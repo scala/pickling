@@ -6,9 +6,7 @@ import Arbitrary._
 import scala.reflect.runtime.universe._
 import Flag._
 
-object LiftableProps extends Properties("liftable")
-                        with TreeSimiliarity
-                        with ArbitraryTreesAndNames {
+object LiftableProps extends QuasiquoteProperties("liftable") {
 
   // this tests use exists as there is no neeed
   // to test the same property for many possible values
@@ -53,18 +51,23 @@ object LiftableProps extends Properties("liftable")
     q"$c" ≈ Literal(Constant(c))
   }
 
-  // this are some non arbitrary generators that
-  // are needed for following tests
-
-  implicit val arbType = Arbitrary[Type] { rootMirror.staticClass("scala.Int").toType }
-  implicit val arbSymbol = Arbitrary[Symbol] { rootMirror.staticClass("scala.Int") }
-
-  property("lift symbol") = exists { (s: Symbol) =>
+  test("lift symbol") {
+    val s = rootMirror.staticClass("scala.Int")
     q"$s" ≈ Ident(s)
   }
 
-  property("lift type") = exists { (tpe: Type) =>
+  test("lift type") {
+    val tpe = rootMirror.staticClass("scala.Int").toType
     q"$tpe" ≈ TypeTree(tpe)
   }
 
+  test("lift type tag") {
+    val tag = TypeTag.Int
+    q"$tag" ≈ TypeTree(tag.tpe)
+  }
+
+  test("lift weak type tag") {
+    val tag = WeakTypeTag.Int
+    q"$tag" ≈ TypeTree(tag.tpe)
+  }
 }

@@ -6,9 +6,7 @@ import Arbitrary._
 import scala.reflect.runtime.universe._
 import Flag._
 
-object TypeConstructionProps extends Properties("type construction")
-                                with TreeSimiliarity
-                                with ArbitraryTreesAndNames {
+object TypeConstructionProps extends QuasiquoteProperties("type construction")  {
 
   property("bare idents contain type names") = exists { (u: Unit) =>
     tq"x" ≈ Ident(TypeName("x"))

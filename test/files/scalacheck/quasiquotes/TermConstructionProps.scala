@@ -6,9 +6,7 @@ import Arbitrary._
 import scala.reflect.runtime.universe._
 import Flag._
 
-object TermConstructionProps extends Properties("construction")
-                                with TreeSimiliarity
-                                with ArbitraryTreesAndNames {
+object TermConstructionProps extends QuasiquoteProperties("construction") {
 
   val anyRef = Select(Ident(TermName("scala")), TypeName("AnyRef"))
 
@@ -140,7 +138,7 @@ object TermConstructionProps extends Properties("construction")
     q"type $name = $t.type" ≈ q"type $name = ${SingletonTypeTree(t)}"
   }
 
-// TODO: this test needs to be fixed
+  // TODO: this test needs to be fixed
   // property("splice tree into super") = forAll { (T: TypeName, t: Tree) =>
   //   q"$t.super[$T]" ≈ Super(This(t), T)
   // }
@@ -185,12 +183,20 @@ object TermConstructionProps extends Properties("construction")
 
   property("splice typename into typedef with default bounds") = forAll { (T1: TypeName, T2: TypeName, t: Tree) =>
     q"type $T1[$T2 >: Any <: Nothing] = $t" ≈
-      TypeDef(Modifiers(), T1, List(TypeDef(ellipsis, T2, List(), TypeBoundsTree(ellipsis, ellipsis))), t)
+      TypeDef(
+        Modifiers(), T1,
+        List(TypeDef(
+          Modifiers(PARAM), T2,
+          List(),
+          TypeBoundsTree(
+            Ident(TypeName("Any")),
+            Ident(TypeName("Nothing"))))),
+        t)
   }
 
   // TODO: this test needs to be fixed
   // property("splice targs into classdef") = forAll { (C: TypeName, targs: List[TypeDef], t: Tree) =>
-  //   q"class $C[..$targs]" ≈ ellipsis
+  //   q"class $C[..$targs]" ≈ ...
   // }
 
   property("splice type names into compound type tree") = forAll { (T: TypeName, A: TypeName, B: TypeName) =>
@@ -215,34 +221,25 @@ object TermConstructionProps extends Properties("construction")
 
   property("splice names into import selector") = forAll {
     (expr: Tree, plain: Name, oldname: Name, newname: Name, discard: Name) =>
-    q"import $expr.{$plain, $oldname => $newname, $discard => _}" ≈
-      Import(expr,
-        List(
-          ImportSelector(plain, 0, plain, 0),
-          ImportSelector(oldname, 0, newname, 0),
-          ImportSelector(discard, 0, nme.WILDCARD, 0)))
+
+    val Import(expr1, List(
+      ImportSelector(plain11, _, plain12, _),
+      ImportSelector(oldname1, _, newname1, _),
+      ImportSelector(discard1, _, wildcard, _))) =
+        q"import $expr.{$plain, $oldname => $newname, $discard => _}"
+
+    expr1 ≈ expr && plain11 == plain12 && plain12 == plain &&
+    oldname1 == oldname && newname1 == newname && discard1 == discard && wildcard == nme.WILDCARD
   }
 
   property("splice trees into while loop") = forAll { (cond: Tree, body: Tree) =>
-    q"while($cond) $body" ≈
-      LabelDef(
-        ellipsis,
-        List(),
-        If(cond,
-          Block(List(body), Apply(ellipsis, List())),
-          Literal(Constant(()))))
+    val LabelDef(_, List(), If(cond1, Block(List(body1), Apply(_, List())), Literal(Constant(())))) = q"while($cond) $body"
+    body1 ≈ body && cond1 ≈ cond
   }
 
   property("splice trees into do while loop") = forAll { (cond: Tree, body: Tree) =>
-    q"do $body while($cond)" ≈
-      LabelDef(
-        ellipsis,
-        List(),
-        Block(
-          List(body),
-          If(cond,
-            Apply(ellipsis, List()),
-            Literal(Constant(())))))
+    val LabelDef(_, List(), Block(List(body1), If(cond1, Apply(_, List()), Literal(Constant(()))))) = q"do $body while($cond)"
+    body1 ≈ body && cond1 ≈ cond
   }
 
   property("splice trees into alternative") = forAll { (c: Tree, A: Tree, B: Tree) =>

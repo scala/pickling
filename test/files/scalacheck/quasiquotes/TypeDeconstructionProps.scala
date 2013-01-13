@@ -6,9 +6,7 @@ import Arbitrary._
 import scala.reflect.runtime.universe._
 import Flag._
 
-object TypeDeconstructionProps extends Properties("type deconstruction")
-                                  with TreeSimiliarity
-                                  with ArbitraryTreesAndNames {
+object TypeDeconstructionProps extends QuasiquoteProperties("type deconstruction") {
 
   property("ident(type name)") = forAll { (name: TypeName) =>
     val t = Ident(name)
