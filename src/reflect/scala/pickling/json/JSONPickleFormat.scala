@@ -17,35 +17,60 @@ package json {
 }
 
 package object json {
-  import ir._
   import reflect.macros.Context
 
   implicit val pickleFormat = new JSONPickleFormat
 
   class JSONPickleFormat extends PickleFormat {
 
-     // do we need this??
-     def write(ir: IR): /*Expr[*/Pickle/*]*/ = {
-       def mkJSONString(ir: IR): String = ir match {
-         case ObjectIR(tpe, fields) => newObject(tpe, fields.map(fld => newField(fld.name, mkJSONString(fld.value))))
-         case vir: IR          => vir.value.toString
-       }
-       JSONPickle(mkJSONString(ir))
-     }
+    // type Pickle = String
 
-     // do we need this??
-     def read(p: Pickle): IR  = ???
+    //  // do we need this??
+    //  def write(ir: IR): /*Expr[*/Pickle/*]*/ = {
+    //    def mkJSONString(ir: IR): String = ir match {
+    //      case ObjectIR(tpe, fields) => newObject(tpe, fields.map(fld => newField(fld.name, mkJSONString(fld.value))))
+    //      case vir: IR          => vir.value.toString
+    //    }
+    //    JSONPickle(mkJSONString(ir))
+    //  }
 
-     // do we need this??
-     def pickleType(c: Context)(tpe: c.universe.Type): Any = tpe.toString
+    //  // do we need this??
+    //  def read(p: Pickle): IR  = ???
 
-     def newField(name: String, value: Any): String =  "  \"" + name + "\": \"" + value + "\""
-     def newObject(tpe: c.Expr[Any], fields: c.Expr[List[String]]): c.Expr[String] =
-       reify {
-         "{\n" +
-         "  \"tpe\": \"" + c.Expr(pickleType).splice + "\",\n" +
-         fields.mkString(",\n") +
-         "\n}"
-       }
+    //  def newField(name: String, value: Any): String =  "  \"" + name + "\": \"" + value + "\""
+    //  def newObject(tpe: c.Expr[Any], fields: c.Expr[List[String]]): c.Expr[String] =
+    //    reify {
+    //      "{\n" +
+    //      "  \"tpe\": \"" + c.Expr(pickleType).splice + "\",\n" +
+    //      fields.mkString(",\n") +
+    //      "\n}"
+    //    }
+
+    type Data = String
+
+    def pickleType(c: Context)(tpe: c.universe.Type): Data = tpe.toString
+
+    def genObjectTemplate(c: Context)(tpe: c.universe.Type, fields: List[c.Expr[Any => Data]]): c.Expr[List[Any] => Data] = {
+      import c.universe._
+
+      def genFields(fldRem: List[Expr[Any => Data]]): Expr[List[Any] => Data] = reify {
+        (vals: List[Any]) =>
+          fldRem.head.splice(vals.head) + "\n" +
+          genFields(fldRem.tail).splice(vals.tail)
+      }
+
+      c.universe.reify {
+        (vals: List[Any]) =>
+          "{ \"tpe\": \"" + pickleType(c)(tpe) + "\"\n" +
+          genFields(fields).splice(vals) + "\n" +
+          "}"
+      }
+    }
+
+    def genFieldTemplate(c: Context)(name: String): c.Expr[Any => Data] = c.universe.reify {
+      (x: Any) => "\"" + name + "\": \"" + x + "\""
+    }
+
+    def build(d: Data): Pickle = new Pickle { val value = d }
   }
 }

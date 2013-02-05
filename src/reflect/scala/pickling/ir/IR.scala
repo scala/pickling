@@ -9,12 +9,12 @@
 package scala.pickling
 package ir
 
-import scala.reflect.api.Universe
+import scala.reflect.macros.Context
 
-class IRs(val u: Universe) {
+class IRs[C <: Context](val c: C) {
   trait IR
 
-  case class FieldIR(name: String, tpe: u.Type)
-  case class ObjectIR(tpe: u.Type, fields: List[FieldIR]) extends IR
+  case class FieldIR(name: String, tpe: c.universe.Type)
+  case class ObjectIR(tpe: c.universe.Type, fields: List[FieldIR]) extends IR
 }
 

@@ -21,8 +21,8 @@ package object pickling {
 
   implicit class PickleOps[T <% HasPicklerDispatch](x: T) {
     def pickle(implicit format: PickleFormat): Pickle = {
-      val ir = x.dispatchTo.pickle(x)
-      format.write(ir)
+      x.dispatchTo.pickle(x)
+      //format.write(ir)
     }
   }
 
@@ -43,35 +43,38 @@ package object pickling {
     // using "runtime" reflection in the compiler might not be the best way to achieve this.
     val ru = scala.reflect.runtime.universe
     val m = ru.runtimeMirror(getClass.getClassLoader)
+
+    val pickleFormatClazz = m.staticClass(pickleFormatTree.tpe.toString)
+
     val cm = m.reflectClass(pickleFormatClazz)
     val ctor = pickleFormatClazz.toType.declaration(ru.nme.CONSTRUCTOR).asMethod
     val ctorm = cm.reflectConstructor(ctor)
 
-    val pickleFormatClazz = m.staticClass(pickleFormatTree.tpe.toString)
-    val pickleFormat = ctorm()
+    val pickleFormat = ctorm().asInstanceOf[PickleFormat]
 
     // println("clazz: "+pickleFormatClazz)
     // println("PickleFormat instance: "+pickleFormat)
-
-
-    /*def buildIR(v: toBePickled[c.Expr[Any]]): c.Expr[IR] = {
-      null
-    }*/
 
     val tt = weakTypeTag[T]
     val fields = tt.tpe.declarations.filter(!_.isMethod)
 
     // build IR
-    val irs = new IRs(c.universe)
-    val ir = irs.ObjectIR(tt.tpe, fields.map(field => irs.FieldIR(field.name, field.typeSignatureIn(tt.tpe))))
-/*
-    def pickleCode: c.Expr[Unit] = fields foreach {
-      case field =>
-        field.typeSignature
-        reify { newField() }
+    val irs = new IRs[c.type](c)
+    val ir = irs.ObjectIR(tt.tpe, fields.map(field => irs.FieldIR(field.name.toString, field.typeSignatureIn(tt.tpe))).toList)
+
+    val fldTempls = fields.map(field => pickleFormat.genFieldTemplate(c)(field.name.toString))
+    val objTempl = pickleFormat.genObjectTemplate(c)(tt.tpe, fldTempls.toList)
+    //reify(null)
+
+    reify {
+      new Pickler[T] {
+        def pickle(obj: Any): Pickle = {
+          new Pickle {
+            val value = objTempl.splice(List("Bob", 42))
+          }
+        }
+      }
     }
-*/
-    reify(null)
 /*
     reify { // creates c.Expr[Pickler[T]]
       new Pickler[T] {
@@ -98,27 +101,29 @@ package pickling {
   import scala.reflect.macros.Context
 
   trait Pickler[T] {
-    def pickle(obj: Any): IR
-    def unpickle(p: Pickle): T
+    def pickle(obj: Any): Pickle
+    //def unpickle(p: Pickle): T
   }
 
   trait Pickle {
-    type Data
-    val value: Data
+    val value: Any
   }
 
   trait HasPicklerDispatch {
     def dispatchTo: Pickler[_]
   }
 
+  // PickleFormat is intended to be used at compile time
+  // to generate a pickle template
   trait PickleFormat {
-    def newField(name: String, value: Any): String
-    def newObject(tpe: Any, fields: List[String]): String
-    // called at compile time to obtained pickled type
-    def pickleType(c: Context)(tpe: c.universe.Type): Any
+    type Data
+    def genObjectTemplate(c: Context)(tpe: c.universe.Type, fields: List[c.Expr[Any => Data]]): c.Expr[List[Any] => Data]
+    def genFieldTemplate(c: Context)(name: String): c.Expr[Any => Data]
+    def build(d: Data): Pickle
 
-    def write(ir: IR): Pickle
-    def read(p: Pickle): IR
+    // called at compile time to obtained pickled type
+    // def pickleType(c: Context)(tpe: c.universe.Type): Any
+    // def genPickleTemplate(c: Context)(ir: IR):
   }
 }
 
