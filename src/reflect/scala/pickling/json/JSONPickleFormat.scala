@@ -53,11 +53,17 @@ package object json {
     def genObjectTemplate(c: Context)(tpe: c.universe.Type, fields: List[c.Expr[Any => Data]]): c.Expr[List[Any] => Data] = {
       import c.universe._
 
-      def genFields(fldRem: List[Expr[Any => Data]]): Expr[List[Any] => Data] = reify {
-        (vals: List[Any]) =>
-          fldRem.head.splice(vals.head) + "\n" +
-          genFields(fldRem.tail).splice(vals.tail)
-      }
+      def genFields(fldRem: List[Expr[Any => Data]]): Expr[List[Any] => Data] =
+        if (fldRem.isEmpty) reify { (vals: List[Any]) => "" }
+        else {
+          val fstField: Expr[Any => Data] = fldRem.head
+          val otherFields: Expr[List[Any] => Data] = genFields(fldRem.tail)
+          reify {
+            (vals: List[Any]) =>
+              fstField.splice(vals.head) +
+              otherFields.splice(vals.tail)
+          }
+        }
 
       c.universe.reify {
         (vals: List[Any]) =>
@@ -65,6 +71,16 @@ package object json {
           genFields(fields).splice(vals) + "\n" +
           "}"
       }
+
+/*
+      reify {
+        (vals: List[Any]) =>
+          if (fldRem.isEmpty || vals.isEmpty) "" else {
+            fldRem.head.splice(vals.head) + "\n" +
+            genFields(fldRem.tail).splice(vals.tail)
+          }
+      }
+*/
     }
 
     def genFieldTemplate(c: Context)(name: String): c.Expr[Any => Data] = c.universe.reify {

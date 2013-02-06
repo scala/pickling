@@ -62,16 +62,18 @@ package object pickling {
     val irs = new IRs[c.type](c)
     val ir = irs.ObjectIR(tt.tpe, fields.map(field => irs.FieldIR(field.name.toString, field.typeSignatureIn(tt.tpe))).toList)
 
-    val fldTempls = fields.map(field => pickleFormat.genFieldTemplate(c)(field.name.toString))
-    val objTempl = pickleFormat.genObjectTemplate(c)(tt.tpe, fldTempls.toList)
-    //reify(null)
+    val pickleFormatExpr = c.Expr[pickleFormat.type](pickleFormatTree)
+
+    // reify(null)
 
     reify {
       new Pickler[T] {
         def pickle(obj: Any): Pickle = {
-          new Pickle {
-            val value = objTempl.splice(List("Bob", 42))
-          }
+          val pf = pickleFormatExpr.splice
+          val fldTempls = fields.map(field => pf.genFieldTemplate(c)(field.name.toString))
+          val objTempl = pf.genObjectTemplate(c)(tt.tpe, fldTempls.toList)
+          // pf.build(objTempl(List("Bob", 42)))
+          null
         }
       }
     }
