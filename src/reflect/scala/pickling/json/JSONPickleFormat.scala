@@ -12,6 +12,11 @@ package object json {
   import reflect.macros.Context
   import ir._
 
+  // each pickle formatter needs to provide hard-coded picklers for
+  // all of the primitive types. this is because there are many ways
+  // to pickle an Int, for example, we can't guess what the right way
+  // is as a framework.
+
   implicit val pickleFormat = new JSONPickleFormat
 
   class JSONPickleFormat extends PickleFormat {
@@ -21,7 +26,9 @@ package object json {
     def genObjectTemplate(ir: ObjectIR): Chunked = {
       // each element in this list is a pair (List[Any], List[FieldIR]) for each field
       // example for one element: (List("name: ", "\n"), List(FieldIR("name")))
-      val fieldTemplates: List[Chunked] = ir.fields.map(genFieldTemplate _)
+      val fieldTemplates: List[Chunked] = ir.fields.map(genFieldTemplate _).map {
+        case (List(beginning, end), holes) => (List(",\n" + beginning, end), holes)
+      }
 
       val initialFieldChunks: List[Any] = fieldTemplates.map(_._1).flatten
       val fieldHoles: List[FieldIR]     = fieldTemplates.map(_._2).flatten
@@ -34,7 +41,7 @@ package object json {
         (pairs map { case (left, right) => concatChunked(left, right) }) :+
         initialFieldChunks.last
 
-      val objectHeaderChunk: String = "{ \"tpe\": \"" + ir.tpe + "\"\n"
+      val objectHeaderChunk: String = "{\n  \"tpe\": \"" + ir.tpe + "\""
 
       val objectFooterChunk: String = "\n}"
 
@@ -47,7 +54,7 @@ package object json {
       (allChunks, allHoles)
     }
 
-    def genFieldTemplate(ir: FieldIR): Chunked = (List("\"" + ir.name + "\": \"", "\""), List(ir))
+    def genFieldTemplate(ir: FieldIR): Chunked = (List("  \"" + ir.name + "\": \"", "\""), List(ir))
 
     def concatChunked(c1: Any, c2: Any): Any =
       c1.asInstanceOf[String] + c2.asInstanceOf[String]
