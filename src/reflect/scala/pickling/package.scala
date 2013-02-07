@@ -57,27 +57,37 @@ package object pickling {
     val chunked: (List[Any], List[FieldIR]) = pickleFormat.genObjectTemplate(ir)
     val chunks = chunked._1
     val holes  = chunked._2
+    println("chunks: "+chunks.mkString("]["))
+    println("chunks.size:" + chunks.size)
+    println("holes.size:" + holes.size)
 
     // fill in holes
-    def genFieldAccess(ir: FieldIR): c.Expr[Any] = {
+    def genFieldAccess(ir: FieldIR): c.Tree = {
       // obj.fieldName
       println("selecting member [" + ir.name + "]")
-      val tree: c.universe.Tree = Select(Ident("obj"), ir.name)
-      c.Expr[Any](tree)
+      Select(Ident("obj"), ir.name)
     }
 
-    def genChunkLiteral(chunk: Any): c.Expr[Any] = {
-      val tree = Literal(Constant(chunk))
-      c.Expr[Any](tree)
+    def genChunkLiteral(chunk: Any): c.Tree =
+      Literal(Constant(chunk))
+
+    // assemble the pickle from the template
+    val cs = chunks.init.zipWithIndex
+    val pickleChunks: List[c.Tree] = for (c <- cs) yield {
+      Apply(Select(pickleFormatTree, "concatChunked"), List(genChunkLiteral(c._1), genFieldAccess(holes(c._2))))
+    }
+    val concatAllTree = (pickleChunks :+ genChunkLiteral(chunks.last)) reduceLeft { (left: c.Tree, right: c.Tree) =>
+      Apply(Select(pickleFormatTree, "concatChunked"), List(left, right))
     }
 
+    // pass the assembled pickle into the generated runtime code
     reify {
       new Pickler[T] {
         def pickle(raw: Any): Pickle = {
           val obj = raw.asInstanceOf[T]
           new Pickle {
             val value = {
-              genChunkLiteral(chunks(0)).splice.toString + genFieldAccess(holes(0)).splice.toString + genChunkLiteral(chunks(1)).splice.toString
+              c.Expr[Any](concatAllTree).splice
             }
           }
         }
