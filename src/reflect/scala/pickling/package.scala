@@ -46,6 +46,12 @@ package object pickling {
 
     val tt = weakTypeTag[T]
     val fields = tt.tpe.declarations.filter(!_.isMethod)
+    val implicitPicklers = fields.map{ field =>
+      c.inferImplicitValue(
+        typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.typeSignatureIn(tt.tpe)))
+      )
+    }
+    println("Implicit values found per field: " + implicitPicklers)
 
     // build IR
     val pickledType = pickleFormat.genTypeTemplate(c)(tt.tpe)
@@ -92,8 +98,6 @@ package object pickling {
           }
         }
       }
-
-      //null
     }
   }
 }
@@ -101,7 +105,7 @@ package object pickling {
 package pickling {
   import scala.reflect.macros.Context
 
-  trait Pickler[T] {
+  trait Pickler[-T] {
     def pickle(obj: Any): Pickle
     //def unpickle(p: Pickle): T
   }
