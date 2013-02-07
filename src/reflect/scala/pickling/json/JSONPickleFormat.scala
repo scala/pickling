@@ -23,8 +23,16 @@ package object json {
       // example for one element: (List("name: ", "\n"), List(FieldIR("name")))
       val fieldTemplates: List[Chunked] = ir.fields.map(genFieldTemplate _)
 
-      val fieldChunks: List[Any]    = fieldTemplates.map(_._1).flatten
-      val fieldHoles: List[FieldIR] = fieldTemplates.map(_._2).flatten
+      val initialFieldChunks: List[Any] = fieldTemplates.map(_._1).flatten
+      val fieldHoles: List[FieldIR]     = fieldTemplates.map(_._2).flatten
+
+      val withoutFirstAndLast = initialFieldChunks.tail.init
+
+      val pairs = withoutFirstAndLast.init zip withoutFirstAndLast.tail
+      val fieldChunks =
+        initialFieldChunks.head +:
+        (pairs map { case (left, right) => concatChunked(left, right) }) :+
+        initialFieldChunks.last
 
       val objectHeaderChunk: String = "{ \"tpe\": \"" + ir.tpe + "\"\n"
 
