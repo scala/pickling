@@ -12,9 +12,9 @@ import scala.language.experimental.macros
 
 package object pickling {
 
-  implicit class PickleOps[T <% HasPicklerDispatch](x: T) {
-    def pickle(implicit format: PickleFormat): Pickle = {
-      x.dispatchTo.pickle(x)
+  implicit class PickleOps[T](x: T) {
+    def pickle(implicit pickler: Pickler[T], format: PickleFormat): Pickle = {
+      pickler.pickle(x)
       //format.write(ir)
     }
   }
@@ -46,18 +46,34 @@ package object pickling {
 
     val tt = weakTypeTag[T]
     val fields = tt.tpe.declarations.filter(!_.isMethod)
+
+    // this is unneeded now, but it's useful for debugging
+    //--from here
     val implicitPicklers = fields.map{ field =>
       c.inferImplicitValue(
         typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.typeSignatureIn(tt.tpe)))
       )
     }
     println("Implicit values found per field: " + implicitPicklers)
+    //--to here
+
+    var fieldIR2Pickler: Map[FieldIR, c.Tree] = Map()
 
     // build IR
     val pickledType = pickleFormat.genTypeTemplate(c)(tt.tpe)
     val ir = ObjectIR(pickledType, (fields.map { field =>
       val pickledFieldType = pickleFormat.genTypeTemplate(c)(field.typeSignatureIn(tt.tpe))
-      FieldIR(field.name.toString.trim, pickledFieldType)
+      val fir = FieldIR(field.name.toString.trim, pickledFieldType)
+
+      // infer implicit pickler, if not found, try to generate pickler for field
+      c.inferImplicitValue(
+        typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.typeSignatureIn(tt.tpe)))
+      ) match {
+        case EmptyTree => /* do nothing */
+        case tree      => fieldIR2Pickler += (fir -> tree)
+      }
+
+      fir
     }).toList)
 
     val chunked: (List[Any], List[FieldIR]) = pickleFormat.genObjectTemplate(ir)
@@ -71,7 +87,13 @@ package object pickling {
     def genFieldAccess(ir: FieldIR): c.Tree = {
       // obj.fieldName
       println("selecting member [" + ir.name + "]")
-      Select(Ident("obj"), ir.name)
+      fieldIR2Pickler.get(ir) match {
+        case None =>
+          Select(Select(Select(Ident("obj"), ir.name), "pickle"), "value")
+        case Some(picklerTree) =>
+          Select(Apply(Select(picklerTree, "pickle"), List(Select(Ident("obj"), ir.name))), "value")
+          //Select(Ident("obj"), ir.name)
+      }
     }
 
     def genChunkLiteral(chunk: Any): c.Tree =

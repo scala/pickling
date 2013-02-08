@@ -37,7 +37,15 @@ package object json {
 
     //def genValueTemplate(c: Context)(tpe: c.universe.Type): Option[Any => Any] =
 
+    def pairUp[T](l: List[T]): List[(T, T)] = l match {
+      case fst :: snd :: rest => (fst, snd) :: pairUp(rest)
+      case List() => List()
+    }
+
     def genObjectTemplate(ir: ObjectIR): Chunked = {
+      println("genObjectTemplate on "+ ir.tpe)
+      println("fields: " + ir.fields)
+
       // each element in this list is a pair (List[Any], List[FieldIR]) for each field
       // example for one element: (List("name: ", "\n"), List(FieldIR("name")))
       val fieldTemplates: List[Chunked] = ir.fields.map(genFieldTemplate _).map {
@@ -45,15 +53,22 @@ package object json {
       }
 
       val initialFieldChunks: List[Any] = fieldTemplates.map(_._1).flatten
+      println("initial field chunks: " + initialFieldChunks.mkString("]["))
+
       val fieldHoles: List[FieldIR]     = fieldTemplates.map(_._2).flatten
 
       val withoutFirstAndLast = initialFieldChunks.tail.init
+      println("withoutFirstAndLast: " + withoutFirstAndLast.mkString("]["))
 
-      val pairs = withoutFirstAndLast.init zip withoutFirstAndLast.tail
+      val pairs = pairUp(withoutFirstAndLast)
+      println("to be merged: " + pairs.mkString("]["))
+
       val fieldChunks =
         initialFieldChunks.head +:
         (pairs map { case (left, right) => concatChunked(left, right) }) :+
         initialFieldChunks.last
+
+      println("field chunks: " + fieldChunks.mkString("]["))
 
       val objectHeaderChunk: String = "{\n  \"tpe\": \"" + ir.tpe + "\""
 
@@ -64,6 +79,7 @@ package object json {
 
       // need to group all chunks and all holes together in separate lists
       val allChunks = List(firstChunk) ++ fieldChunks.tail.init ++ List(lastChunk)
+      println("all chunks: " + allChunks.mkString("]["))
       val allHoles  = fieldHoles
       (allChunks, allHoles)
     }
@@ -71,7 +87,7 @@ package object json {
     def genFieldTemplate(ir: FieldIR): Chunked = (List("  \"" + ir.name + "\": ", ""), List(ir))
 
     def concatChunked(c1: Any, c2: Any): Any =
-      c1.asInstanceOf[String] + c2.asInstanceOf[String]
+      c1.toString + c2.toString
   }
 }
 
