@@ -24,7 +24,7 @@ package object pickling {
   import scala.reflect.macros.Context
   import ir._
 
-  def genPicklerImpl[T: c.WeakTypeTag](c: Context): c.Expr[Pickler[T]] = {
+  def genPicklerExpr[T: c.WeakTypeTag](c: Context)(tpe: c.Type): c.Expr[Pickler[T]] = {
     import c.universe._
 
     val pickleFormatTree: Tree = c.inferImplicitValue(typeOf[PickleFormat]) match {
@@ -44,14 +44,13 @@ package object pickling {
 
     val pickleFormat = ctorm().asInstanceOf[PickleFormat]
 
-    val tt = weakTypeTag[T]
-    val fields = tt.tpe.declarations.filter(!_.isMethod)
+   val fields = tpe.declarations.filter(!_.isMethod)
 
     // this is unneeded now, but it's useful for debugging
     //--from here
     val implicitPicklers = fields.map{ field =>
       c.inferImplicitValue(
-        typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.typeSignatureIn(tt.tpe)))
+        typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.typeSignatureIn(tpe)))
       )
     }
     println("Implicit values found per field: " + implicitPicklers)
@@ -60,17 +59,22 @@ package object pickling {
     var fieldIR2Pickler: Map[FieldIR, c.Tree] = Map()
 
     // build IR
-    val pickledType = pickleFormat.genTypeTemplate(c)(tt.tpe)
+    val pickledType = pickleFormat.genTypeTemplate(c)(tpe)
     val ir = ObjectIR(pickledType, (fields.map { field =>
-      val pickledFieldType = pickleFormat.genTypeTemplate(c)(field.typeSignatureIn(tt.tpe))
+      val pickledFieldType = pickleFormat.genTypeTemplate(c)(field.typeSignatureIn(tpe))
       val fir = FieldIR(field.name.toString.trim, pickledFieldType)
 
       // infer implicit pickler, if not found, try to generate pickler for field
       c.inferImplicitValue(
-        typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.typeSignatureIn(tt.tpe)))
+        typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.typeSignatureIn(tpe)))
       ) match {
-        case EmptyTree => /* do nothing */
-        case tree      => fieldIR2Pickler += (fir -> tree)
+        case EmptyTree =>
+          println("I have to look for a pickler for one of my fields: " + field.typeSignatureIn(tpe))
+          val fieldPickler = genPicklerExpr[T](c)(field.typeSignatureIn(tpe))
+          println("I generated a pickler for that field: " + fieldPickler)
+          fieldIR2Pickler += (fir -> fieldPickler.tree)
+        case tree =>
+          fieldIR2Pickler += (fir -> tree)
       }
 
       fir
@@ -121,6 +125,12 @@ package object pickling {
         }
       }
     }
+  }
+
+  def genPicklerImpl[T: c.WeakTypeTag](c: Context): c.Expr[Pickler[T]] = {
+    import c.universe._
+    val tt = weakTypeTag[T]
+    genPicklerExpr[T](c)(tt.tpe)
   }
 }
 
