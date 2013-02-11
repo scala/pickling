@@ -70,7 +70,7 @@ package object pickling {
       ) match {
         case EmptyTree =>
           println("I have to look for a pickler for one of my fields: " + field.typeSignatureIn(tpe))
-          val fieldPickler = genPicklerExpr[T](c)(field.typeSignatureIn(tpe))
+          val fieldPickler = genPicklerExpr[Any](c)(field.typeSignatureIn(tpe))
           println("I generated a pickler for that field: " + fieldPickler)
           fieldIR2Pickler += (fir -> fieldPickler.tree)
         case tree =>
@@ -112,11 +112,17 @@ package object pickling {
       Apply(Select(pickleFormatTree, "concatChunked"), List(left, right))
     }
 
+    val castAndAssignTree: c.Tree =
+      ValDef(Modifiers(), "obj", TypeTree(tpe),
+        TypeApply(Select(Ident("raw"), "asInstanceOf"), List(TypeTree(tpe)))
+      )
+
     // pass the assembled pickle into the generated runtime code
     reify {
       new Pickler[T] {
         def pickle(raw: Any): Pickle = {
-          val obj = raw.asInstanceOf[T]
+          //val obj = raw.asInstanceOf[T]
+          c.Expr[Unit](castAndAssignTree).splice
           new Pickle {
             val value = {
               c.Expr[Any](concatAllTree).splice
