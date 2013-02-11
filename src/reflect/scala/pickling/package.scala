@@ -37,17 +37,9 @@ package object pickling {
     }
 
     // get instance of PickleFormat
-    val ru = scala.reflect.runtime.universe
-    val m = ru.runtimeMirror(getClass.getClassLoader)
+    val pickleFormat = c.eval(c.Expr[PickleFormat](c.resetAllAttrs(pickleFormatTree)))
 
-    val pickleFormatClazz = m.staticClass(pickleFormatTree.tpe.toString)
-
-    val cm = m.reflectClass(pickleFormatClazz)
-    val ctor = pickleFormatClazz.toType.declaration(ru.nme.CONSTRUCTOR).asMethod
-    val ctorm = cm.reflectConstructor(ctor)
-
-    val pickleFormat = ctorm().asInstanceOf[PickleFormat]
-
+    // get all declared fields (and not accessor methods)
     val fields = tpe.declarations.filter(!_.isMethod)
 
     // this is unneeded now, but it's useful for debugging
