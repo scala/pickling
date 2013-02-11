@@ -12,6 +12,13 @@ import scala.language.experimental.macros
 
 package object pickling {
 
+  import scala.reflect.macros.Context
+  import ir._
+
+  // TOGGLE DEBUGGING
+  var debugEnabled: Boolean = true
+  def debug(output: => String) = if (debugEnabled) println(output)
+
   implicit class PickleOps[T](x: T) {
     def pickle(implicit pickler: Pickler[T], format: PickleFormat): Pickle = {
       pickler.pickle(x)
@@ -20,9 +27,6 @@ package object pickling {
   }
 
   implicit def genPickler[T]: Pickler[T] = macro genPicklerImpl[T]
-
-  import scala.reflect.macros.Context
-  import ir._
 
   def genPicklerExpr[T: c.WeakTypeTag](c: Context)(tpe: c.Type): c.Expr[Pickler[T]] = {
     import c.universe._
@@ -44,7 +48,7 @@ package object pickling {
 
     val pickleFormat = ctorm().asInstanceOf[PickleFormat]
 
-   val fields = tpe.declarations.filter(!_.isMethod)
+    val fields = tpe.declarations.filter(!_.isMethod)
 
     // this is unneeded now, but it's useful for debugging
     //--from here
@@ -53,7 +57,7 @@ package object pickling {
         typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.typeSignatureIn(tpe)))
       )
     }
-    println("Implicit values found per field: " + implicitPicklers)
+    debug("Implicit values found per field: " + implicitPicklers)
     //--to here
 
     var fieldIR2Pickler: Map[FieldIR, c.Tree] = Map()
@@ -69,9 +73,9 @@ package object pickling {
         typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.typeSignatureIn(tpe)))
       ) match {
         case EmptyTree =>
-          println("I have to look for a pickler for one of my fields: " + field.typeSignatureIn(tpe))
+          debug("I have to look for a pickler for one of my fields: " + field.typeSignatureIn(tpe))
           val fieldPickler = genPicklerExpr[Any](c)(field.typeSignatureIn(tpe))
-          println("I generated a pickler for that field: " + fieldPickler)
+          debug("I generated a pickler for that field: " + fieldPickler)
           fieldIR2Pickler += (fir -> fieldPickler.tree)
         case tree =>
           fieldIR2Pickler += (fir -> tree)
@@ -83,14 +87,14 @@ package object pickling {
     val chunked: (List[Any], List[FieldIR]) = pickleFormat.genObjectTemplate(ir)
     val chunks = chunked._1
     val holes  = chunked._2
-    println("chunks: "+chunks.mkString("]["))
-    println("chunks.size:" + chunks.size)
-    println("holes.size:" + holes.size)
+    debug("chunks: "+chunks.mkString("]["))
+    debug("chunks.size:" + chunks.size)
+    debug("holes.size:" + holes.size)
 
     // fill in holes
     def genFieldAccess(ir: FieldIR): c.Tree = {
       // obj.fieldName
-      println("selecting member [" + ir.name + "]")
+      debug("selecting member [" + ir.name + "]")
       fieldIR2Pickler.get(ir) match {
         case None =>
           Select(Select(Select(Ident("obj"), ir.name), "pickle"), "value")
