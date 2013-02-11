@@ -17,17 +17,15 @@ package object json {
   // to pickle an Int, for example, we can't guess what the right way
   // is as a framework.
 
-  private val numericPickler: Pickler[AnyVal] = new Pickler[AnyVal] { def pickle(x: Any) = new Pickle { val value: Any = x }}
-
-  implicit val intPickler: Pickler[Int]         = numericPickler
-  implicit val longPickler: Pickler[Long]       = numericPickler
-  implicit val shortPickler: Pickler[Short]     = numericPickler
-  implicit val doublePickler: Pickler[Double]   = numericPickler
-  implicit val floatPickler: Pickler[Float]     = numericPickler
-  implicit val booleanPickler: Pickler[Boolean] = numericPickler
-  implicit val bytePickler: Pickler[Byte]       = numericPickler
-  implicit val charPickler: Pickler[Char]       = new Pickler[Char]  { def pickle(x: Any) = new Pickle { val value: Any = "\"" + x.toString + "\""}}
-  implicit val stringPickler: Pickler[String]   = new Pickler[String]{ def pickle(x: Any) = new Pickle { val value: Any = "\"" + x.toString + "\""}}
+  implicit val intPickler: Pickler[Int]         = new Pickler[Int]     { def pickle(x: Any) = new Pickle { val value: Any = x }}
+  implicit val longPickler: Pickler[Long]       = new Pickler[Long]    { def pickle(x: Any) = new Pickle { val value: Any = x }}
+  implicit val shortPickler: Pickler[Short]     = new Pickler[Short]   { def pickle(x: Any) = new Pickle { val value: Any = x }}
+  implicit val doublePickler: Pickler[Double]   = new Pickler[Double]  { def pickle(x: Any) = new Pickle { val value: Any = x }}
+  implicit val floatPickler: Pickler[Float]     = new Pickler[Float]   { def pickle(x: Any) = new Pickle { val value: Any = x }}
+  implicit val booleanPickler: Pickler[Boolean] = new Pickler[Boolean] { def pickle(x: Any) = new Pickle { val value: Any = x }}
+  implicit val bytePickler: Pickler[Byte]       = new Pickler[Byte]    { def pickle(x: Any) = new Pickle { val value: Any = x }}
+  implicit val charPickler: Pickler[Char]       = new Pickler[Char]    { def pickle(x: Any) = new Pickle { val value: Any = "\"" + x.toString + "\""}}
+  implicit val stringPickler: Pickler[String]   = new Pickler[String]  { def pickle(x: Any) = new Pickle { val value: Any = "\"" + x.toString + "\""}}
 
   implicit val pickleFormat = new JSONPickleFormat
 

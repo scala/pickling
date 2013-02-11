@@ -56,6 +56,7 @@ package object pickling {
 
     // build IR
     val pickledType = pickleFormat.genTypeTemplate(c)(tpe)
+    debug("The tpe just before IR creation is: " + tpe)
     val ir = ObjectIR(pickledType, (fields.map { field =>
       val pickledFieldType = pickleFormat.genTypeTemplate(c)(field.typeSignatureIn(tpe))
       val fir = FieldIR(field.name.toString.trim, pickledFieldType)
@@ -142,7 +143,7 @@ package object pickling {
 package pickling {
   import scala.reflect.macros.Context
 
-  trait Pickler[-T] {
+  trait Pickler[T] {
     def pickle(obj: Any): Pickle
     //def unpickle(p: Pickle): T
   }
