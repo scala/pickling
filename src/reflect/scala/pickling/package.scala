@@ -66,10 +66,8 @@ package object pickling {
         typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.typeSignatureIn(tpe)))
       ) match {
         case EmptyTree =>
-          debug("I have to look for a pickler for one of my fields: " + field.typeSignatureIn(tpe))
-          val fieldPickler = genPicklerExpr[Any](c)(field.typeSignatureIn(tpe))
-          debug("I generated a pickler for that field: " + fieldPickler)
-          fieldIR2Pickler += (fir -> fieldPickler.tree)
+          // EmptyTree essentially means that no pickler could be generated, so abort with error msg
+          c.abort(c.enclosingPosition, "Couldn't generate implicit Pickler[" + field.typeSignatureIn(tpe) + "]")
         case tree =>
           fieldIR2Pickler += (fir -> tree)
       }
@@ -133,6 +131,7 @@ package object pickling {
     import c.universe._
     val tt = weakTypeTag[T]
     try {
+      debug("Just about to invoke genPicklerExpr with type: " + tt.tpe)
       genPicklerExpr[T](c)(tt.tpe)
     } catch {
       case t: Throwable => t.printStackTrace(); throw t
