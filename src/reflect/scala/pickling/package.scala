@@ -117,8 +117,7 @@ package object pickling {
     reify {
       new Pickler[T] {
         def pickle(raw: Any): Pickle = {
-          //val obj = raw.asInstanceOf[T]
-          c.Expr[Unit](castAndAssignTree).splice
+          c.Expr[Unit](castAndAssignTree).splice //akin to: val obj = raw.asInstanceOf[<tpe>]
           new Pickle {
             val value = {
               c.Expr[Any](concatAllTree).splice
