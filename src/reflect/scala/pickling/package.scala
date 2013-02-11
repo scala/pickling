@@ -131,7 +131,11 @@ package object pickling {
   def genPicklerImpl[T: c.WeakTypeTag](c: Context): c.Expr[Pickler[T]] = {
     import c.universe._
     val tt = weakTypeTag[T]
-    genPicklerExpr[T](c)(tt.tpe)
+    try {
+      genPicklerExpr[T](c)(tt.tpe)
+    } catch {
+      case t: Throwable => t.printStackTrace(); throw t
+    }
   }
 }
 
