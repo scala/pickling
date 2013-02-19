@@ -11,7 +11,13 @@ package ir
 
 import scala.reflect.macros.Context
 
-trait IR
 
-case class FieldIR(name: String, tpe: Any)
-case class ObjectIR(tpe: Any, fields: List[FieldIR]) extends IR
+class IRs[C <: Context with Singleton](val ctx: C) {
+
+  trait IR
+
+  case class FieldIR(name: String, tpe: ctx.Type)
+
+  case class ObjectIR(tpe: ctx.Type, fields: List[FieldIR]) extends IR
+
+}

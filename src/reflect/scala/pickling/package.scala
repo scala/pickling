@@ -30,6 +30,9 @@ package object pickling {
 
   def genPicklerImpl[T: c.WeakTypeTag](c: Context): c.Expr[Pickler[T]] = {
     import c.universe._
+    val irs = new IRs[c.type](c)
+    import irs._
+
     val tt = weakTypeTag[T]
     val tpe = tt.tpe
     try {
@@ -59,9 +62,9 @@ package object pickling {
       // build IR
       val pickledType = pickleFormat.genTypeTemplate(c)(tpe)
       debug("The tpe just before IR creation is: " + tpe)
-      val ir = ObjectIR(pickledType, (fields.map { field =>
+      val oir = ObjectIR(tpe, (fields.map { field =>
         val pickledFieldType = pickleFormat.genTypeTemplate(c)(field.typeSignatureIn(tpe))
-        val fir = FieldIR(field.name.toString.trim, pickledFieldType)
+        val fir = FieldIR(field.name.toString.trim, field.typeSignatureIn(tpe))
 
         // infer implicit pickler, if not found, try to generate pickler for field
         c.inferImplicitValue(
@@ -77,7 +80,7 @@ package object pickling {
         fir
       }).toList)
 
-      val chunked: (List[Any], List[FieldIR]) = pickleFormat.genObjectTemplate(ir)
+      val chunked: (List[Any], List[FieldIR]) = pickleFormat.genObjectTemplate(irs)(oir)
       val chunks = chunked._1
       val holes  = chunked._2
       debug("chunks: "+chunks.mkString("]["))
@@ -85,14 +88,14 @@ package object pickling {
       debug("holes.size:" + holes.size)
 
       // fill in holes
-      def genFieldAccess(ir: FieldIR): c.Tree = {
+      def genFieldAccess(fir: FieldIR): c.Tree = {
         // obj.fieldName
-        debug("selecting member [" + ir.name + "]")
-        fieldIR2Pickler.get(ir) match {
+        debug("selecting member [" + fir.name + "]")
+        fieldIR2Pickler.get(fir) match {
           case None =>
-            Select(Select(Select(Ident("obj"), ir.name), "pickle"), "value")
+            Select(Select(Select(Ident("obj"), fir.name), "pickle"), "value")
           case Some(picklerTree) =>
-            Select(Apply(Select(picklerTree, "pickle"), List(Select(Ident("obj"), ir.name))), "value")
+            Select(Apply(Select(picklerTree, "pickle"), List(Select(Ident("obj"), fir.name))), "value")
             //Select(Ident("obj"), ir.name)
         }
       }
@@ -155,11 +158,9 @@ package pickling {
   trait PickleFormat {
     import ir._
 
-    type Chunked = (List[Any], List[FieldIR])
-
     def genTypeTemplate(c: Context)(tpe: c.universe.Type): Any
-    def genObjectTemplate(ir: ObjectIR): Chunked
-    def genFieldTemplate(ir: FieldIR): Chunked
+    def genObjectTemplate[C <: Context with Singleton](irs: IRs[C])(ir: irs.ObjectIR): (List[Any], List[irs.FieldIR])
+    def genFieldTemplate[C <: Context with Singleton](irs: IRs[C])(ir: irs.FieldIR): (List[Any], List[irs.FieldIR])
 
     def concatChunked(c1: Any, c2: Any): Any
   }
