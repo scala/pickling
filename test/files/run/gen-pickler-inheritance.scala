@@ -2,11 +2,11 @@ import scala.pickling._
 import json._
 
 abstract class Creature {
-  var species: String
+  val species: String
 }
 
 abstract class Person extends Creature {
-  var species = "human"
+  val species = "human"
   val name: String
   val age: Int
 }

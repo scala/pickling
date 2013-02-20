@@ -48,42 +48,47 @@ package object json {
       debug("genObjectTemplate on "+ ir.tpe.typeSymbol.name)
       debug("fields: " + ir.fields)
 
-      // each element in this list is a pair (List[Any], List[FieldIR]) for each field
-      // example for one element: (List("name: ", "\n"), List(FieldIR("name")))
-      val fieldTemplates: List[Chunked] = ir.fields.map(genFieldTemplate(irs)(_)).map {
-        case (List(beginning, end), holes) => (List(",\n" + beginning, end), holes)
+      if (ir.fields.isEmpty) {
+        val objectChunk = "{\n  \"tpe\": \"" + genTypeTemplate(irs.ctx)(ir.tpe) + "\"\n}"
+        (List(objectChunk), List())
+      } else {
+        // each element in this list is a pair (List[Any], List[FieldIR]) for each field
+        // example for one element: (List("name: ", "\n"), List(FieldIR("name")))
+        val fieldTemplates: List[Chunked] = ir.fields.map(genFieldTemplate(irs)(_)).map {
+          case (List(beginning, end), holes) => (List(",\n" + beginning, end), holes)
+        }
+
+        val initialFieldChunks: List[Any] = fieldTemplates.map(_._1).flatten
+        debug("initial field chunks: " + initialFieldChunks.mkString("]["))
+
+        val fieldHoles: List[FieldIR] = fieldTemplates.map(_._2).flatten
+
+        val withoutFirstAndLast = initialFieldChunks.tail.init
+        debug("withoutFirstAndLast: " + withoutFirstAndLast.mkString("]["))
+
+        val pairs = pairUp(withoutFirstAndLast)
+        debug("to be merged: " + pairs.mkString("]["))
+
+        val fieldChunks =
+          initialFieldChunks.head +:
+          (pairs map { case (left, right) => concatChunked(left, right) }) :+
+          initialFieldChunks.last
+
+        debug("field chunks: " + fieldChunks.mkString("]["))
+
+        val objectHeaderChunk: String = "{\n  \"tpe\": \"" + genTypeTemplate(irs.ctx)(ir.tpe) + "\""
+
+        val objectFooterChunk: String = "\n}"
+
+        val firstChunk = concatChunked(objectHeaderChunk, fieldChunks.head)
+        val lastChunk  = concatChunked(fieldChunks.last, objectFooterChunk)
+
+        // need to group all chunks and all holes together in separate lists
+        val allChunks = List(firstChunk) ++ fieldChunks.tail.init ++ List(lastChunk)
+        debug("all chunks: " + allChunks.mkString("]["))
+        val allHoles  = fieldHoles
+        (allChunks, allHoles)
       }
-
-      val initialFieldChunks: List[Any] = fieldTemplates.map(_._1).flatten
-      debug("initial field chunks: " + initialFieldChunks.mkString("]["))
-
-      val fieldHoles: List[FieldIR] = fieldTemplates.map(_._2).flatten
-
-      val withoutFirstAndLast = initialFieldChunks.tail.init
-      debug("withoutFirstAndLast: " + withoutFirstAndLast.mkString("]["))
-
-      val pairs = pairUp(withoutFirstAndLast)
-      debug("to be merged: " + pairs.mkString("]["))
-
-      val fieldChunks =
-        initialFieldChunks.head +:
-        (pairs map { case (left, right) => concatChunked(left, right) }) :+
-        initialFieldChunks.last
-
-      debug("field chunks: " + fieldChunks.mkString("]["))
-
-      val objectHeaderChunk: String = "{\n  \"tpe\": \"" + genTypeTemplate(irs.ctx)(ir.tpe) + "\""
-
-      val objectFooterChunk: String = "\n}"
-
-      val firstChunk = concatChunked(objectHeaderChunk, fieldChunks.head)
-      val lastChunk  = concatChunked(fieldChunks.last, objectFooterChunk)
-
-      // need to group all chunks and all holes together in separate lists
-      val allChunks = List(firstChunk) ++ fieldChunks.tail.init ++ List(lastChunk)
-      debug("all chunks: " + allChunks.mkString("]["))
-      val allHoles  = fieldHoles
-      (allChunks, allHoles)
     }
 
     def genFieldTemplate[C <: Context with Singleton](irs: IRs[C])(ir: irs.FieldIR): (List[Any], List[irs.FieldIR]) =
