@@ -13,11 +13,33 @@ import scala.reflect.macros.Context
 
 
 class IRs[C <: Context with Singleton](val ctx: C) {
+  import ctx._
 
   trait IR
+  case class FieldIR(name: String, tpe: Type)
+  case class ObjectIR(tpe: Type, parent: ObjectIR, fields: List[FieldIR]) extends IR
 
-  case class FieldIR(name: String, tpe: ctx.Type)
+  type Q = List[FieldIR]
+  type C = ObjectIR
 
-  case class ObjectIR(tpe: ctx.Type, fields: List[FieldIR]) extends IR
+  def fields(tp: Type): Q =
+    tp.declarations
+      .filter(sym => !sym.isMethod)
+      .map(sym => FieldIR(sym.name.toString.trim, sym.typeSignatureIn(tp)))
+      .toList
 
+  def composition(f1: (Q, Q) => Q, f2: (C, C) => C, f3: C => List[C]) =
+    (c: C) => f3(c).reverse.reduce[C](f2)
+
+  val f1 = (q1: Q, q2: Q) => q1 ++ q2
+
+  val f2 = (c1: C, c2: C) => ObjectIR(c2.tpe, c1, f1(fields(c2.tpe), fields(c1.tpe)))
+
+  val f3 = (c: C) =>
+    c.tpe.baseClasses
+         .map(_.typeSignature)
+         .map(tp => ObjectIR(tp, null, fields(tp)))
+
+  val compose =
+    composition(f1, f2, f3)
 }

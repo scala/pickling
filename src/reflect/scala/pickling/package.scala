@@ -57,28 +57,21 @@ package object pickling {
       debug("Implicit values found per field: " + implicitPicklers)
       //--to here
 
-      var fieldIR2Pickler: Map[FieldIR, c.Tree] = Map()
-
       // build IR
-      val pickledType = pickleFormat.genTypeTemplate(c)(tpe)
       debug("The tpe just before IR creation is: " + tpe)
-      val oir = ObjectIR(tpe, (fields.map { field =>
-        val pickledFieldType = pickleFormat.genTypeTemplate(c)(field.typeSignatureIn(tpe))
-        val fir = FieldIR(field.name.toString.trim, field.typeSignatureIn(tpe))
-
+      val oir = compose(ObjectIR(tpe, null, List()))
+      val fieldIR2Pickler = oir.fields.map(field =>
         // infer implicit pickler, if not found, try to generate pickler for field
         c.inferImplicitValue(
-          typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.typeSignatureIn(tpe)))
+          typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.tpe))
         ) match {
           case EmptyTree =>
             // EmptyTree essentially means that no pickler could be generated, so abort with error msg
-            c.abort(c.enclosingPosition, "Couldn't generate implicit Pickler[" + field.typeSignatureIn(tpe) + "]")
+            c.abort(c.enclosingPosition, "Couldn't generate implicit Pickler[" + field.tpe + "]")
           case tree =>
-            fieldIR2Pickler += (fir -> tree)
+            field -> tree
         }
-
-        fir
-      }).toList)
+      ).toMap
 
       val chunked: (List[Any], List[FieldIR]) = pickleFormat.genObjectTemplate(irs)(oir)
       val chunks = chunked._1
