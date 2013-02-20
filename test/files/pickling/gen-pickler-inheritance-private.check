@@ -1,0 +1,7 @@
+{
+  "tpe": "Firefighter",
+  "name": "Jeff",
+  "age": 45,
+  "since": 1990,
+  "$$expose$private$salary": 30000
+}

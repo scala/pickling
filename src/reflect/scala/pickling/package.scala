@@ -16,7 +16,7 @@ package object pickling {
   import ir._
 
   // TOGGLE DEBUGGING
-  var debugEnabled: Boolean = true
+  var debugEnabled: Boolean = System.getProperty("pickling.debug", "false").toBoolean
   def debug(output: => String) = if (debugEnabled) println(output)
 
   implicit class PickleOps[T](x: T) {
