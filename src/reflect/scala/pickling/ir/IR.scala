@@ -24,7 +24,7 @@ class IRs[C <: Context with Singleton](val ctx: C) {
 
   def fields(tp: Type): Q =
     tp.declarations
-      .filter(sym => !sym.isMethod)
+      .filter(sym => !sym.isMethod && sym.isTerm && (sym.asTerm.isVar || sym.asTerm.isParamAccessor)) // separate issue: minimal versus verbose PickleFormat . i.e. someone might want all concrete inherited fields in their pickle
       .map(sym => FieldIR(sym.name.toString.trim, sym.typeSignatureIn(tp)))
       .toList
 

@@ -73,7 +73,7 @@ package object pickling {
         }
       ).toMap
 
-      val chunked: (List[Any], List[FieldIR]) = pickleFormat.genObjectTemplate(irs)(oir)
+      val chunked: (List[Any], List[FieldIR]) = pickleFormat.genObjectTemplate(irs)(flatten(oir))
       val chunks = chunked._1
       val holes  = chunked._2
       debug("chunks: "+chunks.mkString("]["))
