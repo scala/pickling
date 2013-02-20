@@ -1,3 +1,9 @@
+/*
+  Test to generate a pickler for an arbitrary type, and then use the generated
+  pickler to pickle an instance of that type by going through the `pickle`
+  extension method.
+*/
+
 import scala.pickling._
 import json._
 

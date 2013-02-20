@@ -1,3 +1,10 @@
+/*
+  Test to directly generate a pickler for a *nested* arbitrary type (that is,
+  a type that has at least one field with an arbitrary non-primitive type),
+  and then use the generated pickler to pickle an instance of that type, by
+  going through the `pickle` extension method.
+*/
+
 import scala.pickling._
 import json._
 
