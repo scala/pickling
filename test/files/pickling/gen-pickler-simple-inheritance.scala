@@ -12,16 +12,15 @@ abstract class Person {
   val name: String
   val age: Int
 }
-abstract class Firefighter extends Person {
-  val since: Int
-}
+
+class Firefighter(val name: String, val age: Int, val since: Int) extends Person
 
 object Test extends App {
-  val f = new Firefighter {
-    val name = "Jeff"
-    val age = 45
-    val since = 1990
-  }
+  val f = new Firefighter(
+    name = "Jeff",
+    age = 45,
+    since = 1990
+  )
 
   val pickle = f.pickle
   println(pickle.value)
