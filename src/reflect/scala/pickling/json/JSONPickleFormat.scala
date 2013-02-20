@@ -31,7 +31,7 @@ package object json {
 
   class JSONPickleFormat extends PickleFormat {
 
-    def genTypeTemplate(c: Context)(tpe: c.universe.Type): Any = tpe.toString
+    def genTypeTemplate(c: Context)(tpe: c.universe.Type): Any = tpe.typeSymbol.name.toString
 
     //def genValueTemplate(c: Context)(tpe: c.universe.Type): Option[Any => Any] =
 
@@ -45,7 +45,7 @@ package object json {
       import irs._
       type Chunked = (List[Any], List[FieldIR])
 
-      debug("genObjectTemplate on "+ ir.tpe)
+      debug("genObjectTemplate on "+ ir.tpe.typeSymbol.name)
       debug("fields: " + ir.fields)
 
       // each element in this list is a pair (List[Any], List[FieldIR]) for each field
