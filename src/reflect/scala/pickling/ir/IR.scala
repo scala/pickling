@@ -33,7 +33,7 @@ class IRs[C <: Context with Singleton](val ctx: C) {
 
   val f1 = (q1: Q, q2: Q) => q1 ++ q2
 
-  val f2 = (c1: C, c2: C) => ObjectIR(c2.tpe, c1, f1(fields(c2.tpe), fields(c1.tpe)))
+  val f2 = (c1: C, c2: C) => ObjectIR(c2.tpe, c1, fields(c2.tpe))
 
   val f3 = (c: C) =>
     c.tpe.baseClasses
@@ -42,4 +42,8 @@ class IRs[C <: Context with Singleton](val ctx: C) {
 
   val compose =
     composition(f1, f2, f3)
+
+  val flatten: C => C = (c: C) =>
+    if (c.parent != null) ObjectIR(c.tpe, c.parent, f1(c.fields, flatten(c.parent).fields))
+    else c
 }
