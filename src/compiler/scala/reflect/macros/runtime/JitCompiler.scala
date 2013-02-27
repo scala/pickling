@@ -29,7 +29,8 @@ object JitCompiler {
       val importer = jitCompiler.mkImporter(closureAnalyzer)
       val units = closure.map(pdef => {
         def convertedPackage: jitCompiler.PackageDef = importer.importTree(closureAnalyzer.resetAllAttrs(pdef, resetAllTypeTrees = true)).asInstanceOf[jitCompiler.PackageDef]
-        def wrappedPackage = if (pdef.name == closureAnalyzer.nme.EMPTY_PACKAGE_NAME) convertedPackage.stats else List(convertedPackage)
+        // def wrappedPackage = if (pdef.name == closureAnalyzer.nme.EMPTY_PACKAGE_NAME) convertedPackage.stats else List(convertedPackage)
+        def wrappedPackage = convertedPackage.stats
         val cu = new jitCompiler.CompilationUnit(NoSourceFile)
         cu.body = jitCompiler.PackageDef(jitCompiler.Ident(pdef.name.toString), wrappedPackage)
         cu
@@ -93,6 +94,7 @@ object JitCompiler {
             // TODO: deny annotation parts make completers
             case _:Ident  =>
             case _:Apply  =>
+            case _:Import =>
             case _ => abort("attachCompleter can't recognize " + showRaw(mytree))
           }
       }
