@@ -1,6 +1,6 @@
 package scala.tools.reflect
 
-import scala.reflect.macros.runtime.Context
+import scala.reflect.macros.contexts.Context
 
 abstract class Quasiquotes extends ApplyMacro
                               with UnapplyMacro

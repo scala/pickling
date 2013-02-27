@@ -2,7 +2,7 @@ package scala.tools.reflect
 
 import java.util.UUID.randomUUID
 import scala.tools.nsc.Global
-import scala.reflect.macros.runtime.Context
+import scala.reflect.macros.contexts.Context
 import scala.collection.mutable
 import scala.collection.SortedMap
 

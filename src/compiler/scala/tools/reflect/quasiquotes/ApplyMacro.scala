@@ -1,7 +1,7 @@
 package scala.tools.reflect
 
 import scala.tools.nsc.Global
-import scala.reflect.macros.runtime.Context
+import scala.reflect.macros.contexts.Context
 import scala.collection.mutable
 
 trait ApplyMacro { self: Quasiquotes =>
