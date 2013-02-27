@@ -6,7 +6,7 @@ class G[T]
 
 object Macros {
   def impl(c: Context) = {
-    val cc = c.asInstanceOf[scala.reflect.macros.runtime.Context]
+    val cc = c.asInstanceOf[scala.reflect.macros.contexts.Context]
     c.warning(c.enclosingPosition, s"app = ${c.macroApplication}, role = ${c.macroRole}")
     // println(cc.callsiteTyper.context.enclosingContextChain.map(_.tree))
   }

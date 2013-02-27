@@ -1,0 +1,5 @@
+macro-jit-macrochain2.scala:7: error: macro implementation not found: foo (the most common reason for that is that you cannot use macro implementations in the same compilation run that defines them)
+    println(A1.foo(42))
+                  ^
+error: macro implementation not found: foo2 (the most common reason for that is that you cannot use macro implementations in the same compilation run that defines them)
+two errors found

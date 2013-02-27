@@ -276,9 +276,12 @@ trait Trees extends scala.reflect.internal.Trees { self: Global =>
 //  def resetAllAttrs[A<:Tree](x:A): A = { new ResetAttrsTraverser().traverse(x); x }
 //  def resetLocalAttrs[A<:Tree](x:A): A = { new ResetLocalAttrsTraverser().traverse(x); x }
 
-  def resetAllAttrs(x: Tree, leaveAlone: Tree => Boolean = null): Tree = new ResetAttrs(false, leaveAlone).transform(x)
-  def resetLocalAttrs(x: Tree, leaveAlone: Tree => Boolean = null): Tree = new ResetAttrs(true, leaveAlone).transform(x)
-  def resetLocalAttrsKeepLabels(x: Tree, leaveAlone: Tree => Boolean = null): Tree = new ResetAttrs(true, leaveAlone, true).transform(x)
+  // TODO: resetAllTypeTrees is an awful hack for the macro jit compiler
+  // I'm afraid it's going to irreparably bork trees in some cases
+  // We should definitely figure this out some time
+  def resetAllAttrs(x: Tree, leaveAlone: Tree => Boolean = null, resetAllTypeTrees: Boolean = false): Tree = new ResetAttrs(localOnly = false, leaveAlone = leaveAlone, resetAllTypeTrees = resetAllTypeTrees).transform(x)
+  def resetLocalAttrs(x: Tree, leaveAlone: Tree => Boolean = null, resetAllTypeTrees: Boolean = false): Tree = new ResetAttrs(localOnly = true, leaveAlone = leaveAlone, resetAllTypeTrees = resetAllTypeTrees).transform(x)
+  def resetLocalAttrsKeepLabels(x: Tree, leaveAlone: Tree => Boolean = null): Tree = new ResetAttrs(localOnly = true, leaveAlone = leaveAlone, keepLabels = true).transform(x)
 
   /** A transformer which resets symbol and tpe fields of all nodes in a given tree,
    *  with special treatment of:
@@ -289,7 +292,7 @@ trait Trees extends scala.reflect.internal.Trees { self: Global =>
    *
    *  (bq:) This transformer has mutable state and should be discarded after use
    */
-  private class ResetAttrs(localOnly: Boolean, leaveAlone: Tree => Boolean = null, keepLabels: Boolean = false) {
+  private class ResetAttrs(localOnly: Boolean, leaveAlone: Tree => Boolean = null, keepLabels: Boolean = false, resetAllTypeTrees: Boolean = false) {
     val debug = settings.debug.value
     val trace = scala.tools.nsc.util.trace when debug
 
@@ -345,7 +348,7 @@ trait Trees extends scala.reflect.internal.Trees { self: Global =>
                 else {
                   val refersToLocalSymbols = tpt.tpe != null && (tpt.tpe exists (tp => locals contains tp.typeSymbol))
                   val isInferred = tpt.wasEmpty
-                  if (refersToLocalSymbols || isInferred) {
+                  if (resetAllTypeTrees || refersToLocalSymbols || isInferred) {
                     tpt.duplicate.clearType()
                   } else {
                     tpt

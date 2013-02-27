@@ -164,4 +164,27 @@ trait StdAttachments {
    *  because someone has put MacroImplRefAttachment on it.
    */
   def isMacroImplRef(tree: Tree): Boolean = tree.attachments.get[MacroImplRefAttachment.type].isDefined
+
+  /** Captures the tree which was used to produce the attachee.
+   */
+  case class OriginalAttachment(original: Tree)
+
+  def setOriginal(tree: Tree, original: Tree): Tree = tree match {
+    case tt @ TypeTree() => tt setOriginal original
+    case tree => tree updateAttachment OriginalAttachment(original)
+  }
+
+  def original(tree: Tree): Tree = tree match {
+    case tt @ TypeTree() => tt.original
+    case tree => tree.attachments.get[OriginalAttachment].map(_.original).getOrElse(null)
+  }
+
+  /** Stores the macro implementation attached to the underlying macro definition symbol.
+   *  Since attachments aren't pickled, this has a scope of a single compilation run.
+   */
+  case class MacroImplAttachment(macroImpl: Symbol)
+
+  def attachMacroImpl(macroDef: Symbol, macroImpl: Symbol) = macroDef updateAttachment MacroImplAttachment(macroImpl)
+
+  def attachedMacroImpl(macroDef: Symbol) = macroDef.attachments.get[MacroImplAttachment].map(_.macroImpl).getOrElse(NoSymbol)
 }

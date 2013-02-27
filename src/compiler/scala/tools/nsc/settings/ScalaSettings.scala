@@ -181,6 +181,7 @@ trait ScalaSettings extends AbsScalaSettings
   val Yinferdebug             = BooleanSetting("-Yinfer-debug", "Trace type inference and implicit search.")
   val Yissuedebug             = BooleanSetting("-Yissue-debug", "Print stack traces when a context issues an error.")
   val YmacrodebugLite         = BooleanSetting("-Ymacro-debug-lite", "Trace essential macro-related activities.")
+  val YmacrodebugJit          = BooleanSetting("-Ymacro-debug-jit", "Trace essential macrojit-related activities.")
   val YmacrodebugVerbose      = BooleanSetting("-Ymacro-debug-verbose", "Trace all macro-related activities: compilation, generation of synthetics, classloading, expansion, exceptions.")
   val Ypmatdebug              = BooleanSetting("-Ypmat-debug", "Trace all pattern matcher activity.")
   val Yposdebug               = BooleanSetting("-Ypos-debug", "Trace position validation.")
@@ -197,7 +198,8 @@ trait ScalaSettings extends AbsScalaSettings
   val Xexperimental = BooleanSetting("-Xexperimental", "Enable experimental extensions.") enabling experimentalSettings
 
   // Feature extensions
-  val XmacroSettings          = MultiStringSetting("-Xmacro-settings", "option", "Custom settings for macros.")
+  val XmacroSettings = MultiStringSetting("-Xmacro-settings", "option", "Custom settings for macros.")
+  val XmacroJit      = BooleanSetting("-Xmacro-jit", "Make macro implementations usable in the same compilation run they are defined.")
 
   /**
    * IDE-specific settings

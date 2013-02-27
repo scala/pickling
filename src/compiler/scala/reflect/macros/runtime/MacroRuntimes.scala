@@ -70,7 +70,8 @@ trait MacroRuntimes extends JavaReflectionRuntimes with ScalaReflectionRuntimes 
    */
   type MacroRuntime = MacroArgs => Any
   class MacroRuntimeResolver(val macroDef: Symbol, val flavor: MacroRuntimeFlavor) extends JavaReflectionResolvers
-                                                                                      with ScalaReflectionResolvers {
+                                                                                      with ScalaReflectionResolvers
+                                                                                      with JitResolvers {
     val binding = loadMacroImplBinding(macroDef)
     val isBundle = binding.isBundle
     val className = binding.className
@@ -78,11 +79,20 @@ trait MacroRuntimes extends JavaReflectionRuntimes with ScalaReflectionRuntimes 
       if (flavor == FLAVOR_EXPAND) binding.methName
       else if (flavor == FLAVOR_ONINFER) "onInfer"
       else abort(s"${flavorNames(flavor)} $macroDef")
+    val methSymbol = attachedMacroImpl(macroDef) map (macroImpl =>
+      if (flavor == FLAVOR_EXPAND) macroImpl
+      else if (flavor == FLAVOR_ONINFER) macroImpl.owner.info.declaration(TermName(methName))
+      else abort(s"${flavorNames(flavor)} $macroDef")
+    )
 
     def resolveRuntime(): MacroRuntime = {
-      // TODO: make this work under partest, where thread-unsafety of reflection raises it's ugly head
-      // resolveScalaReflectionRuntime(defaultMacroClassloader)
-      resolveJavaReflectionRuntime(defaultMacroClassloader)
+      if (settings.XmacroJit.value && currentRun.compiles(methSymbol)) {
+        resolveJitRuntime()
+      } else {
+        // TODO: make this work under partest, where thread-unsafety of reflection raises it's ugly head
+        // resolveScalaReflectionRuntime(defaultMacroClassloader)
+        resolveJavaReflectionRuntime(defaultMacroClassloader)
+      }
     }
   }
 }

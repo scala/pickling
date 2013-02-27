@@ -9,7 +9,7 @@ object Complex {
   def impl[T: c.WeakTypeTag](c: Context): c.Expr[Complex[T]] = {
     import c.universe._
     def shout(msg: String) = {
-      val cannotShutMeUp = c.asInstanceOf[scala.reflect.macros.runtime.Context].universe.currentRun.currentUnit.error _
+      val cannotShutMeUp = c.asInstanceOf[scala.reflect.macros.contexts.Context].universe.currentRun.currentUnit.error _
       cannotShutMeUp(c.enclosingPosition.asInstanceOf[scala.reflect.internal.util.Position], msg)
     }
     try {
