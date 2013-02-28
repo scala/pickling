@@ -346,77 +346,80 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
       }
       else {
         val binding = loadMacroImplBinding(macroDef)
-        val signature = if (binding.isBundle) binding.signature else binding.signature.tail
-        macroTraceVerbose("binding: ")(binding)
+        if (binding.className == "scala.Predef$" && binding.methName == "$qmark$qmark$qmark") Nil
+        else {
+          val signature = if (binding.isBundle) binding.signature else binding.signature.tail
+          macroTraceVerbose("binding: ")(binding)
 
-        // STEP I: prepare value arguments of the macro expansion
-        // wrap argss in c.Expr if necessary (i.e. if corresponding macro impl param is of type c.Expr[T])
-        // expand varargs (nb! varargs can apply to any parameter section, not necessarily to the last one)
-        val trees = map3(argss, paramss, signature)((args, defParams, implParams) => {
-          val isVarargs = isVarArgsList(defParams)
-          if (isVarargs) {
-            if (defParams.length > args.length + 1) MacroTooFewArgumentsError(expandee)
-          } else {
-            if (defParams.length < args.length) MacroTooManyArgumentsError(expandee)
-            if (defParams.length > args.length) MacroTooFewArgumentsError(expandee)
-          }
-
-          val wrappedArgs = mapWithIndex(args)((arg, j) => {
-            val fingerprint = implParams(min(j, implParams.length - 1))
-            fingerprint match {
-              case IMPLPARAM_EXPR => context.Expr[Nothing](arg)(TypeTag.Nothing) // TODO: SI-5752
-              case IMPLPARAM_TREE => arg
-              case _ => abort(s"unexpected fingerprint $fingerprint in $binding with paramss being $paramss " +
-                              s"corresponding to arg $arg in $argss")
+          // STEP I: prepare value arguments of the macro expansion
+          // wrap argss in c.Expr if necessary (i.e. if corresponding macro impl param is of type c.Expr[T])
+          // expand varargs (nb! varargs can apply to any parameter section, not necessarily to the last one)
+          val trees = map3(argss, paramss, signature)((args, defParams, implParams) => {
+            val isVarargs = isVarArgsList(defParams)
+            if (isVarargs) {
+              if (defParams.length > args.length + 1) MacroTooFewArgumentsError(expandee)
+            } else {
+              if (defParams.length < args.length) MacroTooManyArgumentsError(expandee)
+              if (defParams.length > args.length) MacroTooFewArgumentsError(expandee)
             }
+
+            val wrappedArgs = mapWithIndex(args)((arg, j) => {
+              val fingerprint = implParams(min(j, implParams.length - 1))
+              fingerprint match {
+                case IMPLPARAM_EXPR => context.Expr[Nothing](arg)(TypeTag.Nothing) // TODO: SI-5752
+                case IMPLPARAM_TREE => arg
+                case _ => abort(s"unexpected fingerprint $fingerprint in $binding with paramss being $paramss " +
+                                s"corresponding to arg $arg in $argss")
+              }
+            })
+
+            if (isVarargs) {
+              val (normal, varargs) = wrappedArgs splitAt (defParams.length - 1)
+              normal :+ varargs // pack all varargs into a single Seq argument (varargs Scala style)
+            } else wrappedArgs
           })
+          macroTraceVerbose("trees: ")(trees)
 
-          if (isVarargs) {
-            val (normal, varargs) = wrappedArgs splitAt (defParams.length - 1)
-            normal :+ varargs // pack all varargs into a single Seq argument (varargs Scala style)
-          } else wrappedArgs
-        })
-        macroTraceVerbose("trees: ")(trees)
-
-        // STEP II: prepare type arguments of the macro expansion
-        // if paramss have typetag context bounds, add an arglist to argss if necessary and instantiate the corresponding evidences
-        // consider the following example:
-        //
-        //   class D[T] {
-        //     class C[U] {
-        //       def foo[V] = macro Impls.foo[T, U, V]
-        //     }
-        //   }
-        //
-        //   val outer1 = new D[Int]
-        //   val outer2 = new outer1.C[String]
-        //   outer2.foo[Boolean]
-        //
-        // then T and U need to be inferred from the lexical scope of the call using `asSeenFrom`
-        // whereas V won't be resolved by asSeenFrom and need to be loaded directly from `expandee` which needs to contain a TypeApply node
-        // also, macro implementation reference may contain a regular type as a type argument, then we pass it verbatim
-        val tags = signature.flatten filter (_ >= IMPLPARAM_TAG) map (paramPos => {
-          val targ = binding.targs(paramPos).tpe.typeSymbol
-          val tpe = if (targ.isTypeParameterOrSkolem) {
-            if (targ.owner == macroDef) {
-              // doesn't work when macro def is compiled separately from its usages
-              // then targ is not a skolem and isn't equal to any of macroDef.typeParams
-              // val argPos = targ.deSkolemize.paramPos
-              val argPos = macroDef.typeParams.indexWhere(_.name == targ.name)
-              targs(argPos).tpe
+          // STEP II: prepare type arguments of the macro expansion
+          // if paramss have typetag context bounds, add an arglist to argss if necessary and instantiate the corresponding evidences
+          // consider the following example:
+          //
+          //   class D[T] {
+          //     class C[U] {
+          //       def foo[V] = macro Impls.foo[T, U, V]
+          //     }
+          //   }
+          //
+          //   val outer1 = new D[Int]
+          //   val outer2 = new outer1.C[String]
+          //   outer2.foo[Boolean]
+          //
+          // then T and U need to be inferred from the lexical scope of the call using `asSeenFrom`
+          // whereas V won't be resolved by asSeenFrom and need to be loaded directly from `expandee` which needs to contain a TypeApply node
+          // also, macro implementation reference may contain a regular type as a type argument, then we pass it verbatim
+          val tags = signature.flatten filter (_ >= IMPLPARAM_TAG) map (paramPos => {
+            val targ = binding.targs(paramPos).tpe.typeSymbol
+            val tpe = if (targ.isTypeParameterOrSkolem) {
+              if (targ.owner == macroDef) {
+                // doesn't work when macro def is compiled separately from its usages
+                // then targ is not a skolem and isn't equal to any of macroDef.typeParams
+                // val argPos = targ.deSkolemize.paramPos
+                val argPos = macroDef.typeParams.indexWhere(_.name == targ.name)
+                targs(argPos).tpe
+              } else
+                targ.tpe.asSeenFrom(
+                  if (prefix == EmptyTree) macroDef.owner.tpe else prefix.tpe,
+                  macroDef.owner)
             } else
-              targ.tpe.asSeenFrom(
-                if (prefix == EmptyTree) macroDef.owner.tpe else prefix.tpe,
-                macroDef.owner)
-          } else
-            targ.tpe
-          context.WeakTypeTag(tpe)
-        })
-        macroTraceVerbose("tags: ")(tags)
+              targ.tpe
+            context.WeakTypeTag(tpe)
+          })
+          macroTraceVerbose("tags: ")(tags)
 
-        // if present, tags always come in a separate parameter/argument list
-        // that's because macro impls can't have implicit parameters other than c.WeakTypeTag[T]
-        (trees :+ tags).flatten
+          // if present, tags always come in a separate parameter/argument list
+          // that's because macro impls can't have implicit parameters other than c.WeakTypeTag[T]
+          (trees :+ tags).flatten
+        }
       }
     MacroArgs(context, macroTraceVerbose("macroImplArgs: ")(macroImplArgs))
   }

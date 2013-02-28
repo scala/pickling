@@ -16,7 +16,7 @@ trait Validators {
 
   def validateMacroImplRef() = {
     sanityCheck()
-    checkMacroDefMacroImplCorrespondence()
+    if (macroImpl != Predef_???) checkMacroDefMacroImplCorrespondence()
   }
 
   private def sanityCheck() = {

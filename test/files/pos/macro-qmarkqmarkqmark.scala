@@ -1,0 +1,10 @@
+import language.experimental.macros
+
+object Macros {
+  def foo1 = macro ???
+  def foo2(x: Int) = macro ???
+  def foo3[T] = macro ???
+  type Foo1 = macro ???
+  type Foo2(x: Int) = macro ???
+  type Foo3[T] = macro ???
+}

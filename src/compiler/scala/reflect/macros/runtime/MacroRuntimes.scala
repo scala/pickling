@@ -86,12 +86,16 @@ trait MacroRuntimes extends JavaReflectionRuntimes with ScalaReflectionRuntimes 
     )
 
     def resolveRuntime(): MacroRuntime = {
-      if (settings.XmacroJit.value && currentRun.compiles(methSymbol)) {
-        resolveJitRuntime()
+      if (className == "scala.Predef$" && methName == "$qmark$qmark$qmark") {
+        args => args.c.abort(args.c.enclosingPosition, "macro implementation is missing")
       } else {
-        // TODO: make this work under partest, where thread-unsafety of reflection raises it's ugly head
-        // resolveScalaReflectionRuntime(defaultMacroClassloader)
-        resolveJavaReflectionRuntime(defaultMacroClassloader)
+        if (settings.XmacroJit.value && currentRun.compiles(methSymbol)) {
+          resolveJitRuntime()
+        } else {
+          // TODO: make this work under partest, where thread-unsafety of reflection raises it's ugly head
+          // resolveScalaReflectionRuntime(defaultMacroClassloader)
+          resolveJavaReflectionRuntime(defaultMacroClassloader)
+        }
       }
     }
   }
