@@ -522,7 +522,7 @@ object JitCompiler {
               // 2 ) constuctor
               // TODO: Don't ignore Symbol with cycle but generate exception - to receive
               // error description on compilation time against "Symbol not found" or "False overriden usage"
-              for (decl <- body if decl.symbol.name == nme.CONSTRUCTOR || decl.symbol.isOverridingSymbol) {
+              for (decl <- body if decl.symbol.name == nme.CONSTRUCTOR || (decl.symbol != NoSymbol && decl.symbol.isOverridingSymbol)) {
                 try {
                   val ret = getLinkedIds(List(decl.symbol), checkedSyms0, forbiddenSet0, skippedSet0)
                   checkedSyms0 = ret
