@@ -47,31 +47,9 @@ package object pickling {
       // get all declared fields (and not accessor methods)
       val fields = tpe.declarations.filter(!_.isMethod)
 
-      // this is unneeded now, but it's useful for debugging
-      //--from here
-      val implicitPicklers = fields.map{ field =>
-        c.inferImplicitValue(
-          typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.typeSignatureIn(tpe)))
-        )
-      }
-      debug("Implicit values found per field: " + implicitPicklers)
-      //--to here
-
       // build IR
       debug("The tpe just before IR creation is: " + tpe)
       val oir = compose(ObjectIR(tpe, null, List()))
-      val fieldIR2Pickler = oir.fields.map(field =>
-        // infer implicit pickler, if not found, try to generate pickler for field
-        c.inferImplicitValue(
-          typeRef(NoPrefix, typeOf[Pickler[_]].typeSymbol, List(field.tpe))
-        ) match {
-          case EmptyTree =>
-            // EmptyTree essentially means that no pickler could be generated, so abort with error msg
-            c.abort(c.enclosingPosition, "Couldn't generate implicit Pickler[" + field.tpe + "]")
-          case tree =>
-            field -> tree
-        }
-      ).toMap
 
       val chunked: (List[Any], List[FieldIR]) = pickleFormat.genObjectTemplate(irs)(flatten(oir))
       val chunks = chunked._1
@@ -84,13 +62,7 @@ package object pickling {
       def genFieldAccess(fir: FieldIR): c.Tree = {
         // obj.fieldName
         debug("selecting member [" + fir.name + "]")
-        fieldIR2Pickler.get(fir) match {
-          case None =>
-            Select(Select(Select(Ident("obj"), fir.name), "pickle"), "value")
-          case Some(picklerTree) =>
-            Select(Apply(Select(picklerTree, "pickle"), List(Select(Ident("obj"), fir.name))), "value")
-            //Select(Ident("obj"), ir.name)
-        }
+        Select(Select(Select(Ident("obj"), fir.name), "pickle"), "value")
       }
 
       def genChunkLiteral(chunk: Any): c.Tree =
@@ -111,7 +83,7 @@ package object pickling {
         )
 
       // pass the assembled pickle into the generated runtime code
-      reify {
+      val picklerExpr = reify {
         new Pickler[T] {
           def pickle(raw: Any): Pickle = {
             c.Expr[Unit](castAndAssignTree).splice //akin to: val obj = raw.asInstanceOf[<tpe>]
@@ -124,6 +96,9 @@ package object pickling {
         }
       }
 
+      val newPicklerName = newTermName("anon$pickler")
+      val implicitValTree = ValDef(Modifiers(Flag.IMPLICIT), newPicklerName, TypeTree(c.weakTypeOf[Pickler[T]]), c.resetAllAttrs(picklerExpr.tree.duplicate))
+      c.Expr[Pickler[T]](Block(List(implicitValTree), Ident(newPicklerName)))
     } catch {
       case t: Throwable => t.printStackTrace(); throw t
     }
