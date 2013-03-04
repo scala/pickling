@@ -56,12 +56,13 @@ trait Errors extends Traces {
     val verbose = macroDebugVerbose || settings.explaintypes.value
 
     def check(rtpe: Type, atpe: Type): Boolean = {
+      val retOfAnnotationMacro = slot == "return type" && macroDef.isAnnotationMacro
       def prematureOk() = { if (verbose) println(rtpe + " <: " + atpe + "?" + EOL + "true"); true }
       (rtpe, atpe) match {
         case _ if rtpe eq atpe => prematureOk()
         case (TypeRef(_, RepeatedParamClass, rtpe :: Nil), TypeRef(_, RepeatedParamClass, atpe :: Nil)) => check(rtpe, atpe)
-        case (ExprClassOf(_), TreeType()) => prematureOk()
-        case (TreeType(), ExprClassOf(_)) => prematureOk()
+        case (ExprClassOf(_), TreeType()) if !retOfAnnotationMacro => prematureOk() // TODO: make sure this check gets tripped
+        case (TreeType(), ExprClassOf(_)) if !retOfAnnotationMacro => prematureOk()
         case _ => rtpe <:< atpe
       }
     }

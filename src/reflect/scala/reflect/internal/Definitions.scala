@@ -536,6 +536,7 @@ trait Definitions extends api.StandardDefinitions {
     lazy val LiftableClass         = getClassIfDefined("scala.reflect.api.Liftable")    // defined in scala-reflect.jar, so we need to be careful
 
     lazy val MacroClass                          = getClassIfDefined("scala.reflect.macros.Macro") // defined in scala-reflect.jar, so we need to be careful
+    lazy val AnnotationMacroClass                = getClassIfDefined("scala.reflect.macros.AnnotationMacro") // defined in scala-reflect.jar, so we need to be careful
     lazy val MacroContextClass                   = getClassIfDefined("scala.reflect.macros.Context") // defined in scala-reflect.jar, so we need to be careful
          def MacroContextPrefix                  = if (MacroContextClass != NoSymbol) getMemberMethod(MacroContextClass, nme.prefix) else NoSymbol
          def MacroContextPrefixType              = if (MacroContextClass != NoSymbol) getTypeMember(MacroContextClass, tpnme.PrefixType) else NoSymbol
@@ -543,6 +544,7 @@ trait Definitions extends api.StandardDefinitions {
          def MacroContextExprClass               = if (MacroContextClass != NoSymbol) getTypeMember(MacroContextClass, tpnme.Expr) else NoSymbol
          def MacroContextWeakTypeTagClass        = if (MacroContextClass != NoSymbol) getTypeMember(MacroContextClass, tpnme.WeakTypeTag) else NoSymbol
          def MacroContextTreeType                = if (MacroContextClass != NoSymbol) getTypeMember(MacroContextClass, tpnme.Tree) else NoSymbol
+    lazy val AnnotationMacroContextClass         = getClassIfDefined("scala.reflect.macros.AnnotationContext") // defined in scala-reflect.jar, so we need to be careful
     lazy val MacroImplAnnotation                 = requiredClass[scala.reflect.macros.internal.macroImpl]
 
     lazy val StringContextClass                  = requiredClass[scala.StringContext]
@@ -904,6 +906,7 @@ trait Definitions extends api.StandardDefinitions {
     lazy val AnnotationClass            = requiredClass[scala.annotation.Annotation]
     lazy val ClassfileAnnotationClass   = requiredClass[scala.annotation.ClassfileAnnotation]
     lazy val StaticAnnotationClass      = requiredClass[scala.annotation.StaticAnnotation]
+    lazy val MacroAnnotationClass       = requiredClass[scala.annotation.MacroAnnotation]
 
     // Annotations
     lazy val BridgeClass                = requiredClass[scala.annotation.bridge]

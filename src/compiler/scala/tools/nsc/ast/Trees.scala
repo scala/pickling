@@ -63,6 +63,11 @@ trait Trees extends scala.reflect.internal.Trees { self: Global =>
   /** emitted by typer, eliminated by refchecks */
   case class TypeTreeWithDeferredRefCheck()(val check: () => TypeTree) extends TypTree
 
+  /** emitted by typer, eliminated by typer
+   *  TODO: that's a very unfortunate hack
+   */
+  case class MacroAnnotationExpansion(val expandedAnnottee: List[Tree], val expandedCompanion: Option[Tree]) extends Tree
+
   // --- factory methods ----------------------------------------------------------
 
   /** Factory method for a primary constructor super call `super.<init>(args_1)...(args_n)`
@@ -188,6 +193,9 @@ trait Trees extends scala.reflect.internal.Trees { self: Global =>
       traverser.traverse(arg)
     case TypeTreeWithDeferredRefCheck() =>
       // (and rewrap the result? how to update the deferred check? would need to store wrapped tree instead of returning it from check)
+    case MacroAnnotationExpansion(expandedAnnottee, expandedCompanion) =>
+      traverser.traverseTrees(expandedAnnottee)
+      expandedCompanion.map(traverser.traverse _)
     case _ => super.xtraverse(traverser, tree)
   }
 
@@ -196,6 +204,7 @@ trait Trees extends scala.reflect.internal.Trees { self: Global =>
     def SelectFromArray(tree: Tree, qualifier: Tree, selector: Name, erasure: Type): SelectFromArray
     def InjectDerivedValue(tree: Tree, arg: Tree): InjectDerivedValue
     def TypeTreeWithDeferredRefCheck(tree: Tree): TypeTreeWithDeferredRefCheck
+    def MacroAnnotationExpansion(tree: Tree, expandedAnnottee: List[Tree], expandedCompanion: Option[Tree]): MacroAnnotationExpansion
   }
 
   def newStrictTreeCopier: TreeCopier = new StrictTreeCopier
@@ -211,6 +220,8 @@ trait Trees extends scala.reflect.internal.Trees { self: Global =>
     def TypeTreeWithDeferredRefCheck(tree: Tree) = tree match {
       case dc@TypeTreeWithDeferredRefCheck() => new TypeTreeWithDeferredRefCheck()(dc.check).copyAttrs(tree)
     }
+    def MacroAnnotationExpansion(tree: Tree, expandedAnnottee: List[Tree], expandedCompanion: Option[Tree]) =
+      new MacroAnnotationExpansion(expandedAnnottee, expandedCompanion).copyAttrs(tree)
   }
 
   class LazyTreeCopier extends super.LazyTreeCopier with TreeCopier {
@@ -232,6 +243,11 @@ trait Trees extends scala.reflect.internal.Trees { self: Global =>
     def TypeTreeWithDeferredRefCheck(tree: Tree) = tree match {
       case t @ TypeTreeWithDeferredRefCheck() => t
       case _ => this.treeCopy.TypeTreeWithDeferredRefCheck(tree)
+    }
+    def MacroAnnotationExpansion(tree: Tree, expandedAnnottee: List[Tree], expandedCompanion: Option[Tree]) = tree match {
+      case t @ MacroAnnotationExpansion(expandedAnnottee0, expandedCompanion0)
+      if (expandedAnnottee0 == expandedAnnottee && expandedCompanion0 == expandedCompanion) => t
+      case _ => this.treeCopy.MacroAnnotationExpansion(tree, expandedAnnottee, expandedCompanion)
     }
   }
 
@@ -262,6 +278,8 @@ trait Trees extends scala.reflect.internal.Trees { self: Global =>
         tree, transformer.transform(arg))
     case TypeTreeWithDeferredRefCheck() =>
       transformer.treeCopy.TypeTreeWithDeferredRefCheck(tree)
+    case MacroAnnotationExpansion(expandedAnnottee, expandedCompanion) =>
+      transformer.treeCopy.MacroAnnotationExpansion(tree, transformer.transformTrees(expandedAnnottee), expandedCompanion.map(transformer.transform _))
   }
 
   object resetPos extends Traverser {

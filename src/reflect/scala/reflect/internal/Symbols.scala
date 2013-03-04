@@ -505,6 +505,7 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     def isSkolem              = false
     def isMacroType           = false // note that macro types and type macros are two different things
                                       // read up comments to `MacroTypeSymbol` for more info
+    def isMacroAnnotation     = false
 
     /** A Type, but not a Class. */
     def isNonClassType = false
@@ -562,6 +563,7 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     def isTermMacro         = false
     def isTypeMacro         = false // note that macro types and type macros are two different things
                                     // read up comments to `MacroTypeSymbol` for more info
+    def isAnnotationMacro   = false
 
     /** Qualities of MethodSymbols, always false for TypeSymbols
      *  and other TermSymbols.
@@ -2539,8 +2541,9 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
      */
     override def isValue     = !(isModule && hasFlag(PACKAGE | JAVA))
     override def isVariable  = isMutable && !isMethod
-    override def isTermMacro = hasFlag(MACRO) && !isTypeMacro
+    override def isTermMacro = hasFlag(MACRO) && !isTypeMacro && !isAnnotationMacro
     override def isTypeMacro = hasFlag(MACRO) && nme.isTypeMacroName(name)
+    override def isAnnotationMacro = hasFlag(MACRO) && owner.isMacroAnnotation
 
     // interesting only for lambda lift. Captured variables are accessed from inner lambdas.
     override def isCapturedVariable = hasAllFlags(MUTABLE | CAPTURED) && !hasFlag(METHOD)
@@ -3033,6 +3036,7 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
     override def isPackageObjectClass    = isModuleClass && (name == tpnme.PACKAGE)
     override def isPrimitiveValueClass   = definitions.isPrimitiveValueClass(this)
     override def isPrimitive             = isPrimitiveValueClass
+    override def isMacroAnnotation       = tpe <:< MacroAnnotationClass.tpe
 
     // The corresponding interface is the last parent by convention.
     private def lastParent = if (tpe.parents.isEmpty) NoSymbol else tpe.parents.last.typeSymbol

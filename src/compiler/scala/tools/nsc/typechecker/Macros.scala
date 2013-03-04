@@ -306,14 +306,29 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
   }
 
   def macroContext(typer: Typer, prefixTree: Tree, expandeeTree: Tree): MacroContext = {
-    new {
-      val universe: self.global.type = self.global
-      val callsiteTyper: universe.analyzer.Typer = typer.asInstanceOf[global.analyzer.Typer]
-      val expandee = universe.analyzer.macroExpanderAttachment(expandeeTree).original orElse expandeeTree
-      val macroRole = universe.analyzer.macroExpanderAttachment(expandeeTree).role
-    } with UnaffiliatedMacroContext {
-      val prefix = Expr[Nothing](prefixTree)(TypeTag.Nothing)
-      override def toString = "MacroContext(%s@%s +%d)".format(expandee.symbol.name, expandee.pos, enclosingMacros.length - 1 /* exclude myself */)
+    // TODO: how do I remove the duplication?
+    if (expandeeTree.symbol.isAnnotationMacro) {
+      new {
+        val universe: self.global.type = self.global
+        val callsiteTyper: universe.analyzer.Typer = typer.asInstanceOf[global.analyzer.Typer]
+        val expandee = universe.analyzer.macroExpanderAttachment(expandeeTree).original orElse expandeeTree
+        val macroRole = universe.analyzer.macroExpanderAttachment(expandeeTree).role
+        val annottee = universe.analyzer.macroExpanderAttachment(expandeeTree).annottee
+        val companion = universe.analyzer.macroExpanderAttachment(expandeeTree).companion
+      } with UnaffiliatedAnnotationMacroContext {
+        val prefix = Expr[Nothing](prefixTree)(TypeTag.Nothing)
+        override def toString = "AnnotationMacroContext(%s@%s +%d)".format(expandee.symbol.name, expandee.pos, enclosingMacros.length - 1 /* exclude myself */)
+      }
+    } else {
+      new {
+        val universe: self.global.type = self.global
+        val callsiteTyper: universe.analyzer.Typer = typer.asInstanceOf[global.analyzer.Typer]
+        val expandee = universe.analyzer.macroExpanderAttachment(expandeeTree).original orElse expandeeTree
+        val macroRole = universe.analyzer.macroExpanderAttachment(expandeeTree).role
+      } with UnaffiliatedMacroContext {
+        val prefix = Expr[Nothing](prefixTree)(TypeTag.Nothing)
+        override def toString = "MacroContext(%s@%s +%d)".format(expandee.symbol.name, expandee.pos, enclosingMacros.length - 1 /* exclude myself */)
+      }
     }
   }
 
@@ -516,6 +531,9 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
     def onFailure(expanded: Tree): Result = { typer.infer.setError(expandee); expandee match { case expandee: Result => expandee } }
 
     def template: Option[Template] = None
+    def annottee: Tree = EmptyTree
+    def companion: Tree = EmptyTree
+
     def apply(desugared: Tree): Result = {
       if (isMacroExpansionSuppressed(desugared)) onSuppressed(expandee)
       else expand(desugared)
@@ -530,12 +548,12 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
       val start = if (Statistics.canEnable) Statistics.startTimer(macroExpandNanos) else null
       if (Statistics.canEnable) Statistics.incCounter(macroExpandCount)
       try {
-        linkExpandeeAndDesugared(expandee, desugared, role, template)
+        linkExpandeeAndDesugared(expandee, desugared, role, template, annottee, companion)
         macroExpand1(typer, desugared) match {
           case Success(expanded) =>
             if (allowExpanded(expanded)) {
               // also see http://groups.google.com/group/scala-internals/browse_thread/thread/492560d941b315cc
-              val expanded1 = try onSuccess(duplicateAndKeepPositions(expanded)) finally popMacroContext()
+              val expanded1 = try onSuccess(duplicateAndKeepPositions(atPos(expandee.pos)(expanded))) finally popMacroContext()
               if (!hasMacroExpansionAttachment(expanded1)) linkExpandeeAndExpanded(expandee, expanded1)
               if (allowResult(expanded1)) expanded1 else onFailure(expanded)
             } else {
@@ -553,22 +571,14 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
     }
   }
 
-  /** Expands a tree that carries a term, which happens to be a term macro.
-   *  @see MacroExpander
-   */
-   private abstract class TermMacroExpander(role: MacroRole, typer: Typer, expandee: Tree, mode: Mode, pt: Type)
-                  extends MacroExpander[Tree](role, typer, expandee) {
-      override def allowedExpansions: String = "term trees"
-      override def allowExpandee(expandee: Tree) = expandee.isTerm
-      override def onSuccess(expanded: Tree) = typer.typed(expanded, mode, pt)
-      override def onFallback(fallback: Tree) = typer.typed(fallback, mode, pt)
-   }
-
   /** Expands a term macro used in apply role as `M(2)(3)` in `val x = M(2)(3)`.
    *  @see MacroExpander
    */
   def macroExpandApply(typer: Typer, expandee: Tree, mode: Mode, pt: Type) = {
-    object expander extends TermMacroExpander(APPLY_ROLE, typer, expandee, mode, pt) {
+    object expander extends MacroExpander[Tree](APPLY_ROLE, typer, expandee) {
+      override def allowedExpansions: String = "term trees"
+      override def allowExpandee(expandee: Tree) = expandee.isTerm
+      override def onFallback(fallback: Tree) = typer.typed(fallback, mode, pt)
       override def onSuccess(expanded: Tree) = {
         // prematurely annotate the tree with a macro expansion attachment
         // so that adapt called indirectly by typer.typed knows that it needs to apply the existential fixup
@@ -586,7 +596,7 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
           expanded1
         } else {
           if (macroDebugVerbose) println(s"typecheck #2 (against pt = $pt): $expanded1")
-          val expanded2 = typer.context.withImplicitsEnabled(super.onSuccess(expanded1))
+          val expanded2 = typer.context.withImplicitsEnabled(typer.typed(expanded1, mode, pt))
           if (macroDebugVerbose && expanded2.isErrorTyped) println(s"typecheck #2 has failed: ${typer.context.errBuffer}")
           expanded2
         }
@@ -598,7 +608,7 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
   /** Expands a tree that carries a type, which happens to be a macro type.
    *  @see MacroExpander
    */
-  private abstract class MacroTypeExpander[Result: ClassTag](role: MacroRole, typer: Typer, original: Tree, val tpt: Tree, val targs: List[Tree], val argss: List[List[Tree]])
+  private abstract class TypeMacroExpander[Result: ClassTag](role: MacroRole, typer: Typer, original: Tree, val tpt: Tree, val targs: List[Tree], val argss: List[List[Tree]])
                  extends MacroExpander[Result](role, typer, original) {
     def isTypeLike: Boolean = false
     def isParentLike: Boolean = false
@@ -692,7 +702,7 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
    */
   def macroExpandType(typer: Typer, expandee: Tree, mode: Mode, pt: Type) = {
     val treeInfo.Applied(tpt, targs, argss) = expandee
-    object expander extends MacroTypeExpander[Tree](TYPE_ROLE, typer, expandee, tpt, targs, argss) {
+    object expander extends TypeMacroExpander[Tree](TYPE_ROLE, typer, expandee, tpt, targs, argss) {
       override def isTypeLike = true
       override def prepare(desugared: Tree) = typer.typed(desugared, EXPRmode, WildcardType)
       override def onSuccess(expanded: Tree) = typer.typed(expanded, mode, pt)
@@ -706,7 +716,7 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
    */
   def macroExpandAppliedType(typer: Typer, expandee: Tree, mode: Mode) = {
     val treeInfo.Applied(tpt, targs, argss) = expandee
-    object expander extends MacroTypeExpander[Tree](APPLIED_TYPE_ROLE, typer, expandee, tpt, targs, argss) {
+    object expander extends TypeMacroExpander[Tree](APPLIED_TYPE_ROLE, typer, expandee, tpt, targs, argss) {
       override def isTypeLike = true
       override def prepare(desugared: Tree) = typer.typed(desugared, EXPRmode, WildcardType)
       override def onSuccess(expanded: Tree) = typer.typed1(expanded, mode | FUNmode | TAPPmode, WildcardType)
@@ -719,7 +729,7 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
    *  @see MacroExpander
    */
   def macroExpandParent(typer: Typer, original: Tree, tpt: Tree, targs: List[Tree], argss: List[List[Tree]], templ: Template, inMixinPosition: Boolean) = {
-    object expander extends MacroTypeExpander[Tree](PARENT_ROLE, typer, original, tpt, targs, argss) {
+    object expander extends TypeMacroExpander[Tree](PARENT_ROLE, typer, original, tpt, targs, argss) {
       override def isTemplateLike = true
       override def template = Some(templ)
       override def prepare(desugared: Tree) = {
@@ -750,7 +760,7 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
     // back then I tried to play with this, but apparently something in compiler's guts depends on this hack and won't give up
     // therefore we need to undo that hack here or otherwise nullary type macros won't be usable in new role
     val argss1 = if (argss == ListOfNil) Nil else argss
-    object expander extends MacroTypeExpander[Tree](NEW_ROLE, typer, original, tpt, targs, argss1) {
+    object expander extends TypeMacroExpander[Tree](NEW_ROLE, typer, original, tpt, targs, argss1) {
       // TODO: make type macros expanding in new role to behave template-like
       // it kind of makes sense to e.g. let `new TM` expand into `new C { def x = 2 }`
       override def isParentLike = true
@@ -764,15 +774,57 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
   /** Expands a macro type used in annotation role as `TM(2)(3)` in `@TM(2)(3) class C`.
    *  @see MacroExpander
    */
-  def macroExpandAnnotation(typer: Typer, original: Tree, tpt: Tree, targs: List[Tree], argss: List[List[Tree]], mode: Mode, selfsym: Symbol) = {
+  def macroExpandAnnotationType(typer: Typer, original: Tree, tpt: Tree, targs: List[Tree], argss: List[List[Tree]], mode: Mode, selfsym: Symbol) = {
     // TODO: see an explanation of the situation in comments to `macroExpandNew`
     val argss1 = if (argss == ListOfNil) Nil else argss
-    object expander extends MacroTypeExpander[AnnotationInfo](ANNOTATION_ROLE, typer, original, tpt, targs, argss1) {
+    object expander extends TypeMacroExpander[AnnotationInfo](ANNOTATION_ROLE, typer, original, tpt, targs, argss1) {
       override def isParentLike = true
       override def prepare(desugared: Tree) = typer.typed(desugared, EXPRmode, WildcardType)
       override def onSuccess(expanded: Tree) = typer.typedAnnotation(repackApplyAsNew(expanded), mode, selfsym)
       override def onFailure(expanded: Tree) = { typer.infer.setError(original); ErroneousAnnotation }
       override def allowResult(result: AnnotationInfo) = allowResultAnn(result)
+    }
+    expander(original)
+  }
+
+  /** Expands a macro annotation as `ma(2)(3)` in `@ma(2)(3) class C`.
+   *  @see MacroExpander
+   */
+  def macroExpandAnnotation(typer: Typer, original: Tree, tpt: Tree, targs: List[Tree], argss: List[List[Tree]], annottee: Tree, companion: Tree) = {
+    // TODO: see an explanation of the situation in comments to `macroExpandNew`
+    val argss1 = if (argss == ListOfNil) Nil else argss
+    val annottee1 = annottee
+    val companion1 = companion
+    object expander extends MacroExpander[MacroAnnotationExpansion](ANNOTATION_ROLE, typer, original) {
+      override def allowExpandee(expandee: Tree) = expandee match {
+        case treeInfo.Applied(Select(New(_), nme.CONSTRUCTOR), _, _) => true
+        case _ => false
+      }
+
+      override def annottee = annottee1
+      override def companion = companion1
+
+      def ErroneousMacroAnnotationExpansion = typer.infer.setError(MacroAnnotationExpansion(Nil, None))
+      override def onFailure(expanded: Tree): MacroAnnotationExpansion = { typer.infer.setError(expandee); ErroneousMacroAnnotationExpansion }
+      override def onSuccess(expanded: Tree): MacroAnnotationExpansion = expanded.asInstanceOf[MacroAnnotationExpansion]
+
+      // see comments for the corresponding methods in TypeMacroExpander
+      override def onFallback(expanded: Tree): MacroAnnotationExpansion = abort("annotation macros aren't supposed to support fallback")
+      override def onDelayed(expanded: Tree): MacroAnnotationExpansion = { typer.TyperErrorGen.MacroAnnotationHasntBeenExpandedError(expanded); onFailure(expandee) }
+      override def onSkipped(expanded: Tree): MacroAnnotationExpansion = onSuccess(expanded)
+
+      override def expand(expandee: Tree): MacroAnnotationExpansion = {
+        assert(tpt.symbol.isMacroAnnotation, "core of the macro annotation application should have been pre-typechecked in advance")
+        val desugared = atPos(original.pos)(gen.mkApply(Select(New(tpt), nme.transform), targs, argss1))
+        def prepare(desugared: Tree): Tree = typer.typed(desugared, EXPRmode, WildcardType)
+        val desugared1 = unsuppressMacroExpansion(prepare(suppressMacroExpansion(desugared)))
+        if (desugared1 == EmptyTree || desugared1.isErrorTyped) onFailure(desugared1)
+        else {
+          val result = super.expand(desugared1)
+          if (!result.isErroneous) linkExpandeeAndExpanded(annottee, result)
+          result
+        }
+      }
     }
     expander(original)
   }
@@ -804,7 +856,7 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
         // TODO: this is a bug waiting to happen
         // we should remove this check, because it's already there in `macroExpandWithRuntime`
         if (typer.context.macrosEnabled) {
-          val runtime = macroRuntime(expandee.symbol,FLAVOR_EXPAND)
+          val runtime = macroRuntime(expandee.symbol, FLAVOR_EXPAND)
           if (runtime != null) macroExpandWithRuntime(typer, expandee, runtime)
           else macroExpandWithoutRuntime(typer, expandee)
         } else {
@@ -844,17 +896,19 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
           val numErrors    = reporter.ERROR.count
           def hasNewErrors = reporter.ERROR.count > numErrors
           val expanded = { pushMacroContext(args.c); runtime(args) }
+          macroLogVerbose("original:")
+          macroLogLite("" + expanded + "\n" + showRaw(expanded))
           if (hasNewErrors) MacroGeneratedTypeError(expandee)
-          def validateResultingTree(expanded: Tree) = {
-            macroLogVerbose("original:")
-            macroLogLite("" + expanded + "\n" + showRaw(expanded))
+          def validated(expanded: Tree) = {
             val freeSyms = expanded.freeTerms ++ expanded.freeTypes
             freeSyms foreach (sym => MacroFreeSymbolError(expandee, sym))
-            Success(atPos(enclosingMacroPosition.focus)(expanded))
+            expanded
           }
           expanded match {
-            case expanded: Expr[_] => validateResultingTree(expanded.tree)
-            case expanded: Tree => validateResultingTree(expanded)
+            case expanded: Expr[_] if expandee.symbol.isTermMacro => Success(validated(expanded.tree))
+            case expanded: Tree if !expandee.symbol.isAnnotationMacro => Success(validated(expanded))
+            case expanded: MacroAnnotationExpansion if expandee.symbol.isAnnotationMacro => Success(validated(expanded))
+            case expanded: Tree if expandee.symbol.isAnnotationMacro => Success(MacroAnnotationExpansion(List(validated(expanded)), None))
             case _ => MacroExpansionHasInvalidTypeError(expandee, expanded)
           }
         } catch {
@@ -956,7 +1010,7 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
           context.macrosEnabled = typer.context.macrosEnabled
           // if it's a type macro, its expansion will be typechecked elsewhere
           // if it's a term macro, we need to process the expansion immediately
-          if (tree.symbol.isTypeMacro) {
+          if (tree.symbol.isTypeMacro || tree.symbol.isAnnotationMacro) {
             assert(tree == expandee, s"tree = ${showRaw(tree)}, expandee = ${showRaw(expandee)}")
             macroExpand1(newTyper(context), tree).result
           } else {

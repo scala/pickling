@@ -55,6 +55,9 @@ trait Printers extends scala.reflect.internal.Printers { this: Global =>
     case SelectFromArray(qualifier, name, _) =>
       treePrinter.print(qualifier, ".<arr>", symName(tree, name))
 
+    case MacroAnnotationExpansion(expandedAnnottee, expandedCompanion) =>
+      treePrinter.print("<macro annotation expansion>(", expandedAnnottee, expandedCompanion, ")")
+
     case _ =>
       super.xprintTree(treePrinter, tree)
   }

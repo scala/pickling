@@ -692,6 +692,10 @@ trait ContextErrors {
         issueNormalTypeError(expandee, "macro has not been expanded")
       }
 
+      def MacroAnnotationHasntBeenExpandedError(expandee: Tree) = {
+        issueNormalTypeError(expandee, "macro has not been expanded")
+      }
+
       def MacroTypeExpansionViolatesOverriddenBounds(expandee: Tree, result: Type, overridden: Symbol, bounds: Type) = {
         issueNormalTypeError(expandee, s"macro expansion $result violates bounds $bounds of the overridden $overridden in ${overridden.owner}")
       }
@@ -789,10 +793,19 @@ trait ContextErrors {
       }
 
       def MacroExpansionHasInvalidTypeError(expandee: Tree, expanded: Any) = {
-        val expected = if (expandee.symbol.isTermMacro) "expr" else "tree"
-        val isPathMismatch =
-          if (expandee.symbol.isTermMacro) expanded != null && expanded.isInstanceOf[scala.reflect.api.Exprs#Expr[_]]
-          else expanded != null && expanded.isInstanceOf[scala.reflect.internal.Trees#Tree]
+        val expected =
+          if (expandee.symbol.isTermMacro) "expr or tree"
+          else if (expandee.symbol.isTypeMacro) "tree"
+          else if (expandee.symbol.isAnnotationMacro) "tree or trees"
+          else abort(expandee.symbol.toString)
+        def isUnaffiliatedExpr = expanded.isInstanceOf[scala.reflect.api.Exprs#Expr[_]]
+        def isUnaffiliatedTree = expanded.isInstanceOf[scala.reflect.api.Trees#TreeApi]
+        val isPathMismatch = expanded != null && {
+          if (expandee.symbol.isTermMacro) isUnaffiliatedExpr || isUnaffiliatedTree
+          else if (expandee.symbol.isTypeMacro) isUnaffiliatedTree
+          else if (expandee.symbol.isAnnotationMacro) isUnaffiliatedTree
+          else abort(expandee.symbol.toString)
+        }
         macroExpansionError(expandee,
           s"macro must return a compiler-specific $expected; returned value is " + (
             if (expanded == null) "null"

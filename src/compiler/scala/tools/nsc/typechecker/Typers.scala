@@ -1809,6 +1809,13 @@ trait Typers extends Adaptations with Tags {
              |make your annotation visible at runtime.  If that is what
              |you want, you must write the annotation class in Java.""".stripMargin)
       }
+      if (clazz isNonBottomSubClass MacroAnnotationClass) {
+        impl2.body foreach {
+          case ctor @ DefDef(_, name, _, vparamss, _, _) if nme.isConstructorName(name) && vparamss != ListOfNil =>
+            unit.error(ctor.pos, "macro annotations cannot have non-trivial constructors")
+          case _ =>
+        }
+      }
 
       if (!isPastTyper) {
         for (ann <- clazz.getAnnotation(DeprecatedAttr)) {
@@ -1913,6 +1920,17 @@ trait Typers extends Adaptations with Tags {
     /** <!-- 2 --> Check that inner classes do not inherit from Annotation
      */
     def typedTemplate(templ: Template, parents1: List[Tree]): Template = {
+      // HACK HACK HACK!!!
+      // remove this once macro annotations in `enterSym` are working
+      if (isPastTyper) typedTemplate1(templ, parents1)
+      else context.outer.tree match {
+        case ExpandedIntoTree(MacroAnnotationExpansion(List(implDef: ImplDef), None)) => typedTemplate1(implDef.impl, parents1)
+        case ExpandedIntoTree(expansion) => abort(expansion.toString)
+        case _ => typedTemplate1(templ, parents1)
+      }
+    }
+
+    private def typedTemplate1(templ: Template, parents1: List[Tree]): Template = {
       val clazz = context.owner
       clazz.annotations.map(_.completeInfo())
       if (templ.symbol == NoSymbol)
@@ -3568,7 +3586,7 @@ trait Typers extends Adaptations with Tags {
 
       val Select(New(core), nme.CONSTRUCTOR) = fun0
       val (probe, macrotpt) = probeTypeConstructor(core)
-      if (probe.isMacroType) return macroExpandAnnotation(this, ann, macrotpt, targs, argss, mode, selfsym)
+      if (probe.isMacroType) return macroExpandAnnotationType(this, ann, macrotpt, targs, argss, mode, selfsym)
 
       val typedFun0 = typed(fun0, mode.forFunMode, WildcardType)
       val typedFunPart = (
@@ -5019,9 +5037,12 @@ trait Typers extends Adaptations with Tags {
       def typedPackageDef(pdef: PackageDef) = {
         val pid1 = typedQualifier(pdef.pid).asInstanceOf[RefTree]
         assert(sym.moduleClass ne NoSymbol, sym)
-        val stats1 = newTyper(context.make(tree, sym.moduleClass, sym.info.decls))
-          .typedStats(pdef.stats, NoSymbol)
-        treeCopy.PackageDef(tree, pid1, stats1) setType NoType
+        val typer = newTyper(context.make(tree, sym.moduleClass, sym.info.decls))
+        val stats1 =
+          if (isPastTyper || reporter.hasErrors) pdef.stats
+          else pdef.stats flatMap rewrappingWrapperTrees(namer.addDerivedTrees(typer, _))
+        val stats2 = typer.typedStats(stats1, NoSymbol)
+        treeCopy.PackageDef(tree, pid1, stats2) setType NoType
       }
 
       /**

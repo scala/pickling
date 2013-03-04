@@ -11,12 +11,13 @@ trait StdAttachments {
    *  After a macro application has been successfully expanded, this attachment is destroyed.
    */
   type UnaffiliatedMacroContext = scala.reflect.macros.contexts.Context
+  type UnaffiliatedAnnotationMacroContext = scala.reflect.macros.contexts.AnnotationContext
   type MacroContext = UnaffiliatedMacroContext { val universe: self.global.type }
   case class MacroRuntimeAttachment(delayed: Boolean, typerContext: Context, macroContext: Option[MacroContext])
 
   /** Scratchpad for the macro expander, which is used to store all intermediate data except the details about the runtime.
    */
-  case class MacroExpanderAttachment(original: Tree, desugared: Tree, role: MacroRole, enclosingTemplate: Option[Template])
+  case class MacroExpanderAttachment(original: Tree, desugared: Tree, role: MacroRole, enclosingTemplate: Option[Template], annottee: Tree, companion: Tree)
 
   /** Loads underlying MacroExpanderAttachment from a macro expandee or returns a default value for that attachment.
    */
@@ -24,15 +25,15 @@ trait StdAttachments {
     tree.attachments.get[MacroExpanderAttachment] getOrElse {
       tree match {
         case Apply(fn, _) if tree.isInstanceOf[ApplyToImplicitArgs] => macroExpanderAttachment(fn)
-        case _ => MacroExpanderAttachment(tree, EmptyTree, APPLY_ROLE, None)
+        case _ => MacroExpanderAttachment(tree, EmptyTree, APPLY_ROLE, None, EmptyTree, EmptyTree)
       }
     }
 
   /** After macro expansion is completed, links the expandee and the expansion result
    *  by annotating them both with a `MacroExpansionAttachment`.
    */
-  def linkExpandeeAndDesugared(expandee: Tree, desugared: Tree, role: MacroRole, template: Option[Template]): Unit = {
-    val metadata = MacroExpanderAttachment(expandee, desugared, role, template)
+  def linkExpandeeAndDesugared(expandee: Tree, desugared: Tree, role: MacroRole, template: Option[Template], annottee: Tree, companion: Tree): Unit = {
+    val metadata = MacroExpanderAttachment(expandee, desugared, role, template, annottee, companion)
     expandee updateAttachment metadata
     desugared updateAttachment metadata
   }

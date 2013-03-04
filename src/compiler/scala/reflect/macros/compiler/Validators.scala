@@ -50,7 +50,7 @@ trait Validators {
         if (aparam.name != rparam.name && !rparam.isSynthetic) MacroImplParamNameMismatchError(aparam, rparam)
         if (isRepeated(aparam) ^ isRepeated(rparam)) MacroImplVarargMismatchError(aparam, rparam)
         val aparamtpe = aparam.tpe.dealias match {
-          case RefinedType(List(tpe), Scope(sym)) if tpe =:= MacroContextClass.tpe && sym.allOverriddenSymbols.contains(MacroContextPrefixType) => tpe
+          case RefinedType(List(tpe), Scope(sym)) if tpe =:= ctxTpe && sym.allOverriddenSymbols.contains(MacroContextPrefixType) => tpe
           case tpe => tpe
         }
         checkMacroImplParamTypeMismatch(atpeToRtpe(aparamtpe), rparam)
@@ -141,9 +141,8 @@ trait Validators {
     // had to move method's body to an object because of the recursive dependencies between sigma and param
     object SigGenerator {
       val cache = scala.collection.mutable.Map[Symbol, Symbol]()
-      val macroDef = macroDdef.symbol
       val ctxPrefix =
-        if (isImplMethod) singleType(NoPrefix, makeParam(nme.macroContext, macroDdef.pos, MacroContextClass.tpe, SYNTHETIC))
+        if (isImplMethod) singleType(NoPrefix, makeParam(nme.macroContext, macroDdef.pos, ctxTpe, SYNTHETIC))
         else singleType(ThisType(macroImpl.owner), macroImpl.owner.tpe.member(nme.c))
       var paramss =
         if (isImplMethod) List(ctxPrefix.termSymbol) :: mmap(macroDdef.vparamss)(param)
@@ -154,6 +153,7 @@ trait Validators {
       val implReturnType =
         if (macroDef.isTermMacro) sigma(increaseMetalevel(ctxPrefix, macroDefRet))
         else if (macroDef.isTypeMacro) typeRef(ctxPrefix, TreesTreeType, Nil)
+        else if (macroDef.isAnnotationMacro) typeRef(ctxPrefix, TreesTreeType, Nil)
         else abort(s"unknown macro flavor: $macroDef")
 
       object SigmaTypeMap extends TypeMap {

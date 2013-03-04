@@ -12,6 +12,11 @@ trait Resolvers {
   import definitions._
   import treeInfo._
 
+  /** Determines the type of context implied by the macro def.
+   *  Currently the logic is simple: macro annotation => AnnotationContext, otherwise Context
+   */
+  val ctxTpe = if (macroDef.isAnnotationMacro) AnnotationMacroContextClass.tpe else MacroContextClass.tpe
+
   /** Resolves a macro impl reference provided in the right-hand side of the given macro definition.
    *
    *  Acceptable shapes of the right-hand side:
@@ -45,7 +50,7 @@ trait Resolvers {
         // synthesize the invoker, i.e. given `trait Foo extends Macro { def expand = ... } `
         // create a top-level definition `class Foo$invoker(val c: Context) extends Foo`
         val invokerName = TypeName(bundleClass.name.toString + nme.MACRO_INVOKER_SUFFIX)
-        def mkContextValDef(flags: Long) = ValDef(Modifiers(flags), nme.c, Ident(MacroContextClass), EmptyTree)
+        def mkContextValDef(flags: Long) = ValDef(Modifiers(flags), nme.c, TypeTree(ctxTpe), EmptyTree)
         val contextField = mkContextValDef(PARAMACCESSOR)
         val contextParam = mkContextValDef(PARAM | PARAMACCESSOR)
         val invokerCtor = DefDef(Modifiers(), nme.CONSTRUCTOR, Nil, List(List(contextParam)), TypeTree(), Block(List(pendingSuperCall), Literal(Constant(()))))
