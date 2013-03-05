@@ -992,10 +992,14 @@ trait Namers extends MethodSynthesis {
     }
 
     private def templateSig(templ: Template): Type = {
+      templateSig1(templ, allowMacros = true)
+    }
+
+    private def templateSig1(templ: Template, allowMacros: Boolean): Type = {
       // HACK HACK HACK! и в продакшен
       // should be removed once the `enterSym` thingie is made to work
       val annottee = context.tree.asInstanceOf[ImplDef]
-      def tryExpand(ann: Tree): Option[MacroAnnotationExpansion] = ann match {
+      def tryExpand(ann: Tree, parent: Boolean): Option[MacroAnnotationExpansion] = ann match {
         case ann @ treeInfo.Applied(Select(New(core), nme.CONSTRUCTOR), targs, argss) =>
           val annContext = newNamer(context.outer).innerNamer.context.make(ann)
           annContext.setReportErrors()
@@ -1003,37 +1007,49 @@ trait Namers extends MethodSynthesis {
           val (probe, tpt) = annTyper.probeTypeConstructor(core)
           if (probe.isMacroType) {
             val AnnotationInfo(atp, args, assocs) = macroExpandAnnotationType(annTyper, ann, tpt, targs, argss, EXPRmode, NoSymbol)
-            tryExpand(atPos(ann.pos)(gen.mkApply(Select(New(TypeTree(atp)), nme.CONSTRUCTOR), Nil, argss)))
-          } else if (probe.isMacroAnnotation) {
+            tryExpand(atPos(ann.pos)(gen.mkApply(Select(New(TypeTree(atp)), nme.CONSTRUCTOR), Nil, argss)), parent)
+          } else if (probe.isMacroAnnotation && allowMacros) {
             Some(macroExpandAnnotation(annTyper, ann, tpt, targs, argss, annottee, EmptyTree))
           } else {
             None
           }
       }
-      val expanded = annottee.mods.annotations.view.flatMap(tryExpand).headOption
-      expanded match {
-        case Some(MacroAnnotationExpansion(List(ClassDef(_, _, _, templ1)), None)) if annottee.isInstanceOf[ClassDef] =>
-          templateSig1(templ1)
-        case Some(MacroAnnotationExpansion(List(ModuleDef(_, _, templ1)), None)) if annottee.isInstanceOf[ModuleDef] =>
-          templateSig1(templ1)
-        case None =>
-          templateSig1(templ)
+      object TemplateFromAnnotationExpansion {
+        def unapply(tree: Tree) = tree match {
+          case MacroAnnotationExpansion(List(ClassDef(_, _, _, templ1)), None) if annottee.isInstanceOf[ClassDef] => Some(templ1)
+          case MacroAnnotationExpansion(List(ModuleDef(_, _, templ1)), None) if annottee.isInstanceOf[ModuleDef] => Some(templ1)
+          case MacroAnnotationExpansion(_, _) => abort(tree.toString)
+          case _ => None
+        }
       }
-    }
-
-    private def templateSig1(templ: Template): Type = {
-      // when a parent type happens to be a macro type which expands into a template
-      // macro engine will return Ident(AnyRefClass) with an attachment carrying the actual expansion
-      // here we detect this situation and replace the original template with a new one
-      val parentTrees = typer.typedParentTypes(templ)
-      val expansions = flatCollect(parentTrees) { case ExpandedIntoTemplate(templ1) => Some(templ1) }
-      expansions match {
-        case templ1 :: _ =>
-          linkExpandeeAndExpanded(templ, templ1)
-          templateSig(templ1)
-        case _ =>
-          val parentTypes = parentTrees map (_.tpe) map (tpe => if (tpe.isError) AnyRefClass.tpe else tpe)
-          templateSig2(templ, parentTypes)
+      val expanded = annottee.mods.annotations.view.flatMap(ann => tryExpand(ann, parent = false)).headOption
+      expanded match {
+        case Some(TemplateFromAnnotationExpansion(templ1)) => templateSig1(templ1, allowMacros = false)
+        case None =>
+          // when a parent type happens to be a macro type which expands into a template
+          // macro engine will return Ident(AnyRefClass) with an attachment carrying the actual expansion
+          // here we detect this situation and replace the original template with a new one
+          val parentTrees = typer.typedParentTypes(templ)
+          val expansions = flatCollect(parentTrees) { case ExpandedIntoTemplate(templ1) => Some(templ1) }
+          expansions match {
+            case templ1 :: _ =>
+              linkExpandeeAndExpanded(templ, templ1)
+              templateSig(templ1)
+            case _ =>
+              val parentTypes = parentTrees map (_.tpe) map (tpe => if (tpe.isError) AnyRefClass.tpe else tpe)
+              val parentAnnotations = parentTypes flatMap (_.typeSymbol.initialize.annotations)
+              val expanded = parentAnnotations.view.flatMap({
+                case AnnotationInfo(atp, args, Nil) if atp.typeSymbol.annotations.exists(_.atp.typeSymbol == InheritedAttr) =>
+                  val ann = gen.mkApply(Select(New(TypeTree(atp)), nme.CONSTRUCTOR), Nil, List(args)) // TODO: New(atp). is it going to work for polymorphic types?
+                  tryExpand(ann, parent = true)
+                case _ => None
+              }).headOption
+              // val expanded: Option[Tree] = None
+              expanded match {
+                case Some(TemplateFromAnnotationExpansion(templ1)) => templateSig1(templ1, allowMacros = false)
+                case None => templateSig2(templ, parentTypes)
+              }
+          }
       }
     }
 
