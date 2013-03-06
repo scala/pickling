@@ -9,11 +9,11 @@
 package scala.pickling
 package ir
 
-import scala.reflect.macros.Context
+import scala.reflect.api.Universe
 
 
-class IRs[C <: Context with Singleton](val ctx: C) {
-  import ctx._
+class IRs[U <: Universe with Singleton](val uni: U) {
+  import uni._
 
   trait IR
   case class FieldIR(name: String, tpe: Type)

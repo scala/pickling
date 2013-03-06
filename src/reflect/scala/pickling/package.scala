@@ -9,6 +9,8 @@
 package scala
 
 import scala.language.experimental.macros
+import scala.reflect.runtime.{universe => ru}
+import scala.reflect.api.Universe
 
 package object pickling {
 
@@ -30,7 +32,7 @@ package object pickling {
 
   def genPicklerImpl[T: c.WeakTypeTag](c: Context): c.Expr[Pickler[T]] = {
     import c.universe._
-    val irs = new IRs[c.type](c)
+    val irs = new IRs[c.universe.type](c.universe)
     import irs._
 
     val tt = weakTypeTag[T]
@@ -43,9 +45,6 @@ package object pickling {
 
       // get instance of PickleFormat
       val pickleFormat = c.eval(c.Expr[PickleFormat](c.resetAllAttrs(pickleFormatTree)))
-
-      // get all declared fields (and not accessor methods)
-      val fields = tpe.declarations.filter(!_.isMethod)
 
       // build IR
       debug("The tpe just before IR creation is: " + tpe)
@@ -106,7 +105,6 @@ package object pickling {
 }
 
 package pickling {
-  import scala.reflect.macros.Context
 
   trait Pickler[T] {
     def pickle(obj: Any): Pickle
@@ -126,9 +124,9 @@ package pickling {
   trait PickleFormat {
     import ir._
 
-    def genTypeTemplate(c: Context)(tpe: c.universe.Type): Any
-    def genObjectTemplate[C <: Context with Singleton](irs: IRs[C])(ir: irs.ObjectIR): (List[Any], List[irs.FieldIR])
-    def genFieldTemplate[C <: Context with Singleton](irs: IRs[C])(ir: irs.FieldIR): (List[Any], List[irs.FieldIR])
+    def genTypeTemplate(u: Universe)(tpe: u.Type): Any
+    def genObjectTemplate[U <: Universe with Singleton](irs: IRs[U])(ir: irs.ObjectIR): (List[Any], List[irs.FieldIR])
+    def genFieldTemplate[U <: Universe with Singleton](irs: IRs[U])(ir: irs.FieldIR): (List[Any], List[irs.FieldIR])
 
     def concatChunked(c1: Any, c2: Any): Any
   }

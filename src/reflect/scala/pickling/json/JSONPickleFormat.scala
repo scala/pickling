@@ -9,7 +9,7 @@
 package scala.pickling
 
 package object json {
-  import reflect.macros.Context
+  import scala.reflect.api.Universe
   import ir._
 
   // each pickle formatter needs to provide hard-coded picklers for
@@ -31,9 +31,7 @@ package object json {
 
   class JSONPickleFormat extends PickleFormat {
 
-    def genTypeTemplate(c: Context)(tpe: c.universe.Type): Any = tpe.typeSymbol.name.toString
-
-    //def genValueTemplate(c: Context)(tpe: c.universe.Type): Option[Any => Any] =
+    def genTypeTemplate(u: Universe)(tpe: u.Type): Any = tpe.typeSymbol.name.toString
 
     def pairUp[T](l: List[T]): List[(T, T)] = l match {
       case fst :: snd :: rest => (fst, snd) :: pairUp(rest)
@@ -41,7 +39,7 @@ package object json {
     }
 
     // maybe later we could make c an implicit parameter
-    def genObjectTemplate[C <: Context with Singleton](irs: IRs[C])(ir: irs.ObjectIR): (List[Any], List[irs.FieldIR]) = {
+    def genObjectTemplate[U <: Universe with Singleton](irs: IRs[U])(ir: irs.ObjectIR): (List[Any], List[irs.FieldIR]) = {
       import irs._
       type Chunked = (List[Any], List[FieldIR])
 
@@ -49,7 +47,7 @@ package object json {
       debug("fields: " + ir.fields)
 
       if (ir.fields.isEmpty) {
-        val objectChunk = "{\n  \"tpe\": \"" + genTypeTemplate(irs.ctx)(ir.tpe) + "\"\n}"
+        val objectChunk = "{\n  \"tpe\": \"" + genTypeTemplate(irs.uni)(ir.tpe) + "\"\n}"
         (List(objectChunk), List())
       } else {
         // each element in this list is a pair (List[Any], List[FieldIR]) for each field
@@ -76,7 +74,7 @@ package object json {
 
         debug("field chunks: " + fieldChunks.mkString("]["))
 
-        val objectHeaderChunk: String = "{\n  \"tpe\": \"" + genTypeTemplate(irs.ctx)(ir.tpe) + "\""
+        val objectHeaderChunk: String = "{\n  \"tpe\": \"" + genTypeTemplate(irs.uni)(ir.tpe) + "\""
 
         val objectFooterChunk: String = "\n}"
 
@@ -91,7 +89,7 @@ package object json {
       }
     }
 
-    def genFieldTemplate[C <: Context with Singleton](irs: IRs[C])(ir: irs.FieldIR): (List[Any], List[irs.FieldIR]) =
+    def genFieldTemplate[U <: Universe with Singleton](irs: IRs[U])(ir: irs.FieldIR): (List[Any], List[irs.FieldIR]) =
       (List("  \"" + ir.name + "\": ", ""), List(ir))
 
     def concatChunked(c1: Any, c2: Any): Any =
