@@ -240,6 +240,7 @@ trait TypeTags { self: Universe =>
         case _          => new WeakTypeTagImpl[T](mirror1.asInstanceOf[Mirror], tpec1)
       }
 
+    def apply[T](tpe: Type): WeakTypeTag[T] = WeakTypeTag[T](rootMirror, FixedMirrorTypeCreator(rootMirror, tpe))
     def unapply[T](ttag: WeakTypeTag[T]): Option[Type] = Some(ttag.tpe)
   }
 
@@ -318,6 +319,7 @@ trait TypeTags { self: Universe =>
         case _          => new TypeTagImpl[T](mirror1.asInstanceOf[Mirror], tpec1)
       }
 
+    def apply[T](tpe: Type): TypeTag[T] = TypeTag[T](rootMirror, FixedMirrorTypeCreator(rootMirror, tpe))
     def unapply[T](ttag: TypeTag[T]): Option[Type] = Some(ttag.tpe)
   }
 

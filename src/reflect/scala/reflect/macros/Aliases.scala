@@ -51,15 +51,6 @@ trait Aliases {
   /** Constructor/Extractor for `Expr`. */
   val Expr = universe.Expr
 
-  /** A shorthand to create an expr.
-   *
-   *  Unlike the conventional expr factory, which requires a [[scala.reflect.api.TreeCreator]],
-   *  this one accepts a regular tree, but the resulting exprs are unable of being migrated
-   *  to other universes/mirrors (the functionality normally not needed for macros, since there is
-   *  only one compile-time universe and only one compile-time mirror).
-   */
-  def Expr[T: WeakTypeTag](tree: Tree): Expr[T]
-
   /** The type of weak type tags. */
   type WeakTypeTag[T] = universe.WeakTypeTag[T]
 
@@ -71,24 +62,6 @@ trait Aliases {
 
   /** Constructor/Extractor for `TypeTag`. */
   val TypeTag = universe.TypeTag
-
-  /** A shorthand to create a weak type tag.
-   *
-   *  Unlike the conventional type tag factory, which requires a [[scala.reflect.api.TypeCreator]],
-   *  this one accepts a regular type, but the resulting type tags are unable of being migrated
-   *  to other universes/mirrors (the functionality normally not needed for macros, since there is
-   *  only one compile-time universe and only one compile-time mirror).
-   */
-  def WeakTypeTag[T](tpe: Type): WeakTypeTag[T]
-
-  /** A shorthand to create a type tag.
-   *
-   *  Unlike the conventional type tag factory, which requires a [[scala.reflect.api.TypeCreator]],
-   *  this one accepts a regular type, but the resulting type tags are unable of being migrated
-   *  to other universes/mirrors (the functionality normally not needed for macros, since there is
-   *  only one compile-time universe and only one compile-time mirror).
-   */
-  def TypeTag[T](tpe: Type): TypeTag[T]
 
   /**
    * Shortcut for `implicitly[WeakTypeTag[T]]`
