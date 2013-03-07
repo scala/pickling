@@ -28,8 +28,6 @@ package object pickling {
     }
   }
 
-  implicit def genPickler[T]: Pickler[T] = macro genPicklerImpl[T]
-
   def genPicklerImpl[T: c.WeakTypeTag](c: Context): c.Expr[Pickler[T]] = {
     import c.universe._
     val irs = new IRs[c.universe.type](c.universe)
@@ -109,6 +107,10 @@ package pickling {
   trait Pickler[T] {
     def pickle(obj: Any): Pickle
     //def unpickle(p: Pickle): T
+  }
+
+  object Pickler {
+    implicit def genPickler[T]: Pickler[T] = macro genPicklerImpl[T]
   }
 
   trait Pickle {
