@@ -37,7 +37,6 @@ abstract class SymbolTable extends macros.Universe
                               with Required
                               with CapturedVariables
                               with StdAttachments
-                              with StdCreators
                               with BuildUtils
                               with PrivateWithin
 {

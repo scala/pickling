@@ -130,6 +130,7 @@ trait Exprs { self: Universe =>
    */
   object Expr {
     def apply[T: WeakTypeTag](mirror: scala.reflect.api.Mirror[self.type], treec: TreeCreator): Expr[T] = new ExprImpl[T](mirror.asInstanceOf[Mirror], treec)
+    def apply[T: WeakTypeTag](tree: Tree): Expr[T] = Expr[T](rootMirror, FixedMirrorTreeCreator(rootMirror, tree))
     def unapply[T](expr: Expr[T]): Option[Tree] = Some(expr.tree)
   }
 
