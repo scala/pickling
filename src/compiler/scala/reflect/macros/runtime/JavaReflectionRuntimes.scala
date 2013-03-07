@@ -25,8 +25,12 @@ trait JavaReflectionRuntimes {
         macroLogVerbose("successfully loaded macro impl as (%s, %s)".format(implClass, implMeth))
         args => {
           val implObj =
-            if (isBundle) implClass.getConstructor(classOf[scala.reflect.macros.Context]).newInstance(args.c)
-            else implClass.getField("MODULE$").get(null)
+            if (isBundle) {
+              implClass.getConstructors.filter(_.getParameterTypes.toList match {
+                case ctxClass :: Nil => classOf[scala.reflect.macros.Context].isAssignableFrom(ctxClass)
+                case _ => false
+              }).head.newInstance(args.c)
+            } else implClass.getField("MODULE$").get(null)
           val implArgs = if (isBundle) args.others else args.c +: args.others
           implMeth.invoke(implObj, implArgs.asInstanceOf[Seq[AnyRef]]: _*)
         }
