@@ -12,6 +12,7 @@ import java.lang.{Class => jClass}
 import scala.compat.Platform.EOL
 import scala.reflect.NameTransformer
 import scala.reflect.api.JavaUniverse
+import scala.reflect.internal.Mode
 
 abstract class ToolBoxFactory[U <: JavaUniverse](val u: U) { factorySelf =>
 
@@ -161,11 +162,11 @@ abstract class ToolBoxFactory[U <: JavaUniverse](val u: U) { factorySelf =>
         unwrapped
       }
 
-      def typeCheck(expr: Tree, pt: Type, silent: Boolean, withImplicitViewsDisabled: Boolean, withMacrosDisabled: Boolean): Tree =
+      def typeCheck(expr: Tree, pt: Type, mode: Mode, silent: Boolean, withImplicitViewsDisabled: Boolean, withMacrosDisabled: Boolean): Tree =
         transformDuringTyper(expr, withImplicitViewsDisabled = withImplicitViewsDisabled, withMacrosDisabled = withMacrosDisabled)(
           (currentTyper, expr) => {
             trace("typing (implicit views = %s, macros = %s): ".format(!withImplicitViewsDisabled, !withMacrosDisabled))(showAttributed(expr, true, true, settings.Yshowsymkinds.value))
-            currentTyper.silent(_.typed(expr, EXPRmode, pt)) match {
+            currentTyper.silent(_.typed(expr, mode, pt)) match {
               case analyzer.SilentResultValue(result) =>
                 trace("success: ")(showAttributed(result, true, true, settings.Yshowsymkinds.value))
                 result
@@ -348,13 +349,17 @@ abstract class ToolBoxFactory[U <: JavaUniverse](val u: U) { factorySelf =>
     lazy val importer = compiler.mkImporter(u)
     lazy val exporter = importer.reverse
 
-    def typeCheck(tree: u.Tree, expectedType: u.Type, silent: Boolean = false, withImplicitViewsDisabled: Boolean = false, withMacrosDisabled: Boolean = false): u.Tree = compiler.withCleanupCaches {
+    type TypecheckMode = Mode
+    def EXPRmode = Mode.EXPRmode
+    def TYPEmode = Mode.TYPEmode
+
+    def typeCheck(tree: u.Tree, expectedType: u.Type, mode: TypecheckMode, silent: Boolean = false, withImplicitViewsDisabled: Boolean = false, withMacrosDisabled: Boolean = false): u.Tree = compiler.withCleanupCaches {
       if (compiler.settings.verbose.value) println("importing "+tree+", expectedType = "+expectedType)
       val ctree: compiler.Tree = importer.importTree(tree)
       val cexpectedType: compiler.Type = importer.importType(expectedType)
 
-      if (compiler.settings.verbose.value) println("typing "+ctree+", expectedType = "+expectedType)
-      val ttree: compiler.Tree = compiler.typeCheck(ctree, cexpectedType, silent = silent, withImplicitViewsDisabled = withImplicitViewsDisabled, withMacrosDisabled = withMacrosDisabled)
+      if (compiler.settings.verbose.value) println("typing "+ctree+", expectedType = "+expectedType+", mode = "+mode)
+      val ttree: compiler.Tree = compiler.typeCheck(ctree, cexpectedType, mode, silent = silent, withImplicitViewsDisabled = withImplicitViewsDisabled, withMacrosDisabled = withMacrosDisabled)
       val uttree = exporter.importTree(ttree)
       uttree
     }
