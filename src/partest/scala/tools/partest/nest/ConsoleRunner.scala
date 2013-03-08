@@ -29,6 +29,7 @@ class ConsoleRunner extends DirectRunner {
       TestSet("pos", stdFilter, "Testing compiler (on files whose compilation should succeed)"),
       TestSet("neg", stdFilter, "Testing compiler (on files whose compilation should fail)"),
       TestSet("run", stdFilter, "Testing interpreter and backend"),
+      TestSet("pickling", stdFilter, "Testing pickling"),
       TestSet("jvm", stdFilter, "Testing JVM backend"),
       TestSet("res", x => x.isFile && (x hasExtension "res"), "Testing resident compiler"),
       TestSet("shootout", stdFilter, "Testing shootout tests"),

@@ -514,7 +514,7 @@ class RunnerManager(kind: String, val fileManager: FileManager, params: TestRunP
           diffCheck(file, compareOutput(dir, logFile))
         })
 
-      case "run" | "jvm" =>
+      case "run" | "jvm" | "pickling" =>
         runJvmTest(file)
 
       case "specialized" =>
