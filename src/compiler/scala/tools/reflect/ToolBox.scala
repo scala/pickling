@@ -21,6 +21,10 @@ trait ToolBox[U <: scala.reflect.api.Universe] {
    */
   def frontEnd: FrontEnd
 
+  type TypecheckMode
+  def EXPRmode: TypecheckMode
+  def TYPEmode: TypecheckMode
+
   /** Typechecks a tree using this ToolBox.
    *  This populates symbols and types of the tree and possibly transforms it to reflect certain desugarings.
    *
@@ -35,7 +39,7 @@ trait ToolBox[U <: scala.reflect.api.Universe] {
    *    `withImplicitViewsDisabled` recursively prohibits implicit views (though, implicit vals will still be looked up and filled in), default value is false
    *    `withMacrosDisabled` recursively prohibits macro expansions and macro-based implicits, default value is false
    */
-  def typeCheck(tree: u.Tree, pt: u.Type = u.WildcardType, silent: Boolean = false, withImplicitViewsDisabled: Boolean = false, withMacrosDisabled: Boolean = false): u.Tree
+  def typeCheck(tree: u.Tree, pt: u.Type = u.WildcardType, mode: TypecheckMode = EXPRmode, silent: Boolean = false, withImplicitViewsDisabled: Boolean = false, withMacrosDisabled: Boolean = false): u.Tree
 
   /** Infers an implicit value of the expected type `pt` in top-level context.
    *  Optional `pos` parameter provides a position that will be associated with the implicit search.

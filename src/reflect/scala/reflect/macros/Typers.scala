@@ -45,6 +45,10 @@ trait Typers {
    */
   def openImplicits: List[ImplicitCandidate]
 
+  type TypecheckMode
+  def EXPRmode: TypecheckMode
+  def TYPEmode: TypecheckMode
+
   /** Typechecks the provided tree against the expected type `pt` in the macro callsite context.
    *
    *  If `silent` is false, `TypecheckException` will be thrown in case of a typecheck error.
@@ -58,7 +62,7 @@ trait Typers {
    *
    *  @throws [[scala.reflect.macros.TypecheckException]]
    */
-  def typeCheck(tree: Tree, pt: Type = WildcardType, silent: Boolean = false, withImplicitViewsDisabled: Boolean = false, withMacrosDisabled: Boolean = false): Tree
+  def typeCheck(tree: Tree, pt: Type = WildcardType, mode: TypecheckMode = EXPRmode, silent: Boolean = false, withImplicitViewsDisabled: Boolean = false, withMacrosDisabled: Boolean = false): Tree
 
   /** Infers an implicit value of the expected type `pt` in the macro callsite context.
    *  Optional `pos` parameter provides a position that will be associated with the implicit search.
