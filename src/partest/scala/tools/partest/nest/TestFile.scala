@@ -54,6 +54,7 @@ abstract class TestFile(val kind: String) extends TestFileCommon {
 case class PosTestFile(file: JFile, fileManager: FileManager) extends TestFile("pos")
 case class NegTestFile(file: JFile, fileManager: FileManager) extends TestFile("neg")
 case class RunTestFile(file: JFile, fileManager: FileManager) extends TestFile("run")
+case class PicklingTestFile(file: JFile, fileManager: FileManager) extends TestFile("pickling")
 case class ScalaCheckTestFile(file: JFile, fileManager: FileManager) extends TestFile("scalacheck")
 case class JvmTestFile(file: JFile, fileManager: FileManager) extends TestFile("jvm")
 case class ShootoutTestFile(file: JFile, fileManager: FileManager) extends TestFile("shootout") {

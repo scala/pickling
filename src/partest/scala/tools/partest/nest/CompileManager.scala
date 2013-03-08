@@ -137,6 +137,7 @@ class DirectCompiler(val fileManager: FileManager) extends SimpleCompiler {
       case "pos"          => PosTestFile.apply
       case "neg"          => NegTestFile.apply
       case "run"          => RunTestFile.apply
+      case "pickling"     => PicklingTestFile.apply
       case "jvm"          => JvmTestFile.apply
       case "shootout"     => ShootoutTestFile.apply
       case "scalap"       => ScalapTestFile.apply
