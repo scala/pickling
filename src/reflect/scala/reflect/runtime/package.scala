@@ -20,7 +20,7 @@ package object runtime {
    */
   // implementation hardwired to the `currentMirror` method below
   // using the mechanism implemented in `scala.tools.reflect.FastTrack`
-  def currentMirror: universe.Mirror = ??? // macro
+  def currentMirror: universe.Mirror = macro ???
 }
 
 package runtime {

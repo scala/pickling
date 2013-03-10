@@ -6,4 +6,5 @@ object Test extends Properties("quasiquotes") {
   include(TermDeconstructionProps)
   include(TypeDeconstructionProps)
   include(LiftableProps)
+  include(ErrorProps)
 }
