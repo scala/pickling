@@ -6,9 +6,7 @@ import Arbitrary._
 import scala.reflect.runtime.universe._
 import Flag._
 
-object ErrorProps extends QuasiquoteProperties("liftable")
-                     with TreeSimiliarity
-                     with ArbitraryTreesAndNames {
+object ErrorProps extends QuasiquoteProperties("errors") {
 
 
 }
