@@ -22,7 +22,7 @@ END-USER TARGETS
   <target name="clean" depends="quick.clean"
     description="Removes binaries of compiler and library. Distributions are untouched."/>
 
-  <target name="test" depends="test.done, osgi.test"
+  <target name="test" depends="test.done"
     description="Runs test suite and bootstrapping test on Scala compiler and library."/>
 
   <target name="test-opt"
@@ -2539,7 +2539,7 @@ Binary compatibility testing
 DISTRIBUTION
 ============================================================================ -->
 
-  <target name="dist.start" depends="pack.done, osgi.done">
+  <target name="dist.start" depends="pack.done">
     <property name="dist.name" value="scala-${version.number}"/>
     <property name="dist.dir" value="${dists.dir}/${dist.name}"/>
 
@@ -2572,12 +2572,12 @@ DISTRIBUTION
     </copy>
     <mkdir dir="${dist.dir}/bin"/>
     <!-- TODO - Stop being inefficient and don't copy OSGi bundles overtop other jars. -->
-    <copy-bundle name="scala-library"/>
+<!--     <copy-bundle name="scala-library"/>
     <copy-bundle name="scala-reflect"/>
     <copy-bundle name="scala-swing"/>
     <copy-bundle name="scala-actors"/>
     <copy-bundle name="scala-compiler"/>
-    <copy toDir="${dist.dir}/bin">
+ -->    <copy toDir="${dist.dir}/bin">
       <fileset dir="${build-pack.dir}/bin"/>
     </copy>
     <chmod perm="ugo+rx" file="${dist.dir}/bin/scala"/>
@@ -2586,7 +2586,7 @@ DISTRIBUTION
     <chmod perm="ugo+rx" file="${dist.dir}/bin/fsc"/>
     <chmod perm="ugo+rx" file="${dist.dir}/bin/scalap"/>
     <mkdir dir="${dist.dir}/misc/scala-devel/plugins"/>
-    <copy-plugin-bundle name="continuations"/>
+    <!-- <copy-plugin-bundle name="continuations"/> -->
   </target>
 
   <target name="dist.doc" depends="dist.base, docs.done">
