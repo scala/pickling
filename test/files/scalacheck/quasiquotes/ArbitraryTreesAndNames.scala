@@ -7,7 +7,6 @@ import scala.reflect.api._
 import scala.reflect.runtime.universe._
 import scala.reflect.runtime.universe.Flag._
 
-
 trait ArbitraryTreesAndNames {
 
   def smallList[T](size: Int, g: Gen[T]) = {

@@ -6,8 +6,7 @@ import Arbitrary._
 import scala.reflect.runtime.universe._
 import Flag._
 
-class QuasiquoteProperties(name: String) extends Properties(name)
-                                            with ArbitraryTreesAndNames {
+class QuasiquoteProperties(name: String) extends Properties(name) with ArbitraryTreesAndNames {
 
   def test(name: String)(block: => Boolean): Unit =
     property(name) = exists { (u: Unit) => block }
