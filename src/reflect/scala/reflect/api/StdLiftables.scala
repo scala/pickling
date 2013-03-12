@@ -6,8 +6,8 @@ trait StdLiftables { self: Universe =>
   private def requireSameUniverse[T](universe: Universe, tp: String, value: T) =
     require(universe eq self, s"Can't lift $tp ${showRaw(value)} from universe ${showRaw(universe)} using lift$tp defined for ${showRaw(self)}.")
 
-  implicit object liftExpr extends Liftable[Expr[_]] {
-    def apply(universe: Universe, value: Expr[_]): universe.Tree = {
+  implicit def liftExpr[T <: Expr[_]]: Liftable[T] = new Liftable[T] {
+    def apply(universe: Universe, value: T): universe.Tree = {
       requireSameUniverse(universe, "Expr", value)
       value.tree.asInstanceOf[universe.Tree]
     }
