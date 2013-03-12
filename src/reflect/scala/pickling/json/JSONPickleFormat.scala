@@ -45,7 +45,19 @@ package json {
         }
       reify(JSONPickle(value.splice))
     }
-    def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): JSONPickle = ???
+    def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): JSONPickle = {
+      def objectPrefix(tpe: irs.uni.Type) = "{\n  \"tpe\": \"" + tpe.typeSymbol.name.toString + "\",\n"
+      val objectSuffix = "\n}"
+      val fieldSeparator = ",\n"
+      def fieldPrefix(fir: irs.FieldIR) = "  \"" + fir.name + "\": "
+      val fieldSuffix = ""
+      JSONPickle {
+        objectPrefix(cir.tpe) + {
+          val formattedFields = cir.fields.map(fld => fieldPrefix(fld) + fields(fld).value)
+          formattedFields mkString fieldSeparator
+        } + objectSuffix
+      }
+    }
     def parse(pickle: JSONPickle, mirror: ru.Mirror): Option[UnpickleIR] = {
       def unpickleTpe(stpe: String): ru.Type = {
         // TODO: support polymorphic types as serialized above in formatCT/formatRT

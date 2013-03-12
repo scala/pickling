@@ -1029,6 +1029,7 @@ QUICK BUILD (QUICK)
       jvmargs="${scalacfork.jvmargs}">
       <include name="**/*.scala"/>
       <compilationpath>
+        <pathelement location="${build-locker.dir}/classes/compiler"/>
         <pathelement location="${build-quick.dir}/classes/library"/>
         <pathelement location="${build-quick.dir}/classes/reflect"/>
         <path refid="aux.libs"/>
