@@ -28,8 +28,8 @@ package pickling {
     // TODO: the primitive pickler hack employed here is funny, but I think we should fix this one
     // since people probably would also have to deal with the necessity to abstract over pickle formats
     def genPickler(mirror: ru.Mirror, tpe: ru.Type)(implicit format: PickleFormat, p1: Pickler[Int], p2: Pickler[String]): Pickler[_] = {
-      // PicklerRuntime.genCompiledPickler(mirror, tpe)
-      PicklerRuntime.genInterpretedPickler(mirror, tpe)
+      PicklerRuntime.genCompiledPickler(mirror, tpe)
+      // PicklerRuntime.genInterpretedPickler(mirror, tpe)
     }
   }
 
