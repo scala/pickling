@@ -23,7 +23,9 @@ class IRs[U <: Universe with Singleton](val uni: U) {
   type C = ObjectIR
 
   def fields(tp: Type): Q =
-    tp.declarations
+    tp.typeSymbol
+      .typeSignature
+      .declarations
       .filter(sym => !sym.isMethod && sym.isTerm && (sym.asTerm.isVar || sym.asTerm.isParamAccessor)) // separate issue: minimal versus verbose PickleFormat . i.e. someone might want all concrete inherited fields in their pickle
       .map(sym => FieldIR(sym.name.toString.trim, sym.typeSignatureIn(tp)))
       .toList
@@ -37,7 +39,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
 
   val f3 = (c: C) =>
     c.tpe.baseClasses
-         .map(_.typeSignature)
+         .map(_.asType.toType)
          .map(tp => ObjectIR(tp, null, fields(tp)))
 
   val compose =
