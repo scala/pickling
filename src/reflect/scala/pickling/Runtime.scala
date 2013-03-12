@@ -10,7 +10,14 @@ object PicklerRuntime {
     import scala.reflect.runtime.universe._
     val tb = mirror.mkToolBox()
     val formatTpe = mirror.reflect(format).symbol.asType.toType
-    tb.eval(q"scala.pickling.Pickler.genPickler[$tpe](new $formatTpe())").asInstanceOf[Pickler[_]]
+    // TODO: toolbox bug. if we don't explicitly import PickleOps, it will fail to be found
+    // more precisely: it will be found, but then immediately discarded, because a reference to it won't typecheck
+    tb.eval(q"""
+      import scala.pickling._
+      import scala.pickling.`package`.PickleOps
+      implicit val format: $formatTpe = new $formatTpe()
+      Pickler.genPickler[$tpe]
+    """).asInstanceOf[Pickler[_]]
   }
 
   def genInterpretedPickler(mirror: ru.Mirror, tpe: ru.Type)(implicit format: PickleFormat, p1: Pickler[Int], p2: Pickler[String]): Pickler[_] = {
