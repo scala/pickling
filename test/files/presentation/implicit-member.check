@@ -1,0 +1,42 @@
+reload: ImplicitMember.scala
+
+askTypeCompletion at ImplicitMember.scala(7,7)
+================================================================================
+[response] aksTypeCompletion at (7,7)
+retrieved 38 members
+[accessible:  true] `class AppliedImplicitImplicit.AppliedImplicit`
+[accessible:  true] `method !=(x$1: Any)Boolean`
+[accessible:  true] `method !=(x$1: AnyRef)Boolean`
+[accessible:  true] `method ##()Int`
+[accessible:  true] `method +(other: String)String`
+[accessible:  true] `method ->[B](y: B)(Implicit.type, B)`
+[accessible:  true] `method ==(x$1: Any)Boolean`
+[accessible:  true] `method ==(x$1: AnyRef)Boolean`
+[accessible:  true] `method AppliedImplicit[A](x: A)Implicit.AppliedImplicit[A]`
+[accessible:  true] `method asInstanceOf[T0]=> T0`
+[accessible:  true] `method clone()Object`
+[accessible:  true] `method ensuring(cond: Boolean)Implicit.type`
+[accessible:  true] `method ensuring(cond: Boolean, msg: => Any)Implicit.type`
+[accessible:  true] `method ensuring(cond: Implicit.type => Boolean)Implicit.type`
+[accessible:  true] `method ensuring(cond: Implicit.type => Boolean, msg: => Any)Implicit.type`
+[accessible:  true] `method eq(x$1: AnyRef)Boolean`
+[accessible:  true] `method equals(x$1: Any)Boolean`
+[accessible:  true] `method finalize()Unit`
+[accessible:  true] `method formatted(fmtstr: String)String`
+[accessible:  true] `method hashCode()Int`
+[accessible:  true] `method isInstanceOf[T0]=> Boolean`
+[accessible:  true] `method ne(x$1: AnyRef)Boolean`
+[accessible:  true] `method notify()Unit`
+[accessible:  true] `method notifyAll()Unit`
+[accessible:  true] `method synchronized[T0](x$1: T0)T0`
+[accessible:  true] `method toString()String`
+[accessible:  true] `method wait()Unit`
+[accessible:  true] `method wait(x$1: Long)Unit`
+[accessible:  true] `method wait(x$1: Long, x$2: Int)Unit`
+[accessible:  true] `method →[B](y: B)(Implicit.type, B)`
+[accessible:  true] `value __leftOfArrowImplicit.type`
+[accessible:  true] `value __resultOfEnsuringImplicit.type`
+[accessible:  true] `value __stringToFormatImplicit.type`
+[accessible:  true] `value __thingToAddImplicit.type`
+[accessible:  true] `value xImplicit.type`
+================================================================================

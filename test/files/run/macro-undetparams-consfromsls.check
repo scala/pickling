@@ -1,0 +1,5 @@
+A = TypeTag[Int]
+B = TypeTag[Nothing]
+List(1)
+A = TypeTag[Any]
+List(abc, 1)

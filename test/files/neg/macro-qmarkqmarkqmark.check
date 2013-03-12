@@ -1,0 +1,25 @@
+macro-qmarkqmarkqmark.scala:5: error: macro implementation is missing
+  foo1
+  ^
+macro-qmarkqmarkqmark.scala:8: error: too few argument lists for macro invocation
+  foo2
+  ^
+macro-qmarkqmarkqmark.scala:9: error: macro implementation is missing
+  foo2(1)
+      ^
+macro-qmarkqmarkqmark.scala:12: error: macro implementation is missing
+  foo3[Int]
+      ^
+macro-qmarkqmarkqmark.scala:15: error: macro implementation is missing
+  class C1 extends Foo1
+                   ^
+macro-qmarkqmarkqmark.scala:18: error: too few argument lists for macro invocation
+  class C21 extends Foo2
+                    ^
+macro-qmarkqmarkqmark.scala:19: error: macro implementation is missing
+  class C22 extends Foo2(2)
+                    ^
+macro-qmarkqmarkqmark.scala:22: error: macro implementation is missing
+  class C3 extends Foo3[String]
+                   ^
+8 errors found
