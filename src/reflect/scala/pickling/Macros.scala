@@ -37,6 +37,9 @@ trait PicklerMacros extends Macro {
     val fieldAccessor = (fir: FieldIR) => Expr[Pickle](q"$picklee.${TermName(fir.name)}.pickle")
     def pickleLogic(cir: ClassIR) = pickleFormatObj.formatCT[c.universe.type](irs)(cir, picklee, fieldAccessor)
 
+    // TODO: genPickler and genUnpickler should really hoist their results to the top level
+    // it should be a straightforward c.introduceTopLevel (I guess we can ignore inner classes in the paper)
+    // then we would also not need this implicit val trick
     q"""
       import scala.pickling._
       implicit val anon$$pickler = new Pickler[$tpe] {
@@ -95,20 +98,29 @@ trait UnpicklerMacros extends Macro {
 }
 
 trait PickleMacros extends Macro {
-  def impl[T: c.WeakTypeTag](pickler: c.Expr[Pickler[T]]) = {
-    // TODO: generate the code like this
-    // (new HasPicklerDispatch {
-    //   def dispatchTo: Pickler[_] = p match {
-    //     case null => genPickler[Person]
-    //     case _: Person => genPickler[Person]
-    //     case _: Employee => genPickler[Employee]
-    //     case _: Any => runtimeFallback
-    //   }
-    // }).dispatchTo.pickle(p)
-    // as described at https://github.com/heathermiller/pickling-design-doc/blob/gh-pages/index.md
+  def impl[T: c.WeakTypeTag] = {
     import c.universe._
+    val tpe = weakTypeOf[T]
     val q"${_}($picklee)" = c.prefix.tree
-    Expr(q"$pickler.pickle($picklee)")
+
+    def pickleAs(tpe: Type) = q"scala.pickling.Pickler.genPickler[$tpe]"
+    val tools = new Tools[c.universe.type](c.universe)
+    def allSubclasses(tpe: Type): List[Type] = tools.allStaticallyKnownSubclasses(tpe.typeSymbol, rootMirror).map(_.asType.toType)
+    val compileTimeDispatch = allSubclasses(tpe) map (tpe => CaseDef(Bind(TermName("tpe"), Ident(nme.WILDCARD)), q"tpe =:= pickleeTpe", pickleAs(tpe)))
+    val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"scala.pickling.Pickler.genPickler(mirror, pickleeTpe)")
+    // TODO: this should go through HasPicklerDispatch
+    // TODO: you know, probably we should move dispatch logic directly into picklers and unpicklers after some time
+    // at the moment this won't help us at all, but later on when picklers/unpicklers will be hoisted, this will save us some bytecodes
+    val dispatchLogic = Match(q"pickleeTpe", compileTimeDispatch :+ runtimeDispatch)
+
+    // TODO: we don't really need ru.Types, neither here nor in unpickle dispatch
+    // we could just use erasures and be perfectly fine. that would also bring a performance boost
+    q"""
+      val mirror = scala.reflect.runtime.currentMirror
+      val pickleeTpe = mirror.reflect($picklee).symbol.asType.toType
+      val pickler = $dispatchLogic
+      pickler.pickle($picklee)
+    """
   }
 }
 
@@ -143,7 +155,8 @@ trait UnpickleMacros extends Macro {
 
     def unpickleAs(tpe: Type) = q"scala.pickling.Unpickler.genUnpickler[$tpe].unpickle(ir)"
     val valueIRUnpickleLogic = unpickleAs(tpe)
-    def allSubclasses(tpe: Type): List[Type] = List(tpe) // TODO: implement this and share the logic with Heather & Philipp
+    val tools = new Tools[c.universe.type](c.universe)
+    def allSubclasses(tpe: Type): List[Type] = tools.allStaticallyKnownSubclasses(tpe.typeSymbol, rootMirror).map(_.asType.toType)
     val subclassDispatch = allSubclasses(tpe) map (tpe => CaseDef(Bind(TermName("tpe"), Ident(nme.WILDCARD)), q"tpe =:= scala.reflect.runtime.universe.typeOf[$tpe]", unpickleAs(tpe)))
     val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"???")
     // TODO: this should also go through HasPicklerDispatch, probably routed through a companion of T
