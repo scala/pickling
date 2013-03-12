@@ -1,0 +1,6 @@
+{
+  "tpe": "Person",
+  "name": "Bob",
+  "age": 83
+}
+Person(Bob,83)
