@@ -45,7 +45,8 @@ package json {
         }
       reify(JSONPickle(value.splice))
     }
-    def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): JSONPickle = {
+    // def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): JSONPickle = {
+    def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): Pickle = {
       def objectPrefix(tpe: irs.uni.Type) = "{\n  \"tpe\": \"" + tpe.typeSymbol.name.toString + "\",\n"
       val objectSuffix = "\n}"
       val fieldSeparator = ",\n"

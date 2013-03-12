@@ -64,7 +64,13 @@ package pickling {
     type PickleType <: Pickle
     def instantiate = macro ???
     def formatCT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: U#Expr[Any], fields: irs.FieldIR => U#Expr[Pickle]): U#Expr[PickleType]
-    def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): PickleType
+    // TODO: unfortunately we hit a bug when trying to use the most specific signature possible, i.e. with the PickleType return value
+    // when calling (pickleFormat: PickleFormat).formatRT(...), we compile finely, but then get an AME when trying to run the program:
+    // java.lang.AbstractMethodError: scala.pickling.json.JSONPickleFormat.formatRT
+    // (Lscala/pickling/ir/PickleIRs;Lscala/pickling/ir/PickleIRs$ClassIR;Ljava/lang/Object;Lscala/Function1;)Lscala/pickling/Pickle;
+    // looks like scalac fails to generate a bridge here...
+    // def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): PickleType
+    def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): Pickle
     def parse(pickle: PickleType, mirror: ru.Mirror): Option[UnpickleIR]
   }
 
