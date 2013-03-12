@@ -1,41 +1,19 @@
 package scala.pickling
 
 import scala.reflect.macros.AnnotationMacro
-import scala.reflect.macros.Macro
 import scala.reflect.runtime.{universe => ru}
 import ir._
 
 trait PicklerMacros extends Macro {
-  def impl[T: c.WeakTypeTag](pickleFormat: c.Expr[PickleFormat]): c.Tree = {
+  def impl[T: c.WeakTypeTag](pickleFormat: c.Tree): c.Tree = {
     import c.universe._
     val tpe = weakTypeOf[T]
 
-    // get instance of PickleFormat
-    def failPickleFormat(msg: String) = c.abort(c.enclosingPosition, s"$msg for ${pickleFormat.tree} of type ${pickleFormat.tree.tpe}")
-    val pickleFormatCarrier = c.typeCheck(q"$pickleFormat.instantiate", silent = true)
-    val pickleFormatObj = pickleFormatCarrier.attachments.all.find(_.isInstanceOf[PickleFormat]) match {
-      case Some(pf: PickleFormat) => pf
-      case _ => failPickleFormat("Couldn't instantiate PickleFormat")
-    }
-
-    // get the type of pickles this format works with
-    val pickleTypeCarrier = c.typeCheck(tq"${pickleFormat.tree.tpe}#PickleType", mode = c.TYPEmode, silent = true)
-    val pickleType = pickleTypeCarrier match {
-      case EmptyTree => failPickleFormat("Couldn't resolve PickleType")
-      case tree => tree.tpe.normalize match {
-        case tpe if tpe.typeSymbol.isClass => tpe
-        case tpe => failPickleFormat(s"PickleType resolved as $tpe is invalid")
-      }
-    }
-
-    // build pickler methods
-    val irs = new PickleIRs[c.universe.type](c.universe)
     import irs._
     val cir = flatten(compose(ClassIR(tpe, null, List())))
     val nullCir = ClassIR(definitions.NullTpe, null, Nil)
-    val picklee = Expr(q"picklee")
-    val fieldAccessor = (fir: FieldIR) => Expr[Pickle](q"$picklee.${TermName(fir.name)}.pickle")
-    def pickleLogic(cir: ClassIR) = pickleFormatObj.formatCT[c.universe.type](irs)(cir, picklee, fieldAccessor)
+    val fieldAccessor = (fir: FieldIR) => Expr[Pickle](q"picklee.${TermName(fir.name)}.pickle")
+    def pickleLogic(cir: ClassIR) = instantiatePickleFormat(pickleFormat).formatCT[c.universe.type](irs)(cir, Expr(q"picklee"), fieldAccessor)
 
     // TODO: genPickler and genUnpickler should really hoist their results to the top level
     // it should be a straightforward c.introduceTopLevel (I guess we can ignore inner classes in the paper)
@@ -43,8 +21,8 @@ trait PicklerMacros extends Macro {
     q"""
       import scala.pickling._
       implicit val anon$$pickler = new Pickler[$tpe] {
-        type PickleType = $pickleType
-        def pickle(pickleeRaw: Any): $pickleType = {
+        type PickleType = ${pickleType(pickleFormat)}
+        def pickle(pickleeRaw: Any): PickleType = {
           if (pickleeRaw != null) {
             val picklee = pickleeRaw.asInstanceOf[$tpe]
             ${pickleLogic(cir)}
@@ -98,15 +76,15 @@ trait UnpicklerMacros extends Macro {
 }
 
 trait PickleMacros extends Macro {
-  def impl[T: c.WeakTypeTag] = {
+  def impl[T: c.WeakTypeTag](pickleFormat: c.Tree) = {
     import c.universe._
     val tpe = weakTypeOf[T]
     val q"${_}($picklee)" = c.prefix.tree
 
     def pickleAs(tpe: Type) = q"scala.pickling.Pickler.genPickler[$tpe]"
-    val tools = new Tools[c.universe.type](c.universe)
-    def allSubclasses(tpe: Type): List[Type] = tools.allStaticallyKnownSubclasses(tpe.typeSymbol, rootMirror).map(_.asType.toType)
-    val compileTimeDispatch = allSubclasses(tpe) map (tpe => CaseDef(Bind(TermName("tpe"), Ident(nme.WILDCARD)), q"tpe =:= pickleeTpe", pickleAs(tpe)))
+    val compileTimeDispatch = allStaticallyKnownSubclasses(tpe) map (tpe => {
+      CaseDef(Bind(TermName("tpe"), Ident(nme.WILDCARD)), q"tpe =:= pickleeTpe", pickleAs(tpe))
+    })
     val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"scala.pickling.Pickler.genPickler(mirror, pickleeTpe)")
     // TODO: this should go through HasPicklerDispatch
     // TODO: you know, probably we should move dispatch logic directly into picklers and unpicklers after some time
@@ -116,9 +94,10 @@ trait PickleMacros extends Macro {
     // TODO: we don't really need ru.Types, neither here nor in unpickle dispatch
     // we could just use erasures and be perfectly fine. that would also bring a performance boost
     q"""
+      import scala.pickling._
       val mirror = scala.reflect.runtime.currentMirror
       val pickleeTpe = mirror.reflect($picklee).symbol.asType.toType
-      val pickler = $dispatchLogic
+      val pickler = $dispatchLogic.asInstanceOf[Pickler[_]{ type PickleType = ${pickleType(pickleFormat)} }]
       pickler.pickle($picklee)
     """
   }
@@ -130,21 +109,11 @@ trait UnpickleMacros extends Macro {
     val tpe = weakTypeOf[T]
     val pickleTree = c.prefix.tree
 
-    // TODO: get rid of copy/paste w.r.t GenPicklerMacro
-    def failUnpickle(msg: String) = c.abort(c.enclosingPosition, s"$msg for $pickleTree of type ${pickleTree.tpe}")
-    val pickleFormatTypeCarrier = c.typeCheck(tq"${pickleTree.tpe}#PickleFormatType", mode = c.TYPEmode, silent = true)
-    val pickleFormatType = pickleFormatTypeCarrier match {
-      case EmptyTree => failUnpickle("Couldn't resolve PickleFormatType")
-      case tree => tree.tpe.normalize match {
-        case tpe if tpe.typeSymbol.isClass => tpe
-        case tpe => failUnpickle(s"PickleFormatType resolved as $tpe is invalid")
-      }
-    }
-
     q"""
-      new $pickleFormatType().parse($pickleTree, scala.reflect.runtime.currentMirror) match {
+      val pickle = $pickleTree
+      new ${pickleFormatType(pickleTree)}().parse(pickle, scala.reflect.runtime.currentMirror) match {
         case Some(result) => result.unpickle[$tpe]
-        case None => throw new PicklingException("failed to unpickle \"" + $pickleTree + "\" as ${tpe.toString}")
+        case None => throw new PicklingException("failed to unpickle \"" + pickle + "\" as ${tpe.toString}")
       }
     """
   }
@@ -155,9 +124,9 @@ trait UnpickleMacros extends Macro {
 
     def unpickleAs(tpe: Type) = q"scala.pickling.Unpickler.genUnpickler[$tpe].unpickle(ir)"
     val valueIRUnpickleLogic = unpickleAs(tpe)
-    val tools = new Tools[c.universe.type](c.universe)
-    def allSubclasses(tpe: Type): List[Type] = tools.allStaticallyKnownSubclasses(tpe.typeSymbol, rootMirror).map(_.asType.toType)
-    val subclassDispatch = allSubclasses(tpe) map (tpe => CaseDef(Bind(TermName("tpe"), Ident(nme.WILDCARD)), q"tpe =:= scala.reflect.runtime.universe.typeOf[$tpe]", unpickleAs(tpe)))
+    val subclassDispatch = allStaticallyKnownSubclasses(tpe) map (tpe => {
+      CaseDef(Bind(TermName("tpe"), Ident(nme.WILDCARD)), q"tpe =:= scala.reflect.runtime.universe.typeOf[$tpe]", unpickleAs(tpe))
+    })
     val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"???")
     // TODO: this should also go through HasPicklerDispatch, probably routed through a companion of T
     val objectIRUnpickleLogic = Match(q"ir.tpe", subclassDispatch :+ runtimeDispatch)

@@ -12,7 +12,7 @@ package object pickling {
   def debug(output: => String) = if (debugEnabled) println(output)
 
   implicit class PickleOps[T](picklee: T) {
-    def pickle: _ = macro PickleMacros.impl[T]
+    def pickle(implicit pickleFormat: PickleFormat): _ = macro PickleMacros.impl[T]
   }
 }
 
