@@ -667,6 +667,10 @@ LOCAL REFERENCE BUILD (LOCKER)
       srcdir="${src.dir}/reflect"
       jvmargs="${scalacfork.jvmargs}">
       <include name="**/*.scala"/>
+      <exclude name="scala/pickling/*.scala"/>
+      <exclude name="scala/pickling/json/*.scala"/>
+      <exclude name="scala/pickling/binary/*.scala"/>
+      <exclude name="scala/pickling/ir/*.scala"/>
       <compilationpath>
         <pathelement location="${build-locker.dir}/classes/library"/>
         <pathelement location="${build-locker.dir}/classes/reflect"/>
@@ -718,7 +722,6 @@ LOCAL REFERENCE BUILD (LOCKER)
       <compilationpath>
         <pathelement location="${build-locker.dir}/classes/library"/>
         <pathelement location="${build-locker.dir}/classes/reflect"/>
-        <pathelement location="${build-locker.dir}/classes/compiler"/>
         <path refid="aux.libs"/>
         <path refid="asm.classpath"/>
         <pathelement location="${jline.jar}"/>
