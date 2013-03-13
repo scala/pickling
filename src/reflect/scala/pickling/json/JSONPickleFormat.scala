@@ -59,14 +59,41 @@ package json {
         } + objectSuffix
       }
     }
-    def parse(pickle: JSONPickle, mirror: ru.Mirror): Option[UnpickleIR] = {
-      def unpickleTpe(stpe: String): ru.Type = {
-        // TODO: support polymorphic types as serialized above in formatCT/formatRT
-        mirror.staticClass(stpe).asType.toType
+
+    //TODO: seems unneeded after move to parseTpe, parseField, etc.
+    def unpickleTpe(stpe: String, mirror: ru.Mirror): ru.Type = {
+      // TODO: support polymorphic types as serialized above in formatCT/formatRT
+      mirror.staticClass(stpe).asType.toType
+    }
+
+    private def readerFor(rawJSON: Any, mirror: ru.Mirror): PickleReader = new PickleReader {
+      def readType: ru.Type = rawJSON match {
+        case JSONObject(data) =>
+          unpickleTpe(data("tpe").asInstanceOf[String], mirror)
+        case _                =>
+          throw new PicklingException("JSON object expected")
       }
+      def readField(name: String): PickleReader = rawJSON match {
+        case JSONObject(data) => readerFor(data(name), mirror)
+        case value            => readerFor(value, mirror)
+      }
+      def readInt: Int       = rawJSON.asInstanceOf[Int]
+      def readString: String = rawJSON.toString
+      //...
+    }
+
+    def readerFor(pickle: PickleType, mirror: ru.Mirror): PickleReader = {
+      val rawJSON = JSON.parseRaw(pickle.value) match {
+        case Some(any) => any
+        case None      => throw new PicklingException("error parsing JSON")
+      }
+      readerFor(rawJSON, mirror: ru.Mirror)
+    }
+
+    def parse(pickle: JSONPickle, mirror: ru.Mirror): Option[UnpickleIR] = {
       def translate(parsedJSON: Any): UnpickleIR = parsedJSON match {
         case JSONObject(data) =>
-          val tpe = unpickleTpe(data("tpe").asInstanceOf[String])
+          val tpe = unpickleTpe(data("tpe").asInstanceOf[String], mirror)
           val fields = ListMap() ++ data.map{case (k, v) => (k -> translate(v))} - "tpe"
           ObjectIR(tpe, fields)
         case JSONArray(data) =>

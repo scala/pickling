@@ -73,6 +73,16 @@ package pickling {
     // def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): PickleType
     def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): Pickle
     def parse(pickle: PickleType, mirror: ru.Mirror): Option[UnpickleIR]
+
+    def readerFor(pickle: PickleType, mirror: ru.Mirror): PickleReader
+  }
+
+  trait PickleReader {
+    def readType: ru.Type
+    def readField(name: String): PickleReader
+    def readInt: Int
+    def readString: String
+    //...
   }
 
   case class PicklingException(msg: String) extends Exception(msg)
