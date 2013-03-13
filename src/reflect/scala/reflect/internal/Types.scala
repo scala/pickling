@@ -1387,11 +1387,11 @@ trait Types extends api.Types { self: SymbolTable =>
   /** A class for this-types of the form <sym>.this.type
    */
   abstract case class ThisType(sym: Symbol) extends SingletonType with ThisTypeApi {
-    if (!sym.isClass) {
-      // SI-6640 allow StubSymbols to reveal what's missing from the classpath before we trip the assertion.
-      sym.failIfStub()
-      abort(s"ThisType($sym) for sym which is not a class")
-    }
+    // if (!sym.isClass) {
+    //   // SI-6640 allow StubSymbols to reveal what's missing from the classpath before we trip the assertion.
+    //   sym.failIfStub()
+    //   abort(s"ThisType($sym) for sym which is not a class")
+    // }
 
     override def isTrivial: Boolean = sym.isPackageClass
     override def isNotNull = true

@@ -3258,13 +3258,13 @@ trait Symbols extends api.Symbols { self: SymbolTable =>
       */
     private def fail[T](alt: T): T = {
       // Avoid issuing lots of redundant errors
-      if (!hasFlag(IS_ERROR)) {
-        globalError(missingMessage)
-        if (settings.debug.value)
-          (new Throwable).printStackTrace
+      // if (!hasFlag(IS_ERROR)) {
+      //   globalError(missingMessage)
+      //   if (settings.debug.value)
+      //     (new Throwable).printStackTrace
 
-        this setFlag IS_ERROR
-      }
+      //   this setFlag IS_ERROR
+      // }
       alt
     }
     // This one doesn't call fail because SpecializeTypes winds up causing
