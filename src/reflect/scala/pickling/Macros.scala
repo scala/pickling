@@ -82,7 +82,7 @@ trait PickleMacros extends Macro {
     val q"${_}($picklee)" = c.prefix.tree
 
     def pickleAs(tpe: Type) = q"scala.pickling.Pickler.genPickler[$tpe]"
-    val compileTimeDispatch = allStaticallyKnownSubclasses(tpe) map (tpe => {
+    val compileTimeDispatch = compileTimeDispatchees(tpe) map (tpe => {
       CaseDef(Bind(TermName("tpe"), Ident(nme.WILDCARD)), q"tpe =:= pickleeTpe", pickleAs(tpe))
     })
     val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"scala.pickling.Pickler.genPickler(mirror, pickleeTpe)")
@@ -124,12 +124,12 @@ trait UnpickleMacros extends Macro {
 
     def unpickleAs(tpe: Type) = q"scala.pickling.Unpickler.genUnpickler[$tpe].unpickle(ir)"
     val valueIRUnpickleLogic = unpickleAs(tpe)
-    val subclassDispatch = allStaticallyKnownSubclasses(tpe) map (tpe => {
+    val compileTimeDispatch = compileTimeDispatchees(tpe) map (tpe => {
       CaseDef(Bind(TermName("tpe"), Ident(nme.WILDCARD)), q"tpe =:= scala.reflect.runtime.universe.typeOf[$tpe]", unpickleAs(tpe))
     })
     val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"???")
     // TODO: this should also go through HasPicklerDispatch, probably routed through a companion of T
-    val objectIRUnpickleLogic = Match(q"ir.tpe", subclassDispatch :+ runtimeDispatch)
+    val objectIRUnpickleLogic = Match(q"ir.tpe", compileTimeDispatch :+ runtimeDispatch)
 
     q"""
       import scala.pickling._
