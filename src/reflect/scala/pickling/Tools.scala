@@ -75,7 +75,8 @@ class Tools[U <: Universe with Singleton](val u: U) {
             pkg.name.toString != "_root_" &&
             pkg.name.toString != "quicktime" && // TODO: pesky thing on my classpath, crashes ClassfileParser
             pkg.name.toString != "j3d" && // TODO: another ClassfileParser crash
-            pkg.name.toString != "jansi" // TODO: and another one (jline.jar)
+            pkg.name.toString != "jansi" && // TODO: and another one (jline.jar)
+            pkg.name.toString != "jsoup" // TODO: SI-3809
           }
           val subpackages = pkgMembers filter (m => m.isPackage && recurIntoPackage(m))
           subpackages foreach loop
