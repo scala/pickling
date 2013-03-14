@@ -20,6 +20,8 @@ package json {
 
   class JSONPickleFormat extends PickleFormat {
     import ir._
+    import ru.definitions._
+
     type PickleType = JSONPickle
     override def instantiate = macro JSONPickleInstantiate.impl
     def formatCT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: U#Expr[Any], fields: irs.FieldIR => U#Expr[Pickle]): U#Expr[JSONPickle] = {
@@ -88,6 +90,25 @@ package json {
         case None      => throw new PicklingException("error parsing JSON")
       }
       readerFor(rawJSON, mirror: ru.Mirror)
+    }
+
+    def getObject(p: PickleType): Any = JSON.parseRaw(p.value).get
+
+    def getType(obj: Any, mirror: ru.Mirror): ru.Type = {
+      val JSONObject(data) = obj
+      unpickleTpe(data("tpe").toString, mirror)
+    }
+
+    def getField(obj: Any, tpe: ru.Type, name: String): Any = {
+      obj match {
+        case JSONObject(data) =>
+          tpe match {
+            case null => data(name)
+            case tp if tp =:= IntClass.toType    => data(name).asInstanceOf[Double].toInt
+            case tp if tp =:= StringClass.toType => data(name).toString
+            case _ => data(name)
+          }
+      }
     }
 
     def parse(pickle: JSONPickle, mirror: ru.Mirror): Option[UnpickleIR] = {

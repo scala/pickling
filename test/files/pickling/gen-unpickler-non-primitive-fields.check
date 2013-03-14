@@ -1,0 +1,14 @@
+{
+  "tpe": "Philipp",
+  "mother": {
+  "tpe": "Person",
+  "name": "Gudrun",
+  "age": 62
+},
+  "father": {
+  "tpe": "Person",
+  "name": "Rudolf",
+  "age": 70
+}
+}
+Philipp(Person(Gudrun,62),Person(Rudolf,70))

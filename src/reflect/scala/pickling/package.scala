@@ -14,6 +14,12 @@ package object pickling {
   implicit class PickleOps[T](picklee: T) {
     def pickle(implicit pickleFormat: PickleFormat): _ = macro PickleMacros.impl[T]
   }
+
+  private[pickling] var synthCntr: Int = 0
+  private[pickling] def nextSynth: Int = {
+    synthCntr += 1
+    synthCntr
+  }
 }
 
 package pickling {
@@ -36,7 +42,7 @@ package pickling {
 
   trait Unpickler[T] {
     import ir._
-    def unpickle(ir: UnpickleIR): T
+    def unpickle(p: Pickle): T
   }
 
   object Unpickler {
@@ -75,6 +81,10 @@ package pickling {
     def parse(pickle: PickleType, mirror: ru.Mirror): Option[UnpickleIR]
 
     def readerFor(pickle: PickleType, mirror: ru.Mirror): PickleReader
+
+    def getObject(p: PickleType): Any
+    def getType(obj: Any, mirror: ru.Mirror): ru.Type
+    def getField(obj: Any, tpe: ru.Type, name: String): Any
   }
 
   trait PickleReader {

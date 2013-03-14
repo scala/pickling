@@ -1,0 +1,9 @@
+{
+  "tpe": "Philipp",
+  "mother": {
+  "tpe": "Person",
+  "name": "Gudrun",
+  "age": 62
+}
+}
+Philipp(Person(Gudrun,62))

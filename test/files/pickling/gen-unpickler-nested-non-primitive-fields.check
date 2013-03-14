@@ -1,0 +1,13 @@
+{
+  "tpe": "Philipp",
+  "mother": {
+  "tpe": "Person",
+  "name": "gudrun",
+  "age": 62,
+  "job": {
+  "tpe": "Job",
+  "title": "Teacher"
+}
+}
+}
+Philipp(Person(gudrun,62,Job(Teacher)))
