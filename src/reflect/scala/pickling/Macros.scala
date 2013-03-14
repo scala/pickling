@@ -4,6 +4,8 @@ import scala.reflect.macros.AnnotationMacro
 import scala.reflect.runtime.{universe => ru}
 import ir._
 
+// purpose of this macro: implementation of genPickler[T]. i.e. the macro that is selected
+// via implicit search and which initiates the process of generating a pickler for a given type T
 trait PicklerMacros extends Macro {
   def impl[T: c.WeakTypeTag](pickleFormat: c.Tree): c.Tree = {
     import c.universe._
@@ -36,45 +38,63 @@ trait PicklerMacros extends Macro {
   }
 }
 
+// purpose of this macro: implementation of genUnpickler[T]. i.e., the macro that is selected via implicit
+// search and which initiates the process of generating an unpickler for a given type T.
 trait UnpicklerMacros extends Macro {
   def impl[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
     import definitions._
+    import irs._
+
     val tpe = weakTypeOf[T]
     val expectsValueIR = tpe.typeSymbol.asClass.isPrimitive || tpe.typeSymbol == StringClass
     val expectsObjectIR = !expectsValueIR
 
-    def unexpectedIR: c.Tree = q"""throw new PicklingException("unexpected IR: " + ir + " for type " + ${tpe.toString})"""
+    def genTreeToUnpickle(nestedObj: Name, nestedTpe: Type): Tree = {
+      val cir     = flatten(compose(ClassIR(nestedTpe, null, List())))
+      val ctorSym = nestedTpe.declaration(nme.CONSTRUCTOR).asMethod // TODO: multiple constructors
 
-    def unpickleValueIR: c.Tree =
-      tpe match {
-        case tpe if tpe =:= IntClass.toType => q"vir.value.asInstanceOf[Double].toInt"
-        case tpe if tpe =:= StringClass.toType => q"vir.value.asInstanceOf[String]"
-        case _ => c.abort(c.enclosingPosition, s"don't know how to unpickle a ValueIR as $tpe")
-      }
-
-    def unpickleObjectIR: c.Tree = {
-      val ctorSym = tpe.declaration(nme.CONSTRUCTOR).asMethod // TODO: multiple constructors
-      def ctorArg(name: String, tpe: Type) = q"oir.fields($name).unpickle[$tpe]"
-      val ctorArgs = ctorSym.paramss.flatten.map(f => ctorArg(f.name.toString, f.typeSignature)) // TODO: multiple argument lists
-      q"new $tpe(..$ctorArgs)"
-    }
-
-    q"""
-      import scala.pickling._
-      import scala.pickling.ir._
-      implicit val anon$$unpickler = new Unpickler[$tpe] {
-        def unpickle(ir: UnpickleIR): $tpe = ir match {
-          case vir: ValueIR => ${if (expectsValueIR) unpickleValueIR else unexpectedIR}
-          case oir: ObjectIR => ${if (expectsObjectIR) unpickleObjectIR else unexpectedIR}
-          case _ => $unexpectedIR
+      def ctorArg(name: String, tpe: Type) = {
+        tpe match {
+          case tpe if tpe =:= IntClass.toType    => q"pf.getField($nestedObj, ru.definitions.IntClass.toType, $name.toString).asInstanceOf[Int]"
+          case tpe if tpe =:= StringClass.toType => q"pf.getField($nestedObj, ru.definitions.StringClass.toType, $name.toString).asInstanceOf[String]"
+          case _ => // field has non-primitive type
+            val newName = newTermName("synth" + pickling.nextSynth) //TODO
+            val treeToUnpickle = genTreeToUnpickle(newName, tpe)
+            q"""
+              {
+                val $newName = pf.getField($nestedObj, null, $name)
+                $treeToUnpickle
+              }
+            """
         }
       }
-      anon$$unpickler
+      val ctorArgs = ctorSym.paramss.flatten.map(f => ctorArg(f.name.toString, f.typeSignature)) // TODO: multiple argument lists
+      q"new $nestedTpe(..$ctorArgs)"
+    }
+
+    val treeToUnpickle = genTreeToUnpickle(newTermName("obj"), tpe)
+
+    q"""
+     import scala.pickling._
+     import scala.pickling.ir._
+     import scala.reflect.runtime.{universe => ru}
+     implicit val anon$$unpickler = new Unpickler[$tpe] {
+       def unpickle(pickle: Pickle): $tpe = {
+         val rtm = scala.reflect.runtime.universe.runtimeMirror(getClass.getClassLoader)
+         val pf = implicitly[PickleFormat]
+         val pickleTyped = pickle.asInstanceOf[pf.PickleType]
+         val obj = pf.getObject(pickleTyped)
+         $treeToUnpickle
+       }
+     }
+     anon$$unpickler
     """
   }
 }
 
+// purpose of this macro: implementation of PickleOps.pickle. i.e., this exists so as to insert a call in the generated
+// code to the genPickler macro (described above)
 trait PickleMacros extends Macro {
   def impl[T: c.WeakTypeTag](pickleFormat: c.Tree) = {
     import c.universe._
@@ -103,43 +123,27 @@ trait PickleMacros extends Macro {
   }
 }
 
+// purpose of this macro: implementation of unpickle method on type Pickle.
 trait UnpickleMacros extends Macro {
   def pickleUnpickle[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
     val tpe = weakTypeOf[T]
     val pickleTree = c.prefix.tree
 
-    q"""
-      val pickle = $pickleTree
-      new ${pickleFormatType(pickleTree)}().parse(pickle, scala.reflect.runtime.currentMirror) match {
-        case Some(result) => result.unpickle[$tpe]
-        case None => throw new PicklingException("failed to unpickle \"" + pickle + "\" as ${tpe.toString}")
-      }
-    """
-  }
-  def irUnpickle[T: c.WeakTypeTag]: c.Tree = {
-    import c.universe._
-    val tpe = weakTypeOf[T]
-    val irTree = c.prefix.tree
+    def unpickleAs(tpe: Type) = q"scala.pickling.Unpickler.genUnpickler[$tpe].unpickle(pickle)"
 
-    def unpickleAs(tpe: Type) = q"scala.pickling.Unpickler.genUnpickler[$tpe].unpickle(ir)"
-    val valueIRUnpickleLogic = unpickleAs(tpe)
     val compileTimeDispatch = compileTimeDispatchees(tpe) map (tpe => {
       CaseDef(Bind(TermName("tpe"), Ident(nme.WILDCARD)), q"tpe =:= scala.reflect.runtime.universe.typeOf[$tpe]", unpickleAs(tpe))
     })
     val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"???")
-    // TODO: this should also go through HasPicklerDispatch, probably routed through a companion of T
-    val objectIRUnpickleLogic = Match(q"ir.tpe", compileTimeDispatch :+ runtimeDispatch)
+
+    val dispatchLogic = Match(q"pickleTpe", compileTimeDispatch :+ runtimeDispatch)
 
     q"""
-      import scala.pickling._
-      import scala.pickling.ir._
-      val ir = $irTree
-      ir match {
-        case ir: ValueIR => $valueIRUnpickleLogic
-        case ir: ObjectIR => $objectIRUnpickleLogic
-        case ir => throw new PicklingException(s"unknown IR: $$ir")
-      }
+      val pickle = $pickleTree
+      val pf = new ${pickleFormatType(pickleTree)}()
+      val pickleTpe = pf.getType(pf.getObject(pickle), scala.reflect.runtime.currentMirror)
+      $dispatchLogic
     """
   }
 }
