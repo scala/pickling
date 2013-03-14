@@ -64,7 +64,7 @@ class Tools[U <: Universe with Singleton](val u: U) {
           val pkgMembers = pkg.typeSignature.members
           pkgMembers foreach (m => {
             def analyze(m: Symbol): Unit = {
-              if (m.name.toString.contains("$")) () // SI-7251
+              if (m.name.decoded.contains("$")) () // SI-7251
               else if (m.isClass && !m.asClass.isAbstractClass && !m.asClass.isTrait) m.asClass.baseClasses foreach (bc => updateCache(bc, m))
               else if (m.isModule) analyze(m.asModule.moduleClass)
               else ()
