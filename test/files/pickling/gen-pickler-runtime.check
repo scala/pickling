@@ -1,3 +1,4 @@
+generating runtime pickler for Person
 hooray:
 {
   "tpe": "Person",
