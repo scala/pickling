@@ -151,6 +151,10 @@ trait PickleMacros extends Macro {
 
 // purpose of this macro: implementation of unpickle method on type Pickle.
 trait UnpickleMacros extends Macro {
+  // TODO: implement this
+  // override def onInfer(tic: c.TypeInferenceContext): Unit = {
+  //   c.error(c.enclosingPosition, "must specify the type parameter for method unpickle")
+  // }
   def pickleUnpickle[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
     val tpe = weakTypeOf[T]
