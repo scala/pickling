@@ -55,15 +55,15 @@ trait UnpicklerMacros extends Macro {
       val ctorSym = nestedTpe.declaration(nme.CONSTRUCTOR).asMethod // TODO: multiple constructors
 
       def ctorArg(name: String, tpe: Type) = {
-        tpe match {
-          case tpe if tpe =:= IntClass.toType    => q"pf.getField($nestedObj, ru.definitions.IntClass.toType, $name.toString).asInstanceOf[Int]"
-          case tpe if tpe =:= StringClass.toType => q"pf.getField($nestedObj, ru.definitions.StringClass.toType, $name.toString).asInstanceOf[String]"
+        tpe match { // TODO check if tpe is primitive, if so reify type
+          case tpe if tpe =:= IntClass.toType    => q"pf.getPrimitive($nestedObj, ru.definitions.IntClass.toType, $name.toString).asInstanceOf[Int]"
+          case tpe if tpe =:= StringClass.toType => q"pf.getPrimitive($nestedObj, ru.definitions.StringClass.toType, $name.toString).asInstanceOf[String]"
           case _ => // field has non-primitive type
             val newName = newTermName(c.freshName("picklNestedObj"))
             val treeToUnpickle = genTreeToUnpickle(newName, tpe)
             q"""
               {
-                val $newName = pf.getField($nestedObj, null, $name)
+                val $newName = pf.getField($nestedObj, $name)
                 $treeToUnpickle
               }
             """
