@@ -72,7 +72,6 @@ package pickling {
     // looks like scalac fails to generate a bridge here...
     // def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): PickleType
     def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): Pickle
-    def parse(pickle: PickleType, mirror: ru.Mirror): Option[UnpickleIR]
 
     def getObject(p: PickleType): Any
     def getType(obj: Any, mirror: ru.Mirror): ru.Type
