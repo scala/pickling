@@ -74,11 +74,10 @@ package pickling {
     def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): Pickle
     def parse(pickle: PickleType, mirror: ru.Mirror): Option[UnpickleIR]
 
-    def readerFor(pickle: PickleType, mirror: ru.Mirror): PickleReader
-
     def getObject(p: PickleType): Any
     def getType(obj: Any, mirror: ru.Mirror): ru.Type
-    def getField(obj: Any, tpe: ru.Type, name: String): Any
+    def getField(obj: Any, name: String): Any
+    def getPrimitive(obj: Any, tpe: ru.Type, name: String): Any
   }
 
   trait PickleReader {

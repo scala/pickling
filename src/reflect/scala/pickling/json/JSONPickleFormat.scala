@@ -68,30 +68,6 @@ package json {
       mirror.staticClass(stpe).asType.toType
     }
 
-    private def readerFor(rawJSON: Any, mirror: ru.Mirror): PickleReader = new PickleReader {
-      def readType: ru.Type = rawJSON match {
-        case JSONObject(data) =>
-          unpickleTpe(data("tpe").asInstanceOf[String], mirror)
-        case _                =>
-          throw new PicklingException("JSON object expected")
-      }
-      def readField(name: String): PickleReader = rawJSON match {
-        case JSONObject(data) => readerFor(data(name), mirror)
-        case value            => readerFor(value, mirror)
-      }
-      def readInt: Int       = rawJSON.asInstanceOf[Int]
-      def readString: String = rawJSON.toString
-      //...
-    }
-
-    def readerFor(pickle: PickleType, mirror: ru.Mirror): PickleReader = {
-      val rawJSON = JSON.parseRaw(pickle.value) match {
-        case Some(any) => any
-        case None      => throw new PicklingException("error parsing JSON")
-      }
-      readerFor(rawJSON, mirror: ru.Mirror)
-    }
-
     def getObject(p: PickleType): Any = JSON.parseRaw(p.value).get
 
     def getType(obj: Any, mirror: ru.Mirror): ru.Type = {
@@ -99,16 +75,16 @@ package json {
       unpickleTpe(data("tpe").toString, mirror)
     }
 
-    def getField(obj: Any, tpe: ru.Type, name: String): Any = {
-      obj match {
-        case JSONObject(data) =>
-          tpe match {
-            case null => data(name)
-            case tp if tp =:= IntClass.toType    => data(name).asInstanceOf[Double].toInt
-            case tp if tp =:= StringClass.toType => data(name).toString
-            case _ => data(name)
-          }
-      }
+    def getField(obj: Any, name: String): Any = obj match {
+      case JSONObject(data) => data(name)
+    }
+
+    def getPrimitive(obj: Any, tpe: ru.Type, name: String): Any = obj match {
+      case JSONObject(data) =>
+        tpe match {
+          case tp if tp =:= IntClass.toType    => data(name).asInstanceOf[Double].toInt
+          case tp if tp =:= StringClass.toType => data(name).toString
+        }
     }
 
     def parse(pickle: JSONPickle, mirror: ru.Mirror): Option[UnpickleIR] = {
