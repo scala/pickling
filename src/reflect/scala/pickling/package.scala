@@ -80,13 +80,5 @@ package pickling {
     def getPrimitive(obj: Any, tpe: ru.Type, name: String): Any
   }
 
-  trait PickleReader {
-    def readType: ru.Type
-    def readField(name: String): PickleReader
-    def readInt: Int
-    def readString: String
-    //...
-  }
-
   case class PicklingException(msg: String) extends Exception(msg)
 }
