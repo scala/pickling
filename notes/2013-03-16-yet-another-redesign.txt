@@ -8,7 +8,7 @@ trait Pickler[T] {
 trait PickleBuilder {
   type PickleType <: Pickle
   def startObject(tpe: Type, picklee: Any): this.type
-  def putField(name: String, value: this.type => this.type): this.type
+  def putField(name: String, value: => this.type): this.type
   def finishObject(): this.type
   def toPickle(): PickleType
 }
@@ -52,9 +52,9 @@ class PersonJSONPickler extends Pickler[Int] {
   def pickle(pickleeRaw: Any, builder: JSONPickleBuilder): JSONPickleBuilder = {
     val picklee = pickleeRaw.asInstanceOf[Person]
     builder.startObject(typeOf[Person], picklee)
-           .putField("name", b => {
+           .putField("name", {
       val name = picklee.name
-      name.pickler.pickle(name, b) // the .pickler macro does the same that the .pickle macro does, but omits the last "toPickle" line
+      name.pickler.pickle(name, builder) // the .pickler macro does the same that the .pickle macro does, but omits the last "toPickle" line
                                    // NOTE: if we go for introduceTopLevel, then dispatch code generated here won't take into account the scope of the callsite
     }) // again, no special treatment for primitives
     builder.finishObject()
