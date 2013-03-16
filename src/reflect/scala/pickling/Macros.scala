@@ -59,7 +59,7 @@ trait UnpicklerMacros extends Macro {
           case tpe if tpe =:= IntClass.toType    => q"pf.getField($nestedObj, ru.definitions.IntClass.toType, $name.toString).asInstanceOf[Int]"
           case tpe if tpe =:= StringClass.toType => q"pf.getField($nestedObj, ru.definitions.StringClass.toType, $name.toString).asInstanceOf[String]"
           case _ => // field has non-primitive type
-            val newName = newTermName("synth" + pickling.nextSynth) //TODO
+            val newName = newTermName(c.freshName("picklNestedObj"))
             val treeToUnpickle = genTreeToUnpickle(newName, tpe)
             q"""
               {

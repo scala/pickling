@@ -14,12 +14,6 @@ package object pickling {
   implicit class PickleOps[T](picklee: T) {
     def pickle(implicit pickleFormat: PickleFormat): _ = macro PickleMacros.impl[T]
   }
-
-  private[pickling] var synthCntr: Int = 0
-  private[pickling] def nextSynth: Int = {
-    synthCntr += 1
-    synthCntr
-  }
 }
 
 package pickling {
