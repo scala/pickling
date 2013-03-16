@@ -7,7 +7,7 @@ package object json {
 
 package json {
   import language.experimental.macros
-  import scala.collection.immutable.ListMap
+
   import scala.reflect.api.Universe
   import scala.reflect.runtime.{universe => ru}
   import scala.reflect.macros.Macro
@@ -24,29 +24,7 @@ package json {
 
     type PickleType = JSONPickle
     override def instantiate = macro JSONPickleInstantiate.impl
-    def formatCT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: U#Expr[Any], fields: irs.FieldIR => U#Expr[Pickle]): U#Expr[JSONPickle] = {
-      import irs.uni._
-      import definitions._
-      val sym = cir.tpe.typeSymbol.asClass
-      val value: Expr[String] =
-        if (sym == NullClass) reify("null")
-        else if (sym == CharClass || sym == StringClass) reify("\"" + JSONFormat.quoteString(picklee.splice.toString) + "\"")
-        else if (sym.isPrimitive) reify(picklee.splice.toString) // TODO: unit?
-        else {
-          def pickleTpe(tpe: Type): Expr[String] = {
-            def loop(tpe: Type): String = tpe match {
-              case TypeRef(_, sym, Nil) => s"${sym.fullName}"
-              case TypeRef(_, sym, targs) => s"${sym.fullName}[${targs.map(targ => pickleTpe(targ))}]"
-            }
-            reify("\"tpe\": \"" + Expr[String](Literal(Constant(loop(tpe)))).splice + "\"")
-          }
-          def pickleField(fir: irs.FieldIR) = reify("\"" + Expr[String](Literal(Constant(fir.name))).splice + "\": " + fields(fir).splice.value)
-          val fragmentTrees = pickleTpe(cir.tpe) +: cir.fields.map(fir => pickleField(fir))
-          val fragmentsTree = fragmentTrees.map(t => reify("  " + t.splice)).reduce((t1, t2) => reify(t1.splice + ",\n" + t2.splice))
-          reify("{\n" + fragmentsTree.splice + "\n}")
-        }
-      reify(JSONPickle(value.splice))
-    }
+
     // def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): JSONPickle = {
     def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): Pickle = {
       def objectPrefix(tpe: irs.uni.Type) = "{\n  \"tpe\": \"" + tpe.typeSymbol.name.toString + "\",\n"
@@ -86,6 +64,29 @@ package json {
           case tp if tp =:= StringClass.toType => data(name).toString
         }
     }
+
+    /** Returns partial pickle */
+    def putType(tpe: ru.Type): PickleType =
+      JSONPickle("{\n  \"tpe\": \"" + tpe.typeSymbol.name.toString + "\"")
+
+    /** Adds field to `partial` pickle, using `state` to guide the pickling */
+    def putField(partial: PickleType, state: Any, name: String, value: Any): PickleType =
+      JSONPickle(partial.value + ",\n" + "  \"" + name + "\": " + value)
+
+    /** Adds field of primitive type to `partial` pickle */
+    def putPrimitive(partial: PickleType, state: Any, tpe: ru.Type, name: String, value: AnyVal): PickleType = {
+      val valueToWrite = formatPrimitive(tpe, value).value
+      JSONPickle(partial.value + ",\n" + "  \"" + name + "\": " + valueToWrite)
+    }
+
+    def putObjectSuffix(partial: PickleType, state: Any): PickleType =
+      JSONPickle(partial.value + "\n}")
+
+    def formatPrimitive(tpe: ru.Type, value: Any): PickleType =
+      if (tpe =:= CharClass.toType || tpe =:= StringClass.toType)
+        JSONPickle("\"" + JSONFormat.quoteString(value.toString) + "\"")
+      else
+        JSONPickle(value.toString)
   }
 
   trait JSONPickleInstantiate extends Macro {

@@ -15,26 +15,52 @@ trait PicklerMacros extends Macro {
     val cir = flatten(compose(ClassIR(tpe, null, List())))
     val nullCir = ClassIR(definitions.NullTpe, null, Nil)
     val fieldAccessor = (fir: FieldIR) => Expr[Pickle](q"picklee.${TermName(fir.name)}.pickle")
-    def pickleLogic(cir: ClassIR) = instantiatePickleFormat(pickleFormat).formatCT[c.universe.type](irs)(cir, Expr(q"picklee"), fieldAccessor)
 
-    // TODO: genPickler and genUnpickler should really hoist their results to the top level
-    // it should be a straightforward c.introduceTopLevel (I guess we can ignore inner classes in the paper)
-    // then we would also not need this implicit val trick
-    q"""
+    val rtag = c.reifyType(treeBuild.mkRuntimeUniverseRef, EmptyTree, tpe)
+
+    def mkPrimitivePickler = q"""
       import scala.pickling._
       implicit val anon$$pickler = new Pickler[$tpe] {
         type PickleType = ${pickleType(pickleFormat)}
         def pickle(pickleeRaw: Any): PickleType = {
-          if (pickleeRaw != null) {
-            val picklee = pickleeRaw.asInstanceOf[$tpe]
-            ${pickleLogic(cir)}
-          } else {
-            ${pickleLogic(nullCir)}
-          }
+          val picklee = pickleeRaw.asInstanceOf[$tpe]
+          $pickleFormat.formatPrimitive($rtag.tpe, picklee)
         }
       }
       anon$$pickler
     """
+
+    if (tpe.typeSymbol.asClass.isPrimitive || tpe =:= typeOf[String])
+      mkPrimitivePickler
+    else {
+      def pickleField(fir: irs.FieldIR): Tree =
+        q"partial = pf.putField(partial, null, ${fir.name}, ${fieldAccessor(fir).tree}.value)"
+
+      val pickleAllFieldsTree = cir.fields.map(pickleField).reduce((t1, t2) => q"""
+        $t1
+        $t2
+      """)
+
+      val pickleLogic = q"""
+        val rtm = scala.reflect.runtime.universe.runtimeMirror(getClass.getClassLoader)
+        val pf = $pickleFormat
+        var partial = pf.putType($rtag.tpe)
+        $pickleAllFieldsTree
+        pf.putObjectSuffix(partial, null)
+      """
+
+      q"""
+        import scala.pickling._
+        implicit val anon$$pickler = new Pickler[$tpe] {
+          type PickleType = ${pickleType(pickleFormat)}
+          def pickle(pickleeRaw: Any): PickleType = {
+            val picklee = pickleeRaw.asInstanceOf[$tpe]
+            $pickleLogic
+          }
+        }
+        anon$$pickler
+      """
+    }
   }
 }
 
