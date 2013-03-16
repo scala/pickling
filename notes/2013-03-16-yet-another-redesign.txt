@@ -7,10 +7,9 @@ trait Pickler[T] {
 
 trait PickleBuilder {
   type PickleType <: Pickle
-  type PickleBuilderType <: PickleBuilder
-  def startObject(tpe: Type, picklee: Any): PickleBuilderType
-  def putField(name: String, value: PickleBuilderType => PickleBuilderType): PickleBuilderType
-  def finishObject(): PickleBuilderType
+  def startObject(tpe: Type, picklee: Any): this.type
+  def putField(name: String, value: this.type => this.type): this.type
+  def finishObject(): this.type
   def toPickle(): PickleType
 }
 
@@ -39,8 +38,7 @@ class IntJSONPickler extends Pickler[Int] { // note that we no longer depend on 
     // I) don't have the primitive dilemma => builder decides what's primitive and what's not
     // II) builder methods can be inlined if declared as macros => we need precise PickleBuilderType to enable such an optimization
     // III) we might even not have to construct instances of Types at runtime if startObject is a macro
-    val b1 = builder.startObject(typeOf[Int], picklee)
-    builder.finishObject()
+    builder.startObject(typeOf[Int], picklee).finishObject()
   }
 }
 
@@ -53,8 +51,8 @@ class PersonJSONPickler extends Pickler[Int] {
   type PickleBuilderType = JSONPickleBuilder
   def pickle(pickleeRaw: Any, builder: JSONPickleBuilder): JSONPickleBuilder = {
     val picklee = pickleeRaw.asInstanceOf[Person]
-    val b1 = builder.startObject(typeOf[Person], picklee)
-    val b2 = builder.putField("name", b => {
+    builder.startObject(typeOf[Person], picklee)
+           .putField("name", b => {
       val name = picklee.name
       name.pickler.pickle(name, b) // the .pickler macro does the same that the .pickle macro does, but omits the last "toPickle" line
                                    // NOTE: if we go for introduceTopLevel, then dispatch code generated here won't take into account the scope of the callsite
