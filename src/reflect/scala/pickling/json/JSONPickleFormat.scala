@@ -86,21 +86,6 @@ package json {
           case tp if tp =:= StringClass.toType => data(name).toString
         }
     }
-
-    def parse(pickle: JSONPickle, mirror: ru.Mirror): Option[UnpickleIR] = {
-      def translate(parsedJSON: Any): UnpickleIR = parsedJSON match {
-        case JSONObject(data) =>
-          val tpe = unpickleTpe(data("tpe").asInstanceOf[String], mirror)
-          val fields = ListMap() ++ data.map{case (k, v) => (k -> translate(v))} - "tpe"
-          ObjectIR(tpe, fields)
-        case JSONArray(data) =>
-          throw new PicklingException(s"not yet implemented: $parsedJSON")
-        case value =>
-          ValueIR(value)
-      }
-      // TODO: hook into the JSON parser to construct UnpickleIR directly from JSONObject/JSONArray
-      JSON.parseRaw(pickle.value).map(translate)
-    }
   }
 
   trait JSONPickleInstantiate extends Macro {
