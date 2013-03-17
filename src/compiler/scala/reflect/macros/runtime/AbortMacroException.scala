@@ -5,3 +5,5 @@ import scala.reflect.internal.util.Position
 import scala.util.control.ControlThrowable
 
 class AbortMacroException(val pos: Position, val msg: String) extends Throwable(msg) with ControlThrowable
+
+class DivergentAbortMacroException() extends Throwable("") with ControlThrowable

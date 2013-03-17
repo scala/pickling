@@ -44,4 +44,8 @@ trait FrontEnds {
    *  Use `enclosingPosition` if you're in doubt what position to pass to `pos`.
    */
   def abort(pos: Position, msg: String): Nothing
+
+  /** Abruptly terminates current implicit macro expansion.
+   */
+  def diverge(): Nothing
 }

@@ -10,7 +10,7 @@ import scala.reflect.ClassTag
 import scala.reflect.internal.util.Statistics
 import scala.reflect.macros.util._
 import scala.util.control.ControlThrowable
-import scala.reflect.macros.runtime.{AbortMacroException, MacroRuntimes}
+import scala.reflect.macros.runtime.{AbortMacroException, DivergentAbortMacroException, MacroRuntimes}
 import scala.reflect.runtime.{universe => ru}
 import scala.tools.reflect.FastTrack
 
@@ -916,6 +916,7 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
             popMacroContext()
             val realex = ReflectionUtils.unwrapThrowable(ex)
             realex match {
+              case ex: DivergentAbortMacroException => throw DivergentImplicit
               case ex: AbortMacroException => MacroGeneratedAbort(expandee, ex)
               case ex: ControlThrowable => throw ex
               case ex: TypeError => MacroGeneratedTypeError(expandee, ex)

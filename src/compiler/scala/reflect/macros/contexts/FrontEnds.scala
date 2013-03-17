@@ -1,7 +1,7 @@
 package scala.reflect.macros
 package contexts
 
-import scala.reflect.macros.runtime.AbortMacroException
+import scala.reflect.macros.runtime.{AbortMacroException, DivergentAbortMacroException}
 
 trait FrontEnds {
   self: Context =>
@@ -19,4 +19,6 @@ trait FrontEnds {
   def error(pos: Position, msg: String): Unit = callsiteTyper.context.error(pos, msg)
 
   def abort(pos: Position, msg: String): Nothing = throw new AbortMacroException(pos, msg)
+
+  def diverge(): Nothing = throw new DivergentAbortMacroException()
 }
