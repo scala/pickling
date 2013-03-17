@@ -32,15 +32,25 @@ class Tools[U <: Universe with Singleton](val u: U) {
   import u._
   import definitions._
 
-  def compileTimeDispatchees(sym: Symbol, mirror: Mirror): List[Symbol] = {
-    val subclasses = allStaticallyKnownConcreteSubclasses(sym, mirror)
-    val blackList = Set[Symbol](AnyClass, AnyRefClass, AnyValClass)
-    val whiteList = (sym: Symbol) => sym.asClass.isPrimitive
-    val inclusive = sym.isClass && !blackList(sym) && (whiteList(sym) || (!sym.asClass.isAbstractClass && !sym.asClass.isTrait))
-    subclasses ++ (if (inclusive) List(sym) else Nil)
+  def compileTimeDispatchees(tpe: Type, mirror: Mirror): List[Type] = {
+    val subtypes = allStaticallyKnownConcreteSubclasses(tpe, mirror)
+    def includeTpeItself = {
+      val sym = tpe.typeSymbol
+      val blackList = Set[Symbol](AnyClass, AnyRefClass, AnyValClass)
+      val whiteList = (sym: Symbol) => sym.asClass.isPrimitive
+      sym.isClass && !blackList(sym) && (whiteList(sym) || (!sym.asClass.isAbstractClass && !sym.asClass.isTrait))
+    }
+    subtypes ++ (if (includeTpeItself) List(tpe) else Nil)
   }
 
-  def allStaticallyKnownConcreteSubclasses(sym: Symbol, mirror: Mirror): List[Symbol] = {
+  def allStaticallyKnownConcreteSubclasses(tpe: Type, mirror: Mirror): List[Type] = {
+    // TODO: so far the search is a bit dumb
+    // given `class C[T]; class D extends C[Int]` and `tpe = C[String]`, it will return <symbol of D>
+    // TODO: on a more elaborate note
+    // given `class C; class D[T] extends C` we of course cannot return the infinite number of `D[X]` types
+    // but what we can probably do is to additionally look up custom picklers/unpicklers of for specific `D[X]`
+    val sym = tpe.typeSymbol
+
     def sourcepathScan(): List[Symbol] = {
       val g = u.asInstanceOf[scala.tools.nsc.Global]
       val subclasses = MutableList[g.Symbol]()
@@ -96,7 +106,15 @@ class Tools[U <: Universe with Singleton](val u: U) {
         }
       // NOTE: need to order the list: children first, parents last
       // otherwise pattern match which uses this list might work funnily
-      unsorted.distinct.sortWith((c1, c2) => c1.asClass.baseClasses.contains(c2))
+      val subSyms = unsorted.distinct.sortWith((c1, c2) => c1.asClass.baseClasses.contains(c2))
+      subSyms map (sym => {
+        val tpeWithMaybeTparams = sym.asType.toType
+        val tparams = tpeWithMaybeTparams match {
+          case PolyType(tparams, _) => tparams
+          case _ => Nil
+        }
+        existentialAbstraction(tparams, tpeWithMaybeTparams)
+      })
     }
   }
 }
@@ -106,42 +124,69 @@ abstract class Macro extends scala.reflect.macros.Macro {
   import definitions._
 
   val tools = new Tools[c.universe.type](c.universe)
-  val irs = new ir.PickleIRs[c.universe.type](c.universe)
+  import tools._
 
-  def instantiatePickleFormat(pickleFormat: Tree): PickleFormat = {
-    def failPickleFormat(msg: String) = c.abort(c.enclosingPosition, s"$msg for ${pickleFormat} of type ${pickleFormat.tpe}")
-    val pickleFormatCarrier = c.typeCheck(q"$pickleFormat.instantiate", silent = true)
-    pickleFormatCarrier.attachments.all.find(_.isInstanceOf[PickleFormat]) match {
-      case Some(pf: PickleFormat) => pf
-      case _ => failPickleFormat("Couldn't instantiate PickleFormat")
-    }
-  }
+  val irs = new ir.IRs[c.universe.type](c.universe)
+  import irs._
 
-  def pickleType(pickleFormat: Tree): Type = {
-    def failPickleFormat(msg: String) = c.abort(c.enclosingPosition, s"$msg for ${pickleFormat} of type ${pickleFormat.tpe}")
-    val pickleTypeCarrier = c.typeCheck(tq"${pickleFormat.tpe}#PickleType", mode = c.TYPEmode, silent = true)
-    pickleTypeCarrier match {
-      case EmptyTree => failPickleFormat("Couldn't resolve PickleType")
+  private def innerType(target: Tree, name: String): Type = {
+    def fail(msg: String) = c.abort(c.enclosingPosition, s"$msg for ${target} of type ${target.tpe}")
+    val carrier = c.typeCheck(tq"${target.tpe}#${TypeName(name)}", mode = c.TYPEmode, silent = true)
+    carrier match {
+      case EmptyTree => fail(s"Couldn't resolve $name")
       case tree => tree.tpe.normalize match {
         case tpe if tpe.typeSymbol.isClass => tpe
-        case tpe => failPickleFormat(s"PickleType resolved as $tpe is invalid")
+        case tpe => fail(s"$name resolved as $tpe is invalid")
       }
     }
   }
 
-  def pickleFormatType(pickleTree: Tree): Type = {
-    def failUnpickle(msg: String) = c.abort(c.enclosingPosition, s"$msg for $pickleTree of type ${pickleTree.tpe}")
-    val pickleFormatTypeCarrier = c.typeCheck(tq"${pickleTree.tpe}#PickleFormatType", mode = c.TYPEmode, silent = true)
-    pickleFormatTypeCarrier match {
-      case EmptyTree => failUnpickle("Couldn't resolve PickleFormatType")
-      case tree => tree.tpe.normalize match {
-        case tpe if tpe.typeSymbol.isClass => tpe
-        case tpe => failUnpickle(s"PickleFormatType resolved as $tpe is invalid")
-      }
-    }
+  def pickleBuilderType(pickleFormat: Tree): Type = innerType(pickleFormat, "PickleBuilderType")
+  def pickleReaderType(pickleFormat: Tree): Type = innerType(pickleFormat, "PickleReaderType")
+  def pickleFormatType(pickle: Tree): Type = innerType(pickle, "PickleFormatType")
+
+  def compileTimeDispatchees(tpe: Type): List[Type] = tools.compileTimeDispatchees(tpe, rootMirror)
+
+  def syntheticPackageName: String = "scala.pickling.synthetic"
+  def syntheticBaseName(tpe: Type): TypeName = TypeName(tpe.typeSymbol.fullName.split('.').map(_.capitalize).mkString(""))
+  def syntheticBaseQualifiedName(tpe: Type): TypeName = TypeName(syntheticPackageName + "." + syntheticBaseName(tpe).toString)
+
+  def syntheticPicklerName(tpe: Type, builderTpe: Type): TypeName = syntheticBaseName(tpe) + syntheticPicklerSuffix(builderTpe)
+  def syntheticPicklerQualifiedName(tpe: Type, builderTpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticPicklerSuffix(builderTpe)
+  def syntheticPicklerSuffix(builderTpe: Type): String = builderTpe.typeSymbol.name.toString.stripSuffix("PickleBuilder") + "Pickler"
+
+  def syntheticUnpicklerName(tpe: Type, readerTpe: Type): TypeName = syntheticBaseName(tpe) + syntheticUnpicklerSuffix(readerTpe)
+  def syntheticUnpicklerQualifiedName(tpe: Type, readerTpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticUnpicklerSuffix(readerTpe)
+  def syntheticUnpicklerSuffix(readerTpe: Type): String = readerTpe.typeSymbol.name.toString.stripSuffix("PickleReader") + "Unpickler"
+
+  def notImplementedYet(cir: ClassIR, predicate: FieldIR => Boolean, description: String) = {
+    cir.fields.filter(predicate).foreach(fir =>
+      c.abort(c.enclosingPosition, s"TODO: cannot unpickle $description yet (${fir.name} in class ${cir.tpe})"))
   }
 
-  def compileTimeDispatchees(tpe: Type): List[Type] = {
-    tools.compileTimeDispatchees(tpe.typeSymbol, rootMirror).map(_.asType.toType)
+  def preferringAlternativeImplicits(body: => Tree): Tree = {
+    def debug(msg: Any) = {
+      val padding = "  " * (c.enclosingImplicits.length - 1)
+      // Console.err.println(padding + msg)
+    }
+    debug("can we enter " + c.enclosingImplicits.head.pt + "?")
+    debug(c.enclosingImplicits)
+    c.enclosingImplicits match {
+      case c.ImplicitCandidate(_, _, ourPt, _) :: c.ImplicitCandidate(_, _, theirPt, _) :: _ if ourPt =:= theirPt =>
+        debug(s"no, because: ourPt = $ourPt, theirPt = $theirPt")
+        c.diverge()
+      case _ =>
+        debug(s"not sure, need to explore alternatives")
+        c.inferImplicitValue(c.enclosingImplicits.head.pt, silent = true) match {
+          case success if success != EmptyTree =>
+            debug(s"no, because there's $success")
+            c.diverge()
+          case _ =>
+            debug("yes, there are no obstacles. entering " + c.enclosingImplicits.head.pt)
+            val result = body
+            debug("result: " + result)
+            result
+        }
+    }
   }
 }

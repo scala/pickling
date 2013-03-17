@@ -1,17 +1,19 @@
 package scala.pickling
 
 package object json {
-  implicit val pickleFormat = new JSONPickleFormat
+  implicit val pickleFormat: JSONPickleFormat = new JSONPickleFormat
   implicit def toJSONPickle(value: String): JSONPickle = JSONPickle(value)
 }
 
 package json {
   import language.experimental.macros
 
-  import scala.reflect.api.Universe
-  import scala.reflect.runtime.{universe => ru}
+  import scala.reflect.runtime.universe._
+  import definitions._
   import scala.reflect.macros.Macro
   import scala.util.parsing.json._
+  import scala.collection.mutable.{StringBuilder, Stack}
+  import ir._
 
   case class JSONPickle(value: String) extends Pickle {
     type ValueType = String
@@ -19,77 +21,97 @@ package json {
   }
 
   class JSONPickleFormat extends PickleFormat {
-    import ir._
-    import ru.definitions._
-
     type PickleType = JSONPickle
-    override def instantiate = macro JSONPickleInstantiate.impl
 
-    // def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): JSONPickle = {
-    def formatRT[U <: Universe with Singleton](irs: PickleIRs[U])(cir: irs.ClassIR, picklee: Any, fields: irs.FieldIR => Pickle): Pickle = {
-      def objectPrefix(tpe: irs.uni.Type) = "{\n  \"tpe\": \"" + tpe.typeSymbol.name.toString + "\",\n"
-      val objectSuffix = "\n}"
-      val fieldSeparator = ",\n"
-      def fieldPrefix(fir: irs.FieldIR) = "  \"" + fir.name + "\": "
-      val fieldSuffix = ""
-      JSONPickle {
-        objectPrefix(cir.tpe) + {
-          val formattedFields = cir.fields.map(fld => fieldPrefix(fld) + fields(fld).value)
-          formattedFields mkString fieldSeparator
-        } + objectSuffix
+    type PickleBuilderType = JSONPickleBuilder
+    def createBuilder() = new JSONPickleBuilder
+
+    type PickleReaderType = JSONPickleReader
+    def createReader(pickle: JSONPickle) = {
+      JSON.parseRaw(pickle.value) match {
+        case Some(raw) => new JSONPickleReader(raw)
+        case None => throw new PicklingException("failed to parse \"" + pickle.value + "\" as JSON")
       }
     }
-
-    //TODO: seems unneeded after move to parseTpe, parseField, etc.
-    def unpickleTpe(stpe: String, mirror: ru.Mirror): ru.Type = {
-      // TODO: support polymorphic types as serialized above in formatCT/formatRT
-      mirror.staticClass(stpe).asType.toType
-    }
-
-    def getObject(p: PickleType): Any = JSON.parseRaw(p.value).get
-
-    def getType(obj: Any, mirror: ru.Mirror): ru.Type = {
-      val JSONObject(data) = obj
-      unpickleTpe(data("tpe").toString, mirror)
-    }
-
-    def getField(obj: Any, name: String): Any = obj match {
-      case JSONObject(data) => data(name)
-    }
-
-    def getPrimitive(obj: Any, tpe: ru.Type, name: String): Any = obj match {
-      case JSONObject(data) =>
-        tpe match {
-          case tp if tp =:= IntClass.toType    => data(name).asInstanceOf[Double].toInt
-          case tp if tp =:= StringClass.toType => data(name).toString
-        }
-    }
-
-    /** Returns partial pickle */
-    def putType(tpe: ru.Type): PickleType =
-      JSONPickle("{\n  \"tpe\": \"" + tpe.typeSymbol.name.toString + "\"")
-
-    /** Adds field to `partial` pickle, using `state` to guide the pickling */
-    def putField(partial: PickleType, state: Any, name: String, value: Any): PickleType =
-      JSONPickle(partial.value + ",\n" + "  \"" + name + "\": " + value)
-
-    /** Adds field of primitive type to `partial` pickle */
-    def putPrimitive(partial: PickleType, state: Any, tpe: ru.Type, name: String, value: AnyVal): PickleType = {
-      val valueToWrite = formatPrimitive(tpe, value).value
-      JSONPickle(partial.value + ",\n" + "  \"" + name + "\": " + valueToWrite)
-    }
-
-    def putObjectSuffix(partial: PickleType, state: Any): PickleType =
-      JSONPickle(partial.value + "\n}")
-
-    def formatPrimitive(tpe: ru.Type, value: Any): PickleType =
-      if (tpe =:= CharClass.toType || tpe =:= StringClass.toType)
-        JSONPickle("\"" + JSONFormat.quoteString(value.toString) + "\"")
-      else
-        JSONPickle(value.toString)
   }
 
-  trait JSONPickleInstantiate extends Macro {
-    def impl = c.universe.EmptyTree updateAttachment pickleFormat
+  class JSONPickleBuilder extends PickleBuilder {
+    type PickleFormatType = JSONPickleFormat
+    implicit val format = json.pickleFormat
+    type PickleType = JSONPickle
+
+    private val buf = new StringBuilder()
+    private val stack = new Stack[Type]()
+    private def isJSONPrimitive(tpe: Type) = {
+      val sym = tpe.typeSymbol.asClass
+      sym == NullClass || sym.isPrimitive || sym == StringClass
+    }
+
+    def beginEntry(tpe: Type, picklee: Any): this.type = {
+      stack.push(tpe)
+      val sym = tpe.typeSymbol.asClass
+      if (isJSONPrimitive(tpe)) {
+        if (sym == NullClass) buf ++= "null"
+        else if (sym == CharClass || sym == StringClass) buf ++= "\"" + JSONFormat.quoteString(picklee.toString) + "\""
+        else buf ++= picklee.toString // TODO: unit?
+      } else {
+        buf ++= "{\n"
+        def pickleTpe(tpe: Type): String = {
+          def loop(tpe: Type): String = tpe match {
+            case TypeRef(_, sym, Nil) => s"${sym.fullName}"
+            case TypeRef(_, sym, targs) => s"${sym.fullName}[${targs.map(targ => pickleTpe(targ))}]"
+          }
+          "  \"tpe\": \"" + loop(tpe) + "\""
+        }
+        buf ++= pickleTpe(tpe)
+      }
+      this
+    }
+    def putField(name: String, pickler: this.type => Unit): this.type = {
+      assert(!isJSONPrimitive(stack.top), stack.top)
+      buf ++= ",\n  \"" + name + "\": "
+      pickler(this)
+      this
+    }
+    def endEntry(): Unit = {
+      val tpe = stack.pop()
+      if (isJSONPrimitive(tpe)) () // do nothing
+      else buf ++= "\n}"
+    }
+    def result(): JSONPickle = {
+      assert(stack.isEmpty, stack)
+      JSONPickle(buf.toString)
+    }
+  }
+
+  class JSONPickleReader(datum: Any) extends PickleReader {
+    type PickleFormatType = JSONPickleFormat
+    implicit val format = json.pickleFormat
+    def readType(mirror: Mirror): Type = {
+      def unpickleTpe(stpe: String): Type = {
+        // TODO: support polymorphic types as serialized above with pickleTpe
+        mirror.staticClass(stpe).asType.toType
+      }
+      datum match {
+        case JSONObject(fields) => unpickleTpe(fields("tpe").asInstanceOf[String])
+        case JSONArray(elements) => throw new PicklingException(s"TODO: not yet implemented ($datum)")
+        case _: String => StringClass.toType
+        case _: Double => DoubleClass.toType
+        case null => NullTpe
+      }
+    }
+    def atPrimitive: Boolean = !atObject
+    def readPrimitive(tpe: Type): Any = {
+      tpe match {
+        case tpe if tpe =:= StringClass.toType => datum.asInstanceOf[String]
+        case tpe if tpe =:= IntClass.toType => datum.asInstanceOf[Double].toInt
+      }
+    }
+    def atObject: Boolean = datum.isInstanceOf[JSONObject]
+    def readField(name: String): this.type = {
+      datum match {
+        case JSONObject(fields) => new JSONPickleReader(fields(name)).asInstanceOf[this.type] // TODO: think this over
+      }
+    }
   }
 }

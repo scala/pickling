@@ -1,4 +1,4 @@
-generating runtime pickler for Person
+generating runtime pickler for class Person
 hooray:
 {
   "tpe": "Person",
