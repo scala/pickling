@@ -1,49 +1,69 @@
 package scala.pickling
 
+import scala.reflect.runtime.universe._
+import definitions._
 import scala.reflect.runtime.{universe => ru}
 import scala.tools.reflect.ToolBox
 import ir._
 
-object PicklerRuntime {
-  def genCompiledPickler(mirror: ru.Mirror, tpe: ru.Type)(implicit format: PickleFormat, p1: Pickler[Int], p2: Pickler[String]): Pickler[_] = {
+abstract class PicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) {
+  val mirror = runtimeMirror(classLoader)
+  val sym = mirror.classSymbol(clazz)
+  if (sym.typeParams.nonEmpty)
+    throw new PicklingException(s"TODO: cannot pickle polymorphic types yet ($clazz)")
+  val tpe = sym.toType
+  val irs = new IRs[ru.type](ru)
+  import irs._
+  val cir = classIR(tpe)
+}
+
+class CompiledPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) extends PicklerRuntime(classLoader, clazz) {
+  def genPickler(implicit format: PickleFormat): Pickler[_] = {
     // TODO: we should somehow cache toolboxes. maybe even inside the reflection API
-    import scala.reflect.runtime.universe._
-    val tb = mirror.mkToolBox()
-    val formatTpe = mirror.reflect(format).symbol.asType.toType
     // TODO: toolbox bug. if we don't explicitly import PickleOps, it will fail to be found
     // more precisely: it will be found, but then immediately discarded, because a reference to it won't typecheck
-    tb.eval(q"""
+    val formatTpe = mirror.reflect(format).symbol.asType.toType
+    mirror.mkToolBox().eval(q"""
       import scala.pickling._
       import scala.pickling.`package`.PickleOps
       implicit val format: $formatTpe = new $formatTpe()
-      Pickler.genPickler[$tpe]
+      implicitly[Pickler[$tpe]]
     """).asInstanceOf[Pickler[_]]
   }
+}
 
-  def genInterpretedPickler(mirror: ru.Mirror, tpe: ru.Type)(implicit format: PickleFormat, p1: Pickler[Int], p2: Pickler[String]): Pickler[_] = {
-    // TODO: cover all primitive types
-    if (tpe <:< ru.typeOf[Int])         implicitly[Pickler[Int]]
-    else if (tpe <:< ru.typeOf[String]) implicitly[Pickler[String]]
+// TODO: didn't test this one yet
+class InterpretedPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) extends PicklerRuntime(classLoader, clazz) {
+  def genPickler(implicit format: PickleFormat, p1: Pickler[Int], p2: Pickler[String]) = {
+    if (tpe <:< typeOf[Int])         implicitly[Pickler[Int]]
+    else if (tpe <:< typeOf[String]) implicitly[Pickler[String]]
     else {
-      val irs = new PickleIRs[ru.type](ru)
-      import irs._
-
-      debug("creating IR for runtime pickler of type " + tpe)
-      val cir = flatten(compose(ClassIR(tpe, null, List())))
-
       // build "interpreted" runtime pickler
+      val format0 = format
       new Pickler[Any] {
-        def pickle(picklee: Any): PickleType = {
-          val im = mirror.reflect(picklee) // instance mirror
-
-          format.formatRT(irs)(cir, picklee, (fld: irs.FieldIR) => {
-            val fldAccessor = tpe.declaration(ru.newTermName(fld.name)).asTerm.accessed.asTerm
-            val fldMirror   = im.reflectField(fldAccessor)
-            val fldValue    = fldMirror.get
-            debug("pickling field value: " + fldValue)
-            val fldPickler  = genInterpretedPickler(mirror, fld.tpe)
-            fldPickler.pickle(fldValue)
-          }).asInstanceOf[PickleType]
+        type PickleFormatType = PickleFormat
+        implicit val format = format0
+        type PickleBuilderType = PickleBuilder
+        def pickle(picklee: Any, builder: PickleBuilder): Unit = {
+          if (picklee != null) {
+            val im = mirror.reflect(picklee)
+            builder.beginEntry(tpe, picklee)
+            cir.fields.foreach(fir => {
+              if (fir.flags.isErasedParam)
+                throw new PicklingException(s"TODO: cannot pickle erased params yet (${fir.name} in $tpe)")
+              val fldAccessor = tpe.declaration(TermName(fir.name)).asMethod
+              val fldMirror   = im.reflectMethod(fldAccessor)
+              val fldValue    = fldMirror()
+              debug("pickling field value: " + fldValue)
+              val fldClass    = if (fldValue != null) fldValue.getClass else mirror.runtimeClass(NullTpe)
+              val fldPickler  = Pickler.genPickler(classLoader, fldClass).asInstanceOf[Pickler[_] { type PickleBuilderType = builder.type }]
+              builder.putField(fir.name, b => fldPickler.pickle(fldValue, b))
+            })
+            builder.endEntry()
+          } else {
+            builder.beginEntry(NullTpe, null)
+            builder.endEntry()
+          }
         }
       }
     }

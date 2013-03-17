@@ -13,7 +13,6 @@ import json._
 case class Person(name: String, age: Int)
 
 object Test extends App {
-  val pickler = Pickler.genPickler[Person]
-  val pickle = pickler.pickle(new Person("Bob",83))
+  val pickle = new Person("Bob", 83).pickle
   println(pickle.value)
 }
