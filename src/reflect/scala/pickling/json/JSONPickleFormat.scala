@@ -2,7 +2,7 @@ package scala.pickling
 
 package object json {
   implicit val pickleFormat = new JSONPickleFormat
-  implicit def toJSONPickle(value: String): JSONPickle = new JSONPickle(value)
+  implicit def toJSONPickle(value: String): JSONPickle = JSONPickle(value)
 }
 
 package json {
@@ -13,7 +13,7 @@ package json {
   import scala.reflect.macros.Macro
   import scala.util.parsing.json._
 
-  case class JSONPickle(val value: String) extends Pickle {
+  case class JSONPickle(value: String) extends Pickle {
     type ValueType = String
     type PickleFormatType = JSONPickleFormat
   }
