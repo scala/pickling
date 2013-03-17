@@ -423,7 +423,7 @@ trait Implicits {
              case ex: DivergentImplicit =>
                //println("DivergentImplicit for pt:"+ pt +", open implicits:"+context.openImplicits) //@MDEBUG
                if (context.openImplicits.tail.isEmpty) {
-                 if (!(pt.isErroneous))
+                 if (!pt.isErroneous && !info.sym.isMacro)
                    DivergingImplicitExpansionError(tree, pt, info.sym)(context)
                  SearchFailure
                } else {
