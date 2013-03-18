@@ -96,7 +96,7 @@ package pickling {
     def atPrimitive: Boolean
     def readPrimitive(tpe: Type): Any
     def atObject: Boolean
-    def readField(name: String): this.type
+    def readField(name: String): PickleReader
     def unpickle[T] = macro UnpickleMacros.readerUnpickle[T]
   }
 
