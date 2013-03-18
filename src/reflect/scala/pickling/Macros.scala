@@ -80,8 +80,8 @@ trait UnpicklerMacros extends Macro {
         def unpickleObject = {
           // TODO: validate that the tpe argument of unpickle and weakTypeOf[T] work together
           val cir = classIR(tpe)
-          notImplementedYet(cir, !_.flags.isPublic, "non-public members")
-          notImplementedYet(cir, _.flags.isVar, "mutable fields")
+          notImplementedYet(cir, !_.isPublic, "non-public members")
+          notImplementedYet(cir, _.isNonParam, "mutable fields")
           val ctorSym = tpe.declaration(nme.CONSTRUCTOR).asMethod // TODO: multiple constructors
           def ctorArg(name: String, tpe: Type) = q"reader.readField($name).unpickle[$tpe]"
           val ctorArgs = ctorSym.paramss.flatten.map(f => ctorArg(f.name.toString, f.typeSignature)) // TODO: multiple argument lists
