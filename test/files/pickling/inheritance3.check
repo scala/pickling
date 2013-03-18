@@ -5,3 +5,20 @@
   "salary": 30000,
   "since": 1999
 }
+Firefighter(Joey,32,30000,1999)
+{
+  "tpe": "Firefighter",
+  "name": "Joey",
+  "age": 32,
+  "salary": 30000,
+  "since": 1999
+}
+Firefighter(Joey,32,30000,1999)
+{
+  "tpe": "Firefighter",
+  "name": "Joey",
+  "age": 32,
+  "salary": 30000,
+  "since": 1999
+}
+Firefighter(Joey,32,30000,1999)

@@ -19,7 +19,7 @@ abstract class Employee {
   val salary: Int
 }
 
-class Firefighter(val name: String, val age: Int, val salary: Int, val since: Int) extends Employee with Person
+case class Firefighter(val name: String, val age: Int, val salary: Int, val since: Int) extends Employee with Person
 
 object Test extends App {
   val f = new Firefighter(
@@ -29,6 +29,15 @@ object Test extends App {
     since = 1999
   )
 
-  val pickle = f.pickle
-  println(pickle.value)
+  val pickleF = (f: Firefighter).pickle
+  println(pickleF.value)
+  println(pickleF.unpickle[Firefighter])
+
+  val pickleE = (f: Employee).pickle
+  println(pickleE.value)
+  println(pickleE.unpickle[Employee])
+
+  val pickleP = (f: Person).pickle
+  println(pickleP.value)
+  println(pickleP.unpickle[Person])
 }
