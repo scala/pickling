@@ -24,7 +24,9 @@ trait PicklerMacros extends Macro {
           val cir = classIR(tpe)
           val beginEntry = q"builder.beginEntry(typeOf[$tpe], picklee)"
           val putFields = cir.fields.flatMap(fir => {
-            if (fir.hasGetter) {
+            if (sym.isModuleClass) {
+              Nil
+            } else if (fir.hasGetter) {
               def putField(getterLogic: Tree) = q"builder.putField(${fir.name}, b => $getterLogic.pickleInto(b))"
               if (fir.isPublic) List(putField(q"picklee.${TermName(fir.name)}"))
               else reflectively("picklee", fir)(fm => putField(q"$fm.get.asInstanceOf[${fir.tpe}]"))
@@ -95,7 +97,9 @@ trait UnpicklerMacros extends Macro {
           val canCallCtor = !cir.fields.exists(_.isErasedParam)
           val pendingFields = cir.fields.filter(fir => fir.isNonParam || (!canCallCtor && fir.isReifiedParam))
           val instantiationLogic = {
-            if (canCallCtor) {
+            if (sym.isModuleClass) {
+              q"${sym.module}"
+            } else if (canCallCtor) {
               val ctorSym = tpe.declaration(nme.CONSTRUCTOR) match {
                 case overloaded: TermSymbol => overloaded.alternatives.head.asMethod // NOTE: primary ctor is always the first in the list
                 case primaryCtor: MethodSymbol => primaryCtor
@@ -108,7 +112,7 @@ trait UnpicklerMacros extends Macro {
           }
           // NOTE: step 2) this sets values for non-erased fields which haven't been initialized during step 1
           val initializationLogic = {
-            if (pendingFields.isEmpty) instantiationLogic
+            if (sym.isModuleClass || pendingFields.isEmpty) instantiationLogic
             else {
               val instance = TermName(tpe.typeSymbol.name + "Instance")
               val initPendingFields = pendingFields.flatMap(fir => {
