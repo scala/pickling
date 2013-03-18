@@ -49,7 +49,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) exten
             val im = mirror.reflect(picklee)
             builder.beginEntry(tpe, picklee)
             cir.fields.foreach(fir => {
-              if (fir.flags.isErasedParam)
+              if (!fir.hasGetter)
                 throw new PicklingException(s"TODO: cannot pickle erased params yet (${fir.name} in $tpe)")
               val fldAccessor = tpe.declaration(TermName(fir.name)).asMethod
               val fldMirror   = im.reflectMethod(fldAccessor)
