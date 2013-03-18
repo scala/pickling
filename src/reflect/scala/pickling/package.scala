@@ -55,7 +55,12 @@ package pickling {
 
   trait GenUnpicklers {
     implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] = macro UnpicklerMacros.impl[T]
-    def genUnpickler(mirror: Mirror, tpe: Type)(implicit format: PickleFormat): Unpickler[_] = ??? // TODO: runtime dispatch for unpickling
+    def genUnpickler(mirror: Mirror, tpe: Type)(implicit format: PickleFormat): Unpickler[_] = {
+      println(s"generating runtime unpickler for $tpe") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
+      val runtime = new CompiledUnpicklerRuntime(mirror, tpe)
+      // val runtime = new InterpretedUnpicklerRuntime(mirror, tpe)
+      runtime.genUnpickler
+    }
   }
 
   object Unpickler extends CorePicklersUnpicklers
