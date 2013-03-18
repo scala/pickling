@@ -161,11 +161,6 @@ abstract class Macro extends scala.reflect.macros.Macro {
   def syntheticUnpicklerQualifiedName(tpe: Type, readerTpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticUnpicklerSuffix(readerTpe)
   def syntheticUnpicklerSuffix(readerTpe: Type): String = readerTpe.typeSymbol.name.toString.stripSuffix("PickleReader") + "Unpickler"
 
-  def notImplementedYet(cir: ClassIR, predicate: FieldIR => Boolean, description: String) = {
-    cir.fields.filter(predicate).foreach(fir =>
-      c.abort(c.enclosingPosition, s"TODO: cannot unpickle $description yet (${fir.name} in class ${cir.tpe})"))
-  }
-
   def preferringAlternativeImplicits(body: => Tree): Tree = {
     def debug(msg: Any) = {
       val padding = "  " * (c.enclosingImplicits.length - 1)
@@ -190,5 +185,35 @@ abstract class Macro extends scala.reflect.macros.Macro {
             result
         }
     }
+  }
+
+  private var reflectivePrologueEmitted = false // TODO: come up with something better
+  def reflectively(target: String, fir: FieldIR)(body: Tree => Tree): List[Tree] = reflectively(TermName(target), fir)(body)
+  def reflectively(target: TermName, fir: FieldIR)(body: Tree => Tree): List[Tree] = {
+    val prologue = {
+      if (!reflectivePrologueEmitted) {
+        reflectivePrologueEmitted = true
+        val initMirror = q"""
+          import scala.reflect.runtime.universe._
+          val mirror = runtimeMirror(getClass.getClassLoader)
+          val im = mirror.reflect($target)
+        """
+        initMirror.stats :+ initMirror.expr
+      } else {
+        Nil
+      }
+    }
+    val field = fir.field.get
+    val firSymbol = TermName(fir.name + "Symbol")
+    // TODO: make sure this works for:
+    // 1) private[this] fields
+    // 2) inherited private[this] fields
+    // 3) overridden fields
+    val wrappedBody =
+      q"""
+        val $firSymbol = typeOf[${field.owner.asClass.toType}].member(TermName(${field.name.toString}))
+        if ($firSymbol.isTerm) ${body(q"im.reflectField($firSymbol.asTerm)")}
+      """
+    prologue ++ wrappedBody.stats :+ wrappedBody.expr
   }
 }

@@ -8,3 +8,4 @@ JSONPickle({
   "attitude": "loving it"
 }
 })
+Person(name = Eugene, hobby = Hobby(name = hacking, notes = mostly Scala, attitude = loving it))
