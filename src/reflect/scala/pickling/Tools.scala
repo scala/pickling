@@ -116,14 +116,16 @@ class Tools[U <: Universe with Singleton](val u: U) {
       // NOTE: need to order the list: children first, parents last
       // otherwise pattern match which uses this list might work funnily
       val subSyms = unsorted.distinct.sortWith((c1, c2) => c1.asClass.baseClasses.contains(c2))
-      subSyms map (subSym => {
+      val subTpes = subSyms.map(subSym => {
         val tpeWithMaybeTparams = subSym.asType.toType
         val tparams = tpeWithMaybeTparams match {
-          case PolyType(tparams, _) => tparams
+          case TypeRef(_, _, targs) => targs.map(_.typeSymbol)
           case _ => Nil
         }
         existentialAbstraction(tparams, tpeWithMaybeTparams)
       })
+      // println(s"allStaticallyKnownConcreteSubclasses($tpe) = $subTpes")
+      subTpes
     }
   }
 }
