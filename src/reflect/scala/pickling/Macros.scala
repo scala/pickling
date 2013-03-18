@@ -196,9 +196,8 @@ trait PickleMacros extends Macro {
     q"""
       import scala.pickling._
       val picklee = $pickleeArg
-      val picklerRaw = $dispatchLogic
-      val pickler = picklerRaw.asInstanceOf[Pickler[_]{ type PickleBuilderType = ${builder.tpe} }]
-      pickler.pickle(picklee, $builder)
+      val pickler = $dispatchLogic
+      pickler.pickle(picklee, $builder.asInstanceOf[pickler.PickleBuilderType])
     """
   }
 }
@@ -248,9 +247,8 @@ trait UnpickleMacros extends Macro {
       import scala.reflect.runtime.currentMirror
       val reader = $readerArg
       val tpe = reader.readType(currentMirror)
-      val unpicklerRaw = $dispatchLogic
-      val unpickler = unpicklerRaw.asInstanceOf[Unpickler[_]{ type PickleReaderType = ${readerArg.tpe} }]
-      val result = unpickler.unpickle(tpe, reader)
+      val unpickler = $dispatchLogic
+      val result = unpickler.unpickle(tpe, reader.asInstanceOf[unpickler.PickleReaderType])
       result.asInstanceOf[$tpe]
     """
   }
