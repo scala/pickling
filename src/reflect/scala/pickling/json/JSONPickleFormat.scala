@@ -58,8 +58,8 @@ package json {
         buf ++= "{\n"
         def pickleTpe(tpe: Type): String = {
           def loop(tpe: Type): String = tpe match {
-            case TypeRef(_, sym, Nil) => s"${sym.fullName}"
-            case TypeRef(_, sym, targs) => s"${sym.fullName}[${targs.map(targ => pickleTpe(targ))}]"
+            case TypeRef(_, sym, Nil) => s"${sym.fullName}" + (if (sym.isModuleClass) "$" else "")
+            case TypeRef(_, sym, targs) => loop(tpe.typeConstructor) + s"[${targs.map(targ => pickleTpe(targ))}]"
           }
           "  \"tpe\": \"" + loop(tpe) + "\""
         }

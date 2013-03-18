@@ -55,9 +55,11 @@ class Tools[U <: Universe with Singleton](val u: U) {
     def sourcepathScan(): List[Symbol] = {
       val g = u.asInstanceOf[scala.tools.nsc.Global]
       val subclasses = MutableList[g.Symbol]()
+      def relevant(other: g.Symbol) = other != sym && other.baseClasses.contains(sym)
       def loop(tree: g.Tree): Unit = tree match {
         case g.PackageDef(_, stats) => stats.foreach(loop)
-        case implDef: g.ImplDef if implDef.symbol != sym && implDef.symbol.baseClasses.contains(sym) => subclasses += implDef.symbol
+        case cdef: g.ClassDef if relevant(cdef.symbol) => subclasses += cdef.symbol
+        case mdef: g.ModuleDef if relevant(mdef.symbol.moduleClass) => subclasses += mdef.symbol.moduleClass
         case _ => // do nothing
       }
       g.currentRun.units.map(_.body).foreach(loop)
@@ -98,7 +100,7 @@ class Tools[U <: Universe with Singleton](val u: U) {
       classpathCache.getOrElse(sym, Nil).toList
     }
 
-    if (sym.isFinal) Nil
+    if (sym.isFinal || sym.isModuleClass) Nil // FIXME: http://groups.google.com/group/scala-internals/browse_thread/thread/e2b786120b6d118d
     else if (blackList(sym)) Nil
     else {
       var unsorted =
@@ -150,7 +152,7 @@ abstract class Macro extends scala.reflect.macros.Macro {
   def compileTimeDispatchees(tpe: Type): List[Type] = tools.compileTimeDispatchees(tpe, rootMirror)
 
   def syntheticPackageName: String = "scala.pickling.synthetic"
-  def syntheticBaseName(tpe: Type): TypeName = TypeName(tpe.typeSymbol.fullName.split('.').map(_.capitalize).mkString(""))
+  def syntheticBaseName(tpe: Type): TypeName = TypeName(tpe.typeSymbol.fullName.split('.').map(_.capitalize).mkString("") + (if (tpe.typeSymbol.isModuleClass) "$" else ""))
   def syntheticBaseQualifiedName(tpe: Type): TypeName = TypeName(syntheticPackageName + "." + syntheticBaseName(tpe).toString)
 
   def syntheticPicklerName(tpe: Type, builderTpe: Type): TypeName = syntheticBaseName(tpe) + syntheticPicklerSuffix(builderTpe)
@@ -160,6 +162,10 @@ abstract class Macro extends scala.reflect.macros.Macro {
   def syntheticUnpicklerName(tpe: Type, readerTpe: Type): TypeName = syntheticBaseName(tpe) + syntheticUnpicklerSuffix(readerTpe)
   def syntheticUnpicklerQualifiedName(tpe: Type, readerTpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticUnpicklerSuffix(readerTpe)
   def syntheticUnpicklerSuffix(readerTpe: Type): String = readerTpe.typeSymbol.name.toString.stripSuffix("PickleReader") + "Unpickler"
+
+  def syntheticPicklerUnpicklerName(tpe: Type, builderTpe: Type, readerTpe: Type): TypeName = syntheticBaseName(tpe) + syntheticPicklerUnpicklerSuffix(builderTpe, readerTpe)
+  def syntheticPicklerUnpicklerQualifiedName(tpe: Type, builderTpe: Type, readerTpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticPicklerUnpicklerSuffix(builderTpe, readerTpe)
+  def syntheticPicklerUnpicklerSuffix(builderTpe: Type, readerTpe: Type): String = readerTpe.typeSymbol.name.toString.stripSuffix("PickleReader") + "PicklerUnpickler"
 
   def preferringAlternativeImplicits(body: => Tree): Tree = {
     def debug(msg: Any) = {

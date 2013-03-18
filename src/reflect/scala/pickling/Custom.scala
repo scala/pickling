@@ -1,6 +1,7 @@
 package scala.pickling
 
 import scala.reflect.runtime.universe._
+import language.experimental.macros
 
 trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
   // TODO: since we don't know precise types of builder and reader, we can't do optimizations here!!
@@ -23,4 +24,39 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
 
   implicit def intPicklerUnpickler(implicit format: PickleFormat): PrimitivePicklerUnpickler[Int] = new PrimitivePicklerUnpickler[Int]()
   implicit def stringPicklerUnpickler(implicit format: PickleFormat): PrimitivePicklerUnpickler[String] = new PrimitivePicklerUnpickler[String]()
+  implicit def modulePicklerUnpickler[T](implicit format: PickleFormat): Pickler[T] with Unpickler[T] = macro ModulePicklerUnpicklerMacro.impl[T]
+}
+
+trait ModulePicklerUnpicklerMacro extends Macro {
+  def impl[T: c.WeakTypeTag](format: c.Tree): c.Tree = {
+    import c.universe._
+    val tpe = weakTypeOf[T]
+    val module = tpe.typeSymbol.asClass.module
+    if (module == NoSymbol) c.diverge()
+    val picklerUnpickler = {
+      val builderTpe = pickleBuilderType(format)
+      val readerTpe = pickleReaderType(format)
+      c.topLevelRef(syntheticPicklerUnpicklerQualifiedName(tpe, builderTpe, readerTpe)) orElse c.introduceTopLevel(syntheticPackageName, {
+        q"""
+          class ${syntheticPicklerUnpicklerName(tpe, builderTpe, readerTpe)} extends scala.pickling.Pickler[$tpe] with scala.pickling.Unpickler[$tpe] {
+            import scala.reflect.runtime.universe._
+            import scala.pickling._
+            import scala.pickling.`package`.PickleOps
+            type PickleFormatType = ${format.tpe}
+            implicit val format = new PickleFormatType()
+            type PickleBuilderType = ${pickleBuilderType(format)}
+            def pickle(pickleeRaw: Any, builder: PickleBuilderType): Unit = {
+              builder.beginEntry(typeOf[$tpe], pickleeRaw)
+              builder.endEntry()
+            }
+            type PickleReaderType = ${pickleReaderType(format)}
+            def unpickle(tpe: Type, reader: PickleReaderType): Any = {
+              $module
+            }
+          }
+        """
+      })
+    }
+    q"new $picklerUnpickler"
+  }
 }

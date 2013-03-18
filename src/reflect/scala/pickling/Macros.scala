@@ -153,10 +153,11 @@ trait UnpicklerMacros extends Macro {
 trait PickleMacros extends Macro {
   def pickle[T: c.WeakTypeTag](format: c.Tree): c.Tree = {
     import c.universe._
+    val tpe = weakTypeOf[T]
     val q"${_}($pickleeArg)" = c.prefix.tree
     q"""
       import scala.pickling._
-      val picklee = $pickleeArg
+      val picklee: $tpe = $pickleeArg
       val builder = $format.createBuilder()
       picklee.pickleInto(builder)
       builder.result()
@@ -165,7 +166,7 @@ trait PickleMacros extends Macro {
   def pickleInto[T: c.WeakTypeTag](builder: c.Tree): c.Tree = {
     import c.universe._
     import definitions._
-    val tpe = weakTypeOf[T]
+    val tpe = weakTypeOf[T].widen // TODO: I used widen to make module classes work, but I don't think it's okay to do that
     val sym = tpe.typeSymbol.asClass
     val q"${_}($pickleeArg)" = c.prefix.tree
 
@@ -177,7 +178,7 @@ trait PickleMacros extends Macro {
         CaseDef(Bind(TermName("clazz"), Ident(nme.WILDCARD)), q"clazz == classOf[$tpe]", createPickler(tpe))
       })
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Pickler.genPickler(getClass.getClassLoader, clazz)")
-      // TODO: do we still want to use something HasPicklerDispatch?
+      // TODO: do we still want to use something like HasPicklerDispatch?
       // NOTE: we dispatch on erasure, because that's the best we can have here anyways
       // so, if we have C[T], then we generate a pickler for C[_] and let the pickler do the rest
       // (e.g. to fetch the type tag for T as discussed yesterday and do the necessary dispatch)
@@ -186,7 +187,7 @@ trait PickleMacros extends Macro {
         ${Match(q"clazz", nullDispatch +: compileTimeDispatch :+ runtimeDispatch)}
       """
     }
-    val dispatchLogic = if (sym.isFinal) finalDispatch else nonFinalDispatch
+    val dispatchLogic = if (sym.isFinal || sym.isModuleClass) finalDispatch else nonFinalDispatch
 
     q"""
       import scala.pickling._
@@ -227,7 +228,7 @@ trait UnpickleMacros extends Macro {
     def finalDispatch = createUnpickler(tpe)
     def nonFinalDispatch = {
       val compileTimeDispatch = compileTimeDispatchees(tpe) map (tpe => {
-        // TODO: do we still want to use something HasPicklerDispatch (for unpicklers it would be routed throw tpe's companion)?
+        // TODO: do we still want to use something like HasPicklerDispatch (for unpicklers it would be routed throw tpe's companion)?
         // NOTE: we have a precise type at hand here, but we do dispatch on erasure
         // why? because picklers are created generic, i.e. for C[T] we have a single pickler of type Pickler[C[_]]
         // therefore here we dispatch on erasure and later on pass the precise type to `unpickle`
@@ -236,7 +237,7 @@ trait UnpickleMacros extends Macro {
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Unpickler.genUnpickler(currentMirror, tpe)")
       Match(q"tpe", compileTimeDispatch :+ runtimeDispatch)
     }
-    val dispatchLogic = if (sym.isFinal) finalDispatch else nonFinalDispatch
+    val dispatchLogic = if (sym.isFinal || sym.isModuleClass) finalDispatch else nonFinalDispatch
 
     q"""
       import scala.reflect.runtime.universe._
