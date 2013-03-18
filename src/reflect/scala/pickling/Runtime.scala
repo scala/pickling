@@ -69,3 +69,24 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) exten
     }
   }
 }
+
+// TODO: copy/paste wrt CompiledPicklerRuntime
+class CompiledUnpicklerRuntime(mirror: Mirror, tpe: Type) {
+  def genUnpickler(implicit format: PickleFormat): Unpickler[_] = {
+    // see notes and todos in CompiledPicklerRuntime.genPickler
+    val formatTpe = mirror.reflect(format).symbol.asType.toType
+    mirror.mkToolBox().eval(q"""
+      import scala.pickling._
+      import scala.pickling.`package`.PickleOps
+      implicit val format: $formatTpe = new $formatTpe()
+      implicitly[Unpickler[$tpe]]
+    """).asInstanceOf[Unpickler[_]]
+  }
+}
+
+// TODO: implement this one
+class InterpretedUnpicklerRuntime(mirror: Mirror, tpe: Type) {
+  def genPickler(implicit format: PickleFormat, p1: Pickler[Int], p2: Pickler[String]): Unpickler[_] = {
+    ???
+  }
+}

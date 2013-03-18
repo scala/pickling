@@ -10,7 +10,8 @@ class Hobby(var name: String, private var notes: String, private val attitude: S
 }
 
 object Test extends App {
-  val pickle = (new Person("Eugene", 25, new Hobby("hacking", "mostly Scala", "loving it")): Any).pickle
-  println(pickle)
-  println(pickle.unpickle[Person])
+  val person = new Person("Eugene", 25, new Hobby("hacking", "mostly Scala", "loving it"))
+  val anyPickle = (person: Any).pickle
+  println(anyPickle)
+  println(anyPickle.unpickle[Any])
 }
