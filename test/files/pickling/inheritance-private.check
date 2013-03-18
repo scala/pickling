@@ -5,3 +5,22 @@
   "since": 1990,
   "salary": 30000
 }
+Firefighter(Jeff,45,1990)
+30000
+{
+  "tpe": "Firefighter",
+  "name": "Jeff",
+  "age": 45,
+  "since": 1990,
+  "salary": 30000
+}
+Firefighter(Jeff,45,1990)
+30000
+{
+  "tpe": "Firefighter",
+  "name": "Jeff",
+  "age": 45,
+  "since": 1990,
+  "salary": 30000
+}
+Firefighter(Jeff,45,1990)

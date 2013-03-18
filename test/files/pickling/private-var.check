@@ -4,3 +4,4 @@
   "age": 42,
   "ssn": 0
 }
+Person(Bob,42)

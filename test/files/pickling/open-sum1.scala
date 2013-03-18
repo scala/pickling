@@ -14,10 +14,10 @@ package outer {
     val age: Int
   }
 
-  class Firefighter(val name: String, val age: Int, val since: Int) extends Person
+  case class Firefighter(val name: String, val age: Int, val since: Int) extends Person
 
   package inner {
-    class Employee(val name: String, val age: Int, val salary: Int) extends Person
+    case class Employee(val name: String, val age: Int, val salary: Int) extends Person
   }
 }
 
@@ -32,4 +32,5 @@ object Test extends App {
 
   val pickle = f.pickle
   println(pickle.value)
+  println(pickle.unpickle[Person])
 }

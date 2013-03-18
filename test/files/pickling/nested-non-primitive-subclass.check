@@ -1,0 +1,33 @@
+{
+  "tpe": "Fork",
+  "left": {
+  "tpe": "Fork",
+  "left": {
+  "tpe": "Fork",
+  "left": {
+  "tpe": "Node",
+  "value": 1
+},
+  "right": {
+  "tpe": "Node",
+  "value": 2
+}
+},
+  "right": {
+  "tpe": "Node",
+  "value": 3
+}
+},
+  "right": {
+  "tpe": "Fork",
+  "left": {
+  "tpe": "Node",
+  "value": 4
+},
+  "right": {
+  "tpe": "Node",
+  "value": 5
+}
+}
+}
+Fork(Fork(Fork(Node(1),Node(2)),Node(3)),Fork(Node(4),Node(5)))
