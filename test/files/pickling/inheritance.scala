@@ -20,10 +20,20 @@ abstract class Person extends Creature {
   val age: Int
 }
 
-class Firefighter(val name: String, val age: Int, val salary: Int) extends Person
+case class Firefighter(val name: String, val age: Int, val salary: Int) extends Person
 
 object Test extends App {
   val f = new Firefighter("Josephine", 48, 40000)
-  val pickle = f.pickle
-  println(pickle.value)
+
+  val pickleF = (f: Firefighter).pickle
+  println(pickleF.value)
+  println(pickleF.unpickle[Firefighter])
+
+  val pickleP = (f: Person).pickle
+  println(pickleP.value)
+  println(pickleP.unpickle[Person])
+
+  val pickleC = (f: Creature).pickle
+  println(pickleC.value)
+  println(pickleC.unpickle[Creature])
 }
