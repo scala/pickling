@@ -19,9 +19,10 @@ class IRs[U <: Universe with Singleton](val uni: U) {
     def hasGetter = getter.isDefined
 
     // this part is interesting to unpicklers
+    def hasSetter = setter.isDefined
     def isErasedParam = isParam && accessor.isEmpty // TODO: this should somehow communicate with the constructors phase!
     def isReifiedParam = isParam && accessor.nonEmpty
-    def isNonParam = !isParam && field.map(_.isVar).getOrElse(false)
+    def isNonParam = !isParam
   }
   case class ClassIR(tpe: Type, parent: ClassIR, fields: List[FieldIR]) extends PickleIR
 

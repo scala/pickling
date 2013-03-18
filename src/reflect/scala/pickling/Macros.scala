@@ -22,44 +22,28 @@ trait PicklerMacros extends Macro {
           if (tpe.typeSymbol.asClass.typeParams.nonEmpty)
             c.abort(c.enclosingPosition, s"TODO: cannot pickle polymorphic types yet ($tpe)")
           val cir = classIR(tpe)
-          var prologue: List[Tree] = Nil
           val beginEntry = q"builder.beginEntry(typeOf[$tpe], picklee)"
-          val putFields = cir.fields.map(fir => {
+          val putFields = cir.fields.flatMap(fir => {
             if (fir.hasGetter) {
               def putField(getterLogic: Tree) = q"builder.putField(${fir.name}, b => $getterLogic.pickleInto(b))"
-              if (fir.isPublic) putField(q"picklee.${TermName(fir.name)}")
-              else {
-                if (prologue.isEmpty) {
-                  val initMirror = q"""
-                    import scala.reflect.runtime.universe._
-                    val mirror = runtimeMirror(getClass.getClassLoader)
-                    val im = mirror.reflect(picklee)
-                  """
-                  prologue = initMirror.stats :+ initMirror.expr
-                }
-                val firSymbol = TermName(fir.name + "Symbol")
-                q"""
-                  val $firSymbol = typeOf[$tpe].member(TermName(${fir.getter.get.name.toString}))
-                  if ($firSymbol.isTerm) ${putField(q"im.reflectField($firSymbol.asTerm).get.asInstanceOf[${fir.tpe}]")}
-                """
-              }
+              if (fir.isPublic) List(putField(q"picklee.${TermName(fir.name)}"))
+              else reflectively("picklee", fir)(fm => putField(q"$fm.get.asInstanceOf[${fir.tpe}]"))
             } else {
               // NOTE: this means that we've encountered a primary constructor parameter elided in the "constructors" phase
               // we can do nothing about that, so we don't serialize this field right now leaving everything to the unpickler
               // when deserializing we'll have to use the Unsafe.allocateInstance strategy
-              q""
+              Nil
             }
           })
           val optimizedPutFields =
-            if (putFields.isEmpty) q""
-            else if (sym.isPrimitive || sym.isDerivedValueClass) q"{ ..$putFields; () }"
-            else q"if (picklee != null) { ..$putFields; () }"
+            if (putFields.isEmpty) Nil
+            else if (sym.isPrimitive || sym.isDerivedValueClass) putFields
+            else List(q"if (picklee != null) { ..$putFields; () }")
           val endEntry = q"builder.endEntry()"
           q"""
             import scala.reflect.runtime.universe._
-            ..$prologue
             $beginEntry
-            $optimizedPutFields
+            ..$optimizedPutFields
             $endEntry
           """
         }
@@ -104,14 +88,42 @@ trait UnpicklerMacros extends Macro {
           c.abort(c.enclosingPosition, s"TODO: cannot unpickle polymorphic types yet ($tpe)")
         def unpicklePrimitive = q"reader.readPrimitive(tpe)"
         def unpickleObject = {
+          def readField(name: String, tpe: Type) = q"reader.readField($name).unpickle[$tpe]"
           // TODO: validate that the tpe argument of unpickle and weakTypeOf[T] work together
+          // NOTE: step 1) this creates an instance and initializes its fields reified from constructor arguments
           val cir = classIR(tpe)
-          notImplementedYet(cir, !_.isPublic, "non-public members")
-          notImplementedYet(cir, _.isNonParam, "mutable fields")
-          val ctorSym = tpe.declaration(nme.CONSTRUCTOR).asMethod // TODO: multiple constructors
-          def ctorArg(name: String, tpe: Type) = q"reader.readField($name).unpickle[$tpe]"
-          val ctorArgs = ctorSym.paramss.flatten.map(f => ctorArg(f.name.toString, f.typeSignature)) // TODO: multiple argument lists
-          q"new $tpe(..$ctorArgs)"
+          val canCallCtor = !cir.fields.exists(_.isErasedParam)
+          val pendingFields = cir.fields.filter(fir => fir.isNonParam || (!canCallCtor && fir.isReifiedParam))
+          val instantiationLogic = {
+            if (canCallCtor) {
+              val ctorSym = tpe.declaration(nme.CONSTRUCTOR) match {
+                case overloaded: TermSymbol => overloaded.alternatives.head.asMethod // NOTE: primary ctor is always the first in the list
+                case primaryCtor: MethodSymbol => primaryCtor
+              }
+              val ctorArgs = ctorSym.paramss.map(_.map(f => readField(f.name.toString, f.typeSignature)))
+              q"new $tpe(...$ctorArgs)"
+            } else {
+              q"scala.concurrent.util.Unsafe.instance.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]"
+            }
+          }
+          // NOTE: step 2) this sets values for non-erased fields which haven't been initialized during step 1
+          val initializationLogic = {
+            if (pendingFields.isEmpty) instantiationLogic
+            else {
+              val instance = TermName(tpe.typeSymbol.name + "Instance")
+              val initPendingFields = pendingFields.flatMap(fir => {
+                val readFir = readField(fir.name, fir.tpe)
+                if (fir.isPublic && fir.hasSetter) List(q"$instance.${TermName(fir.name)} = $readFir")
+                else reflectively(instance, fir)(fm => q"$fm.set($readFir)")
+              })
+              q"""
+                val $instance = $instantiationLogic
+                ..$initPendingFields
+                $instance
+              """
+            }
+          }
+          q"$initializationLogic"
         }
         def unpickleLogic = tpe match {
           case NullTpe => q"null"
