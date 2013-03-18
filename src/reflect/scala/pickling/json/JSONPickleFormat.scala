@@ -6,11 +6,8 @@ package object json {
 }
 
 package json {
-  import language.experimental.macros
-
   import scala.reflect.runtime.universe._
   import definitions._
-  import scala.reflect.macros.Macro
   import scala.util.parsing.json._
   import scala.collection.mutable.{StringBuilder, Stack}
   import ir._
