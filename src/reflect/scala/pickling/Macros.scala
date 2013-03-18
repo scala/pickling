@@ -22,9 +22,34 @@ trait PicklerMacros extends Macro {
           if (tpe.typeSymbol.asClass.typeParams.nonEmpty)
             c.abort(c.enclosingPosition, s"TODO: cannot pickle polymorphic types yet ($tpe)")
           val cir = classIR(tpe)
-          notImplementedYet(cir, !_.flags.isPublic, "non-public members")
+          var prologue: List[Tree] = Nil
           val beginEntry = q"builder.beginEntry(typeOf[$tpe], picklee)"
-          val putFields = cir.fields.map(fir => q"builder.putField(${fir.name}, b => picklee.${TermName(fir.name)}.pickleInto(b))")
+          val putFields = cir.fields.map(fir => {
+            if (fir.hasGetter) {
+              def putField(getterLogic: Tree) = q"builder.putField(${fir.name}, b => $getterLogic.pickleInto(b))"
+              if (fir.isPublic) putField(q"picklee.${TermName(fir.name)}")
+              else {
+                if (prologue.isEmpty) {
+                  val initMirror = q"""
+                    import scala.reflect.runtime.universe._
+                    val mirror = runtimeMirror(getClass.getClassLoader)
+                    val im = mirror.reflect(picklee)
+                  """
+                  prologue = initMirror.stats :+ initMirror.expr
+                }
+                val firSymbol = TermName(fir.name + "Symbol")
+                q"""
+                  val $firSymbol = typeOf[$tpe].member(TermName(${fir.getter.get.name.toString}))
+                  if ($firSymbol.isTerm) ${putField(q"im.reflectField($firSymbol.asTerm).get.asInstanceOf[${fir.tpe}]")}
+                """
+              }
+            } else {
+              // NOTE: this means that we've encountered a primary constructor parameter elided in the "constructors" phase
+              // we can do nothing about that, so we don't serialize this field right now leaving everything to the unpickler
+              // when deserializing we'll have to use the Unsafe.allocateInstance strategy
+              q""
+            }
+          })
           val optimizedPutFields =
             if (putFields.isEmpty) q""
             else if (sym.isPrimitive || sym.isDerivedValueClass) q"{ ..$putFields; () }"
@@ -32,6 +57,7 @@ trait PicklerMacros extends Macro {
           val endEntry = q"builder.endEntry()"
           q"""
             import scala.reflect.runtime.universe._
+            ..$prologue
             $beginEntry
             $optimizedPutFields
             $endEntry

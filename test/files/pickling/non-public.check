@@ -1,0 +1,10 @@
+JSONPickle({
+  "tpe": "Person",
+  "name": "Eugene",
+  "hobby": {
+  "tpe": "Hobby",
+  "name": "hacking",
+  "notes": "mostly Scala",
+  "attitude": "loving it"
+}
+})
