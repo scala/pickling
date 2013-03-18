@@ -2,5 +2,5 @@
   "tpe": "Person",
   "name": "Bob",
   "age": 42,
-  "$$expose$private$ssn": 0
+  "ssn": 0
 }
