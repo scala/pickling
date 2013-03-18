@@ -1,0 +1,12 @@
+D
+JSONPickle({
+  "tpe": "D$"
+})
+D
+E(2)
+JSONPickle({
+  "tpe": "E",
+  "x": 2,
+  "x": 2
+})
+E(2)
