@@ -90,7 +90,8 @@ package json {
     def readType(mirror: Mirror): Type = {
       def unpickleTpe(stpe: String): Type = {
         // TODO: support polymorphic types as serialized above with pickleTpe
-        mirror.staticClass(stpe).asType.toType
+        val sym = if (stpe.endsWith("$")) mirror.staticModule(stpe.stripSuffix("$")).moduleClass else mirror.staticClass(stpe)
+        sym.asType.toType
       }
       datum match {
         case JSONObject(fields) => unpickleTpe(fields("tpe").asInstanceOf[String])
