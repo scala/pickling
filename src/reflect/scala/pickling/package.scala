@@ -5,6 +5,7 @@ import scala.annotation.MacroAnnotation
 import scala.language.experimental.macros
 import scala.reflect.runtime.{universe => ru}
 import scala.reflect.runtime.universe._
+import scala.annotation.implicitNotFound
 
 package object pickling {
 
@@ -20,6 +21,7 @@ package object pickling {
 
 package pickling {
 
+  @implicitNotFound(msg = "Cannot generate a pickler for ${T}. Recompile with -Xlog-implicits for details")
   trait Pickler[T] {
     type PickleFormatType <: PickleFormat
     val format: PickleFormatType
@@ -42,6 +44,7 @@ package pickling {
 
   object Pickler extends CorePicklersUnpicklers
 
+  @implicitNotFound(msg = "Cannot generate an unpickler for ${T}. Recompile with -Xlog-implicits for details")
   trait Unpickler[T] {
     type PickleFormatType <: PickleFormat
     val format: PickleFormatType
