@@ -6,7 +6,6 @@ package object binary {
 }
 
 package binary {
-  import language.experimental.macros
   import scala.reflect.runtime.{universe => ru}
 
   case class BinaryPickle(value: Array[Byte]) extends Pickle {
@@ -186,8 +185,6 @@ package binary {
       pos = pos + subarrlen
       new BinaryPickleReader(subarr, format)
     }
-
-    override def unpickle[T] = macro UnpickleMacros.readerUnpickle[T]
   }
 
   class BinaryPickleFormat extends PickleFormat {
