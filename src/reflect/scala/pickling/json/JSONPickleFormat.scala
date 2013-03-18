@@ -95,6 +95,7 @@ package json {
         case JSONArray(elements) => throw new PicklingException(s"TODO: not yet implemented ($datum)")
         case _: String => StringClass.toType
         case _: Double => DoubleClass.toType
+        case _: Boolean => BooleanClass.toType
         case null => NullTpe
       }
     }
@@ -103,6 +104,7 @@ package json {
       tpe match {
         case tpe if tpe =:= StringClass.toType => datum.asInstanceOf[String]
         case tpe if tpe =:= IntClass.toType => datum.asInstanceOf[Double].toInt
+        case tpe if tpe =:= BooleanClass.toType => datum.asInstanceOf[Boolean]
       }
     }
     def atObject: Boolean = datum.isInstanceOf[JSONObject]
