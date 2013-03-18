@@ -32,11 +32,12 @@ class Tools[U <: Universe with Singleton](val u: U) {
   import u._
   import definitions._
 
+  def blackList(sym: Symbol) = sym == AnyClass || sym == AnyRefClass || sym == AnyValClass
+
   def compileTimeDispatchees(tpe: Type, mirror: Mirror): List[Type] = {
     val subtypes = allStaticallyKnownConcreteSubclasses(tpe, mirror)
     def includeTpeItself = {
       val sym = tpe.typeSymbol
-      val blackList = Set[Symbol](AnyClass, AnyRefClass, AnyValClass)
       val whiteList = (sym: Symbol) => sym.asClass.isPrimitive
       sym.isClass && !blackList(sym) && (whiteList(sym) || (!sym.asClass.isAbstractClass && !sym.asClass.isTrait))
     }
@@ -67,7 +68,7 @@ class Tools[U <: Universe with Singleton](val u: U) {
       lazy val classpathCache = Tools.subclassCache(mirror, {
         val cache = MutableMap[Symbol, MutableList[Symbol]]()
         def updateCache(bc: Symbol, c: Symbol) = {
-          if (bc != c && bc != AnyClass && bc != AnyRefClass && bc != AnyValClass) // TODO: what else do we want to ignore?
+          if (bc != c && !blackList(bc)) // TODO: what else do we want to ignore?
             cache.getOrElseUpdate(bc, MutableList()) += c
         }
         def loop(pkg: Symbol): Unit = {
@@ -98,6 +99,7 @@ class Tools[U <: Universe with Singleton](val u: U) {
     }
 
     if (sym.isFinal) Nil
+    else if (blackList(sym)) Nil
     else {
       var unsorted =
         u match {
