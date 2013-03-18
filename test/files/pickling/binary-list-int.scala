@@ -11,6 +11,10 @@ import scala.pickling._
 import binary._
 import reflect.runtime.universe._
 
+package scala.pickling {
+  class Custom
+}
+
 object Test extends App {
 
   implicit def genListPickler[T: TypeTag](implicit elemPickler: Pickler[T], pf: PickleFormat): Pickler[List[T]] with Unpickler[List[T]] = new Pickler[List[T]] with Unpickler[List[T]] {
