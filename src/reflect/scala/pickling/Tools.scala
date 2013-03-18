@@ -34,13 +34,16 @@ class Tools[U <: Universe with Singleton](val u: U) {
 
   def blackList(sym: Symbol) = sym == AnyClass || sym == AnyRefClass || sym == AnyValClass
 
+  def isRelevantSubclass(baseSym: Symbol, subSym: Symbol) = {
+    !blackList(baseSym) && !blackList(subSym) && subSym.isClass && {
+      val subClass = subSym.asClass
+      subClass.baseClasses.contains(baseSym) && !subClass.isAbstractClass && !subClass.isTrait
+    }
+  }
+
   def compileTimeDispatchees(tpe: Type, mirror: Mirror): List[Type] = {
     val subtypes = allStaticallyKnownConcreteSubclasses(tpe, mirror)
-    def includeTpeItself = {
-      val sym = tpe.typeSymbol
-      val whiteList = (sym: Symbol) => sym.asClass.isPrimitive
-      sym.isClass && !blackList(sym) && (whiteList(sym) || (!sym.asClass.isAbstractClass && !sym.asClass.isTrait))
-    }
+    def includeTpeItself = isRelevantSubclass(tpe.typeSymbol, tpe.typeSymbol)
     subtypes ++ (if (includeTpeItself) List(tpe) else Nil)
   }
 
@@ -50,16 +53,17 @@ class Tools[U <: Universe with Singleton](val u: U) {
     // TODO: on a more elaborate note
     // given `class C; class D[T] extends C` we of course cannot return the infinite number of `D[X]` types
     // but what we can probably do is to additionally look up custom picklers/unpicklers of for specific `D[X]`
-    val sym = tpe.typeSymbol
+    val baseSym = tpe.typeSymbol
 
     def sourcepathScan(): List[Symbol] = {
       val g = u.asInstanceOf[scala.tools.nsc.Global]
       val subclasses = MutableList[g.Symbol]()
-      def relevant(other: g.Symbol) = other != sym && other.baseClasses.contains(sym)
+      def analyze(sym: g.Symbol) = if (isRelevantSubclass(baseSym, sym.asInstanceOf[Symbol])) subclasses += sym
       def loop(tree: g.Tree): Unit = tree match {
+        // NOTE: only looking for top-level classes!
         case g.PackageDef(_, stats) => stats.foreach(loop)
-        case cdef: g.ClassDef if relevant(cdef.symbol) => subclasses += cdef.symbol
-        case mdef: g.ModuleDef if relevant(mdef.symbol.moduleClass) => subclasses += mdef.symbol.moduleClass
+        case cdef: g.ClassDef => analyze(cdef.symbol)
+        case mdef: g.ModuleDef => analyze(mdef.symbol.moduleClass)
         case _ => // do nothing
       }
       g.currentRun.units.map(_.body).foreach(loop)
@@ -70,15 +74,16 @@ class Tools[U <: Universe with Singleton](val u: U) {
       lazy val classpathCache = Tools.subclassCache(mirror, {
         val cache = MutableMap[Symbol, MutableList[Symbol]]()
         def updateCache(bc: Symbol, c: Symbol) = {
-          if (bc != c && !blackList(bc)) // TODO: what else do we want to ignore?
+          if (bc != c && isRelevantSubclass(bc, c)) // TODO: what else do we want to ignore?
             cache.getOrElseUpdate(bc, MutableList()) += c
         }
         def loop(pkg: Symbol): Unit = {
+          // NOTE: only looking for top-level classes!
           val pkgMembers = pkg.typeSignature.members
           pkgMembers foreach (m => {
             def analyze(m: Symbol): Unit = {
               if (m.name.decoded.contains("$")) () // SI-7251
-              else if (m.isClass && !m.asClass.isAbstractClass && !m.asClass.isTrait) m.asClass.baseClasses foreach (bc => updateCache(bc, m))
+              else if (m.isClass) m.asClass.baseClasses foreach (bc => updateCache(bc, m))
               else if (m.isModule) analyze(m.asModule.moduleClass)
               else ()
             }
@@ -97,22 +102,22 @@ class Tools[U <: Universe with Singleton](val u: U) {
         loop(mirror.RootClass)
         cache // NOTE: 126873 cache entries for my classpath
       }).asInstanceOf[MutableMap[Symbol, MutableList[Symbol]]]
-      classpathCache.getOrElse(sym, Nil).toList
+      classpathCache.getOrElse(baseSym, Nil).toList
     }
 
-    if (sym.isFinal || sym.isModuleClass) Nil // FIXME: http://groups.google.com/group/scala-internals/browse_thread/thread/e2b786120b6d118d
-    else if (blackList(sym)) Nil
+    if (baseSym.isFinal || baseSym.isModuleClass) Nil // FIXME: http://groups.google.com/group/scala-internals/browse_thread/thread/e2b786120b6d118d
+    else if (blackList(baseSym)) Nil
     else {
       var unsorted =
         u match {
-          case u: scala.tools.nsc.Global if u.currentRun.compiles(sym.asInstanceOf[u.Symbol]) => sourcepathScan()
+          case u: scala.tools.nsc.Global if u.currentRun.compiles(baseSym.asInstanceOf[u.Symbol]) => sourcepathScan()
           case _ => sourcepathAndClasspathScan()
         }
       // NOTE: need to order the list: children first, parents last
       // otherwise pattern match which uses this list might work funnily
       val subSyms = unsorted.distinct.sortWith((c1, c2) => c1.asClass.baseClasses.contains(c2))
-      subSyms map (sym => {
-        val tpeWithMaybeTparams = sym.asType.toType
+      subSyms map (subSym => {
+        val tpeWithMaybeTparams = subSym.asType.toType
         val tparams = tpeWithMaybeTparams match {
           case PolyType(tparams, _) => tparams
           case _ => Nil
