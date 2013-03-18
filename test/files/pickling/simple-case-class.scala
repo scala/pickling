@@ -15,4 +15,5 @@ case class Person(name: String, age: Int)
 object Test extends App {
   val pickle = new Person("Bob", 83).pickle
   println(pickle.value)
+  println(pickle.unpickle[Person])
 }

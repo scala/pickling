@@ -5,3 +5,20 @@
   "salary": 30000,
   "species": "human"
 }
+Firefighter(Muriel,41,30000,human)
+{
+  "tpe": "Firefighter",
+  "name": "Muriel",
+  "age": 41,
+  "salary": 30000,
+  "species": "human"
+}
+Firefighter(Muriel,41,30000,human)
+{
+  "tpe": "Firefighter",
+  "name": "Muriel",
+  "age": 41,
+  "salary": 30000,
+  "species": "human"
+}
+Firefighter(Muriel,41,30000,human)

@@ -21,14 +21,26 @@ trait Person {
 class Employee {
   private var salary: Int = 0
   def setSalary(newSalary: Int) = salary = newSalary
+  def exposeSalary = salary
 }
 
-class Firefighter(val name: String, val age: Int, val since: Int) extends Employee with Person
+case class Firefighter(val name: String, val age: Int, val since: Int) extends Employee with Person
 
 object Test extends App {
   val f = new Firefighter("Jeff", 45, 1990)
   f.setSalary(30000)
 
-  val pickle = f.pickle
-  println(pickle.value)
+  val pickleF = (f: Firefighter).pickle
+  println(pickleF.value)
+  println(pickleF.unpickle[Firefighter])
+  println(pickleF.unpickle[Firefighter].exposeSalary)
+
+  val pickleE = (f: Employee).pickle
+  println(pickleE.value)
+  println(pickleE.unpickle[Employee])
+  println(pickleE.unpickle[Employee].exposeSalary)
+
+  val pickleP = (f: Person).pickle
+  println(pickleP.value)
+  println(pickleP.unpickle[Person])
 }
