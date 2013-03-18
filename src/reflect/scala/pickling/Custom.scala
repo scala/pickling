@@ -3,6 +3,8 @@ package scala.pickling
 import scala.reflect.runtime.universe._
 import language.experimental.macros
 
+class Custom
+
 trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
   // TODO: since we don't know precise types of builder and reader, we can't do optimizations here!!
   // I think we can fix this problem with type macros, so let's not worry much for now - I'll handle it when looking into custom picklers
@@ -24,6 +26,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
 
   implicit def intPicklerUnpickler(implicit format: PickleFormat): PrimitivePicklerUnpickler[Int] = new PrimitivePicklerUnpickler[Int]()
   implicit def stringPicklerUnpickler(implicit format: PickleFormat): PrimitivePicklerUnpickler[String] = new PrimitivePicklerUnpickler[String]()
+  implicit def booleanPicklerUnpickler(implicit format: PickleFormat): PrimitivePicklerUnpickler[Boolean] = new PrimitivePicklerUnpickler[Boolean]()
   implicit def nullPicklerUnpickler(implicit format: PickleFormat): Pickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]()
   // TODO: if you uncomment this one, it will shadow picklers/unpicklers for Int and String. why?!
   // TODO: due to the inability to implement module pickling/unpickling in a separate macro, I moved the logic into genPickler/genUnpickler

@@ -109,7 +109,7 @@ package json {
       }
     }
     def atObject: Boolean = datum.isInstanceOf[JSONObject]
-    def readField(name: String): this.type = {
+    def readField(name: String): JSONPickleReader = {
       datum match {
         case JSONObject(fields) => new JSONPickleReader(fields(name)).asInstanceOf[this.type] // TODO: think this over
       }
