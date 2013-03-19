@@ -1602,8 +1602,10 @@ class Global(var currentSettings: Settings, var reporter: Reporter)
 
       if (firstPhase ne null) { // we might get here during initialization, is a source is newer than the binary
         val maxId = math.max(globalPhase.id, typerPhase.id)
-        firstPhase.iterator takeWhile (_.id < maxId) foreach (ph =>
-          enteringPhase(ph)(ph.asInstanceOf[GlobalPhase] applyPhase unit))
+        firstPhase.iterator takeWhile (_.id < maxId) foreach (ph => {
+          // println(s"applying $ph to ${unit.body.asInstanceOf[PackageDef].stats.head.toString.take(25)}")
+          enteringPhase(ph)(ph.asInstanceOf[GlobalPhase] applyPhase unit)
+        })
         refreshProgress()
       }
     }

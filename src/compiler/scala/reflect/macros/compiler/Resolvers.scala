@@ -49,19 +49,23 @@ trait Resolvers {
 
         // synthesize the invoker, i.e. given `trait Foo extends Macro { def expand = ... } `
         // create a top-level definition `class Foo$invoker(val c: Context) extends Foo`
-        val invokerName = TypeName(bundleClass.name.toString + nme.MACRO_INVOKER_SUFFIX)
-        def mkContextValDef(flags: Long) = ValDef(Modifiers(flags), nme.c, TypeTree(ctxTpe), EmptyTree)
-        val contextField = mkContextValDef(PARAMACCESSOR)
-        val contextParam = mkContextValDef(PARAM | PARAMACCESSOR)
-        val invokerCtor = DefDef(Modifiers(), nme.CONSTRUCTOR, Nil, List(List(contextParam)), TypeTree(), Block(List(pendingSuperCall), Literal(Constant(()))))
-        val invoker = atPos(bundleClass.pos)(ClassDef(NoMods, invokerName, Nil, Template(List(Ident(bundleClass)), emptyValDef, List(contextField, invokerCtor))))
-        val pid = Ident(nme.MACRO_INVOKER_PACKAGE)
-        currentRun.compileLate(PackageDef(pid, List(invoker)))
+        val invokerPid = Ident(nme.MACRO_INVOKER_PACKAGE)
+        val invokerName = TypeName(bundleClass.fullName.split('.').map(_.capitalize).mkString("") + nme.MACRO_INVOKER_SUFFIX)
+        // println("macro bundle: need " + invokerName)
+        // println("macro bundle: pre-existing thing is " + rootMirror.getClassIfDefined(invokerName))
+        if (rootMirror.getClassIfDefined(invokerPid + "." + invokerName) == NoSymbol) {
+          def mkContextValDef(flags: Long) = ValDef(Modifiers(flags), nme.c, TypeTree(ctxTpe), EmptyTree)
+          val contextField = mkContextValDef(PARAMACCESSOR)
+          val contextParam = mkContextValDef(PARAM | PARAMACCESSOR)
+          val invokerCtor = DefDef(Modifiers(), nme.CONSTRUCTOR, Nil, List(List(contextParam)), TypeTree(), Block(List(pendingSuperCall), Literal(Constant(()))))
+          val invoker = atPos(bundleClass.pos)(ClassDef(NoMods, invokerName, Nil, Template(List(Ident(bundleClass)), emptyValDef, List(contextField, invokerCtor))))
+          currentRun.compileLate(PackageDef(invokerPid, List(invoker)))
+        }
 
         // synthesize the macro impl reference, which is going to look like:
         // `new Foo$invoker(???).expand` plus the optional type arguments
         val qmarkqmarkqmark = Select(Select(Ident(nme.scala_), nme.Predef), nme.???)
-        val instanceOfInvoker = New(Select(pid, invokerName), List(List(qmarkqmarkqmark)))
+        val instanceOfInvoker = New(Select(invokerPid, invokerName), List(List(qmarkqmarkqmark)))
         gen.mkTypeApply(Select(instanceOfInvoker, methName), targs)
       case _ =>
         vanillaRef
