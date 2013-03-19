@@ -722,6 +722,7 @@ LOCAL REFERENCE BUILD (LOCKER)
       <compilationpath>
         <pathelement location="${build-locker.dir}/classes/library"/>
         <pathelement location="${build-locker.dir}/classes/reflect"/>
+        <pathelement location="${build-locker.dir}/classes/compiler"/>
         <path refid="aux.libs"/>
         <path refid="asm.classpath"/>
         <pathelement location="${jline.jar}"/>
