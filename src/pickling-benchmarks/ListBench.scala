@@ -48,10 +48,10 @@ object ListBench extends testing.Benchmark {
     def pickle(picklee: Any, builder: PickleBuilderType): Unit = {
       val list = picklee.asInstanceOf[List[T]]
 
-      builder.beginEntry(typeOf[AnyRef], picklee)
+      builder.beginEntryNoType(typeOf[AnyRef], picklee)
 
       builder.putField("numElems", b => {
-        b.beginEntry(typeOf[Int], list.length)
+        b.beginEntryNoType(typeOf[Int], list.length)
         b.endEntry()
       })
 
@@ -65,9 +65,7 @@ object ListBench extends testing.Benchmark {
     }
 
     def unpickle(tpe: Type, reader: PickleReaderType): Any = {
-      val tpe = reader.readType(rtm) // should be "Custom"
       val r2 = reader.readField("numElems")
-      val itpe = r2.readType(rtm)
       val num = r2.readPrimitive(typeOf[Int]).asInstanceOf[Int]
       println(s"original list contained $num elements")
 
@@ -75,8 +73,7 @@ object ListBench extends testing.Benchmark {
       var list = List[T]()
       for (i <- 1 to num) {
         currReader = reader.readField("elem")
-        val itpe = currReader.readType(rtm)
-        val el = currReader.readPrimitive(typeOf[T]).asInstanceOf[T]
+        val el = currReader.readPrimitive(typeOf[T]).asInstanceOf[T] //TODO: would like to use currReader.unpickle[T] here
         list = list :+ el
       }
 
@@ -84,7 +81,7 @@ object ListBench extends testing.Benchmark {
     }
   }
 
-  val lst = (1 to 100000).toList
+  val lst = (1 to 10000).toList
 
   val intPickler     = implicitly[Pickler[Int]]
   val pf             = implicitly[BinaryPickleFormat]
