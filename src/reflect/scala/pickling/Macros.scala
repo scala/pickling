@@ -18,7 +18,9 @@ trait PicklerMacros extends Macro {
     import irs._
     val pickler = {
       val builderTpe = pickleBuilderType(format)
-      c.topLevelRef(syntheticPicklerQualifiedName(tpe, builderTpe)) orElse c.introduceTopLevel(syntheticPackageName, {
+      val picklerPid = syntheticPackageName
+      val picklerName = syntheticPicklerName(tpe, builderTpe)
+      introduceTopLevel(picklerPid, picklerName) {
         def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
           if (tpe.typeSymbol.asClass.typeParams.nonEmpty)
             c.abort(c.enclosingPosition, s"TODO: cannot pickle polymorphic types yet ($tpe)")
@@ -57,7 +59,7 @@ trait PicklerMacros extends Macro {
           case _ => unifiedPickle
         }
         q"""
-          class ${syntheticPicklerName(tpe, builderTpe)} extends scala.pickling.Pickler[$tpe] {
+          class $picklerName extends scala.pickling.Pickler[$tpe] {
             import scala.pickling._
             import scala.pickling.`package`.PickleOps
             type PickleFormatType = ${format.tpe}
@@ -69,7 +71,7 @@ trait PicklerMacros extends Macro {
             }
           }
         """
-      })
+      }
     }
     q"new $pickler"
   }
@@ -88,7 +90,9 @@ trait UnpicklerMacros extends Macro {
     import irs._
     val unpickler = {
       val readerTpe = pickleReaderType(format)
-      c.topLevelRef(syntheticUnpicklerQualifiedName(tpe, readerTpe)) orElse c.introduceTopLevel(syntheticPackageName, {
+      val unpicklerPid = syntheticPackageName
+      val unpicklerName = syntheticUnpicklerName(tpe, readerTpe)
+      introduceTopLevel(unpicklerPid, unpicklerName) {
         if (tpe.typeSymbol.asClass.typeParams.nonEmpty)
           c.abort(c.enclosingPosition, s"TODO: cannot unpickle polymorphic types yet ($tpe)")
         def unpicklePrimitive = q"reader.readPrimitive(tag)"
@@ -139,7 +143,7 @@ trait UnpicklerMacros extends Macro {
           case _ => q"$unpickleObject"
         }
         q"""
-          class ${syntheticUnpicklerName(tpe, readerTpe)} extends scala.pickling.Unpickler[$tpe] {
+          class $unpicklerName extends scala.pickling.Unpickler[$tpe] {
             import scala.pickling._
             import scala.pickling.ir._
             import scala.reflect.runtime.universe._
@@ -149,7 +153,7 @@ trait UnpicklerMacros extends Macro {
             def unpickle(tag: TypeTag[_], reader: PickleReaderType): Any = $unpickleLogic
           }
         """
-      })
+      }
     }
     q"new $unpickler"
   }
