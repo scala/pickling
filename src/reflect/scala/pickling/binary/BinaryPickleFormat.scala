@@ -276,4 +276,17 @@ package binary {
 
   }
 
+  object UnsafeMemory {
+    private val unsafe: sun.misc.Unsafe = Unsafe.instance
+    private val byteArrayOffset: Long = unsafe.arrayBaseOffset(classOf[Array[Byte]])
+
+    def putInt(buffer: Array[Byte], pos: Int, value: Int): Unit = {
+      unsafe.putInt(buffer, byteArrayOffset + pos, value)
+    }
+
+    def getInt(buffer: Array[Byte], pos: Int): Int = {
+      unsafe.getInt(buffer, byteArrayOffset + pos)
+    }
+  }
+
 }
