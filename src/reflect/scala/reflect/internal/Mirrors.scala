@@ -124,11 +124,17 @@ trait Mirrors extends api.Mirrors {
 
     /************************ loaders of module symbols ************************/
 
-    private def ensureModuleSymbol(fullname: String, sym: Symbol, allowPackages: Boolean): ModuleSymbol =
+    private def ensureModuleSymbol(fullname: String, sym: Symbol, allowPackages: Boolean): ModuleSymbol = {
+      def fail() = MissingRequirementError.notFound("object " + fullname)
       sym match {
-        case x: ModuleSymbol if allowPackages || !x.isPackage => x
-        case _                                                => MissingRequirementError.notFound("object " + fullname)
+        case x: ModuleSymbol if !x.isPackage => x
+        case x: ModuleSymbol if x.isPackage && allowPackages => x
+        // NOTE: reflective compiler will conjure package symbols on the fly if a search for a module symbol fails
+        // that's freaking annoying. so here we undo this annoyance
+        case x: ModuleSymbol if x.isPackage && !allowPackages => sym.owner.info.decls.unlink(sym); fail()
+        case _  => fail()
       }
+    }
 
     @deprecated("Use getModuleByName", "2.10.0")
     def getModule(fullname: Name): ModuleSymbol =

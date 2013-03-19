@@ -236,13 +236,20 @@ abstract class Macro extends scala.reflect.macros.Macro {
 
   def introduceTopLevel(pid: String, name: Name)(body: => ImplDef): Tree = {
     val fullName = if (name.isTermName) TermName(pid + "." + name) else TypeName(pid + "." + name)
-    // TODO: the standard "c.topLevelRef orElse c.introduceTopLevel" approach doesn't work with the runtime compiler
-    // hence we should go for this hack. at least it's not going to OOM us...
-    if (!Tools.generatedNames(fullName)) {
-      c.introduceTopLevel(pid, body)
-      Tools.generatedNames += fullName
+    try {
+      val existing = if (name.isTermName) c.mirror.staticModule(fullName.toString) else c.mirror.staticClass(fullName.toString)
+      assert(existing != NoSymbol, fullName)
+      // System.err.println(s"existing = $existing")
+      Ident(existing)
+    } catch {
+      case _: scala.reflect.internal.MissingRequirementError =>
+        if (!Tools.generatedNames(fullName)) {
+          // System.err.println(s"introducing $pid.$name")
+          c.introduceTopLevel(pid, body)
+          Tools.generatedNames += fullName
+        }
+        c.topLevelRef(fullName)
     }
-    c.topLevelRef(fullName)
   }
 }
 

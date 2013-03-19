@@ -1,0 +1,23 @@
+JSONPickle({
+  "tpe": "Person",
+  "name": "Eugene",
+  "hobby": {
+  "tpe": "Hobby",
+  "name": "hacking",
+  "notes": "mostly Scala",
+  "attitude": "loving it"
+}
+})
+Person(name = Eugene, hobby = Hobby(name = hacking, notes = mostly Scala, attitude = loving it))
+generating runtime pickler for class Person
+JSONPickle({
+  "tpe": "Person",
+  "name": "Eugene",
+  "hobby": {
+  "tpe": "Hobby",
+  "name": "hacking",
+  "notes": "mostly Scala",
+  "attitude": "loving it"
+}
+})
+Person(name = Eugene, hobby = Hobby(name = hacking, notes = mostly Scala, attitude = loving it))
