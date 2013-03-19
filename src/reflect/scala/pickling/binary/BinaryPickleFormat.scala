@@ -23,6 +23,10 @@ package binary {
     private var entries = List[EntryState]()
     private var completed: Array[Byte] = _
 
+    private var byteBuffer: collection.mutable.Buffer[Byte] = null
+    private var pos = 0
+    private var entryLenPositions = List[Int]()
+
     private class EntryState(val tpe: Type) {
       var target: Array[Byte] = _
       /* current write index into `target` */
@@ -39,48 +43,68 @@ package binary {
 
     //TODO: pass size hint, so that an array of the right size can be allocated
     def beginEntry(tpe: Type, picklee: Any): this.type = {
+
+      if (byteBuffer == null) {
+        byteBuffer = collection.mutable.ListBuffer[Byte]()
+      }
+
+      entryLenPositions = pos :: entryLenPositions
+
       // we always need to push an entry to the stack
       // even for primitive types, since we'll need to check the
       // type upon endEntry
-      val entry = new EntryState(tpe)
+      //val entry = new EntryState(tpe)
       // push entry to stack
-      entries = entry :: entries
+      //entries = entry :: entries
 
       if (format.isPrimitive(tpe)) {
-        val current = entries.tail.head
+        //val current = entries.tail.head
 
         // 0. save position of entry length
-        val entryLenPos = current.pos
-        var entryLenSoFar = 0
+        //val entryLenPos = pos //current.pos
+        //var entryLenSoFar = 0
 
         // 1. store length of type name
-        current.pos = current.pos + 4
+        //current.pos = current.pos + 4
+        pos += 4
         val tpeBytes = formatType(tpe)
-        Util.encodeIntTo(current.target, current.pos, tpeBytes.length)
+        //Util.encodeIntTo(current.target, current.pos, tpeBytes.length)
+        byteBuffer ++= Array.ofDim[Byte](4)
+        Util.encodeIntTo(byteBuffer, tpeBytes.length)
 
         // 2. store type name
-        Util.copy(current.target, current.pos + 4, tpeBytes)
-        current.pos = current.pos + 4 + tpeBytes.length
-        entryLenSoFar = 4 + tpeBytes.length
+        //Util.copy(current.target, current.pos + 4, tpeBytes)
+        byteBuffer ++= tpeBytes
+        //current.pos = current.pos + 4 + tpeBytes.length
+        pos = pos + 4 + tpeBytes.length
+        //entryLenSoFar = 4 + tpeBytes.length
 
         val sym = tpe.typeSymbol.asClass
         // 3. store primitive in following bytes of current array
         if (sym == IntClass) {
-          Util.encodeIntTo(current.target, current.pos, picklee.asInstanceOf[Int])
-          entryLenSoFar += 4
-          current.pos = current.pos + 4
+          //Util.encodeIntTo(current.target, current.pos, picklee.asInstanceOf[Int])
+          Util.encodeIntTo(byteBuffer, picklee.asInstanceOf[Int])
+          //entryLenSoFar += 4
+          //current.pos = current.pos + 4
+          pos += 4
         } else if (sym == StringClass) {
-          val next = Util.encodeStringTo(current.target, current.pos, picklee.asInstanceOf[String])
-          entryLenSoFar += (next - current.pos)
-          current.pos = current.pos + (next - current.pos)
+          //val next = Util.encodeStringTo(current.target, current.pos, picklee.asInstanceOf[String])
+          val next = Util.encodeStringTo(byteBuffer, pos, picklee.asInstanceOf[String])
+          //entryLenSoFar += (next - current.pos)
+          //entryLenSoFar += (next - pos)
+          //current.pos = next
+          pos = next
         } else if (sym == BooleanClass) {
-          Util.encodeBooleanTo(current.target, current.pos, picklee.asInstanceOf[Boolean])
-          entryLenSoFar += 1
-          current.pos = current.pos + 1
+          //Util.encodeBooleanTo(current.target, current.pos, picklee.asInstanceOf[Boolean])
+          Util.encodeBooleanTo(byteBuffer, pos, picklee.asInstanceOf[Boolean])
+          //entryLenSoFar += 1
+          //current.pos = current.pos + 1
+          pos += 1
         }
 
         // 4. store entry length at the beginning of this entry
-        Util.encodeIntTo(current.target, entryLenPos, entryLenSoFar)
+        //Util.encodeIntTo(current.target, entryLenPos, entryLenSoFar)
+        //Util.encodeIntTo(buf, entryLenPos, entryLenSoFar)
         this
       } else {
         // allocate array (what size?)
@@ -88,23 +112,29 @@ package binary {
         // and later when we know the required size, because we're done,
         // copy everything into a smaller array of the right size
         // this array will later on store length of the entire entry in its first 4 bytes
-        val target = Array.ofDim[Byte](4096)
-        entry.target = target
+        //val target = Array.ofDim[Byte](4096)
+        //entry.target = target
 
         // reserve 4 bytes to store length of entire entry
         val offset = 4
 
+        //entryLenPos = pos // that's where len of new entry is stored
+
         // write pickled tpe to `target`:
         // length of pickled type, pickled type
         val tpeBytes = formatType(tpe)
-        Util.encodeIntTo(target, offset, tpeBytes.length)
-        Util.copy(target, offset + 4, tpeBytes)
-
+        //Util.encodeIntTo(target, offset, tpeBytes.length)
+        byteBuffer ++= Array.ofDim[Byte](4)
+        Util.encodeIntTo(byteBuffer, tpeBytes.length)
+        //Util.copy(target, offset + 4, tpeBytes)
+        byteBuffer ++= tpeBytes
         // advance current write index
-        entry.pos = tpeBytes.length + offset + 4
+        //entry.pos = tpeBytes.length + offset + 4
+        pos = pos + tpeBytes.length + offset + 4
 
         this
       }
+
     }
 
     def putField(name: String, pickler: this.type => Unit): this.type = {
@@ -114,11 +144,15 @@ package binary {
     }
 
     def endEntry(): Unit = {
-      val current = entries.head
+      //val current = entries.head
       // pop current entry from stack
-      entries = entries.tail
+      //entries = entries.tail
 
-      if (format.isPrimitive(current.tpe)) () // do nothing
+      val entryLenPos = entryLenPositions.head
+      entryLenPositions = entryLenPositions.tail
+      Util.encodeIntTo(byteBuffer, entryLenPos, pos - entryLenPos - 4)
+
+      /*if (format.isPrimitive(current.tpe)) () // do nothing
       else {
         // we know the length of the current entry
         // write its length and its contents to the parent entry
@@ -136,11 +170,12 @@ package binary {
           Array.copy(current.target, 0, parent.target, parent.pos, totalLen)
           parent.pos = parent.pos + totalLen
         }
-      }
+      }*/
     }
 
-    def result(): PickleType =
-      BinaryPickle(completed)
+    def result(): PickleType = {
+      BinaryPickle(byteBuffer.toArray)
+    }
   }
 
   class BinaryPickleReader(arr: Array[Byte], format: BinaryPickleFormat) extends PickleReader {
@@ -210,6 +245,7 @@ package binary {
 }
 
 package binary {
+  import collection.mutable.Buffer
 
   object Util {
 
@@ -242,6 +278,28 @@ package binary {
       i+4
     }
 
+    def encodeIntTo(buf: Buffer[Byte], i: Int, value: Int): Unit = {
+      val fst = (value >>> 24).asInstanceOf[Byte]
+      val snd = (value >>> 16 & 0xff).asInstanceOf[Byte]
+      val thrd = (value >>> 8 & 0xff).asInstanceOf[Byte]
+      val frth = (value & 0xff).asInstanceOf[Byte]
+      buf(i) = fst
+      buf(i+1) = snd
+      buf(i+2) = thrd
+      buf(i+3) = frth
+    }
+
+    def encodeIntTo(buf: Buffer[Byte], value: Int): Unit = {
+      val fst = (value >>> 24).asInstanceOf[Byte]
+      val snd = (value >>> 16 & 0xff).asInstanceOf[Byte]
+      val thrd = (value >>> 8 & 0xff).asInstanceOf[Byte]
+      val frth = (value & 0xff).asInstanceOf[Byte]
+      buf += fst
+      buf += snd
+      buf += thrd
+      buf += frth
+    }
+
     def decodeBooleanFrom(arr: Array[Byte], i: Int): (Boolean, Int) = {
       val res = arr(i) != 0
       (res, i + 1)
@@ -249,6 +307,11 @@ package binary {
 
     def encodeBooleanTo(arr: Array[Byte], i: Int, value: Boolean): Int = {
       arr(i) = if (value) 1 else 0
+      i + 1
+    }
+
+    def encodeBooleanTo(buf: Buffer[Byte], i: Int, value: Boolean): Int = {
+      buf += (if (value) 1 else 0)
       i + 1
     }
 
@@ -272,6 +335,15 @@ package binary {
       // encode bytes of string at `next` position
       Util.copy(arr, next, bytes)
       next + bytes.length
+    }
+
+    def encodeStringTo(buf: Buffer[Byte], i: Int, value: String): Int = {
+      val bytes = value.getBytes("UTF-8")
+      // encode length
+      encodeIntTo(buf, bytes.length) // requires 4 bytes
+      // append bytes of string to `buf`
+      buf ++= bytes
+      i + 4 + bytes.length
     }
 
   }
