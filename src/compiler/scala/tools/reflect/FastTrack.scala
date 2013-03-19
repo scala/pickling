@@ -36,16 +36,17 @@ trait FastTrack {
 
   /** A map from a set of pre-established macro symbols to their implementations. */
   lazy val fastTrack = Map[Symbol, FastTrackEntry](
-    make(           materializeClassTag) { case Applied(_, ttag :: Nil, _)                      => _.materializeClassTag(ttag.tpe) },
-    make(        materializeWeakTypeTag) { case Applied(_, ttag :: Nil, (u :: _) :: _)          => _.materializeTypeTag(u, EmptyTree, ttag.tpe, concrete = false) },
-    make(            materializeTypeTag) { case Applied(_, ttag :: Nil, (u :: _) :: _)          => _.materializeTypeTag(u, EmptyTree, ttag.tpe, concrete = true) },
-    make(              ApiUniverseReify) { case Applied(_, ttag :: Nil, (expr :: _) :: _)       => c => c.materializeExpr(c.prefix.tree, EmptyTree, expr) },
+    make(           materializeClassTag) { case Applied(_, targ :: Nil, _)                      => _.materializeClassTag(targ.tpe) },
+    make(        materializeWeakTypeTag) { case Applied(_, targ :: Nil, (u :: _) :: _)          => _.materializeTypeTag(u, EmptyTree, targ.tpe, concrete = false) },
+    make(            materializeTypeTag) { case Applied(_, targ :: Nil, (u :: _) :: _)          => _.materializeTypeTag(u, EmptyTree, targ.tpe, concrete = true) },
+    make(              ApiUniverseReify) { case Applied(_, targ :: Nil, (expr :: _) :: _)       => c => c.materializeExpr(c.prefix.tree, EmptyTree, expr) },
     make(               StringContext_f) { case Applied(Select(Apply(_, ps), _), _, args)       => c => c.macro_StringInterpolation_f(ps, args.flatten, c.expandee.pos) },
     make(       QuasiquoteClass_q_apply) { case _                                               => c0 => (new { val c: c0.type = c0 } with quasiquotes.Quasiquotes).applyQ },
     make(     QuasiquoteClass_q_unapply) { case _                                               => c0 => (new { val c: c0.type = c0 } with quasiquotes.Quasiquotes).unapplyQ },
     make(      QuasiquoteClass_tq_apply) { case _                                               => c0 => (new { val c: c0.type = c0 } with quasiquotes.Quasiquotes).applyTq },
     make(    QuasiquoteClass_tq_unapply) { case _                                               => c0 => (new { val c: c0.type = c0 } with quasiquotes.Quasiquotes).unapplyTq },
     make(   ReflectRuntimeCurrentMirror) { case _                                               => c => currentMirror(c).tree },
-    make(Predef_defaultResolveMacroImpl) { case Applied(_, _, ((macroDdef0: DefDef) :: _) :: _) => c0 => (new { val c: c0.type = c0; val macroDdef = macroDdef0 } with DefaultMacroCompiler).resolveMacroImpl }
+    make(Predef_defaultResolveMacroImpl) { case Applied(_, _, ((macroDdef0: DefDef) :: _) :: _) => c0 => (new { val c: c0.type = c0; val macroDdef = macroDdef0 } with DefaultMacroCompiler).resolveMacroImpl },
+    make(             Predef_implicitly) { case Applied(_, _, (inferred :: _) :: _)             => _ => inferred }
   )
 }
