@@ -10,7 +10,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
     type PickleFormatType = PickleFormat
     type PickleBuilderType = PickleBuilder
     def pickle(picklee: Any, builder: PickleBuilderType): Unit = {
-      builder.beginEntry(typeOf[T], picklee)
+      builder.beginEntryNoType(typeOf[T], picklee)
       builder.endEntry()
     }
     type PickleReaderType = PickleReader

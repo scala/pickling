@@ -86,6 +86,7 @@ package pickling {
   trait PickleBuilder {
     type PickleType <: Pickle
     def beginEntry(tpe: Type, picklee: Any): this.type
+    def beginEntryNoType(tpe: Type, picklee: Any): this.type
     def putField(name: String, pickler: this.type => Unit): this.type
     def endEntry(): Unit
     def result(): PickleType

@@ -14,6 +14,7 @@ trait PicklerMacros extends Macro {
     import definitions._
     val tpe = weakTypeOf[T]
     val sym = tpe.typeSymbol.asClass
+    val isNonExtensible = sym.isFinal || sym.isPrimitive || sym.isModuleClass
     import irs._
     val pickler = {
       val builderTpe = pickleBuilderType(format)
@@ -22,7 +23,9 @@ trait PicklerMacros extends Macro {
           if (tpe.typeSymbol.asClass.typeParams.nonEmpty)
             c.abort(c.enclosingPosition, s"TODO: cannot pickle polymorphic types yet ($tpe)")
           val cir = classIR(tpe)
-          val beginEntry = q"builder.beginEntry(typeOf[$tpe], picklee)"
+          val beginEntry =
+            if(isNonExtensible) q"builder.beginEntryNoType(typeOf[$tpe], picklee)"
+            else q"builder.beginEntry(typeOf[$tpe], picklee)"
           val putFields = cir.fields.flatMap(fir => {
             if (sym.isModuleClass) {
               Nil
@@ -132,7 +135,8 @@ trait UnpicklerMacros extends Macro {
         def unpickleLogic = tpe match {
           case NullTpe => q"null"
           case NothingTpe => c.abort(c.enclosingPosition, "cannot unpickle Nothing") // TODO: report the deserialization path that brought us here
-          case _ => q"if (reader.atPrimitive) $unpicklePrimitive else $unpickleObject"
+          case _ if sym.isPrimitive || sym == StringClass => q"$unpicklePrimitive"
+          case _ => q"$unpickleObject"
         }
         q"""
           class ${syntheticUnpicklerName(tpe, readerTpe)} extends scala.pickling.Unpickler[$tpe] {
@@ -240,13 +244,16 @@ trait UnpickleMacros extends Macro {
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Unpickler.genUnpickler(currentMirror, tpe)")
       Match(q"tpe", compileTimeDispatch :+ runtimeDispatch)
     }
-    val dispatchLogic = if (sym.isFinal || sym.isModuleClass) finalDispatch else nonFinalDispatch
+    val isNonExtensible = sym.isFinal || sym.isPrimitive || sym.isModuleClass
+    // val tagReified = c.reifyType(treeBuild.mkRuntimeUniverseRef, EmptyTree, tpe)
+    val readTypeLogic = if (isNonExtensible) q"typeOf[$tpe]" else q"reader.readType(currentMirror)"
+    val dispatchLogic = if (isNonExtensible) finalDispatch else nonFinalDispatch
 
     q"""
       import scala.reflect.runtime.universe._
       import scala.reflect.runtime.currentMirror
       val reader = $readerArg
-      val tpe = reader.readType(currentMirror)
+      val tpe = $readTypeLogic
       val unpickler = $dispatchLogic
       val result = unpickler.unpickle(tpe, reader.asInstanceOf[unpickler.PickleReaderType])
       result.asInstanceOf[$tpe]

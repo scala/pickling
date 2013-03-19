@@ -44,6 +44,9 @@ package json {
       sym == NullClass || sym.isPrimitive || sym == StringClass
     }
 
+    def beginEntryNoType(tpe: Type, picklee: Any): this.type =
+      beginEntry(tpe, picklee)
+
     def beginEntry(tpe: Type, picklee: Any): this.type = {
       stack.push(tpe)
       val sym = tpe.typeSymbol.asClass
