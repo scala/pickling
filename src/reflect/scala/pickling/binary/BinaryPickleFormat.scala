@@ -86,7 +86,7 @@ package binary {
         // allocate array (what size?)
         // one approach (slow) would be to allocate a "big enough" array
         // and later when we know the required size, because we're done,
-        // copy everything into a smaller array of the right size      
+        // copy everything into a smaller array of the right size
         // this array will later on store length of the entire entry in its first 4 bytes
         val target = Array.ofDim[Byte](4096)
         entry.target = target
@@ -277,7 +277,9 @@ package binary {
   }
 
   object UnsafeMemory {
-    private val unsafe: sun.misc.Unsafe = Unsafe.instance
+    import sun.misc.Unsafe
+
+    private val unsafe: Unsafe = Unsafe.getUnsafe()
     private val byteArrayOffset: Long = unsafe.arrayBaseOffset(classOf[Array[Byte]])
 
     def putInt(buffer: Array[Byte], pos: Int, value: Int): Unit = {
