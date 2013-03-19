@@ -245,9 +245,9 @@ abstract class RefChecks extends InfoTransform with scala.reflect.internal.trans
      *    1.8.1  M's type is a subtype of O's type, or
      *    1.8.2  M is of type []S, O is of type ()T and S <: T, or
      *    1.8.3  M is of type ()S, O is of type []T and S <: T, or
-     *    1.9.  If M is a macro def, O cannot be deferred.
-     *    1.10. If M is not a macro def, O cannot be a macro def.
-     *    1.10. If M is not a macro type, O cannot be a macro type.
+     *    [DISABLED] 1.9.  If M is a macro def, O cannot be deferred.
+     *    [DISABLED] 1.10. If M is not a macro def, O cannot be a macro def.
+     *    1.11. If M is not a macro type, O cannot be a macro type.
      *  2. Check that only abstract classes have deferred members
      *  3. Check that concrete classes do not have deferred definitions
      *     that are not implemented in a subclass.
@@ -454,10 +454,11 @@ abstract class RefChecks extends InfoTransform with scala.reflect.internal.trans
           } else if (other.isValue && other.isLazy && !other.isSourceMethod && !other.isDeferred &&
                      member.isValue && !member.isLazy) {
             overrideError("must be declared lazy to override a concrete lazy value")
-          } else if (other.isDeferred && member.isTermMacro) { // (1.9)
-            overrideError("cannot be used here - term macros cannot override abstract methods")
-          } else if (other.isTermMacro && !member.isTermMacro) { // (1.10)
-            overrideError("cannot be used here - only term macros can override term macros")
+          // TODO: disabled to let macros implement methods from traits
+          // } else if (other.isDeferred && member.isTermMacro) { // (1.9)
+          //   overrideError("cannot be used here - term macros cannot override abstract methods")
+          // } else if (other.isTermMacro && !member.isTermMacro) { // (1.10)
+          //   overrideError("cannot be used here - only term macros can override term macros")
           } else {
             checkOverrideTypes()
             checkOverrideDeprecated()
