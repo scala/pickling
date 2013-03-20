@@ -43,10 +43,10 @@ package json {
       sym == NullClass || sym.isPrimitive || sym == StringClass
     }
 
-    def beginEntryNoType(tag: TypeTag[_], picklee: Any): this.type =
+    def beginEntryNoType(tag: TypeTag[_], picklee: Any, knownSize: Int = -1): this.type =
       beginEntry(tag, picklee)
 
-    def beginEntry(tag: TypeTag[_], picklee: Any): this.type = {
+    def beginEntry(tag: TypeTag[_], picklee: Any, knownSize: Int = -1): this.type = {
       val tpe = tag.tpe
       stack.push(tpe)
       val sym = tpe.typeSymbol.asClass
