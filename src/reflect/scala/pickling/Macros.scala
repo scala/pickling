@@ -24,8 +24,8 @@ trait PicklerMacros extends Macro {
             c.abort(c.enclosingPosition, s"TODO: cannot pickle polymorphic types yet ($tpe)")
           val cir = classIR(tpe)
           val beginEntry =
-            if(isNonExtensible) q"builder.beginEntryNoType(typeOf[$tpe], picklee)"
-            else q"builder.beginEntry(typeOf[$tpe], picklee)"
+            if(isNonExtensible) q"builder.beginEntryNoType(typeTag[$tpe], picklee)"
+            else q"builder.beginEntry(typeTag[$tpe], picklee)"
           val putFields = cir.fields.flatMap(fir => {
             if (sym.isModuleClass) {
               Nil
@@ -91,7 +91,7 @@ trait UnpicklerMacros extends Macro {
       c.topLevelRef(syntheticUnpicklerQualifiedName(tpe, readerTpe)) orElse c.introduceTopLevel(syntheticPackageName, {
         if (tpe.typeSymbol.asClass.typeParams.nonEmpty)
           c.abort(c.enclosingPosition, s"TODO: cannot unpickle polymorphic types yet ($tpe)")
-        def unpicklePrimitive = q"reader.readPrimitive(tpe)"
+        def unpicklePrimitive = q"reader.readPrimitive(tag)"
         def unpickleObject = {
           def readField(name: String, tpe: Type) = q"reader.readField($name).unpickle[$tpe]"
           // TODO: validate that the tpe argument of unpickle and weakTypeOf[T] work together
@@ -146,7 +146,7 @@ trait UnpicklerMacros extends Macro {
             type PickleFormatType = ${format.tpe}
             implicit val format = new PickleFormatType()
             type PickleReaderType = ${pickleReaderType(format)}
-            def unpickle(tpe: Type, reader: PickleReaderType): Any = $unpickleLogic
+            def unpickle(tag: TypeTag[_], reader: PickleReaderType): Any = $unpickleLogic
           }
         """
       })
@@ -239,23 +239,23 @@ trait UnpickleMacros extends Macro {
         // NOTE: we have a precise type at hand here, but we do dispatch on erasure
         // why? because picklers are created generic, i.e. for C[T] we have a single pickler of type Pickler[C[_]]
         // therefore here we dispatch on erasure and later on pass the precise type to `unpickle`
-        CaseDef(Bind(TermName("tpe"), Ident(nme.WILDCARD)), q"tpe.typeSymbol == typeOf[$tpe].typeSymbol", createUnpickler(tpe))
+        CaseDef(Bind(TermName("tpe"), Ident(nme.WILDCARD)), q"tpe.typeSymbol == scala.pickling.`package`.fastTypeTag[$tpe].tpe.typeSymbol", createUnpickler(tpe))
       })
-      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Unpickler.genUnpickler(currentMirror, tpe)")
-      Match(q"tpe", compileTimeDispatch :+ runtimeDispatch)
+      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Unpickler.genUnpickler(currentMirror, tag)")
+      Match(q"tag.tpe", compileTimeDispatch :+ runtimeDispatch)
     }
     val isNonExtensible = sym.isFinal || sym.isPrimitive || sym.isModuleClass
     // val tagReified = c.reifyType(treeBuild.mkRuntimeUniverseRef, EmptyTree, tpe)
-    val readTypeLogic = if (isNonExtensible) q"typeOf[$tpe]" else q"reader.readType(currentMirror)"
+    val readTypeTagLogic = if (isNonExtensible) q"typeTag[$tpe]" else q"reader.readTag(currentMirror)"
     val dispatchLogic = if (isNonExtensible) finalDispatch else nonFinalDispatch
 
     q"""
       import scala.reflect.runtime.universe._
       import scala.reflect.runtime.currentMirror
       val reader = $readerArg
-      val tpe = $readTypeLogic
+      val tag = $readTypeTagLogic
       val unpickler = $dispatchLogic
-      val result = unpickler.unpickle(tpe, reader.asInstanceOf[unpickler.PickleReaderType])
+      val result = unpickler.unpickle(tag, reader.asInstanceOf[unpickler.PickleReaderType])
       result.asInstanceOf[$tpe]
     """
   }

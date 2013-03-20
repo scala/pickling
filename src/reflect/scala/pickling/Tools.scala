@@ -2,7 +2,7 @@ package scala.pickling
 
 import scala.reflect.api.Universe
 import scala.reflect.macros.Context
-import scala.collection.mutable.{Map => MutableMap, ListBuffer => MutableList, WeakHashMap}
+import scala.collection.mutable.{Map => MutableMap, ListBuffer => MutableList, WeakHashMap, Set => MutableSet}
 import java.lang.ref.WeakReference
 
 object Tools {
@@ -26,6 +26,10 @@ object Tools {
         value
     }
   }
+
+  // TODO: the standard "c.topLevelRef orElse c.introduceTopLevel" approach doesn't work with the runtime compiler
+  // hence we should go for this hack. at least it's not going to OOM us...
+  val generatedNames = MutableSet[Any]()
 }
 
 class Tools[U <: Universe with Singleton](val u: U) {
@@ -42,9 +46,9 @@ class Tools[U <: Universe with Singleton](val u: U) {
   }
 
   def compileTimeDispatchees(tpe: Type, mirror: Mirror): List[Type] = {
-    val subtypes = allStaticallyKnownConcreteSubclasses(tpe, mirror)
+    val subtypes = allStaticallyKnownConcreteSubclasses(tpe, mirror).filter(subtpe => subtpe.typeSymbol != tpe.typeSymbol)
     def includeTpeItself = isRelevantSubclass(tpe.typeSymbol, tpe.typeSymbol)
-    subtypes ++ (if (includeTpeItself) List(tpe) else Nil)
+    if (includeTpeItself) subtypes :+ tpe else subtypes
   }
 
   def allStaticallyKnownConcreteSubclasses(tpe: Type, mirror: Mirror): List[Type] = {
@@ -224,9 +228,35 @@ abstract class Macro extends scala.reflect.macros.Macro {
     // 3) overridden fields
     val wrappedBody =
       q"""
-        val $firSymbol = typeOf[${field.owner.asClass.toType}].member(TermName(${field.name.toString}))
+        val $firSymbol = scala.pickling.`package`.fastTypeTag[${field.owner.asClass.toType}].tpe.member(TermName(${field.name.toString}))
         if ($firSymbol.isTerm) ${body(q"im.reflectField($firSymbol.asTerm)")}
       """
     prologue ++ wrappedBody.stats :+ wrappedBody.expr
+  }
+
+  def introduceTopLevel(pid: String, name: Name)(body: => ImplDef): Tree = {
+    val fullName = if (name.isTermName) TermName(pid + "." + name) else TypeName(pid + "." + name)
+    // TODO: the standard "c.topLevelRef orElse c.introduceTopLevel" approach doesn't work with the runtime compiler
+    // hence we should go for this hack. at least it's not going to OOM us...
+    if (!Tools.generatedNames(fullName)) {
+      c.introduceTopLevel(pid, body)
+      Tools.generatedNames += fullName
+    }
+    c.topLevelRef(fullName)
+  }
+}
+
+trait FastTypeTagMacro extends Macro {
+  def impl[T: c.WeakTypeTag]: c.Tree = {
+    import c.universe._
+    val tpe = weakTypeOf[T]
+    val wrapperPid = "scala.reflect.synthetic"
+    val wrapperName = TermName(("Reified" + tpe.toString.capitalize).replace(".", "DOT"))
+    val wrapperRef =
+      introduceTopLevel(wrapperPid, wrapperName) {
+        val reifiedTpe = c.reifyType(treeBuild.mkRuntimeUniverseRef, EmptyTree, tpe, concrete = true)
+        q"object $wrapperName { val tag = $reifiedTpe }"
+     }
+    q"$wrapperRef.tag"
   }
 }

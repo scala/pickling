@@ -17,6 +17,8 @@ package object pickling {
     def pickle(implicit format: PickleFormat): _ = macro PickleMacros.pickle[T]
     def pickleInto(builder: PickleBuilder): _ = macro PickleMacros.pickleInto[T]
   }
+
+  def fastTypeTag[T]: TypeTag[T] = macro FastTypeTagMacro.impl[T]
 }
 
 package pickling {
@@ -50,15 +52,15 @@ package pickling {
     val format: PickleFormatType
 
     type PickleReaderType <: PickleReader
-    def unpickle(tpe: Type, reader: PickleReaderType): Any
+    def unpickle(tag: TypeTag[_], reader: PickleReaderType): Any
   }
 
   trait GenUnpicklers {
     implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] = macro UnpicklerMacros.impl[T]
-    def genUnpickler(mirror: Mirror, tpe: Type)(implicit format: PickleFormat): Unpickler[_] = {
-      println(s"generating runtime unpickler for $tpe") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
-      val runtime = new CompiledUnpicklerRuntime(mirror, tpe)
-      // val runtime = new InterpretedUnpicklerRuntime(mirror, tpe)
+    def genUnpickler(mirror: Mirror, tag: TypeTag[_])(implicit format: PickleFormat): Unpickler[_] = {
+      println(s"generating runtime unpickler for ${tag.tpe}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
+      val runtime = new CompiledUnpicklerRuntime(mirror, tag)
+      // val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
       runtime.genUnpickler
     }
   }
@@ -85,17 +87,17 @@ package pickling {
 
   trait PickleBuilder {
     type PickleType <: Pickle
-    def beginEntry(tpe: Type, picklee: Any): this.type
-    def beginEntryNoType(tpe: Type, picklee: Any): this.type
+    def beginEntry(tag: TypeTag[_], picklee: Any): this.type
+    def beginEntryNoType(tag: TypeTag[_], picklee: Any): this.type
     def putField(name: String, pickler: this.type => Unit): this.type
     def endEntry(): Unit
     def result(): PickleType
   }
 
   trait PickleReader {
-    def readType(mirror: Mirror): Type
+    def readTag(mirror: Mirror): TypeTag[_]
     def atPrimitive: Boolean
-    def readPrimitive(tpe: Type): Any
+    def readPrimitive(tag: TypeTag[_]): Any
     def atObject: Boolean
     def readField(name: String): PickleReader
     def unpickle[T] = macro UnpickleMacros.readerUnpickle[T]

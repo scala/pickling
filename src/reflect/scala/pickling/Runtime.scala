@@ -47,7 +47,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) exten
         def pickle(picklee: Any, builder: PickleBuilder): Unit = {
           if (picklee != null) {
             val im = mirror.reflect(picklee)
-            builder.beginEntry(tpe, picklee)
+            builder.beginEntry(TypeTag(tpe), picklee)
             cir.fields.foreach(fir => {
               if (!fir.hasGetter)
                 throw new PicklingException(s"TODO: cannot pickle erased params yet (${fir.name} in $tpe)")
@@ -61,7 +61,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) exten
             })
             builder.endEntry()
           } else {
-            builder.beginEntry(NullTpe, null)
+            builder.beginEntry(TypeTag(NullTpe), null)
             builder.endEntry()
           }
         }
@@ -71,7 +71,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) exten
 }
 
 // TODO: copy/paste wrt CompiledPicklerRuntime
-class CompiledUnpicklerRuntime(mirror: Mirror, tpe: Type) {
+class CompiledUnpicklerRuntime(mirror: Mirror, tag: TypeTag[_]) {
   def genUnpickler(implicit format: PickleFormat): Unpickler[_] = {
     // see notes and todos in CompiledPicklerRuntime.genPickler
     val formatTpe = mirror.reflect(format).symbol.asType.toType
@@ -79,13 +79,13 @@ class CompiledUnpicklerRuntime(mirror: Mirror, tpe: Type) {
       import scala.pickling._
       import scala.pickling.`package`.PickleOps
       implicit val format: $formatTpe = new $formatTpe()
-      implicitly[Unpickler[$tpe]]
+      implicitly[Unpickler[$tag]]
     """).asInstanceOf[Unpickler[_]]
   }
 }
 
 // TODO: implement this one
-class InterpretedUnpicklerRuntime(mirror: Mirror, tpe: Type) {
+class InterpretedUnpicklerRuntime(mirror: Mirror, tag: TypeTag[_]) {
   def genPickler(implicit format: PickleFormat, p1: Pickler[Int], p2: Pickler[String]): Unpickler[_] = {
     ???
   }
