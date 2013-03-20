@@ -41,7 +41,8 @@ package binary {
       s.getBytes("UTF-8")
     }
 
-    def beginEntryNoType(tpe: Type, picklee: Any): this.type = {
+    def beginEntryNoType(tag: TypeTag[_], picklee: Any): this.type = {
+      val tpe = tag.tpe
       if (byteBuffer == null) {
         byteBuffer = collection.mutable.ListBuffer[Byte]()
       }
@@ -67,7 +68,9 @@ package binary {
         this
     }
 
-    def beginEntry(tpe: Type, picklee: Any): this.type = {
+    //TODO: pass size hint, so that an array of the right size can be allocated
+    def beginEntry(tag: TypeTag[_], picklee: Any): this.type = {
+      val tpe = tag.tpe
 
       if (byteBuffer == null) {
         byteBuffer = collection.mutable.ListBuffer[Byte]()
@@ -209,22 +212,26 @@ package binary {
     private var pos = 0
     private var atPrim = false
 
-    def readType(mirror: Mirror): Type = {
-      def unpickleTpe(stpe: String): Type = {
-        // TODO: support polymorphic types as serialized above with pickleTpe
-        mirror.staticClass(stpe).asType.toType
+    def readTag(mirror: Mirror): TypeTag[_] = {
+      def readType = {
+        def unpickleTpe(stpe: String): Type = {
+          // TODO: support polymorphic types as serialized above with pickleTpe
+          mirror.staticClass(stpe).asType.toType
+        }
+        //val offset = 4
+        val typeString = Util.decodeStringFrom(arr, pos)._1
+        pos = pos + 4 + /*offset +*/ typeString.length
+        val tpe = unpickleTpe(typeString)
+        atPrim = format.isPrimitive(tpe)
+        tpe
       }
-      //val offset = 4
-      val typeString = Util.decodeStringFrom(arr, pos)._1
-      pos = pos + 4 + /*offset +*/ typeString.length
-      val tpe = unpickleTpe(typeString)
-      atPrim = format.isPrimitive(tpe)
-      tpe
+      TypeTag(readType)
     }
 
     def atPrimitive: Boolean = atPrim
 
-    def readPrimitive(tpe: Type): Any = {
+    def readPrimitive(tag: TypeTag[_]): Any = {
+      val tpe = tag.tpe
       val (res, newpos) =
         if      (tpe =:= typeOf[Int])     Util.decodeIntFrom(arr, pos)
         else if (tpe =:= typeOf[String])  Util.decodeStringFrom(arr, pos)

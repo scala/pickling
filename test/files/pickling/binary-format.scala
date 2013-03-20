@@ -12,9 +12,9 @@ object Test extends App {
 
   val p = new Person(41)
 
-  pb.beginEntry(typeOf[Person], p)
+  pb.beginEntry(typeTag[Person], p)
   pb.putField("age", b => {
-    b.beginEntry(typeOf[Int], 41)
+    b.beginEntry(typeTag[Int], 41)
     b.endEntry()
   })
   pb.endEntry()
@@ -23,18 +23,18 @@ object Test extends App {
   val arr = res.value
   println("ARRAY:")
   println(arr.mkString("[", ",", "]"))
-  
+
   val rtm = ru.runtimeMirror(getClass.getClassLoader)
   val pr = pf.createReader(res)
-  val tpe = pr.readType(rtm)
+  val tpe = pr.readTag(rtm).tpe
   println(s"TYPE: [$tpe]")
 
   val pr2 = pr.readField("age")
 
-  val tpe2 = pr2.readType(rtm)
+  val tpe2 = pr2.readTag(rtm).tpe
   println(s"TYPE: [$tpe2]")
 
-  val intValue = pr2.readPrimitive(typeOf[Int]).asInstanceOf[Int]
+  val intValue = pr2.readPrimitive(typeTag[Int]).asInstanceOf[Int]
   val up = new Person(intValue)
   println("unpickled: " + up)
 }

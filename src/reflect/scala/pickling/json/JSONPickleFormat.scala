@@ -10,7 +10,6 @@ package json {
   import definitions._
   import scala.util.parsing.json._
   import scala.collection.mutable.{StringBuilder, Stack}
-  import ir._
 
   case class JSONPickle(value: String) extends Pickle {
     type ValueType = String
@@ -44,10 +43,11 @@ package json {
       sym == NullClass || sym.isPrimitive || sym == StringClass
     }
 
-    def beginEntryNoType(tpe: Type, picklee: Any): this.type =
-      beginEntry(tpe, picklee)
+    def beginEntryNoType(tag: TypeTag[_], picklee: Any): this.type =
+      beginEntry(tag, picklee)
 
-    def beginEntry(tpe: Type, picklee: Any): this.type = {
+    def beginEntry(tag: TypeTag[_], picklee: Any): this.type = {
+      val tpe = tag.tpe
       stack.push(tpe)
       val sym = tpe.typeSymbol.asClass
       if (isJSONPrimitive(tpe)) {
@@ -87,23 +87,27 @@ package json {
   class JSONPickleReader(datum: Any) extends PickleReader {
     type PickleFormatType = JSONPickleFormat
     implicit val format = json.pickleFormat
-    def readType(mirror: Mirror): Type = {
-      def unpickleTpe(stpe: String): Type = {
-        // TODO: support polymorphic types as serialized above with pickleTpe
-        val sym = if (stpe.endsWith("$")) mirror.staticModule(stpe.stripSuffix("$")).moduleClass else mirror.staticClass(stpe)
-        sym.asType.toType
+    def readTag(mirror: Mirror): TypeTag[_] = {
+      def readType = {
+        def unpickleTpe(stpe: String): Type = {
+          // TODO: support polymorphic types as serialized above with pickleTpe
+          val sym = if (stpe.endsWith("$")) mirror.staticModule(stpe.stripSuffix("$")).moduleClass else mirror.staticClass(stpe)
+          sym.asType.toType
+        }
+        datum match {
+          case JSONObject(fields) => unpickleTpe(fields("tpe").asInstanceOf[String])
+          case JSONArray(elements) => throw new PicklingException(s"TODO: not yet implemented ($datum)")
+          case _: String => StringClass.toType
+          case _: Double => DoubleClass.toType
+          case _: Boolean => BooleanClass.toType
+          case null => NullTpe
+        }
       }
-      datum match {
-        case JSONObject(fields) => unpickleTpe(fields("tpe").asInstanceOf[String])
-        case JSONArray(elements) => throw new PicklingException(s"TODO: not yet implemented ($datum)")
-        case _: String => StringClass.toType
-        case _: Double => DoubleClass.toType
-        case _: Boolean => BooleanClass.toType
-        case null => NullTpe
-      }
+      TypeTag(readType)
     }
     def atPrimitive: Boolean = !atObject
-    def readPrimitive(tpe: Type): Any = {
+    def readPrimitive(tag: TypeTag[_]): Any = {
+      val tpe = tag.tpe
       tpe match {
         case tpe if tpe =:= StringClass.toType => datum.asInstanceOf[String]
         case tpe if tpe =:= IntClass.toType => datum.asInstanceOf[Double].toInt
