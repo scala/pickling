@@ -41,9 +41,9 @@ package binaryopt {
       if (format.isPrimitive(tpe)) {
         val sym = tpe.typeSymbol.asClass
         pos =
-          if (sym == IntClass) Util.encodeIntTo(byteBuffer, pos, picklee.asInstanceOf[Int])
-          else if (sym == StringClass) Util.encodeStringTo(byteBuffer, pos, picklee.asInstanceOf[String])
-          else if (sym == BooleanClass) Util.encodeBooleanTo(byteBuffer, pos, picklee.asInstanceOf[Boolean])
+          if (sym == IntClass) Util.fastencodeIntTo(byteBuffer, pos, picklee.asInstanceOf[Int])
+          else if (sym == StringClass) Util.fastencodeStringTo(byteBuffer, pos, picklee.asInstanceOf[String])
+          else if (sym == BooleanClass) Util.fastencodeBooleanTo(byteBuffer, pos, picklee.asInstanceOf[Boolean])
           else ???
       }
 
@@ -61,21 +61,21 @@ package binaryopt {
 
       if (format.isPrimitive(tpe)) {
         val tpeBytes = formatType(tpe)
-        pos = Util.encodeIntTo(byteBuffer, pos, tpeBytes.length)
+        pos = Util.fastencodeIntTo(byteBuffer, pos, tpeBytes.length)
         Util.copy(byteBuffer, pos, tpeBytes)
         pos += tpeBytes.length
         val sym = tpe.typeSymbol.asClass
         pos =
-          if (sym == IntClass) Util.encodeIntTo(byteBuffer, pos, picklee.asInstanceOf[Int])
-          else if (sym == StringClass) Util.encodeStringTo(byteBuffer, pos, picklee.asInstanceOf[String])
-          else if (sym == BooleanClass) Util.encodeBooleanTo(byteBuffer, pos, picklee.asInstanceOf[Boolean])
+          if (sym == IntClass) Util.fastencodeIntTo(byteBuffer, pos, picklee.asInstanceOf[Int])
+          else if (sym == StringClass) Util.fastencodeStringTo(byteBuffer, pos, picklee.asInstanceOf[String])
+          else if (sym == BooleanClass) Util.fastencodeBooleanTo(byteBuffer, pos, picklee.asInstanceOf[Boolean])
           else ???
         this
       } else {
         // write pickled tpe to `target`:
         // length of pickled type, pickled type
         val tpeBytes = formatType(tpe)
-        pos = Util.encodeIntTo(byteBuffer, pos, tpeBytes.length)
+        pos = Util.fastencodeIntTo(byteBuffer, pos, tpeBytes.length)
         Util.copy(byteBuffer, pos, tpeBytes)
         pos += tpeBytes.length
         this
@@ -108,7 +108,7 @@ package binaryopt {
           mirror.staticClass(stpe).asType.toType
         }
         //val offset = 4
-        val (typeString, newpos) = Util.decodeStringFrom(arr, pos)
+        val (typeString, newpos) = Util.fastdecodeStringFrom(arr, pos)
         //pos = pos + 4 + /*offset +*/ typeString.length
         pos = newpos
         val tpe = unpickleTpe(typeString)
@@ -123,9 +123,9 @@ package binaryopt {
     def readPrimitive(tag: TypeTag[_]): Any = {
       val tpe = tag.tpe
       val (res, newpos) =
-        if      (tpe =:= typeOf[Int])     Util.decodeIntFrom(arr, pos)
-        else if (tpe =:= typeOf[String])  Util.decodeStringFrom(arr, pos)
-        else if (tpe =:= typeOf[Boolean]) Util.decodeBooleanFrom(arr, pos)
+        if      (tpe =:= typeOf[Int])     Util.fastdecodeIntFrom(arr, pos)
+        else if (tpe =:= typeOf[String])  Util.fastdecodeStringFrom(arr, pos)
+        else if (tpe =:= typeOf[Boolean]) Util.fastdecodeBooleanFrom(arr, pos)
         else ???
       pos = newpos
       res

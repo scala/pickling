@@ -1,5 +1,5 @@
 import scala.pickling._
-import binary._
+import binaryopt._
 import reflect.runtime.universe._
 
 object PicklerTest extends App {
