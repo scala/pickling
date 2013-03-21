@@ -670,6 +670,7 @@ LOCAL REFERENCE BUILD (LOCKER)
       <exclude name="scala/pickling/*.scala"/>
       <exclude name="scala/pickling/json/*.scala"/>
       <exclude name="scala/pickling/binary/*.scala"/>
+      <exclude name="scala/pickling/binaryopt/*.scala"/>
       <exclude name="scala/pickling/ir/*.scala"/>
       <compilationpath>
         <pathelement location="${build-locker.dir}/classes/library"/>
