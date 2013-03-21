@@ -1037,6 +1037,7 @@ QUICK BUILD (QUICK)
         <pathelement location="${build-locker.dir}/classes/compiler"/>
         <pathelement location="${build-quick.dir}/classes/library"/>
         <pathelement location="${build-quick.dir}/classes/reflect"/>
+        <pathelement location="${build-libs.dir}/classes/forkjoin"/>
         <path refid="aux.libs"/>
         <pathelement location="${jline.jar}"/>
       </compilationpath>

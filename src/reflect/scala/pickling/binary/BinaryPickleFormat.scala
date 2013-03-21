@@ -387,7 +387,9 @@ package binary {
   object UnsafeMemory {
     import sun.misc.Unsafe
 
-    private val unsafe: Unsafe = Unsafe.getUnsafe()
+    private val unsafe: Unsafe =
+      scala.concurrent.util.Unsafe.instance
+
     private val byteArrayOffset: Long = unsafe.arrayBaseOffset(classOf[Array[Byte]])
 
     def putInt(buffer: Array[Byte], pos: Int, value: Int): Unit = {

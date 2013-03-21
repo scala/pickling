@@ -20,3 +20,10 @@ ListBench 5 (size 100000)
 
 JavaSerializationListBench 5 (size 100000)
 343	138	64	67	48
+
+commit b6fac27ad848cd6e78e3e2c7577b117c30eae766
+ListBench 5 (size 100000)
+125	7	17	6	6
+
+ListPersonBench$ 5 (size 100000)
+3618	1909	1925	1873	1917
