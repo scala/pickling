@@ -238,12 +238,12 @@ trait UnpickleMacros extends Macro {
     def createUnpickler(tpe: Type) = q"implicitly[Unpickler[$tpe]]"
     def finalDispatch = createUnpickler(tpe)
     def nonFinalDispatch = {
-      val compileTimeDispatch = compileTimeDispatchees(tpe) map (tpe => {
+      val compileTimeDispatch = compileTimeDispatchees(tpe) map (dtpe => {
         // TODO: do we still want to use something like HasPicklerDispatch (for unpicklers it would be routed throw tpe's companion)?
         // NOTE: we have a precise type at hand here, but we do dispatch on erasure
         // why? because picklers are created generic, i.e. for C[T] we have a single pickler of type Pickler[C[_]]
         // therefore here we dispatch on erasure and later on pass the precise type to `unpickle`
-        CaseDef(Bind(TermName("tpe"), Ident(nme.WILDCARD)), q"tpe.typeSymbol == scala.pickling.`package`.fastTypeTag[$tpe].tpe.typeSymbol", createUnpickler(tpe))
+        CaseDef(Bind(TermName("tpeBound"), Ident(nme.WILDCARD)), q"tpeBound.typeSymbol == scala.pickling.`package`.fastTypeTag[$dtpe].tpe.typeSymbol", createUnpickler(dtpe))
       })
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Unpickler.genUnpickler(currentMirror, tag)")
       Match(q"tag.tpe", compileTimeDispatch :+ runtimeDispatch)
