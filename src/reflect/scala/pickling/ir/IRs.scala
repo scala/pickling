@@ -31,12 +31,14 @@ class IRs[U <: Universe with Singleton](val uni: U) {
 
   // TODO: minimal versus verbose PickleFormat. i.e. someone might want all concrete inherited fields in their pickle
   private def fields(tp: Type): Q = {
-    val info = tp.typeSymbol.typeSignature
-    val ctor = info.declaration(nme.CONSTRUCTOR)
+    val ctor = tp.declaration(nme.CONSTRUCTOR)
     val ctorParams = if (ctor != NoSymbol) ctor.asMethod.paramss.flatten.map(_.asTerm) else Nil // TODO: multiple ctors
-    val allAccessors = info.declarations.collect{ case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
+    val allAccessors = tp.declarations.collect{ case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
     val (paramAccessors, otherAccessors) = allAccessors.partition(_.isParamAccessor)
-    def mkFieldIR(sym: TermSymbol, param: Option[TermSymbol], accessor: Option[MethodSymbol]) = FieldIR(sym.name.toString.trim, sym.typeSignatureIn(tp), param, accessor)
+    def mkFieldIR(sym: TermSymbol, param: Option[TermSymbol], accessor: Option[MethodSymbol]) = {
+      val symTp = accessor.getOrElse(sym).typeSignatureIn(tp)
+      FieldIR(sym.name.toString.trim, symTp, param, accessor)
+    }
     val paramFields = ctorParams.map(sym => mkFieldIR(sym, Some(sym), paramAccessors.find(_.name == sym.name)))
     val varGetters = otherAccessors.collect{ case meth if meth.isGetter && meth.accessed != NoSymbol && meth.accessed.asTerm.isVar => meth }
     val varFields = varGetters.map(sym => mkFieldIR(sym, None, Some(sym)))
@@ -52,7 +54,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
 
   private val f3 = (c: C) =>
     c.tpe.baseClasses
-         .map(_.asType.toType)
+         .map(superSym => c.tpe.baseType(superSym))
          .map(tp => ClassIR(tp, null, fields(tp)))
 
   private val compose =
