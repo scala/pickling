@@ -33,7 +33,6 @@ import scala.compat.Platform
  *
  *  @author Iulian Dragos, Burak Emir
  */
-@deprecated("This class will be removed.", "2.10.0")
 trait Benchmark {
 
   /** this method should be implemented by the concrete benchmark.

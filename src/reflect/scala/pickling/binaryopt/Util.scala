@@ -1,3 +1,5 @@
+package scala.pickling
+
 package binaryopt {
   import collection.mutable.Buffer
   import UnsafeMemory._
