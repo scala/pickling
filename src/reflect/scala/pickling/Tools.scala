@@ -186,13 +186,15 @@ abstract class Macro extends scala.reflect.macros.Macro {
     c.enclosingImplicits match {
       case c.ImplicitCandidate(_, _, ourPt, _) :: c.ImplicitCandidate(_, _, theirPt, _) :: _ if ourPt =:= theirPt =>
         debug(s"no, because: ourPt = $ourPt, theirPt = $theirPt")
-        c.diverge()
+        // c.diverge()
+        c.abort(c.enclosingPosition, "stepping aside: repeating itself")
       case _ =>
         debug(s"not sure, need to explore alternatives")
         c.inferImplicitValue(c.enclosingImplicits.head.pt, silent = true) match {
           case success if success != EmptyTree =>
             debug(s"no, because there's $success")
-            c.diverge()
+            c.abort(c.enclosingPosition, "stepping aside: there are other candidates")
+            // c.diverge()
           case _ =>
             debug("yes, there are no obstacles. entering " + c.enclosingImplicits.head.pt)
             val result = body
