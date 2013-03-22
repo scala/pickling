@@ -34,11 +34,10 @@ object TraversablePicklerBench extends testing.Benchmark {
         b.endEntry()
       })
 
-      coll.foreach[Unit]({ (el: Any) =>
+      coll.foreach({ (el: Any) =>
         builder.putField("elem", b => { // in this case, the name "elem" is actually ignored for binary format, would be terrible if `format` was JSON
           elemPickler.pickle(el, b)
         })
-        ()
       })
 
       builder.endEntry()
