@@ -17,9 +17,8 @@ trait PicklerMacros extends Macro {
     val isNonExtensible = sym.isFinal || sym.isPrimitive || sym.isModuleClass
     import irs._
     val pickler = {
-      val builderTpe = pickleBuilderType(format)
       val picklerPid = syntheticPackageName
-      val picklerName = syntheticPicklerName(tpe, builderTpe)
+      val picklerName = syntheticPicklerName(tpe)
       introduceTopLevel(picklerPid, picklerName) {
         def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
           val cir = classIR(tpe)
@@ -60,10 +59,8 @@ trait PicklerMacros extends Macro {
           class $picklerName extends scala.pickling.Pickler[$tpe] {
             import scala.pickling._
             import scala.pickling.`package`.PickleOps
-            type PickleFormatType = ${format.tpe}
-            implicit val format = new PickleFormatType()
-            type PickleBuilderType = ${pickleBuilderType(format)}
-            def pickle(pickleeRaw: Any, builder: PickleBuilderType): Unit = {
+            implicit val format = new ${format.tpe}()
+            def pickle(pickleeRaw: Any, builder: PickleBuilder): Unit = {
               val picklee = pickleeRaw.asInstanceOf[$tpe]
               $pickleLogic
             }
@@ -87,9 +84,8 @@ trait UnpicklerMacros extends Macro {
     val sym = tpe.typeSymbol.asClass
     import irs._
     val unpickler = {
-      val readerTpe = pickleReaderType(format)
       val unpicklerPid = syntheticPackageName
-      val unpicklerName = syntheticUnpicklerName(tpe, readerTpe)
+      val unpicklerName = syntheticUnpicklerName(tpe)
       introduceTopLevel(unpicklerPid, unpicklerName) {
         def unpicklePrimitive = q"reader.readPrimitive(tag)"
         def unpickleObject = {
@@ -143,10 +139,8 @@ trait UnpicklerMacros extends Macro {
             import scala.pickling._
             import scala.pickling.ir._
             import scala.reflect.runtime.universe._
-            type PickleFormatType = ${format.tpe}
-            implicit val format = new PickleFormatType()
-            type PickleReaderType = ${pickleReaderType(format)}
-            def unpickle(tag: TypeTag[_], reader: PickleReaderType): Any = $unpickleLogic
+            implicit val format = new ${format.tpe}()
+            def unpickle(tag: TypeTag[_], reader: PickleReader): Any = $unpickleLogic
           }
         """
       }
@@ -201,7 +195,7 @@ trait PickleMacros extends Macro {
       import scala.pickling._
       val picklee = $pickleeArg
       val pickler = $dispatchLogic
-      pickler.pickle(picklee, $builder.asInstanceOf[pickler.PickleBuilderType])
+      pickler.pickle(picklee, $builder)
     """
   }
 }
@@ -245,7 +239,6 @@ trait UnpickleMacros extends Macro {
       Match(q"tag.tpe", compileTimeDispatch :+ runtimeDispatch)
     }
     val isNonExtensible = sym.isFinal || sym.isPrimitive || sym.isModuleClass
-    // val tagReified = c.reifyType(treeBuild.mkRuntimeUniverseRef, EmptyTree, tpe)
     val readTypeTagLogic = if (isNonExtensible) q"typeTag[$tpe]" else q"reader.readTag(currentMirror)"
     val dispatchLogic = if (isNonExtensible) finalDispatch else nonFinalDispatch
 
@@ -255,7 +248,7 @@ trait UnpickleMacros extends Macro {
       val reader = $readerArg
       val tag = $readTypeTagLogic
       val unpickler = $dispatchLogic
-      val result = unpickler.unpickle(tag, reader.asInstanceOf[unpickler.PickleReaderType])
+      val result = unpickler.unpickle(tag, reader)
       result.asInstanceOf[$tpe]
     """
   }

@@ -18,11 +18,7 @@ package json {
 
   class JSONPickleFormat extends PickleFormat {
     type PickleType = JSONPickle
-
-    type PickleBuilderType = JSONPickleBuilder
     def createBuilder() = new JSONPickleBuilder
-
-    type PickleReaderType = JSONPickleReader
     def createReader(pickle: JSONPickle) = {
       JSON.parseRaw(pickle.value) match {
         case Some(raw) => new JSONPickleReader(raw)
@@ -32,9 +28,7 @@ package json {
   }
 
   class JSONPickleBuilder extends PickleBuilder {
-    type PickleFormatType = JSONPickleFormat
     implicit val format = json.pickleFormat
-    type PickleType = JSONPickle
 
     private val buf = new StringBuilder()
     private val stack = new Stack[Type]()
@@ -85,7 +79,6 @@ package json {
   }
 
   class JSONPickleReader(datum: Any) extends PickleReader {
-    type PickleFormatType = JSONPickleFormat
     implicit val format = json.pickleFormat
     def readTag(mirror: Mirror): TypeTag[_] = {
       def readType = {
@@ -117,7 +110,7 @@ package json {
     def atObject: Boolean = datum.isInstanceOf[JSONObject]
     def readField(name: String): JSONPickleReader = {
       datum match {
-        case JSONObject(fields) => new JSONPickleReader(fields(name)).asInstanceOf[this.type] // TODO: think this over
+        case JSONObject(fields) => new JSONPickleReader(fields(name))
       }
     }
   }

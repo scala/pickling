@@ -25,11 +25,8 @@ package pickling {
 
   @implicitNotFound(msg = "Cannot generate a pickler for ${T}. Recompile with -Xlog-implicits for details")
   trait Pickler[T] {
-    type PickleFormatType <: PickleFormat
-    val format: PickleFormatType
-
-    type PickleBuilderType <: PickleBuilder
-    def pickle(picklee: Any, builder: PickleBuilderType): Unit
+    val format: PickleFormat
+    def pickle(picklee: Any, builder: PickleBuilder): Unit
   }
 
   trait GenPicklers {
@@ -48,11 +45,8 @@ package pickling {
 
   @implicitNotFound(msg = "Cannot generate an unpickler for ${T}. Recompile with -Xlog-implicits for details")
   trait Unpickler[T] {
-    type PickleFormatType <: PickleFormat
-    val format: PickleFormatType
-
-    type PickleReaderType <: PickleReader
-    def unpickle(tag: TypeTag[_], reader: PickleReaderType): Any
+    val format: PickleFormat
+    def unpickle(tag: TypeTag[_], reader: PickleReader): Any
   }
 
   trait GenUnpicklers {
@@ -77,21 +71,16 @@ package pickling {
 
   trait PickleFormat {
     type PickleType <: Pickle
-
-    type PickleBuilderType <: PickleBuilder
-    def createBuilder(): PickleBuilderType
-
-    type PickleReaderType <: PickleReader
-    def createReader(pickle: PickleType): PickleReaderType
+    def createBuilder(): PickleBuilder
+    def createReader(pickle: PickleType): PickleReader
   }
 
   trait PickleBuilder {
-    type PickleType <: Pickle
     def beginEntry(tag: TypeTag[_], picklee: Any, knownSize: Int = -1): this.type
     def beginEntryNoType(tag: TypeTag[_], picklee: Any, knownSize: Int = -1): this.type
     def putField(name: String, pickler: this.type => Unit): this.type
     def endEntry(): Unit
-    def result(): PickleType
+    def result(): Pickle
   }
 
   trait PickleReader {

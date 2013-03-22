@@ -39,11 +39,9 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) exten
     else if (tpe <:< typeOf[String]) implicitly[Pickler[String]]
     else {
       // build "interpreted" runtime pickler
-      val format0 = format
+      implicit val format0 = format // TODO: implicitly[PickleFormat] somehow doesn't work without this local
       new Pickler[Any] {
-        type PickleFormatType = PickleFormat
-        implicit val format = format0
-        type PickleBuilderType = PickleBuilder
+        val format = implicitly[PickleFormat]
         def pickle(picklee: Any, builder: PickleBuilder): Unit = {
           if (picklee != null) {
             val im = mirror.reflect(picklee)
@@ -56,7 +54,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) exten
               val fldValue    = fldMirror()
               debug("pickling field value: " + fldValue)
               val fldClass    = if (fldValue != null) fldValue.getClass else mirror.runtimeClass(NullTpe)
-              val fldPickler  = Pickler.genPickler(classLoader, fldClass).asInstanceOf[Pickler[_] { type PickleBuilderType = builder.type }]
+              val fldPickler  = Pickler.genPickler(classLoader, fldClass).asInstanceOf[Pickler[_]]
               builder.putField(fir.name, b => fldPickler.pickle(fldValue, b))
             })
             builder.endEntry()

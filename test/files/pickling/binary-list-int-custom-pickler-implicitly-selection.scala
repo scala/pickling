@@ -22,17 +22,12 @@ object Test extends App {
   //   import reflect.runtime.{ universe => ru }
   //   import ru._
 
-  //   // these type aliases seem like unnecessary boilerplate that we might be able to get rid of
-  //   type PickleFormatType = PickleFormat
-  //   type PickleBuilderType = elemPickler.PickleBuilderType
-  //   type PickleReaderType = PickleReader
-
   //   val format: PickleFormat = pf
 
   //   // this is only for reading the type during unpickling. otherwise all happens at compile-time
   //   val rtm = ru.runtimeMirror(getClass.getClassLoader)
 
-  //   def pickle(picklee: Any, builder: PickleBuilderType): Unit = {
+  //   def pickle(picklee: Any, builder: PickleBuilder): Unit = {
   //     val list = picklee.asInstanceOf[List[T]]
 
   //     builder.beginEntry(typeTag[AnyRef], picklee)
@@ -51,7 +46,7 @@ object Test extends App {
   //     builder.endEntry()
   //   }
 
-  //   def unpickle(tpe: Type, reader: PickleReaderType): Any = {
+  //   def unpickle(tpe: Type, reader: PickleReader): Any = {
   //     val tpe = reader.readTag(rtm).tpe
   //     val r2 = reader.readField("numElems")
   //     val itpe = r2.readTag(rtm).tpe
