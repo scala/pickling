@@ -156,8 +156,6 @@ abstract class Macro extends scala.reflect.macros.Macro {
     }
   }
 
-  def pickleBuilderType(pickleFormat: Tree): Type = innerType(pickleFormat, "PickleBuilderType")
-  def pickleReaderType(pickleFormat: Tree): Type = innerType(pickleFormat, "PickleReaderType")
   def pickleFormatType(pickle: Tree): Type = innerType(pickle, "PickleFormatType")
 
   def compileTimeDispatchees(tpe: Type): List[Type] = tools.compileTimeDispatchees(tpe, rootMirror)
@@ -166,17 +164,17 @@ abstract class Macro extends scala.reflect.macros.Macro {
   def syntheticBaseName(tpe: Type): TypeName = TypeName(tpe.typeSymbol.fullName.split('.').map(_.capitalize).mkString("") + (if (tpe.typeSymbol.isModuleClass) "$" else ""))
   def syntheticBaseQualifiedName(tpe: Type): TypeName = TypeName(syntheticPackageName + "." + syntheticBaseName(tpe).toString)
 
-  def syntheticPicklerName(tpe: Type, builderTpe: Type): TypeName = syntheticBaseName(tpe) + syntheticPicklerSuffix(builderTpe)
-  def syntheticPicklerQualifiedName(tpe: Type, builderTpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticPicklerSuffix(builderTpe)
-  def syntheticPicklerSuffix(builderTpe: Type): String = builderTpe.typeSymbol.name.toString.stripSuffix("PickleBuilder") + "Pickler"
+  def syntheticPicklerName(tpe: Type): TypeName = syntheticBaseName(tpe) + syntheticPicklerSuffix()
+  def syntheticPicklerQualifiedName(tpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticPicklerSuffix()
+  def syntheticPicklerSuffix(): String = "Pickler"
 
-  def syntheticUnpicklerName(tpe: Type, readerTpe: Type): TypeName = syntheticBaseName(tpe) + syntheticUnpicklerSuffix(readerTpe)
-  def syntheticUnpicklerQualifiedName(tpe: Type, readerTpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticUnpicklerSuffix(readerTpe)
-  def syntheticUnpicklerSuffix(readerTpe: Type): String = readerTpe.typeSymbol.name.toString.stripSuffix("PickleReader") + "Unpickler"
+  def syntheticUnpicklerName(tpe: Type): TypeName = syntheticBaseName(tpe) + syntheticUnpicklerSuffix()
+  def syntheticUnpicklerQualifiedName(tpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticUnpicklerSuffix()
+  def syntheticUnpicklerSuffix(): String = "Unpickler"
 
-  def syntheticPicklerUnpicklerName(tpe: Type, builderTpe: Type, readerTpe: Type): TypeName = syntheticBaseName(tpe) + syntheticPicklerUnpicklerSuffix(builderTpe, readerTpe)
-  def syntheticPicklerUnpicklerQualifiedName(tpe: Type, builderTpe: Type, readerTpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticPicklerUnpicklerSuffix(builderTpe, readerTpe)
-  def syntheticPicklerUnpicklerSuffix(builderTpe: Type, readerTpe: Type): String = readerTpe.typeSymbol.name.toString.stripSuffix("PickleReader") + "PicklerUnpickler"
+  def syntheticPicklerUnpicklerName(tpe: Type): TypeName = syntheticBaseName(tpe) + syntheticPicklerUnpicklerSuffix()
+  def syntheticPicklerUnpicklerQualifiedName(tpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticPicklerUnpicklerSuffix()
+  def syntheticPicklerUnpicklerSuffix(): String = "PicklerUnpickler"
 
   def preferringAlternativeImplicits(body: => Tree): Tree = {
     def debug(msg: Any) = {

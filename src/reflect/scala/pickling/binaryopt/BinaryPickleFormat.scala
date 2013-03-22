@@ -17,8 +17,6 @@ package binaryopt {
     import ru._
     import definitions._
 
-    type PickleType = BinaryPickle
-
     private var byteBuffer: ByteBuffer = _
     private var pos = 0
 
@@ -93,7 +91,7 @@ package binaryopt {
 
     def endEntry(): Unit = { /* do nothing */ }
 
-    def result(): PickleType = {
+    def result() = {
       BinaryPickle(byteBuffer.toArray)
     }
   }
@@ -144,14 +142,8 @@ package binaryopt {
     import definitions._
 
     type PickleType = BinaryPickle
-    type PickleBuilderType = BinaryPickleBuilder
-    type PickleReaderType = BinaryPickleReader
-
-    def createBuilder(): PickleBuilderType =
-      new BinaryPickleBuilder(this)
-
-    def createReader(pickle: PickleType): PickleReaderType =
-      new BinaryPickleReader(pickle.value, this)
+    def createBuilder() = new BinaryPickleBuilder(this)
+    def createReader(pickle: PickleType) = new BinaryPickleReader(pickle.value, this)
 
     def isPrimitive(tpe: Type) = {
       val sym = tpe.typeSymbol.asClass

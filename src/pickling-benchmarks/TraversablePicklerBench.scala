@@ -17,14 +17,9 @@ object TraversablePicklerBench extends testing.Benchmark {
 
     import scala.reflect.runtime.currentMirror
 
-    // these type aliases seem like unnecessary boilerplate that we might be able to get rid of
-    type PickleFormatType = PickleFormat
-    type PickleBuilderType = elemPickler.PickleBuilderType
-    type PickleReaderType = elemUnpickler.PickleReaderType
-
     val format: PickleFormat = pf
 
-    def pickle(picklee: Any, builder: PickleBuilderType): Unit = {
+    def pickle(picklee: Any, builder: PickleBuilder): Unit = {
       val coll = picklee.asInstanceOf[Coll[T]]
       val tpe  = typeTag[Int] // used to pickle the number of elements
       builder.beginEntryNoType(typeTag[AnyRef], picklee)
@@ -43,7 +38,7 @@ object TraversablePicklerBench extends testing.Benchmark {
       builder.endEntry()
     }
 
-    def unpickle(tpe: TypeTag[_], reader: PickleReaderType): Any = {
+    def unpickle(tpe: TypeTag[_], reader: PickleReader): Any = {
       val next = reader.readField("numElems")
       val num  = next.readPrimitive(typeTag[Int]).asInstanceOf[Int]
 
@@ -69,12 +64,12 @@ object TraversablePicklerBench extends testing.Benchmark {
 
   override def run() {
     val builder = pf.createBuilder()
-    val vecPickler = vecPicklerRaw.asInstanceOf[Pickler[_]{ type PickleBuilderType = pf.PickleBuilderType }]
+    val vecPickler = vecPicklerRaw.asInstanceOf[Pickler[_]]
 
     vecPickler.pickle(vec, builder)
     val pckl = builder.result()
 
-    val vecUnpickler = vecPicklerRaw.asInstanceOf[Unpickler[_]{ type PickleBuilderType = BinaryPickleBuilder ; type PickleReaderType = BinaryPickleReader }]
+    val vecUnpickler = vecPicklerRaw.asInstanceOf[Unpickler[_]]
 
     val res = vecUnpickler.unpickle(typeTag[Vector[Person]], pf.createReader(pckl))
   }

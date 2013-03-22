@@ -17,8 +17,6 @@ package binary {
     import ru._
     import definitions._
 
-    type PickleType = BinaryPickle
-
     /* stack of incomplete entry states */
     private var entries = List[EntryState]()
     private var completed: Array[Byte] = _
@@ -201,7 +199,7 @@ package binary {
       }*/
     }
 
-    def result(): PickleType = {
+    def result() = {
       BinaryPickle(byteBuffer.toArray)
     }
   }
@@ -263,14 +261,8 @@ package binary {
     import definitions._
 
     type PickleType = BinaryPickle
-    type PickleBuilderType = BinaryPickleBuilder
-    type PickleReaderType = BinaryPickleReader
-
-    def createBuilder(): PickleBuilderType =
-      new BinaryPickleBuilder(this)
-
-    def createReader(pickle: PickleType): PickleReaderType =
-      new BinaryPickleReader(pickle.value, this)
+    def createBuilder() = new BinaryPickleBuilder(this)
+    def createReader(pickle: PickleType) = new BinaryPickleReader(pickle.value, this)
 
     def isPrimitive(tpe: Type) = {
       val sym = tpe.typeSymbol.asClass

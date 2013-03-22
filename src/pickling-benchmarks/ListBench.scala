@@ -36,17 +36,12 @@ object ListBench extends testing.Benchmark {
     import reflect.runtime.{ universe => ru }
     import ru._
 
-    // these type aliases seem like unnecessary boilerplate that we might be able to get rid of
-    type PickleFormatType = PickleFormat
-    type PickleBuilderType = elemPickler.PickleBuilderType
-    type PickleReaderType = PickleReader
-
     val format: PickleFormat = pf
 
     // this is only for reading the type during unpickling. otherwise all happens at compile-time
     val rtm = ru.runtimeMirror(getClass.getClassLoader)
 
-    def pickle(picklee: Any, builder: PickleBuilderType): Unit = {
+    def pickle(picklee: Any, builder: PickleBuilder): Unit = {
       val list = picklee.asInstanceOf[List[T]]
       val tpe  = typeTag[Int]
       builder.beginEntryNoType(typeTag[AnyRef], picklee, 4 + 4 * list.length)
@@ -65,7 +60,7 @@ object ListBench extends testing.Benchmark {
       builder.endEntry()
     }
 
-    def unpickle(tpe: TypeTag[_], reader: PickleReaderType): Any = {
+    def unpickle(tpe: TypeTag[_], reader: PickleReader): Any = {
       val tpe = typeTag[T]
       val r2 = reader.readField("numElems")
       val num = r2.readPrimitive(typeTag[Int]).asInstanceOf[Int]
@@ -90,13 +85,13 @@ object ListBench extends testing.Benchmark {
 
   override def run() {
     val builder = pf.createBuilder()
-    val listPickler = listPicklerRaw.asInstanceOf[Pickler[_]{ type PickleBuilderType = pf.PickleBuilderType }]
+    val listPickler = listPicklerRaw.asInstanceOf[Pickler[_]]
 
     listPickler.pickle(lst, builder)
     val pckl = builder.result()
     // println(pckl.value.asInstanceOf[Array[Byte]].mkString("[", ",", "]"))
 
-    val listUnpickler = listPicklerRaw.asInstanceOf[Unpickler[_]{ type PickleBuilderType = BinaryPickleBuilder ; type PickleReaderType = BinaryPickleReader }]
+    val listUnpickler = listPicklerRaw.asInstanceOf[Unpickler[_]]
 
     val res = listUnpickler.unpickle(typeTag[Int], pf.createReader(pckl))
   }
