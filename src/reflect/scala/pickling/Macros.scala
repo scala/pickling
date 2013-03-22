@@ -22,8 +22,6 @@ trait PicklerMacros extends Macro {
       val picklerName = syntheticPicklerName(tpe, builderTpe)
       introduceTopLevel(picklerPid, picklerName) {
         def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
-          if (tpe.typeSymbol.asClass.typeParams.nonEmpty)
-            c.abort(c.enclosingPosition, s"TODO: cannot pickle polymorphic types yet ($tpe)")
           val cir = classIR(tpe)
           val beginEntry =
             if(isNonExtensible) q"builder.beginEntryNoType(typeTag[$tpe], picklee)"
@@ -93,8 +91,6 @@ trait UnpicklerMacros extends Macro {
       val unpicklerPid = syntheticPackageName
       val unpicklerName = syntheticUnpicklerName(tpe, readerTpe)
       introduceTopLevel(unpicklerPid, unpicklerName) {
-        if (tpe.typeSymbol.asClass.typeParams.nonEmpty)
-          c.abort(c.enclosingPosition, s"TODO: cannot unpickle polymorphic types yet ($tpe)")
         def unpicklePrimitive = q"reader.readPrimitive(tag)"
         def unpickleObject = {
           def readField(name: String, tpe: Type) = q"reader.readField($name).unpickle[$tpe]"
