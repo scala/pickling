@@ -14,7 +14,6 @@ trait PicklerMacros extends Macro {
     import definitions._
     val tpe = weakTypeOf[T]
     val sym = tpe.typeSymbol.asClass
-    val isNonExtensible = sym.isFinal || sym.isPrimitive || sym.isModuleClass
     import irs._
     val pickler = {
       val picklerPid = syntheticPackageName
@@ -23,7 +22,7 @@ trait PicklerMacros extends Macro {
         def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
           val cir = classIR(tpe)
           val beginEntry =
-            if(isNonExtensible) q"builder.beginEntryNoType(typeTag[$tpe], picklee)"
+            if (sym.isEffectivelyFinal) q"builder.beginEntryNoType(typeTag[$tpe], picklee)"
             else q"builder.beginEntry(typeTag[$tpe], picklee)"
           val putFields = cir.fields.flatMap(fir => {
             if (sym.isModuleClass) {
@@ -233,14 +232,13 @@ trait UnpickleMacros extends Macro {
         // NOTE: we have a precise type at hand here, but we do dispatch on erasure
         // why? because picklers are created generic, i.e. for C[T] we have a single pickler of type Pickler[C[_]]
         // therefore here we dispatch on erasure and later on pass the precise type to `unpickle`
-        CaseDef(Bind(TermName("tpeBound"), Ident(nme.WILDCARD)), q"tpeBound.typeSymbol == scala.pickling.`package`.fastTypeTag[$dtpe].tpe.typeSymbol", createUnpickler(dtpe))
+        CaseDef(Bind(TermName("unpickleeTpe"), Ident(nme.WILDCARD)), q"unpickleeTpe.typeSymbol == scala.pickling.`package`.fastTypeTag[$dtpe].tpe.typeSymbol", createUnpickler(dtpe))
       })
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Unpickler.genUnpickler(currentMirror, tag)")
       Match(q"tag.tpe", compileTimeDispatch :+ runtimeDispatch)
     }
-    val isNonExtensible = sym.isFinal || sym.isPrimitive || sym.isModuleClass
-    val readTypeTagLogic = if (isNonExtensible) q"typeTag[$tpe]" else q"reader.readTag(currentMirror)"
-    val dispatchLogic = if (isNonExtensible) finalDispatch else nonFinalDispatch
+    val readTypeTagLogic = if (sym.isEffectivelyFinal) q"typeTag[$tpe]" else q"reader.readTag(currentMirror)"
+    val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
 
     q"""
       import scala.reflect.runtime.universe._
