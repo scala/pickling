@@ -22,8 +22,8 @@ trait PicklerMacros extends Macro {
         def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
           val cir = classIR(tpe)
           val beginEntry =
-            if (sym.isEffectivelyFinal) q"builder.beginEntryNoType(typeTag[$tpe], picklee)"
-            else q"builder.beginEntry(typeTag[$tpe], picklee)"
+            if (sym.isEffectivelyFinal) q"builder.beginEntryNoType(scala.pickling.`package`.fastTypeTag[$tpe], picklee)"
+            else q"builder.beginEntry(scala.pickling.`package`.fastTypeTag[$tpe], picklee)"
           val putFields = cir.fields.flatMap(fir => {
             if (sym.isModuleClass) {
               Nil
@@ -234,7 +234,7 @@ trait UnpickleMacros extends Macro {
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Unpickler.genUnpickler(currentMirror, tag)")
       Match(q"tag.tpe", compileTimeDispatch :+ runtimeDispatch)
     }
-    val readTypeTagLogic = if (sym.isEffectivelyFinal) q"typeTag[$tpe]" else q"reader.readTag(currentMirror)"
+    val readTypeTagLogic = if (sym.isEffectivelyFinal) q"scala.pickling.`package`.fastTypeTag[$tpe]" else q"reader.readTag(currentMirror)"
     val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
 
     q"""

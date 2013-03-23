@@ -40,7 +40,7 @@ trait ModulePicklerUnpicklerMacro extends Macro {
             import scala.pickling.`package`.PickleOps
             implicit val format = new ${format.tpe}()
             def pickle(picklee: $tpe, builder: PickleBuilder): Unit = {
-              builder.beginEntry(typeTag[$tpe], picklee)
+              builder.beginEntry(fastTypeTag[$tpe], picklee)
               builder.endEntry()
             }
             def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
