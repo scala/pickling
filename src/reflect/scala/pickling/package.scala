@@ -26,7 +26,7 @@ package pickling {
   @implicitNotFound(msg = "Cannot generate a pickler for ${T}. Recompile with -Xlog-implicits for details")
   trait Pickler[T] {
     val format: PickleFormat
-    def pickle(picklee: Any, builder: PickleBuilder): Unit
+    def pickle(picklee: T, builder: PickleBuilder): Unit
   }
 
   trait GenPicklers {

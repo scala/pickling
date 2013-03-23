@@ -24,17 +24,15 @@ object Test extends App {
     // this is only for reading the type during unpickling. otherwise all happens at compile-time
     val rtm = ru.runtimeMirror(getClass.getClassLoader)
 
-    def pickle(picklee: Any, builder: PickleBuilder): Unit = {
-      val list = picklee.asInstanceOf[List[T]]
-
+    def pickle(picklee: List[T], builder: PickleBuilder): Unit = {
       builder.beginEntryNoType(typeTag[AnyRef], picklee)
 
       builder.putField("numElems", b => {
-        b.beginEntryNoType(typeTag[Int], list.length)
+        b.beginEntryNoType(typeTag[Int], picklee.length)
         b.endEntry()
       })
 
-      for (el <- list) {
+      for (el <- picklee) {
         builder.putField("elem", b => { // in this case, the name "elem" is actually ignored for binary format, would be terrible if `format` was JSON
           elemPickler.pickle(el, b)
         })
@@ -62,18 +60,16 @@ object Test extends App {
 
   val intPickler     = implicitly[Pickler[Int]]
   val pf             = implicitly[BinaryPickleFormat]
-  val listPicklerRaw = implicitly[Pickler[List[Int]]]
+  val listPickler    = implicitly[Pickler[List[Int]]]
+  val listUnpickler  = listPickler
 
   val l = List[Int](7, 24, 30)
 
   val builder = pf.createBuilder()
-  val listPickler = listPicklerRaw.asInstanceOf[Pickler[_]]
 
   listPickler.pickle(l, builder)
   val pckl = builder.result()
   println(pckl.value.asInstanceOf[Array[Byte]].mkString("[", ",", "]"))
-
-  val listUnpickler = listPicklerRaw.asInstanceOf[Unpickler[_]]
 
   val res = listUnpickler.unpickle(typeTag[Int], pf.createReader(pckl))
   println(res)

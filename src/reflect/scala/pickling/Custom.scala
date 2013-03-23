@@ -5,7 +5,7 @@ import language.experimental.macros
 
 trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
   class PrimitivePicklerUnpickler[T: TypeTag](implicit val format: PickleFormat) extends Pickler[T] with Unpickler[T] {
-    def pickle(picklee: Any, builder: PickleBuilder): Unit = {
+    def pickle(picklee: T, builder: PickleBuilder): Unit = {
       builder.beginEntryNoType(typeTag[T], picklee)
       builder.endEntry()
     }
@@ -39,8 +39,8 @@ trait ModulePicklerUnpicklerMacro extends Macro {
             import scala.pickling._
             import scala.pickling.`package`.PickleOps
             implicit val format = new ${format.tpe}()
-            def pickle(pickleeRaw: Any, builder: PickleBuilder): Unit = {
-              builder.beginEntry(typeTag[$tpe], pickleeRaw)
+            def pickle(picklee: $tpe, builder: PickleBuilder): Unit = {
+              builder.beginEntry(typeTag[$tpe], picklee)
               builder.endEntry()
             }
             def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
