@@ -54,7 +54,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) exten
               val fldValue    = fldMirror()
               debug("pickling field value: " + fldValue)
               val fldClass    = if (fldValue != null) fldValue.getClass else mirror.runtimeClass(NullTpe)
-              val fldPickler  = Pickler.genPickler(classLoader, fldClass).asInstanceOf[Pickler[_]]
+              val fldPickler  = Pickler.genPickler(classLoader, fldClass).asInstanceOf[Pickler[Any]]
               builder.putField(fir.name, b => fldPickler.pickle(fldValue, b))
             })
             builder.endEntry()

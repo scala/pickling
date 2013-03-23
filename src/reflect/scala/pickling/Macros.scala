@@ -59,10 +59,7 @@ trait PicklerMacros extends Macro {
             import scala.pickling._
             import scala.pickling.`package`.PickleOps
             implicit val format = new ${format.tpe}()
-            def pickle(pickleeRaw: Any, builder: PickleBuilder): Unit = {
-              val picklee = pickleeRaw.asInstanceOf[$tpe]
-              $pickleLogic
-            }
+            def pickle(picklee: $tpe, builder: PickleBuilder): Unit = $pickleLogic
           }
         """
       }
@@ -194,7 +191,7 @@ trait PickleMacros extends Macro {
       import scala.pickling._
       val picklee = $pickleeArg
       val pickler = $dispatchLogic
-      pickler.pickle(picklee, $builder)
+      pickler.asInstanceOf[Pickler[$tpe]].pickle(picklee, $builder)
     """
   }
 }
