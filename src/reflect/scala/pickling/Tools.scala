@@ -251,6 +251,10 @@ abstract class Macro extends scala.reflect.macros.Macro {
         c.topLevelRef(fullName)
     }
   }
+
+  implicit class RichSymbol(sym: Symbol) {
+    def isEffectivelyFinal = sym.asInstanceOf[scala.reflect.internal.Symbols#Symbol].isEffectivelyFinal
+  }
 }
 
 trait FastTypeTagMacro extends Macro {
