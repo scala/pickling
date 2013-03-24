@@ -33,10 +33,10 @@ package pickling {
     implicit def genPickler[T](implicit format: PickleFormat): Pickler[T] = macro PicklerMacros.impl[T]
     // TODO: the primitive pickler hack employed here is funny, but I think we should fix this one
     // since people probably would also have to deal with the necessity to abstract over pickle formats
-    def genPickler(classLoader: ClassLoader, clazz: Class[_])(implicit format: PickleFormat, p1: Pickler[Int], p2: Pickler[String]): Pickler[_] = {
+    def genPickler(classLoader: ClassLoader, clazz: Class[_])(implicit format: PickleFormat): Pickler[_] = {
       println(s"generating runtime pickler for $clazz") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
-      val runtime = new CompiledPicklerRuntime(classLoader, clazz)
-      // val runtime = new InterpretedPicklerRuntime(classLoader, clazz)
+      //val runtime = new CompiledPicklerRuntime(classLoader, clazz)
+      val runtime = new InterpretedPicklerRuntime(classLoader, clazz)
       runtime.genPickler
     }
   }
@@ -53,8 +53,8 @@ package pickling {
     implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] = macro UnpicklerMacros.impl[T]
     def genUnpickler(mirror: Mirror, tag: TypeTag[_])(implicit format: PickleFormat): Unpickler[_] = {
       println(s"generating runtime unpickler for ${tag.tpe}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
-      val runtime = new CompiledUnpicklerRuntime(mirror, tag)
-      // val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
+      //val runtime = new CompiledUnpicklerRuntime(mirror, tag)
+      val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
       runtime.genUnpickler
     }
   }
@@ -73,6 +73,7 @@ package pickling {
     type PickleType <: Pickle
     def createBuilder(): PickleBuilder
     def createReader(pickle: PickleType): PickleReader
+    def isPrimitive(tpe: Type): Boolean
   }
 
   trait PickleBuilder {

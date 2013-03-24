@@ -85,11 +85,12 @@ trait UnpicklerMacros extends Macro {
       introduceTopLevel(unpicklerPid, unpicklerName) {
         def unpicklePrimitive = q"reader.readPrimitive(tag)"
         def unpickleObject = {
-          def readField(name: String, tpe: Type) = q"reader.readField($name).unpickle[$tpe]"
+          def readField(name: String, tpe: Type) = q"reader.readField($name).unpickle[${tpe.erasure}]"
+
           // TODO: validate that the tpe argument of unpickle and weakTypeOf[T] work together
           // NOTE: step 1) this creates an instance and initializes its fields reified from constructor arguments
           val cir = classIR(tpe)
-          val canCallCtor = !cir.fields.exists(_.isErasedParam)
+          val canCallCtor = !cir.fields.exists(_.isErasedParam) && sym.typeParams.isEmpty
           val pendingFields = cir.fields.filter(fir => fir.isNonParam || (!canCallCtor && fir.isReifiedParam))
           val instantiationLogic = {
             if (sym.isModuleClass) {
@@ -172,9 +173,10 @@ trait PickleMacros extends Macro {
     def finalDispatch = createPickler(tpe)
     def nonFinalDispatch = {
       val nullDispatch = CaseDef(Literal(Constant(null)), EmptyTree, createPickler(NullTpe))
-      val compileTimeDispatch = compileTimeDispatchees(tpe) map (tpe => {
-        CaseDef(Bind(TermName("clazz"), Ident(nme.WILDCARD)), q"clazz == classOf[$tpe]", createPickler(tpe))
-      })
+      val compileTimeDispatch = compileTimeDispatchees(tpe) map (dtpe =>
+        CaseDef(Bind(TermName("clazz"), Ident(nme.WILDCARD)), q"clazz == classOf[$dtpe]", createPickler(dtpe))
+      )
+      //TODO OPTIMIZE: do getClass.getClassLoader only once
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Pickler.genPickler(getClass.getClassLoader, clazz)")
       // TODO: do we still want to use something like HasPicklerDispatch?
       // NOTE: we dispatch on erasure, because that's the best we can have here anyways
