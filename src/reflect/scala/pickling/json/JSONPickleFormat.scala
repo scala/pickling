@@ -25,6 +25,10 @@ package json {
         case None => throw new PicklingException("failed to parse \"" + pickle.value + "\" as JSON")
       }
     }
+    def isPrimitive(tpe: Type): Boolean = {
+      val sym = tpe.typeSymbol.asClass
+      sym == NullClass || sym.isPrimitive || sym == StringClass
+    }
   }
 
   class JSONPickleBuilder extends PickleBuilder {
@@ -32,10 +36,6 @@ package json {
 
     private val buf = new StringBuilder()
     private val stack = new Stack[Type]()
-    private def isJSONPrimitive(tpe: Type) = {
-      val sym = tpe.typeSymbol.asClass
-      sym == NullClass || sym.isPrimitive || sym == StringClass
-    }
 
     def beginEntryNoType(tag: TypeTag[_], picklee: Any, knownSize: Int = -1): this.type =
       beginEntry(tag, picklee)
@@ -44,7 +44,7 @@ package json {
       val tpe = tag.tpe
       stack.push(tpe)
       val sym = tpe.typeSymbol.asClass
-      if (isJSONPrimitive(tpe)) {
+      if (format.isPrimitive(tpe)) {
         if (sym == NullClass) buf ++= "null"
         else if (sym == CharClass || sym == StringClass) buf ++= "\"" + JSONFormat.quoteString(picklee.toString) + "\""
         else buf ++= picklee.toString // TODO: unit?
@@ -63,14 +63,14 @@ package json {
       this
     }
     def putField(name: String, pickler: this.type => Unit): this.type = {
-      assert(!isJSONPrimitive(stack.top), stack.top)
+      assert(!format.isPrimitive(stack.top), stack.top)
       buf ++= ",\n  \"" + name + "\": "
       pickler(this)
       this
     }
     def endEntry(): Unit = {
       val tpe = stack.pop()
-      if (isJSONPrimitive(tpe)) () // do nothing
+      if (format.isPrimitive(tpe)) () // do nothing
       else buf ++= "\n}"
     }
     def result(): JSONPickle = {

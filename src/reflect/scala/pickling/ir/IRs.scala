@@ -36,7 +36,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
     val allAccessors = tp.declarations.collect{ case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
     val (paramAccessors, otherAccessors) = allAccessors.partition(_.isParamAccessor)
     def mkFieldIR(sym: TermSymbol, param: Option[TermSymbol], accessor: Option[MethodSymbol]) = {
-      val symTp = accessor.getOrElse(sym).typeSignatureIn(tp)
+      val symTp = accessor.getOrElse(sym).typeSignatureIn(tp).typeSymbol.asType.toType
       FieldIR(sym.name.toString.trim, symTp, param, accessor)
     }
     val paramFields = ctorParams.map(sym => mkFieldIR(sym, Some(sym), paramAccessors.find(_.name == sym.name)))

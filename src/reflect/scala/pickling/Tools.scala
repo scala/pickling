@@ -262,12 +262,15 @@ trait FastTypeTagMacro extends Macro {
     import c.universe._
     val tpe = weakTypeOf[T]
     val wrapperPid = "scala.reflect.synthetic"
-    val wrapperName = TermName(("Reified" + tpe.toString.capitalize).replace(".", "DOT"))
+    val nonGenericType =
+      if (tpe.typeSymbol.asClass.typeParams.nonEmpty) tpe.typeConstructor
+      else tpe
+    val wrapperName = TermName(("Reified" + nonGenericType.typeSymbol.fullName.capitalize).replace(".", "DOT"))
     val wrapperRef =
       introduceTopLevel(wrapperPid, wrapperName) {
         val reifiedTpe = c.reifyType(treeBuild.mkRuntimeUniverseRef, EmptyTree, tpe, concrete = true)
         q"object $wrapperName { val tag = $reifiedTpe }"
-     }
-    q"$wrapperRef.tag"
+      }
+    q"$wrapperRef.tag.asInstanceOf[TypeTag[$tpe]]"
   }
 }

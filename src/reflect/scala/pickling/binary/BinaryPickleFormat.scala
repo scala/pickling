@@ -146,8 +146,10 @@ package binary {
     def createReader(pickle: PickleType) = new BinaryPickleReader(pickle.value, this)
 
     def isPrimitive(tpe: Type) = {
-      val sym = tpe.typeSymbol.asClass
-      sym == IntClass || sym == StringClass || sym == BooleanClass
+      tpe.typeSymbol.isClass && {
+        val sym = tpe.typeSymbol.asClass
+        sym == IntClass || sym == StringClass || sym == BooleanClass
+      }
     }
   }
 
