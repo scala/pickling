@@ -1,4 +1,4 @@
-package scala.pickling.binaryopt
+package scala.pickling.binary
 
 import scala.collection.mutable.ArrayBuffer
 

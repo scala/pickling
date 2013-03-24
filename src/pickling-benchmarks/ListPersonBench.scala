@@ -1,5 +1,5 @@
 import scala.pickling._
-import binaryopt._
+import binary._
 import reflect.runtime.universe._
 
 case class Person(name: String, age: Int)
