@@ -14,7 +14,6 @@ import scala.tools.nsc.util.MultiHashMap
 import scala.reflect.internal.util.{ SourceFile, BatchSourceFile, Position, RangePosition, NoPosition }
 import scala.tools.nsc.reporters._
 import scala.tools.nsc.symtab._
-import scala.tools.nsc.typechecker.DivergentImplicit
 import symtab.Flags.{ACCESSOR, PARAMACCESSOR}
 import scala.annotation.elidable
 import scala.language.implicitConversions
@@ -1126,9 +1125,6 @@ class Global(settings: Settings, _reporter: Reporter, projectName: String = "") 
     } catch {
       case ex: TypeError =>
         debugLog("type error caught: "+ex)
-        alt
-      case ex: DivergentImplicit =>
-        debugLog("divergent implicit caught: "+ex)
         alt
     }
   }

@@ -56,7 +56,6 @@ trait Typers {
 
   private def inferImplicit(tree: Tree, pt: Type, isView: Boolean, silent: Boolean, withMacrosDisabled: Boolean, pos: Position): Tree = {
     import universe.analyzer.SearchResult
-    import scala.tools.nsc.typechecker.DivergentImplicit
     val context = callsiteTyper.context
     val wrapper1 = if (!withMacrosDisabled) (context.withMacrosEnabled[SearchResult] _) else (context.withMacrosDisabled[SearchResult] _)
     def wrapper (inference: => SearchResult) = wrapper1(inference)
@@ -68,13 +67,9 @@ trait Typers {
       }
       universe.EmptyTree
     }
-    try {
-      wrapper(universe.analyzer.inferImplicit(tree, pt, reportAmbiguous = true, isView = isView, context = context, saveAmbiguousDivergent = !silent, pos = pos)) match {
-        case failure if failure.tree.isEmpty => fail(None)
-        case success => success.tree
-      }
-    } catch {
-      case DivergentImplicit => fail(Some("divergent implicit expansion"))
+    wrapper(universe.analyzer.inferImplicit(tree, pt, reportAmbiguous = true, isView = isView, context = context, saveAmbiguousDivergent = !silent, pos = pos)) match {
+      case failure if failure.tree.isEmpty => fail(None)
+      case success => success.tree
     }
   }
 

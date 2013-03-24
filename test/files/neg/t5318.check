@@ -1,4 +1,4 @@
-t5318.scala:7: error: diverging implicit expansion for type CompilerHang.this.TC[F]
+t5318.scala:7: error: diverging implicit expansion for type CompilerHang.this.TC[M]
 starting with method tc in class CompilerHang
   breakage  // type checker doesn't terminate, should report inference failure
   ^
