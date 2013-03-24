@@ -36,7 +36,7 @@ class Tools[U <: Universe with Singleton](val u: U) {
   import u._
   import definitions._
 
-  def blackList(sym: Symbol) = sym == AnyClass || sym == AnyRefClass || sym == AnyValClass
+  def blackList(sym: Symbol) = sym == AnyClass || sym == AnyRefClass || sym == AnyValClass || sym == ObjectClass
 
   def isRelevantSubclass(baseSym: Symbol, subSym: Symbol) = {
     !blackList(baseSym) && !blackList(subSym) && subSym.isClass && {
