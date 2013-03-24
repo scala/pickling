@@ -916,7 +916,7 @@ trait Macros extends FastTrack with MacroRuntimes with Traces with Helpers {
             popMacroContext()
             val realex = ReflectionUtils.unwrapThrowable(ex)
             realex match {
-              case ex: DivergentAbortMacroException => throw DivergentImplicit
+              case ex: DivergentAbortMacroException => throw new DivergentImplicit(expandee.symbol)
               case ex: AbortMacroException => MacroGeneratedAbort(expandee, ex)
               case ex: ControlThrowable => throw ex
               case ex: TypeError => MacroGeneratedTypeError(expandee, ex)
