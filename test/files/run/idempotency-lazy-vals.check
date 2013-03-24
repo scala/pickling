@@ -18,6 +18,6 @@
   };
   val c: C = new C();
   import c._;
-  c.x.*(Predef.implicitly[Int](c.y))
+  c.x.*(c.y)
 }
 error!

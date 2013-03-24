@@ -10,7 +10,7 @@
   };
   new $anon()
 }.getClass().getClassLoader());
-  $u.Expr.apply[Int(2)]($m, {
+  $u.Expr.apply[2]($m, {
     final class $treecreator1 extends TreeCreator {
       def <init>(): $treecreator1 = {
         $treecreator1.super.<init>();
@@ -23,7 +23,7 @@
       }
     };
     new $treecreator1()
-  })($u.TypeTag.apply[Int(2)]($m, {
+  })($u.TypeTag.apply[2]($m, {
     final class $typecreator2 extends TypeCreator {
       def <init>(): $typecreator2 = {
         $typecreator2.super.<init>();
