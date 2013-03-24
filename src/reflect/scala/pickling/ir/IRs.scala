@@ -32,7 +32,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
   // TODO: minimal versus verbose PickleFormat. i.e. someone might want all concrete inherited fields in their pickle
   private def fields(tp: Type): Q = {
     val ctor = tp.declaration(nme.CONSTRUCTOR)
-    val ctorParams = if (ctor != NoSymbol) ctor.asMethod.paramss.flatten.map(_.asTerm) else Nil // TODO: multiple ctors
+    val ctorParams = if (ctor != NoSymbol) ctor.asTerm.alternatives.head.asMethod.paramss.flatten.map(_.asTerm) else Nil
     val allAccessors = tp.declarations.collect{ case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
     val (paramAccessors, otherAccessors) = allAccessors.partition(_.isParamAccessor)
     def mkFieldIR(sym: TermSymbol, param: Option[TermSymbol], accessor: Option[MethodSymbol]) = {
