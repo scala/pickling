@@ -3,6 +3,8 @@ package scala.pickling.binary
 import scala.collection.mutable.ArrayBuffer
 
 sealed abstract class ByteBuffer {
+  def encodeByteTo(pos: Int, value: Byte): Int
+
   def encodeIntTo(pos: Int, value: Int): Int
 
   def encodeStringTo(pos: Int, value: String): Int
@@ -10,6 +12,8 @@ sealed abstract class ByteBuffer {
   def encodeBooleanTo(pos: Int, value: Boolean): Int
 
   def copyTo(pos: Int, bytes: Array[Byte]): Int
+
+  def decodeByteFrom(pos: Int): (Byte, Int)
 
   def decodeIntFrom(pos: Int): (Int, Int)
 
@@ -28,6 +32,11 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
     this(Array.ofDim[Byte](size))
   }
 
+  def encodeByteTo(pos: Int, value: Byte): Int = {
+    arr(pos) = value
+    pos + 1
+  }
+
   def encodeIntTo(pos: Int, value: Int): Int =
     Util.encodeIntTo(arr, pos, value)
 
@@ -40,6 +49,10 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
   def copyTo(pos: Int, bytes: Array[Byte]): Int = {
     Util.copy(arr, pos, bytes)
     pos + bytes.length
+  }
+
+  def decodeByteFrom(pos: Int): (Byte, Int) = {
+    (arr(pos), pos + 1)
   }
 
   def decodeIntFrom(pos: Int): (Int, Int) =
@@ -60,6 +73,15 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
 final class ByteArrayBuffer extends ByteBuffer {
 
   private val buf = ArrayBuffer[Byte]()
+
+  def encodeByteTo(pos: Int, value: Byte): Int = {
+    if (buf.size < pos + 1) {
+      val missing = pos + 1 - buf.size
+      buf ++= Array.ofDim[Byte](missing)
+    }
+    buf(pos) = value
+    pos + 1
+  }
 
   def encodeIntTo(pos: Int, value: Int): Int = {
     if (buf.size < pos + 4) {
@@ -89,6 +111,10 @@ final class ByteArrayBuffer extends ByteBuffer {
     // assume buf.size = buf
     buf ++= bytes
     pos + bytes.length
+  }
+
+  def decodeByteFrom(pos: Int): (Byte, Int) = {
+    (buf(pos), pos+1)
   }
 
   def decodeIntFrom(pos: Int): (Int, Int) = {

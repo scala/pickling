@@ -19,6 +19,11 @@ package object pickling {
   }
 
   def fastTypeTag[T]: TypeTag[T] = macro FastTypeTagMacro.impl[T]
+
+  implicit class RichSymbol(sym: scala.reflect.api.Symbols#Symbol) {
+    def isEffectivelyFinal = sym.asInstanceOf[scala.reflect.internal.Symbols#Symbol].isEffectivelyFinal
+    def isNotNull = sym.asType.toType.asInstanceOf[scala.reflect.internal.Types#Type].isNotNull
+  }
 }
 
 package pickling {
@@ -72,24 +77,32 @@ package pickling {
   trait PickleFormat {
     type PickleType <: Pickle
     def createBuilder(): PickleBuilder
-    def createReader(pickle: PickleType): PickleReader
-    def isPrimitive(tpe: Type): Boolean
+    def createReader(pickle: PickleType, mirror: Mirror): PickleReader
   }
 
-  trait PickleBuilder {
-    def beginEntry(tag: TypeTag[_], picklee: Any, knownSize: Int = -1): this.type
-    def beginEntryNoType(tag: TypeTag[_], picklee: Any, knownSize: Int = -1): this.type
+  trait Hintable {
+    def hintTag(tag: TypeTag[_]): this.type
+    def hintKnownSize(knownSize: Int): this.type
+    def hintStaticallyElidedType(): this.type
+    def hintDynamicallyElidedType(): this.type
+    def hintCollectionType(): this.type
+  }
+
+  trait PickleBuilder extends Hintable {
+    def beginEntry(picklee: Any): this.type
     def putField(name: String, pickler: this.type => Unit): this.type
     def endEntry(): Unit
     def result(): Pickle
   }
 
-  trait PickleReader {
-    def readTag(mirror: Mirror): TypeTag[_]
+  trait PickleReader extends Hintable {
+    def mirror: Mirror
+    def beginEntry(): TypeTag[_]
     def atPrimitive: Boolean
-    def readPrimitive(tag: TypeTag[_]): Any
+    def readPrimitive(): Any
     def atObject: Boolean
     def readField(name: String): PickleReader
+    def endEntry(): Unit
     def unpickle[T] = macro UnpickleMacros.readerUnpickle[T]
   }
 
