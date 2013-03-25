@@ -5,6 +5,7 @@ import definitions._
 import scala.reflect.runtime.{universe => ru}
 import scala.tools.reflect.ToolBox
 import ir._
+import scala.reflect.synthetic._
 
 object Runtime {
   val toUnboxed = Map[Class[_], Class[_]](
@@ -27,6 +28,7 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) {
   val mirror = runtimeMirror(classLoader)
   val sym = mirror.classSymbol(clazz)
   val tpe = sym.toType
+  val tag = TypeTag(tpe)
   debug("PicklerRuntime: tpe = " + tpe)
   val irs = new IRs[ru.type](ru)
   import irs._
@@ -58,36 +60,35 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
 
   override def genPickler(implicit pf: PickleFormat): Pickler[_] = {
     // build "interpreted" runtime pickler
-    new Pickler[Any] {
-      val format = pf
-
+    new Pickler[Any] with PickleTools {
+      val format: PickleFormat = pf
       def pickle(picklee: Any, builder: PickleBuilder): Unit = {
         if (picklee != null) {
-          val tag = TypeTag(tpe)
-          if (format.isPrimitive(tpe)) {
-            builder.beginEntryNoType(tag, picklee)
-          } else {
-            builder.beginEntry(tag, picklee)
+          builder.hintTag(tag)
+          builder.beginEntry(picklee)
 
-            val im = mirror.reflect(picklee)
-
-            cir.fields.foreach(fir => {
-              if (fir.hasGetter) {
-                val fldMirror   = im.reflectField(fir.field.get)
-                val fldValue    = fldMirror.get
-                debug("pickling field value: " + fldValue)
-                val fldClass    = if (fldValue != null) fldValue.getClass else mirror.runtimeClass(NullTpe)
-                // by using only the class we convert Int to Integer
-                // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
-                val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
-                val fldPickler = fldRuntime.genPickler.asInstanceOf[Pickler[Any]]
-                builder.putField(fir.name, b => fldPickler.pickle(fldValue, b))
-              }
+          lazy val im = mirror.reflect(picklee)
+          cir.fields.filter(_.hasGetter).foreach(fir => {
+            val fldMirror = im.reflectField(fir.field.get)
+            val fldValue = fldMirror.get
+            debug("pickling field value: " + fldValue)
+            val fldClass = if (fldValue != null) fldValue.getClass else mirror.runtimeClass(NullTpe)
+            // by using only the class we convert Int to Integer
+            // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
+            val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
+            val fldPickler = fldRuntime.genPickler.asInstanceOf[Pickler[Any]]
+            builder.putField(fir.name, b => {
+              val fstaticTpe = fir.tpe.erasure
+              if (fldClass == null || fldClass == mirror.runtimeClass(fstaticTpe)) builder.hintDynamicallyElidedType()
+              if (fstaticTpe.typeSymbol.isEffectivelyFinal) builder.hintStaticallyElidedType()
+              fldPickler.pickle(fldValue, b)
             })
-          }
+          })
+
           builder.endEntry()
         } else {
-          builder.beginEntry(TypeTag(NullTpe), null)
+          builder.hintTag(ReifiedNull.tag)
+          builder.beginEntry(null)
           builder.endEntry()
         }
       }
@@ -113,28 +114,37 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: TypeTag[_]) {
   val tpe = tag.tpe
   val sym = tpe.typeSymbol.asType
   debug("UnpicklerRuntime: tpe = " + tpe)
-  val clazz = mirror.runtimeClass(tpe)
+  val clazz = mirror.runtimeClass(tpe.erasure)
   val irs = new IRs[ru.type](ru)
   import irs._
   val cir = classIR(tpe)
   debug("UnpicklerRuntime: cir = " + cir)
 
   def genUnpickler(implicit pf: PickleFormat, p1: Pickler[Int], p2: Pickler[String]): Unpickler[Any] = {
-    new Unpickler[Any] {
+    new Unpickler[Any] with PickleTools {
       val format: PickleFormat = pf
       def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
         val pendingFields = cir.fields.filter(fir => fir.isNonParam || fir.isReifiedParam)
         val fieldVals = pendingFields.map(fir => {
           val freader = reader.readField(fir.name)
-          if (format.isPrimitive(fir.tpe.erasure)) {
-            val ftag = TypeTag(fir.tpe)
-            freader.readPrimitive(ftag)
-          } else {
-            val fieldTag = freader.readTag(mirror)
-            val fieldRuntime = new InterpretedUnpicklerRuntime(mirror, fieldTag)
-            val fieldUnpickler = fieldRuntime.genUnpickler
-            fieldUnpickler.unpickle(fieldTag, freader)
+          val fstaticTag = TypeTag(fir.tpe.erasure)
+          freader.hintTag(fstaticTag)
+
+          val fstaticSym = fstaticTag.tpe.typeSymbol
+          if (fstaticSym.isEffectivelyFinal) freader.hintStaticallyElidedType()
+          val fdynamicTag = freader.beginEntry()
+
+          val fval = {
+            if (freader.atPrimitive) freader.readPrimitive()
+            else {
+              val fieldRuntime = new InterpretedUnpicklerRuntime(mirror, fdynamicTag)
+              val fieldUnpickler = fieldRuntime.genUnpickler
+              fieldUnpickler.unpickle(fdynamicTag, freader)
+            }
           }
+
+          freader.endEntry()
+          fval
         })
 
         val inst = scala.concurrent.util.Unsafe.instance.allocateInstance(clazz)

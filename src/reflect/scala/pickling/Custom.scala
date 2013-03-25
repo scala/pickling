@@ -2,24 +2,28 @@ package scala.pickling
 
 import scala.reflect.runtime.universe._
 import language.experimental.macros
+import scala.reflect.synthetic._
 
 trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
-  class PrimitivePicklerUnpickler[T: TypeTag](implicit val format: PickleFormat) extends Pickler[T] with Unpickler[T] {
+  class PrimitivePicklerUnpickler[T](tag: TypeTag[T])(implicit val format: PickleFormat) extends Pickler[T] with Unpickler[T] {
     def pickle(picklee: T, builder: PickleBuilder): Unit = {
-      builder.beginEntryNoType(typeTag[T], picklee)
+      if (picklee != null) builder.hintTag(tag)
+      else builder.hintTag(ReifiedNull.tag)
+      builder.beginEntry(picklee)
       builder.endEntry()
     }
     def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
       // NOTE: here we essentially require that ints and strings are primitives for all readers
       // TODO: discuss that and see whether it defeats all the purpose of abstracting primitives away from picklers
-      reader.readPrimitive(typeTag[T])
+      if (tag != ReifiedNull.tag) reader.readPrimitive()
+      else null
     }
   }
 
-  implicit def intPicklerUnpickler(implicit format: PickleFormat): PrimitivePicklerUnpickler[Int] = new PrimitivePicklerUnpickler[Int]()
-  implicit def stringPicklerUnpickler(implicit format: PickleFormat): PrimitivePicklerUnpickler[String] = new PrimitivePicklerUnpickler[String]()
-  implicit def booleanPicklerUnpickler(implicit format: PickleFormat): PrimitivePicklerUnpickler[Boolean] = new PrimitivePicklerUnpickler[Boolean]()
-  implicit def nullPicklerUnpickler(implicit format: PickleFormat): Pickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]()
+  implicit def intPicklerUnpickler(implicit format: PickleFormat): PrimitivePicklerUnpickler[Int] = new PrimitivePicklerUnpickler[Int](ReifiedInt.tag)
+  implicit def stringPicklerUnpickler(implicit format: PickleFormat): PrimitivePicklerUnpickler[String] = new PrimitivePicklerUnpickler[String](ReifiedString.tag)
+  implicit def booleanPicklerUnpickler(implicit format: PickleFormat): PrimitivePicklerUnpickler[Boolean] = new PrimitivePicklerUnpickler[Boolean](ReifiedBoolean.tag)
+  implicit def nullPicklerUnpickler(implicit format: PickleFormat): Pickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null](ReifiedNull.tag)
   // TODO: if you uncomment this one, it will shadow picklers/unpicklers for Int and String. why?!
   // TODO: due to the inability to implement module pickling/unpickling in a separate macro, I moved the logic into genPickler/genUnpickler
   // implicit def modulePicklerUnpickler[T <: Singleton](implicit format: PickleFormat): Pickler[T] with Unpickler[T] = macro ModulePicklerUnpicklerMacro.impl[T]
@@ -40,7 +44,8 @@ trait ModulePicklerUnpicklerMacro extends Macro {
             import scala.pickling.`package`.PickleOps
             implicit val format = new ${format.tpe}()
             def pickle(picklee: $tpe, builder: PickleBuilder): Unit = {
-              builder.beginEntry(fastTypeTag[$tpe], picklee)
+              builder.hintTag(scala.pickling.`package`.fastTypeTag[$tpe])
+              builder.beginEntry(picklee)
               builder.endEntry()
             }
             def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {

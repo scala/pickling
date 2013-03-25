@@ -3,7 +3,6 @@
   "nationality": "German",
   "weird": true,
   "mother": {
-  "tpe": "Person",
   "name": "Gudrun",
   "age": 62
 }

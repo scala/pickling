@@ -1,12 +1,10 @@
 {
   "tpe": "Philipp",
   "mother": {
-  "tpe": "Person",
   "name": "Gudrun",
   "age": 62
 },
   "father": {
-  "tpe": "Person",
   "name": "Rudolf",
   "age": 70
 }
