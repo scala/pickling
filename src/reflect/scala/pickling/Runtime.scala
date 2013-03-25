@@ -6,9 +6,8 @@ import scala.reflect.runtime.{universe => ru}
 import scala.tools.reflect.ToolBox
 import ir._
 
-abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) {
-
-  def toUnboxed = Map[Class[_], Class[_]](
+object Runtime {
+  val toUnboxed = Map[Class[_], Class[_]](
     classOf[java.lang.Integer]       -> classOf[Int],
     classOf[java.lang.Long]          -> classOf[Long],
     classOf[java.lang.Float]         -> classOf[Float],
@@ -20,8 +19,11 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) {
     classOf[java.lang.Boolean]       -> classOf[Boolean],
     classOf[java.lang.String]        -> classOf[String]
   )
+}
 
-  val clazz = toUnboxed.getOrElse(preclazz, preclazz)
+abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) {
+
+  val clazz = Runtime.toUnboxed.getOrElse(preclazz, preclazz)
   val mirror = runtimeMirror(classLoader)
   val sym = mirror.classSymbol(clazz)
   val tpe = sym.toType
@@ -71,9 +73,8 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
 
             cir.fields.foreach(fir => {
               if (fir.hasGetter) {
-                val fldAccessor = tpe.declaration(TermName(fir.name)).asMethod
-                val fldMirror   = im.reflectMethod(fldAccessor)
-                val fldValue    = fldMirror()
+                val fldMirror   = im.reflectField(fir.field.get)
+                val fldValue    = fldMirror.get
                 debug("pickling field value: " + fldValue)
                 val fldClass    = if (fldValue != null) fldValue.getClass else mirror.runtimeClass(NullTpe)
                 // by using only the class we convert Int to Integer
@@ -125,7 +126,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: TypeTag[_]) {
         val pendingFields = cir.fields.filter(fir => fir.isNonParam || fir.isReifiedParam)
         val fieldVals = pendingFields.map(fir => {
           val freader = reader.readField(fir.name)
-          if (format.isPrimitive(fir.tpe)) {
+          if (format.isPrimitive(fir.tpe.erasure)) {
             val ftag = TypeTag(fir.tpe)
             freader.readPrimitive(ftag)
           } else {
@@ -141,8 +142,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: TypeTag[_]) {
 
         pendingFields.zip(fieldVals) foreach {
           case (fir, fval) =>
-            val fieldX = tpe.declaration(ru.newTermName(fir.name)).asTerm.accessed.asTerm
-            val fmX = im.reflectField(fieldX)
+            val fmX = im.reflectField(fir.field.get)
             fmX.set(fval)
         }
 
