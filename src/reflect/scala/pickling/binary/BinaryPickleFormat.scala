@@ -23,7 +23,7 @@ package binary {
     private def formatType(tpe: Type): Array[Byte] = {
       val s = tpe match {
         case TypeRef(_, sym, Nil) => s"${sym.fullName}"
-        case TypeRef(_, sym, targs) => ???
+        case TypeRef(_, sym, targs) => s"${sym.fullName}"
       }
       s.getBytes("UTF-8")
     }
@@ -146,10 +146,8 @@ package binary {
     def createReader(pickle: PickleType) = new BinaryPickleReader(pickle.value, this)
 
     def isPrimitive(tpe: Type) = {
-      tpe.typeSymbol.isClass && {
-        val sym = tpe.typeSymbol.asClass
-        sym == IntClass || sym == StringClass || sym == BooleanClass
-      }
+      val sym = tpe.typeSymbol.asClass
+      sym == IntClass || sym == StringClass || sym == BooleanClass
     }
   }
 
