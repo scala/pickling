@@ -70,6 +70,12 @@ package binary {
 
     def endEntry(): Unit = { /* do nothing */ }
 
+    def beginCollection(length: Int): this.type = ???
+
+    def putElement(pickler: this.type => Unit): this.type = ???
+
+    def endCollection(): Unit = ???
+
     def result() = {
       BinaryPickle(byteBuffer.toArray)
     }
@@ -134,6 +140,12 @@ package binary {
       this
 
     def endEntry(): Unit = { /* do nothing */ }
+
+    def beginCollection(): Int = ???
+
+    def readElement(): PickleReader = ???
+
+    def endCollection(): Unit = { /* do nothing */ }
   }
 
   class BinaryPickleFormat extends PickleFormat {

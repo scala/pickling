@@ -63,6 +63,9 @@ package json {
       if (primitives.contains(tags.pop())) () // do nothing
       else buf ++= "\n}"
     }
+    def beginCollection(length: Int): this.type = ???
+    def putElement(pickler: this.type => Unit): this.type = ???
+    def endCollection(): Unit = ???
     def result(): JSONPickle = {
       assert(tags.isEmpty, tags)
       JSONPickle(buf.toString)
@@ -101,5 +104,8 @@ package json {
       }
     }
     def endEntry(): Unit = {}
+    def beginCollection(): Int = ???
+    def readElement(): PickleReader = ???
+    def endCollection(): Unit = {}
   }
 }
