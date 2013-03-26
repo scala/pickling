@@ -13,6 +13,7 @@ package binary {
   case class BinaryPickle(value: Array[Byte]) extends Pickle {
     type ValueType = Array[Byte]
     type PickleFormatType = BinaryPickleFormat
+    override def toString = s"""BinaryPickle(${value.mkString("[", ",", "]")})"""
   }
 
   class BinaryPickleBuilder(format: BinaryPickleFormat) extends PickleBuilder with PickleTools {

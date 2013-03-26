@@ -165,7 +165,12 @@ abstract class Macro extends scala.reflect.macros.Macro {
   def compileTimeDispatchees(tpe: Type): List[Type] = tools.compileTimeDispatchees(tpe, rootMirror)
 
   def syntheticPackageName: String = "scala.pickling.synthetic"
-  def syntheticBaseName(tpe: Type): TypeName = TypeName(tpe.typeSymbol.fullName.split('.').map(_.capitalize).mkString("") + (if (tpe.typeSymbol.isModuleClass) "$" else ""))
+  def syntheticBaseName(tpe: Type): TypeName = {
+    def prettyName(sym: Symbol) = sym.fullName.split('.').map(_.capitalize).mkString("") + (if (sym.isModuleClass) "$" else "")
+    var erasedTypeName = prettyName(tpe.typeSymbol)
+    if (tpe.typeSymbol == ArrayClass) erasedTypeName += prettyName(tpe.asInstanceOf[TypeRef].args.head.typeSymbol)
+    TypeName(erasedTypeName)
+  }
   def syntheticBaseQualifiedName(tpe: Type): TypeName = TypeName(syntheticPackageName + "." + syntheticBaseName(tpe).toString)
 
   def syntheticPicklerName(tpe: Type): TypeName = syntheticBaseName(tpe) + syntheticPicklerSuffix()
@@ -190,15 +195,15 @@ abstract class Macro extends scala.reflect.macros.Macro {
     c.enclosingImplicits match {
       case c.ImplicitCandidate(_, _, ourPt, _) :: c.ImplicitCandidate(_, _, theirPt, _) :: _ if ourPt =:= theirPt =>
         debug(s"no, because: ourPt = $ourPt, theirPt = $theirPt")
-        // c.diverge()
-        c.abort(c.enclosingPosition, "stepping aside: repeating itself")
+        c.diverge()
+        // c.abort(c.enclosingPosition, "stepping aside: repeating itself")
       case _ =>
         debug(s"not sure, need to explore alternatives")
         c.inferImplicitValue(c.enclosingImplicits.head.pt, silent = true) match {
           case success if success != EmptyTree =>
             debug(s"no, because there's $success")
-            c.abort(c.enclosingPosition, "stepping aside: there are other candidates")
-            // c.diverge()
+            // c.abort(c.enclosingPosition, "stepping aside: there are other candidates")
+            c.diverge()
           case _ =>
             debug("yes, there are no obstacles. entering " + c.enclosingImplicits.head.pt)
             val result = body
@@ -260,10 +265,10 @@ abstract class Macro extends scala.reflect.macros.Macro {
 trait FastTypeTagMacro extends Macro {
   def impl[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
+    import definitions._
     val tpe = weakTypeOf[T]
     val wrapperPid = "scala.reflect.synthetic"
-    val erasedTypeName = tpe.typeSymbol.fullName.split('.').map(_.capitalize).mkString("") + (if (tpe.typeSymbol.isModuleClass) "$" else "")
-    val wrapperName = TermName("Reified" + erasedTypeName)
+    val wrapperName = TermName("Reified" + syntheticBaseName(tpe))
     val wrapperRef =
       introduceTopLevel(wrapperPid, wrapperName) {
         val reifiedTpe = c.reifyType(treeBuild.mkRuntimeUniverseRef, EmptyTree, tpe, concrete = true)
