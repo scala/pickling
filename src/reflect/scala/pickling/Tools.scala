@@ -52,7 +52,9 @@ class Tools[U <: Universe with Singleton](val u: U) {
     val nullTpe = if (tpe.baseClasses.contains(ObjectClass)) List(NullTpe) else Nil
     val subtypes = allStaticallyKnownConcreteSubclasses(tpe, mirror).filter(subtpe => subtpe.typeSymbol != tpe.typeSymbol)
     val selfTpe = if (isRelevantSubclass(tpe.typeSymbol, tpe.typeSymbol)) List(tpe) else Nil
-    nullTpe ++ subtypes ++ selfTpe
+    val result = nullTpe ++ subtypes ++ selfTpe
+    // println(s"$tpe => $result")
+    result
   }
 
   def allStaticallyKnownConcreteSubclasses(tpe: Type, mirror: Mirror): List[Type] = {

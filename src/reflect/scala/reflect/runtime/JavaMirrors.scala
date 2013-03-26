@@ -1167,7 +1167,7 @@ private[reflect] trait JavaMirrors extends internal.SymbolTable with api.JavaUni
       //println("classToJava "+clazz+" "+clazz.owner+" "+clazz.owner.isPackageClass)//debug
       if (clazz.isPrimitiveValueClass)
         valueClassToJavaType(clazz)
-      else if (clazz == ArrayClass)
+      else if (clazz == ArrayClass || clazz == NullClass || clazz == NothingClass)
         noClass
       else if (clazz.isTopLevel)
         javaClass(clazz.javaClassName)
