@@ -276,7 +276,7 @@ trait FastTypeTagMacro extends Macro {
         val reifiedTpe = c.reifyType(treeBuild.mkRuntimeUniverseRef, EmptyTree, tpe, concrete = true)
         q"object $wrapperName { val tag = $reifiedTpe }"
       }
-    q"$wrapperRef.tag.asInstanceOf[scala.reflect.runtime.universe.TypeTag[$tpe]]"
+    q"$wrapperRef.tag"
   }
 }
 
