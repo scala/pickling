@@ -60,15 +60,16 @@ trait ArrayPicklerUnpicklerMacro extends Macro {
             }
             def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
               if (!$isPrimitive) throw new PicklingException(s"implementation restriction: non-primitive arrays aren't supported")
-              val length = reader.beginCollection()
               var buf = ArrayBuffer[$eltpe]()
+              val arrReader = reader.beginCollection()
+              val length = arrReader.readLength()
               var i = 0
               while (i < length) {
-                val el = reader.readElement().unpickle[$eltpe]
+                val el = arrReader.readElement().unpickle[$eltpe]
                 buf += el
                 i += 1
               }
-              reader.endCollection()
+              arrReader.endCollection()
               buf.toArray
             }
           }

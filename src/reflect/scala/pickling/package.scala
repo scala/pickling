@@ -105,7 +105,8 @@ package pickling {
     def atObject: Boolean
     def readField(name: String): PickleReader
     def endEntry(): Unit
-    def beginCollection(): Int
+    def beginCollection(): PickleReader
+    def readLength(): Int
     def readElement(): PickleReader
     def endCollection(): Unit
     def unpickle[T] = macro UnpickleMacros.readerUnpickle[T]

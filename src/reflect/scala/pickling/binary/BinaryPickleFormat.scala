@@ -141,7 +141,9 @@ package binary {
 
     def endEntry(): Unit = { /* do nothing */ }
 
-    def beginCollection(): Int = ???
+    def beginCollection(): PickleReader = ???
+
+    def readLength(): Int = ???
 
     def readElement(): PickleReader = ???
 

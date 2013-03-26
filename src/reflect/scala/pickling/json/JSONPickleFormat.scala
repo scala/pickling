@@ -63,9 +63,17 @@ package json {
       if (primitives.contains(tags.pop())) () // do nothing
       else buf ++= "\n}"
     }
-    def beginCollection(length: Int): this.type = ???
-    def putElement(pickler: this.type => Unit): this.type = ???
-    def endCollection(): Unit = ???
+    def beginCollection(length: Int): this.type = {
+      putField("elems", b => ())
+      buf ++= "["
+      this
+    }
+    def putElement(pickler: this.type => Unit): this.type = {
+      if (buf.toString.trim.last != '[') buf ++= ", " // TODO: very inefficient, but here we don't care much about performance
+      pickler(this)
+      this
+    }
+    def endCollection(): Unit = buf ++= "]"
     def result(): JSONPickle = {
       assert(tags.isEmpty, tags)
       JSONPickle(buf.toString)
@@ -88,7 +96,6 @@ package json {
           datum match {
             case JSONObject(fields) if fields.contains("tpe") => TypeTag(typeFromString(mirror, fields("tpe").asInstanceOf[String]))
             case JSONObject(fields) => hints.tag
-            case JSONArray(elements) => throw new PicklingException(s"TODO: not yet implemented ($datum)")
           }
         }
       }
@@ -100,12 +107,25 @@ package json {
     def readField(name: String): JSONPickleReader = {
       datum match {
         case JSONObject(fields) => new JSONPickleReader(fields(name), mirror, format)
-        case JSONArray(elements) => throw new PicklingException(s"TODO: not yet implemented ($datum)")
       }
     }
     def endEntry(): Unit = {}
-    def beginCollection(): Int = ???
-    def readElement(): PickleReader = ???
+    def beginCollection(): PickleReader = readField("elems")
+    def readLength(): Int = {
+      datum match {
+        case JSONArray(list) => list.length
+      }
+    }
+    private var i = 0
+    def readElement(): PickleReader = {
+      val reader = {
+        datum match {
+          case JSONArray(list) => new JSONPickleReader(list(i), mirror, format)
+        }
+      }
+      i += 1
+      reader
+    }
     def endCollection(): Unit = {}
   }
 }
