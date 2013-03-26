@@ -22,7 +22,7 @@ trait PicklerMacros extends Macro {
         def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
           val cir = classIR(tpe)
           val beginEntry = q"""
-            builder.hintTag(scala.pickling.`package`.fastTypeTag[$tpe])
+            builder.hintTag(scala.reflect.runtime.universe.typeTag[$tpe])
             builder.beginEntry(picklee)
           """
           val putFields = cir.fields.flatMap(fir => {
@@ -239,26 +239,24 @@ trait UnpickleMacros extends Macro {
     def createUnpickler(tpe: Type) = q"implicitly[Unpickler[${tpe.erasure}]]"
     def finalDispatch = {
       if (sym.isNotNull) createUnpickler(tpe)
-      else q"if (tag != scala.pickling.`package`.fastTypeTag[Null]) ${createUnpickler(tpe)} else ${createUnpickler(NullTpe)}"
+      else q"if (tag != scala.reflect.runtime.universe.typeTag[Null]) ${createUnpickler(tpe)} else ${createUnpickler(NullTpe)}"
     }
     def nonFinalDispatch = {
-      def compileTimeDispatch(fast: Boolean) = compileTimeDispatchees(tpe) map (subtpe => {
+      val compileTimeDispatch = compileTimeDispatchees(tpe) map (subtpe => {
         // TODO: do we still want to use something like HasPicklerDispatch (for unpicklers it would be routed throw tpe's companion)?
         // NOTE: we have a precise type at hand here, but we do dispatch on erasure
         // why? because picklers are created generic, i.e. for C[T] we have a single pickler of type Pickler[C[_]]
         // therefore here we dispatch on erasure and later on pass the precise type to `unpickle`
-        val rhs = q"scala.pickling.`package`.fastTypeTag[$subtpe]"
-        val check = if (fast) q"tag == $rhs" else q"tag.tpe.typeSymbol == $rhs.tpe.typeSymbol"
-        CaseDef(Bind(TermName("tag"), Ident(nme.WILDCARD)), check, createUnpickler(subtpe))
+        CaseDef(Literal(Constant(subtpe.key)), EmptyTree, createUnpickler(subtpe))
       })
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Unpickler.genUnpickler(reader.mirror, tag)")
-      Match(q"tag", compileTimeDispatch(fast = true) ++ compileTimeDispatch(fast = false) :+ runtimeDispatch)
+      Match(q"tag.key", compileTimeDispatch :+ runtimeDispatch)
     }
     val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
 
     q"""
       val reader = $readerArg
-      reader.hintTag(scala.pickling.`package`.fastTypeTag[$tpe])
+      reader.hintTag(scala.reflect.runtime.universe.typeTag[$tpe])
       ${if (sym.isEffectivelyFinal) (q"reader.hintStaticallyElidedType()": Tree) else q""}
       val tag = reader.beginEntry()
       val unpickler = $dispatchLogic

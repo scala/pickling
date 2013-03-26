@@ -77,6 +77,10 @@ trait Types extends ImplicitTags {
    *  @group API
    */
   abstract class TypeApi {
+    /** A string token, which uniquely identifies the underlying type.
+     */
+    def key: String
+
     /** The term symbol associated with the type, or `NoSymbol` for types
      *  that do not refer to a term symbol.
      */

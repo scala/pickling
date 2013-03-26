@@ -8,9 +8,9 @@ import scala.reflect.runtime.universe._
 // Step 3 (separate test): invoke generation macro to generate default pickler, and then use that to run custom
 //                         reinitialization logic (that means we don't need a special readObject method thanks to
 //                         the generation macro)
-// 
+//
 // use of custom picklers: more speed with private fields that can be re-initialized in some other way
-// 
+//
 // another idea: could use custom picklers to obtain picklers for value classes
 
 class Person(val id: Int) {
@@ -37,7 +37,7 @@ object Test extends App {
       def pickle(p: Person, builder: PickleBuilder): Unit = {
         // let's say we only want to pickle id, since we can look up name and age based on id
         // then we can make use of a size hint, so that a fixed-size array can be used for pickling
-        builder.hintTag(fastTypeTag[Person])
+        builder.hintTag(typeTag[Person])
         builder.hintKnownSize(14)
         builder.beginEntry(p)
         builder.putField("id", b => {
@@ -52,7 +52,7 @@ object Test extends App {
     new Unpickler[Person] {
       val format = intup.format
       def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
-        reader.hintTag(fastTypeTag[Int])
+        reader.hintTag(typeTag[Int])
         reader.hintStaticallyElidedType()
         val tag = reader.beginEntry()
         val unpickled = intup.unpickle(tag, reader).asInstanceOf[Int]

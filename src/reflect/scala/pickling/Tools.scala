@@ -6,7 +6,6 @@ import scala.collection.mutable.{Map => MutableMap, ListBuffer => MutableList, W
 import java.lang.ref.WeakReference
 import scala.collection.mutable.{Stack => MutableStack}
 import scala.reflect.runtime.universe._
-import scala.reflect.synthetic._
 
 object Tools {
   private val subclassCaches = new WeakHashMap[AnyRef, WeakReference[AnyRef]]()
@@ -239,7 +238,7 @@ abstract class Macro extends scala.reflect.macros.Macro {
     // 3) overridden fields
     val wrappedBody =
       q"""
-        val $firSymbol = scala.pickling.`package`.fastTypeTag[${field.owner.asClass.toType.erasure}].tpe.member(TermName(${field.name.toString}))
+        val $firSymbol = typeTag[${field.owner.asClass.toType.erasure}].tpe.member(TermName(${field.name.toString}))
         if ($firSymbol.isTerm) ${body(q"im.reflectField($firSymbol.asTerm)")}
       """
     prologue ++ wrappedBody.stats :+ wrappedBody.expr
@@ -264,22 +263,6 @@ abstract class Macro extends scala.reflect.macros.Macro {
   }
 }
 
-trait FastTypeTagMacro extends Macro {
-  def impl[T: c.WeakTypeTag]: c.Tree = {
-    import c.universe._
-    import definitions._
-    val tpe = weakTypeOf[T]
-    val wrapperPid = "scala.reflect.synthetic"
-    val wrapperName = TermName("Reified" + syntheticBaseName(tpe))
-    val wrapperRef =
-      introduceTopLevel(wrapperPid, wrapperName) {
-        val reifiedTpe = c.reifyType(treeBuild.mkRuntimeUniverseRef, EmptyTree, tpe, concrete = true)
-        q"object $wrapperName { val tag = $reifiedTpe }"
-      }
-    q"$wrapperRef.tag"
-  }
-}
-
 trait PickleTools {
   private var hints = new Hints()
   case class Hints(
@@ -301,23 +284,10 @@ trait PickleTools {
     body(hints)
   }
 
-  def typeToString(tpe: Type): String = {
-    def loop(tpe: Type): String = {
-      tpe match {
-        case SingleType(pre, sym) => loop(TypeRef(pre, sym.asModule.moduleClass, Nil))
-        case TypeRef(_, sym, Nil) => s"${sym.fullName}" + (if (sym.isModuleClass) "$" else "")
-        // NOTE: we don't pickle targs, because of the erasure strategy we're employing to support polymorphics
-        // case TypeRef(_, sym, targs) => loop(tpe.typeConstructor) + s"[${targs.map(targ => loop(targ))}]"
-        case TypeRef(pre, sym, targs) => loop(TypeRef(pre, sym, Nil))
-        case ExistentialType(tparams, restpe) => loop(restpe)
-        case _ => throw new PicklingException(s"fatal: unknown type $tpe repesented as ${showRaw(tpe)}")
-      }
-    }
-    loop(tpe)
-  }
+  def typeToString(tpe: Type): String = tpe.key
 
   def typeFromString(mirror: Mirror, tpe: String): Type = {
-    val sym = if (tpe.endsWith("$")) mirror.staticModule(tpe.stripSuffix("$")).moduleClass else mirror.staticClass(tpe)
+    val sym = if (tpe.endsWith(".type")) mirror.staticModule(tpe.stripSuffix(".type")).moduleClass else mirror.staticClass(tpe)
     sym.asType.toType
   }
 }

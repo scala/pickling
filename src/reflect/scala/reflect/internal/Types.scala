@@ -309,6 +309,8 @@ trait Types extends api.Types { self: SymbolTable =>
     def isSpliceable = {
       this.isInstanceOf[TypeRef] && typeSymbol.isAbstractType && !typeSymbol.isExistential
     }
+
+    def key = this.toString
   }
 
   /** Same as a call to narrow unless existentials are visible

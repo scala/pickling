@@ -131,7 +131,7 @@ trait Extractors {
     def apply(universe: Tree, mirror: Tree, symtab: SymbolTable, tpe: Type, rtpe: Tree, concrete: Boolean) = {
       val tagFactory = if (concrete) nme.TypeTag else nme.WeakTypeTag
       val ctor = TypeApply(Select(Select(Ident(nme.UNIVERSE_SHORT), tagFactory), nme.apply), List(mkTarg(tpe)))
-      val args = List(Ident(nme.MIRROR_SHORT), mkCreator(tpnme.REIFY_TYPECREATOR_PREFIX, symtab, rtpe))
+      val args = List(Ident(nme.MIRROR_SHORT), mkCreator(tpnme.REIFY_TYPECREATOR_PREFIX, symtab, rtpe), Literal(Constant(tpe.key)))
       val unwrapped = Apply(ctor, args)
       mkWrapper(universe, mirror, unwrapped)
     }
