@@ -284,8 +284,7 @@ trait PickleTools {
     tag: TypeTag[_] = null,
     knownSize: Int = -1,
     isStaticallyElidedType: Boolean = false,
-    isDynamicallyElidedType: Boolean = false,
-    isCollectionType: Boolean = false) {
+    isDynamicallyElidedType: Boolean = false) {
     def isElidedType = isStaticallyElidedType || isDynamicallyElidedType
   }
 
@@ -293,7 +292,6 @@ trait PickleTools {
   def hintKnownSize(knownSize: Int): this.type = { hints = hints.copy(knownSize = knownSize); this }
   def hintStaticallyElidedType(): this.type = { hints = hints.copy(isStaticallyElidedType = true); this }
   def hintDynamicallyElidedType(): this.type = { hints = hints.copy(isDynamicallyElidedType = true); this }
-  def hintCollectionType(): this.type = { hints = hints.copy(isCollectionType = true); this }
 
   def withHints[T](body: Hints => T): T = {
     val hints = this.hints

@@ -85,13 +85,15 @@ package pickling {
     def hintKnownSize(knownSize: Int): this.type
     def hintStaticallyElidedType(): this.type
     def hintDynamicallyElidedType(): this.type
-    def hintCollectionType(): this.type
   }
 
   trait PickleBuilder extends Hintable {
     def beginEntry(picklee: Any): this.type
     def putField(name: String, pickler: this.type => Unit): this.type
     def endEntry(): Unit
+    def beginCollection(length: Int): this.type
+    def putElement(pickler: this.type => Unit): this.type
+    def endCollection(): Unit
     def result(): Pickle
   }
 
@@ -103,6 +105,9 @@ package pickling {
     def atObject: Boolean
     def readField(name: String): PickleReader
     def endEntry(): Unit
+    def beginCollection(): Int
+    def readElement(): PickleReader
+    def endCollection(): Unit
     def unpickle[T] = macro UnpickleMacros.readerUnpickle[T]
   }
 
