@@ -7,7 +7,6 @@ package object binary {
 
 package binary {
   import scala.reflect.runtime.{universe => ru}
-  import scala.reflect.synthetic._
   import scala.reflect.runtime.universe._
 
   case class BinaryPickle(value: Array[Byte]) extends Pickle {
@@ -32,11 +31,12 @@ package binary {
       }
     }
 
-    private val primitives = Map[TypeTag[_], Any => Unit](
-      ReifiedNull.tag -> ((picklee: Any) => pos = byteBuffer.encodeByteTo(pos, format.NULL_TAG)),
-      ReifiedInt.tag -> ((picklee: Any) => pos = byteBuffer.encodeIntTo(pos, picklee.asInstanceOf[Int])),
-      ReifiedBoolean.tag -> ((picklee: Any) => pos = byteBuffer.encodeBooleanTo(pos, picklee.asInstanceOf[Boolean])),
-      ReifiedString.tag -> ((picklee: Any) => pos = byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String]))
+    private val primitives = Map[String, Any => Unit](
+      typeTag[Null].key -> ((picklee: Any) => pos = byteBuffer.encodeByteTo(pos, format.NULL_TAG)),
+      typeTag[Int].key -> ((picklee: Any) => pos = byteBuffer.encodeIntTo(pos, picklee.asInstanceOf[Int])),
+      typeTag[Boolean].key -> ((picklee: Any) => pos = byteBuffer.encodeBooleanTo(pos, picklee.asInstanceOf[Boolean])),
+      typeTag[String].key -> ((picklee: Any) => pos = byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])),
+      typeTag[java.lang.String].key -> ((picklee: Any) => pos = byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String]))
     )
 
     def beginEntry(picklee: Any): this.type = withHints { hints =>
@@ -44,8 +44,8 @@ package binary {
 
       if (picklee == null) {
         pos = byteBuffer.encodeByteTo(pos, format.NULL_TAG)
-      } else if (hints.isElidedType && primitives.contains(hints.tag)) {
-        primitives(hints.tag)(picklee)
+      } else if (hints.isElidedType && primitives.contains(hints.tag.key)) {
+        primitives(hints.tag.key)(picklee)
       } else {
         if (hints.isElidedType) pos = byteBuffer.encodeByteTo(pos, format.ELIDED_TAG)
         else {
@@ -55,7 +55,7 @@ package binary {
           val tpeBytes = formatType(tpe)
           pos = byteBuffer.encodeIntTo(pos, tpeBytes.length)
           pos = byteBuffer.copyTo(pos, tpeBytes)
-          if (primitives.contains(hints.tag)) primitives(hints.tag)(picklee)
+          if (primitives.contains(hints.tag.key)) primitives(hints.tag.key)(picklee)
         }
       }
 
@@ -92,49 +92,50 @@ package binary {
     private var pos = 0
     private var lastTagRead: TypeTag[_] = null
 
-    private val primitives = Map[TypeTag[_], () => (Any, Int)](
-      ReifiedNull.tag -> (() => (null, pos)),
-      ReifiedInt.tag -> (() => byteBuffer.decodeIntFrom(pos)),
-      ReifiedBoolean.tag -> (() => byteBuffer.decodeBooleanFrom(pos)),
-      ReifiedString.tag -> (() => byteBuffer.decodeStringFrom(pos))
+    private val primitives = Map[String, () => (Any, Int)](
+      typeTag[Null].key -> (() => (null, pos)),
+      typeTag[Int].key -> (() => byteBuffer.decodeIntFrom(pos)),
+      typeTag[Boolean].key -> (() => byteBuffer.decodeBooleanFrom(pos)),
+      typeTag[String].key -> (() => byteBuffer.decodeStringFrom(pos)),
+      typeTag[java.lang.String].key -> (() => byteBuffer.decodeStringFrom(pos))
     )
 
     def beginEntry(): TypeTag[_] = withHints { hints =>
       lastTagRead = {
-        if (hints.tag == ReifiedString.tag) {
+        if (hints.tag.key == typeTag[String].key || hints.tag.key == typeTag[java.lang.String].key) {
           val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
           lookahead match {
             case format.NULL_TAG =>
               pos = newpos
-              ReifiedNull.tag
+              typeTag[Null]
             case _ =>
               hints.tag
           }
-        } else if (hints.isElidedType && primitives.contains(hints.tag)) {
+        } else if (hints.isElidedType && primitives.contains(hints.tag.key)) {
           hints.tag
         } else {
           val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
           lookahead match {
             case format.NULL_TAG =>
               pos = newpos
-              ReifiedNull.tag
+              typeTag[Null]
             case format.ELIDED_TAG =>
               pos = newpos
               hints.tag
             case _ =>
               val (typeString, newpos) = byteBuffer.decodeStringFrom(pos)
               pos = newpos
-              TypeTag(typeFromString(mirror, typeString))
+              TypeTag(typeFromString(mirror, typeString), typeString)
           }
         }
       }
       lastTagRead
     }
 
-    def atPrimitive: Boolean = primitives.contains(lastTagRead)
+    def atPrimitive: Boolean = primitives.contains(lastTagRead.key)
 
     def readPrimitive(): Any = {
-      val (res, newpos) = primitives(lastTagRead)()
+      val (res, newpos) = primitives(lastTagRead.key)()
       pos = newpos
       res
     }

@@ -184,6 +184,10 @@ trait TypeTags { self: Universe =>
      */
     def in[U <: Universe with Singleton](otherMirror: scala.reflect.api.Mirror[U]): U # WeakTypeTag[T]
 
+    /** A string token, which uniquely identifies the underlying type.
+     */
+    def key: String = tpe.key
+
     /**
      * Reflective representation of type T.
      */
@@ -219,28 +223,15 @@ trait TypeTags { self: Universe =>
     val Nothing : WeakTypeTag[scala.Nothing]    = TypeTag.Nothing
     val Null    : WeakTypeTag[scala.Null]       = TypeTag.Null
 
-
     def apply[T](mirror1: scala.reflect.api.Mirror[self.type], tpec1: TypeCreator): WeakTypeTag[T] =
-      tpec1(mirror1) match {
-        case ByteTpe    => WeakTypeTag.Byte.asInstanceOf[WeakTypeTag[T]]
-        case ShortTpe   => WeakTypeTag.Short.asInstanceOf[WeakTypeTag[T]]
-        case CharTpe    => WeakTypeTag.Char.asInstanceOf[WeakTypeTag[T]]
-        case IntTpe     => WeakTypeTag.Int.asInstanceOf[WeakTypeTag[T]]
-        case LongTpe    => WeakTypeTag.Long.asInstanceOf[WeakTypeTag[T]]
-        case FloatTpe   => WeakTypeTag.Float.asInstanceOf[WeakTypeTag[T]]
-        case DoubleTpe  => WeakTypeTag.Double.asInstanceOf[WeakTypeTag[T]]
-        case BooleanTpe => WeakTypeTag.Boolean.asInstanceOf[WeakTypeTag[T]]
-        case UnitTpe    => WeakTypeTag.Unit.asInstanceOf[WeakTypeTag[T]]
-        case AnyTpe     => WeakTypeTag.Any.asInstanceOf[WeakTypeTag[T]]
-        case AnyValTpe  => WeakTypeTag.AnyVal.asInstanceOf[WeakTypeTag[T]]
-        case AnyRefTpe  => WeakTypeTag.AnyRef.asInstanceOf[WeakTypeTag[T]]
-        case ObjectTpe  => WeakTypeTag.Object.asInstanceOf[WeakTypeTag[T]]
-        case NothingTpe => WeakTypeTag.Nothing.asInstanceOf[WeakTypeTag[T]]
-        case NullTpe    => WeakTypeTag.Null.asInstanceOf[WeakTypeTag[T]]
-        case _          => new WeakTypeTagImpl[T](mirror1.asInstanceOf[Mirror], tpec1)
-      }
+      new WeakTypeTagImpl[T](mirror1.asInstanceOf[Mirror], tpec1)
+    def apply[T](mirror1: scala.reflect.api.Mirror[self.type], tpec1: TypeCreator, precomputedKey: String): WeakTypeTag[T] =
+      new WeakTypeTagImpl[T](mirror1.asInstanceOf[Mirror], tpec1) { override def key = precomputedKey }
+    def apply[T](tpe: Type): WeakTypeTag[T] =
+      new WeakTypeTagImpl[T](rootMirror, FixedMirrorTypeCreator(rootMirror, tpe))
+    def apply[T](tpe: Type, precomputedKey: String): WeakTypeTag[T] =
+      new WeakTypeTagImpl[T](rootMirror, FixedMirrorTypeCreator(rootMirror, tpe)) { override def key = precomputedKey }
 
-    def apply[T](tpe: Type): WeakTypeTag[T] = WeakTypeTag[T](rootMirror, FixedMirrorTypeCreator(rootMirror, tpe))
     def unapply[T](ttag: WeakTypeTag[T]): Option[Type] = Some(ttag.tpe)
   }
 
@@ -283,43 +274,31 @@ trait TypeTags { self: Universe =>
    * @group TypeTags
    */
   object TypeTag {
-    val Byte:    TypeTag[scala.Byte]       = new PredefTypeTag[scala.Byte]       (ByteTpe,    _.TypeTag.Byte)
-    val Short:   TypeTag[scala.Short]      = new PredefTypeTag[scala.Short]      (ShortTpe,   _.TypeTag.Short)
-    val Char:    TypeTag[scala.Char]       = new PredefTypeTag[scala.Char]       (CharTpe,    _.TypeTag.Char)
-    val Int:     TypeTag[scala.Int]        = new PredefTypeTag[scala.Int]        (IntTpe,     _.TypeTag.Int)
-    val Long:    TypeTag[scala.Long]       = new PredefTypeTag[scala.Long]       (LongTpe,    _.TypeTag.Long)
-    val Float:   TypeTag[scala.Float]      = new PredefTypeTag[scala.Float]      (FloatTpe,   _.TypeTag.Float)
-    val Double:  TypeTag[scala.Double]     = new PredefTypeTag[scala.Double]     (DoubleTpe,  _.TypeTag.Double)
-    val Boolean: TypeTag[scala.Boolean]    = new PredefTypeTag[scala.Boolean]    (BooleanTpe, _.TypeTag.Boolean)
-    val Unit:    TypeTag[scala.Unit]       = new PredefTypeTag[scala.Unit]       (UnitTpe,    _.TypeTag.Unit)
-    val Any:     TypeTag[scala.Any]        = new PredefTypeTag[scala.Any]        (AnyTpe,     _.TypeTag.Any)
-    val AnyVal:  TypeTag[scala.AnyVal]     = new PredefTypeTag[scala.AnyVal]     (AnyValTpe,  _.TypeTag.AnyVal)
-    val AnyRef:  TypeTag[scala.AnyRef]     = new PredefTypeTag[scala.AnyRef]     (AnyRefTpe,  _.TypeTag.AnyRef)
-    val Object:  TypeTag[java.lang.Object] = new PredefTypeTag[java.lang.Object] (ObjectTpe,  _.TypeTag.Object)
-    val Nothing: TypeTag[scala.Nothing]    = new PredefTypeTag[scala.Nothing]    (NothingTpe, _.TypeTag.Nothing)
-    val Null:    TypeTag[scala.Null]       = new PredefTypeTag[scala.Null]       (NullTpe,    _.TypeTag.Null)
+    val Byte:    TypeTag[scala.Byte]       = new PredefTypeTag[scala.Byte]       (ByteTpe,    _.TypeTag.Byte)     { override def key = "Byte" }
+    val Short:   TypeTag[scala.Short]      = new PredefTypeTag[scala.Short]      (ShortTpe,   _.TypeTag.Short)    { override def key = "Short" }
+    val Char:    TypeTag[scala.Char]       = new PredefTypeTag[scala.Char]       (CharTpe,    _.TypeTag.Char)     { override def key = "Char" }
+    val Int:     TypeTag[scala.Int]        = new PredefTypeTag[scala.Int]        (IntTpe,     _.TypeTag.Int)      { override def key = "Int" }
+    val Long:    TypeTag[scala.Long]       = new PredefTypeTag[scala.Long]       (LongTpe,    _.TypeTag.Long)     { override def key = "Long" }
+    val Float:   TypeTag[scala.Float]      = new PredefTypeTag[scala.Float]      (FloatTpe,   _.TypeTag.Float)    { override def key = "Float" }
+    val Double:  TypeTag[scala.Double]     = new PredefTypeTag[scala.Double]     (DoubleTpe,  _.TypeTag.Double)   { override def key = "Double" }
+    val Boolean: TypeTag[scala.Boolean]    = new PredefTypeTag[scala.Boolean]    (BooleanTpe, _.TypeTag.Boolean)  { override def key = "Boolean" }
+    val Unit:    TypeTag[scala.Unit]       = new PredefTypeTag[scala.Unit]       (UnitTpe,    _.TypeTag.Unit)     { override def key = "Unit" }
+    val Any:     TypeTag[scala.Any]        = new PredefTypeTag[scala.Any]        (AnyTpe,     _.TypeTag.Any)      { override def key = "Any" }
+    val AnyVal:  TypeTag[scala.AnyVal]     = new PredefTypeTag[scala.AnyVal]     (AnyValTpe,  _.TypeTag.AnyVal)   { override def key = "AnyVal" }
+    val AnyRef:  TypeTag[scala.AnyRef]     = new PredefTypeTag[scala.AnyRef]     (AnyRefTpe,  _.TypeTag.AnyRef)   { override def key = "AnyRef" }
+    val Object:  TypeTag[java.lang.Object] = new PredefTypeTag[java.lang.Object] (ObjectTpe,  _.TypeTag.Object)   { override def key = "Object" }
+    val Nothing: TypeTag[scala.Nothing]    = new PredefTypeTag[scala.Nothing]    (NothingTpe, _.TypeTag.Nothing)  { override def key = "Nothing" }
+    val Null:    TypeTag[scala.Null]       = new PredefTypeTag[scala.Null]       (NullTpe,    _.TypeTag.Null)     { override def key = "Null" }
 
     def apply[T](mirror1: scala.reflect.api.Mirror[self.type], tpec1: TypeCreator): TypeTag[T] =
-      tpec1(mirror1) match {
-        case ByteTpe    => TypeTag.Byte.asInstanceOf[TypeTag[T]]
-        case ShortTpe   => TypeTag.Short.asInstanceOf[TypeTag[T]]
-        case CharTpe    => TypeTag.Char.asInstanceOf[TypeTag[T]]
-        case IntTpe     => TypeTag.Int.asInstanceOf[TypeTag[T]]
-        case LongTpe    => TypeTag.Long.asInstanceOf[TypeTag[T]]
-        case FloatTpe   => TypeTag.Float.asInstanceOf[TypeTag[T]]
-        case DoubleTpe  => TypeTag.Double.asInstanceOf[TypeTag[T]]
-        case BooleanTpe => TypeTag.Boolean.asInstanceOf[TypeTag[T]]
-        case UnitTpe    => TypeTag.Unit.asInstanceOf[TypeTag[T]]
-        case AnyTpe     => TypeTag.Any.asInstanceOf[TypeTag[T]]
-        case AnyValTpe  => TypeTag.AnyVal.asInstanceOf[TypeTag[T]]
-        case AnyRefTpe  => TypeTag.AnyRef.asInstanceOf[TypeTag[T]]
-        case ObjectTpe  => TypeTag.Object.asInstanceOf[TypeTag[T]]
-        case NothingTpe => TypeTag.Nothing.asInstanceOf[TypeTag[T]]
-        case NullTpe    => TypeTag.Null.asInstanceOf[TypeTag[T]]
-        case _          => new TypeTagImpl[T](mirror1.asInstanceOf[Mirror], tpec1)
-      }
+      new TypeTagImpl[T](mirror1.asInstanceOf[Mirror], tpec1)
+    def apply[T](mirror1: scala.reflect.api.Mirror[self.type], tpec1: TypeCreator, precomputedKey: String): TypeTag[T] =
+      new TypeTagImpl[T](mirror1.asInstanceOf[Mirror], tpec1) { override def key = precomputedKey }
+    def apply[T](tpe: Type): TypeTag[T] =
+      new TypeTagImpl[T](rootMirror, FixedMirrorTypeCreator(rootMirror, tpe))
+    def apply[T](tpe: Type, precomputedKey: String): TypeTag[T] =
+      new TypeTagImpl[T](rootMirror, FixedMirrorTypeCreator(rootMirror, tpe)) { override def key = precomputedKey }
 
-    def apply[T](tpe: Type): TypeTag[T] = TypeTag[T](rootMirror, FixedMirrorTypeCreator(rootMirror, tpe))
     def unapply[T](ttag: TypeTag[T]): Option[Type] = Some(ttag.tpe)
   }
 

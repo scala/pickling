@@ -5,7 +5,6 @@ import definitions._
 import scala.reflect.runtime.{universe => ru}
 import scala.tools.reflect.ToolBox
 import ir._
-import scala.reflect.synthetic._
 
 object Runtime {
   val toUnboxed = Map[Class[_], Class[_]](
@@ -87,7 +86,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
 
           builder.endEntry()
         } else {
-          builder.hintTag(ReifiedNull.tag)
+          builder.hintTag(typeTag[Null])
           builder.beginEntry(null)
           builder.endEntry()
         }

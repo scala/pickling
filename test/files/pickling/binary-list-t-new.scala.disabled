@@ -8,7 +8,7 @@ import scala.collection.mutable.ListBuffer
 object Test extends App {
   implicit def genListPickler[T](implicit elemPickler: Pickler[T], pf: PickleFormat): Pickler[List[T]] with Unpickler[List[T]] = new Pickler[List[T]] with Unpickler[List[T]] {
     def pickle(picklee: List[T], builder: PickleBuilder): Unit = {
-      builder.hintTag(fastTypeTag[List[Any]]).beginEntry(picklee)
+      builder.hintTag(typeTag[List[Any]]).beginEntry(picklee)
       builder.putField("numElems", b => b.hintStaticallyElidedType().beginEntry(picklee.length))
       for (el <- picklee) builder.putField("elem", b => elemPickler.pickle(el, b))
       builder.endEntry()
@@ -16,7 +16,7 @@ object Test extends App {
 
     def unpickle(tpe: TypeTag[_], reader: PickleReader): Any = {
       reader.readField("numElems")
-      reader.hintTag(fastTypeTag[Int]).hintStaticallyElidedType().beginEntry()
+      reader.hintTag(typeTag[Int]).hintStaticallyElidedType().beginEntry()
       val length = reader.readPrimitive().asInstanceOf[Int]
       reader.endEntry()
 
