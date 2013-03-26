@@ -124,39 +124,42 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: TypeTag[_]) {
     new Unpickler[Any] with PickleTools {
       val format: PickleFormat = pf
       def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
-        val pendingFields = cir.fields.filter(fir => fir.isNonParam || fir.isReifiedParam)
-        val fieldVals = pendingFields.map(fir => {
-          val freader = reader.readField(fir.name)
-          val fstaticTag = TypeTag(fir.tpe.erasure)
-          freader.hintTag(fstaticTag)
+        if (reader.atPrimitive) reader.readPrimitive()
+        else {
+          val pendingFields = cir.fields.filter(fir => fir.isNonParam || fir.isReifiedParam)
+          val fieldVals = pendingFields.map(fir => {
+            val freader = reader.readField(fir.name)
+            val fstaticTag = TypeTag(fir.tpe.erasure)
+            freader.hintTag(fstaticTag)
 
-          val fstaticSym = fstaticTag.tpe.typeSymbol
-          if (fstaticSym.isEffectivelyFinal) freader.hintStaticallyElidedType()
-          val fdynamicTag = freader.beginEntry()
+            val fstaticSym = fstaticTag.tpe.typeSymbol
+            if (fstaticSym.isEffectivelyFinal) freader.hintStaticallyElidedType()
+            val fdynamicTag = freader.beginEntry()
 
-          val fval = {
-            if (freader.atPrimitive) freader.readPrimitive()
-            else {
-              val fieldRuntime = new InterpretedUnpicklerRuntime(mirror, fdynamicTag)
-              val fieldUnpickler = fieldRuntime.genUnpickler
-              fieldUnpickler.unpickle(fdynamicTag, freader)
+            val fval = {
+              if (freader.atPrimitive) freader.readPrimitive()
+              else {
+                val fieldRuntime = new InterpretedUnpicklerRuntime(mirror, fdynamicTag)
+                val fieldUnpickler = fieldRuntime.genUnpickler
+                fieldUnpickler.unpickle(fdynamicTag, freader)
+              }
             }
+
+            freader.endEntry()
+            fval
+          })
+
+          val inst = scala.concurrent.util.Unsafe.instance.allocateInstance(clazz)
+          val im = mirror.reflect(inst)
+
+          pendingFields.zip(fieldVals) foreach {
+            case (fir, fval) =>
+              val fmX = im.reflectField(fir.field.get)
+              fmX.set(fval)
           }
 
-          freader.endEntry()
-          fval
-        })
-
-        val inst = scala.concurrent.util.Unsafe.instance.allocateInstance(clazz)
-        val im = mirror.reflect(inst)
-
-        pendingFields.zip(fieldVals) foreach {
-          case (fir, fval) =>
-            val fmX = im.reflectField(fir.field.get)
-            fmX.set(fval)
+          inst
         }
-
-        inst
       }
     }
   }
