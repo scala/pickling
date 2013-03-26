@@ -44,8 +44,7 @@ package binary {
 
       if (picklee == null) {
         pos = byteBuffer.encodeByteTo(pos, format.NULL_TAG)
-      } else if (primitives.contains(hints.tag)) {
-        // assert(hints.isElidedType)
+      } else if (hints.isElidedType && primitives.contains(hints.tag)) {
         primitives(hints.tag)(picklee)
       } else {
         if (hints.isElidedType) pos = byteBuffer.encodeByteTo(pos, format.ELIDED_TAG)
@@ -56,6 +55,7 @@ package binary {
           val tpeBytes = formatType(tpe)
           pos = byteBuffer.encodeIntTo(pos, tpeBytes.length)
           pos = byteBuffer.copyTo(pos, tpeBytes)
+          if (primitives.contains(hints.tag)) primitives(hints.tag)(picklee)
         }
       }
 
@@ -110,8 +110,7 @@ package binary {
             case _ =>
               hints.tag
           }
-        } else if (primitives.contains(hints.tag)) {
-          assert(hints.isElidedType)
+        } else if (hints.isElidedType && primitives.contains(hints.tag)) {
           hints.tag
         } else {
           val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
