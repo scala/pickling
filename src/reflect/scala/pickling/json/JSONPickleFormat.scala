@@ -44,7 +44,7 @@ package json {
     def beginEntry(picklee: Any): this.type = withHints { hints =>
       tags.push(hints.tag)
       if (primitives.contains(hints.tag)) {
-        assert(hints.isElidedType)
+        // assert(hints.isElidedType)
         primitives(hints.tag)(picklee)
       } else {
         buf ++= "{\n"
