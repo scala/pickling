@@ -24,9 +24,9 @@ object Runtime {
 
 abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) {
 
-  val clazz = Runtime.toUnboxed.getOrElse(preclazz, preclazz)
+  val clazz = if (preclazz != null) Runtime.toUnboxed.getOrElse(preclazz, preclazz) else null
   val mirror = runtimeMirror(classLoader)
-  val sym = mirror.classSymbol(clazz)
+  val sym = if (clazz != null) mirror.classSymbol(clazz) else NullClass
   val tpe = sym.toType
   val tag = TypeTag(tpe)
   debug("PicklerRuntime: tpe = " + tpe)
@@ -72,7 +72,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
             val fldMirror = im.reflectField(fir.field.get)
             val fldValue = fldMirror.get
             debug("pickling field value: " + fldValue)
-            val fldClass = if (fldValue != null) fldValue.getClass else mirror.runtimeClass(NullTpe)
+            val fldClass = if (fldValue != null) fldValue.getClass else null
             // by using only the class we convert Int to Integer
             // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
             val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
