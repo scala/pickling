@@ -237,7 +237,7 @@ abstract class Macro extends scala.reflect.macros.Macro {
     // 3) overridden fields
     val wrappedBody =
       q"""
-        val $firSymbol = scala.pickling.`package`.fastTypeTag[${field.owner.asClass.toType}].tpe.member(TermName(${field.name.toString}))
+        val $firSymbol = scala.pickling.`package`.fastTypeTag[${field.owner.asClass.toType.erasure}].tpe.member(TermName(${field.name.toString}))
         if ($firSymbol.isTerm) ${body(q"im.reflectField($firSymbol.asTerm)")}
       """
     prologue ++ wrappedBody.stats :+ wrappedBody.expr
@@ -307,6 +307,7 @@ trait PickleTools {
         // NOTE: we don't pickle targs, because of the erasure strategy we're employing to support polymorphics
         // case TypeRef(_, sym, targs) => loop(tpe.typeConstructor) + s"[${targs.map(targ => loop(targ))}]"
         case TypeRef(pre, sym, targs) => loop(TypeRef(pre, sym, Nil))
+        case ExistentialType(tparams, restpe) => loop(restpe)
         case _ => throw new PicklingException(s"fatal: unknown type $tpe repesented as ${showRaw(tpe)}")
       }
     }

@@ -37,13 +37,13 @@ trait PicklerMacros extends Macro {
                     $getterLogic.pickleInto(b)
                   """ else q"""
                     val subPicklee = $getterLogic
-                    if (subPicklee == null || subPicklee.getClass == classOf[${fir.tpe}]) b.hintDynamicallyElidedType() else ()
+                    if (subPicklee == null || subPicklee.getClass == classOf[${fir.tpe.erasure}]) b.hintDynamicallyElidedType() else ()
                     subPicklee.pickleInto(b)
                   """
                 }
               }
               if (fir.isPublic) List(putField(q"picklee.${TermName(fir.name)}"))
-              else reflectively("picklee", fir)(fm => putField(q"$fm.get.asInstanceOf[${fir.tpe}]"))
+              else reflectively("picklee", fir)(fm => putField(q"$fm.get.asInstanceOf[${fir.tpe.erasure}]"))
             } else {
               // NOTE: this means that we've encountered a primary constructor parameter elided in the "constructors" phase
               // we can do nothing about that, so we don't serialize this field right now leaving everything to the unpickler
