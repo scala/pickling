@@ -45,7 +45,7 @@ package binary {
       if (picklee == null) {
         pos = byteBuffer.encodeByteTo(pos, format.NULL_TAG)
       } else if (primitives.contains(hints.tag)) {
-        assert(hints.isElidedType)
+        // assert(hints.isElidedType)
         primitives(hints.tag)(picklee)
       } else {
         if (hints.isElidedType) pos = byteBuffer.encodeByteTo(pos, format.ELIDED_TAG)

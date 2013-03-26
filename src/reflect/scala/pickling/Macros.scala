@@ -178,7 +178,7 @@ trait PickleMacros extends Macro {
     val sym = tpe.typeSymbol.asClass
     val q"${_}($pickleeArg)" = c.prefix.tree
 
-    def createPickler(tpe: Type) = q"implicitly[Pickler[$tpe]]"
+    def createPickler(tpe: Type) = q"implicitly[Pickler[${tpe.erasure}]]"
     def finalDispatch = {
       if (sym.isNotNull) createPickler(tpe)
       else q"if (picklee != null) ${createPickler(tpe)} else ${createPickler(NullTpe)}"
@@ -236,7 +236,7 @@ trait UnpickleMacros extends Macro {
     val sym = tpe.typeSymbol.asClass
     val readerArg = c.prefix.tree
 
-    def createUnpickler(tpe: Type) = q"implicitly[Unpickler[$tpe]]"
+    def createUnpickler(tpe: Type) = q"implicitly[Unpickler[${tpe.erasure}]]"
     def finalDispatch = {
       if (sym.isNotNull) createUnpickler(tpe)
       else q"if (tag != scala.pickling.`package`.fastTypeTag[Null]) ${createUnpickler(tpe)} else ${createUnpickler(NullTpe)}"
