@@ -70,11 +70,17 @@ package binary {
 
     def endEntry(): Unit = { /* do nothing */ }
 
-    def beginCollection(length: Int): this.type = ???
+    def beginCollection(length: Int): this.type = {
+      pos = byteBuffer.encodeIntTo(pos, length)
+      this
+    }
 
-    def putElement(pickler: this.type => Unit): this.type = ???
+    def putElement(pickler: this.type => Unit): this.type = {
+      pickler(this)
+      this
+    }
 
-    def endCollection(): Unit = ???
+    def endCollection(): Unit = { /* do nothing */ }
 
     def result() = {
       BinaryPickle(byteBuffer.toArray)
@@ -141,11 +147,15 @@ package binary {
 
     def endEntry(): Unit = { /* do nothing */ }
 
-    def beginCollection(): PickleReader = ???
+    def beginCollection(): PickleReader = this
 
-    def readLength(): Int = ???
+    def readLength(): Int = {
+      val (length, newpos) = byteBuffer.decodeIntFrom(pos)
+      pos = newpos
+      length
+    }
 
-    def readElement(): PickleReader = ???
+    def readElement(): PickleReader = this
 
     def endCollection(): Unit = { /* do nothing */ }
   }
