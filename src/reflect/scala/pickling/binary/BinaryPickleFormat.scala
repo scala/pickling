@@ -31,31 +31,35 @@ package binary {
       }
     }
 
-    private val primitives = Map[String, Any => Unit](
-      typeTag[Null].key -> ((picklee: Any) => pos = byteBuffer.encodeByteTo(pos, format.NULL_TAG)),
-      typeTag[Int].key -> ((picklee: Any) => pos = byteBuffer.encodeIntTo(pos, picklee.asInstanceOf[Int])),
-      typeTag[Boolean].key -> ((picklee: Any) => pos = byteBuffer.encodeBooleanTo(pos, picklee.asInstanceOf[Boolean])),
-      typeTag[String].key -> ((picklee: Any) => pos = byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])),
-      typeTag[java.lang.String].key -> ((picklee: Any) => pos = byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String]))
-    )
-
     def beginEntry(picklee: Any): this.type = withHints { hints =>
       mkByteBuffer(hints.knownSize)
 
       if (picklee == null) {
         pos = byteBuffer.encodeByteTo(pos, format.NULL_TAG)
-      } else if (hints.isElidedType && primitives.contains(hints.tag.key)) {
-        primitives(hints.tag.key)(picklee)
       } else {
-        if (hints.isElidedType) pos = byteBuffer.encodeByteTo(pos, format.ELIDED_TAG)
-        else {
-          // write pickled tpe to `target`:
-          // length of pickled type, pickled type
+        def writeTpe() = {
           val tpe = hints.tag.tpe
           val tpeBytes = formatType(tpe)
           pos = byteBuffer.encodeIntTo(pos, tpeBytes.length)
           pos = byteBuffer.copyTo(pos, tpeBytes)
-          if (primitives.contains(hints.tag.key)) primitives(hints.tag.key)(picklee)
+        }
+
+        hints.tag.key match {
+          case "scala.Null" =>
+            if (!hints.isElidedType) writeTpe()
+            pos = byteBuffer.encodeByteTo(pos, format.NULL_TAG)
+          case "scala.Int" =>
+            if (!hints.isElidedType) writeTpe()
+            pos = byteBuffer.encodeIntTo(pos, picklee.asInstanceOf[Int])
+          case "scala.Boolean" =>
+            if (!hints.isElidedType) writeTpe()
+            pos = byteBuffer.encodeBooleanTo(pos, picklee.asInstanceOf[Boolean])
+          case "scala.String" | "java.lang.String" =>
+            if (!hints.isElidedType) writeTpe()
+            pos = byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])
+          case _ =>
+            if (!hints.isElidedType) writeTpe()
+            else pos = byteBuffer.encodeByteTo(pos, format.ELIDED_TAG)
         }
       }
 
@@ -92,33 +96,25 @@ package binary {
     private var pos = 0
     private var lastTagRead: TypeTag[_] = null
 
-    private val primitives = Map[String, () => (Any, Int)](
-      typeTag[Null].key -> (() => (null, pos)),
-      typeTag[Int].key -> (() => byteBuffer.decodeIntFrom(pos)),
-      typeTag[Boolean].key -> (() => byteBuffer.decodeBooleanFrom(pos)),
-      typeTag[String].key -> (() => byteBuffer.decodeStringFrom(pos)),
-      typeTag[java.lang.String].key -> (() => byteBuffer.decodeStringFrom(pos))
-    )
-
     def beginEntry(): TypeTag[_] = withHints { hints =>
       lastTagRead = {
-        if (hints.tag.key == typeTag[String].key || hints.tag.key == typeTag[java.lang.String].key) {
+        if (hints.tag.key == "scala.String" || hints.tag.key == "java.lang.String") {
           val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
           lookahead match {
             case format.NULL_TAG =>
               pos = newpos
-              typeTag[Null]
+              TypeTag.Null
             case _ =>
               hints.tag
           }
-        } else if (hints.isElidedType && primitives.contains(hints.tag.key)) {
+        } else if (hints.isElidedType && format.primitives.contains(hints.tag.key)) {
           hints.tag
         } else {
           val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
           lookahead match {
             case format.NULL_TAG =>
               pos = newpos
-              typeTag[Null]
+              TypeTag.Null
             case format.ELIDED_TAG =>
               pos = newpos
               hints.tag
@@ -132,10 +128,17 @@ package binary {
       lastTagRead
     }
 
-    def atPrimitive: Boolean = primitives.contains(lastTagRead.key)
+    def atPrimitive: Boolean = format.primitives.contains(lastTagRead.key)
 
     def readPrimitive(): Any = {
-      val (res, newpos) = primitives(lastTagRead.key)()
+      val (res, newpos) = {
+        lastTagRead.key match {
+          case "scala.Null" => (null, pos)
+          case "scala.Int" => byteBuffer.decodeIntFrom(pos)
+          case "scala.Boolean" => byteBuffer.decodeIntFrom(pos)
+          case "scala.String" | "java.lang.String" => byteBuffer.decodeIntFrom(pos)
+        }
+      }
       pos = newpos
       res
     }
@@ -163,6 +166,7 @@ package binary {
   class BinaryPickleFormat extends PickleFormat {
     val ELIDED_TAG: Byte = -1
     val NULL_TAG: Byte = -2
+    val primitives = Set("scala.Null", "scala.Int", "scala.Boolean", "scala.String", "java.lang.String")
 
     type PickleType = BinaryPickle
     def createBuilder() = new BinaryPickleBuilder(this)

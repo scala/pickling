@@ -265,7 +265,8 @@ abstract class Macro extends scala.reflect.macros.Macro {
 }
 
 trait PickleTools {
-  private var hints = new Hints()
+  var hints = new Hints()
+  private var areHintsPinned = false
   case class Hints(
     tag: TypeTag[_] = null,
     knownSize: Int = -1,
@@ -278,10 +279,12 @@ trait PickleTools {
   def hintKnownSize(knownSize: Int): this.type = { hints = hints.copy(knownSize = knownSize); this }
   def hintStaticallyElidedType(): this.type = { hints = hints.copy(isStaticallyElidedType = true); this }
   def hintDynamicallyElidedType(): this.type = { hints = hints.copy(isDynamicallyElidedType = true); this }
+  def pinHints(): this.type = { areHintsPinned = true; this }
+  def unpinHints(): this.type = { areHintsPinned = false; hints = new Hints(); this }
 
   def withHints[T](body: Hints => T): T = {
     val hints = this.hints
-    this.hints = new Hints
+    if (!areHintsPinned) this.hints = new Hints
     body(hints)
   }
 
