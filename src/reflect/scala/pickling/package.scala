@@ -83,6 +83,8 @@ package pickling {
     def hintKnownSize(knownSize: Int): this.type
     def hintStaticallyElidedType(): this.type
     def hintDynamicallyElidedType(): this.type
+    def pinHints(): this.type
+    def unpinHints(): this.type
   }
 
   trait PickleBuilder extends Hintable {

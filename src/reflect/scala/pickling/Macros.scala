@@ -22,7 +22,6 @@ trait PicklerMacros extends Macro {
         def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
           val cir = classIR(tpe)
           val beginEntry = q"""
-            builder.hintTag(scala.reflect.runtime.universe.typeTag[$tpe])
             builder.beginEntry(picklee)
           """
           val putFields = cir.fields.flatMap(fir => {
@@ -183,7 +182,10 @@ trait PickleMacros extends Macro {
     val sym = tpe.typeSymbol.asClass
     val q"${_}($pickleeArg)" = c.prefix.tree
 
-    def createPickler(tpe: Type) = q"implicitly[Pickler[$tpe]]"
+    def createPickler(tpe: Type) = q"""
+      $builder.hintTag(scala.reflect.runtime.universe.typeTag[$tpe])
+      implicitly[Pickler[$tpe]]
+    """
     def finalDispatch = {
       if (sym.isNotNull) createPickler(tpe)
       else q"if (picklee != null) ${createPickler(tpe)} else ${createPickler(NullTpe)}"
