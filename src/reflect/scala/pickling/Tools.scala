@@ -133,7 +133,6 @@ class Tools[U <: Universe with Singleton](val u: U) {
         }
         existentialAbstraction(tparams, tpeWithMaybeTparams)
       })
-      // println(s"allStaticallyKnownConcreteSubclasses($tpe) = $subTpes")
       subTpes
     }
   }

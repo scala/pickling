@@ -877,6 +877,10 @@ trait Types extends ImplicitTags {
    */
   def polyType(tparams: List[Symbol], tpe: Type): Type
 
+  /** A creator for existential types which flattens nested existentials.
+   */
+  def existentialType(quantified: List[Symbol], underlying: Type): Type
+
   /** A creator for existential types. This generates:
    *
    *  {{{
