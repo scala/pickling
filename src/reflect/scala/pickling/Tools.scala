@@ -167,10 +167,9 @@ abstract class Macro extends scala.reflect.macros.Macro {
 
   def syntheticPackageName: String = "scala.pickling.synthetic"
   def syntheticBaseName(tpe: Type): TypeName = {
-    def prettyName(sym: Symbol) = sym.fullName.split('.').map(_.capitalize).mkString("") + (if (sym.isModuleClass) "$" else "")
-    var erasedTypeName = prettyName(tpe.typeSymbol)
-    if (tpe.typeSymbol == ArrayClass) erasedTypeName += prettyName(tpe.asInstanceOf[TypeRef].args.head.typeSymbol)
-    TypeName(erasedTypeName)
+    val raw = tpe.key.split('.').map(_.capitalize).mkString("")
+    val encoded = TypeName(raw).encoded
+    TypeName(encoded)
   }
   def syntheticBaseQualifiedName(tpe: Type): TypeName = TypeName(syntheticPackageName + "." + syntheticBaseName(tpe).toString)
 
@@ -286,8 +285,20 @@ trait PickleTools {
 
   def typeToString(tpe: Type): String = tpe.key
 
-  def typeFromString(mirror: Mirror, tpe: String): Type = {
-    val sym = if (tpe.endsWith(".type")) mirror.staticModule(tpe.stripSuffix(".type")).moduleClass else mirror.staticClass(tpe)
-    sym.asType.toType
+  def typeFromString(mirror: Mirror, stpe: String): Type = {
+    val (ssym, stargs) = {
+      val Pattern = """^(.*?)(\[(.*?)\])?$""".r
+      def fail() = throw new PicklingException(s"fatal: cannot unpickle $stpe")
+      stpe match {
+        case Pattern("", _, _) => fail()
+        case Pattern(sym, _, null) => (sym, Nil)
+        case Pattern(sym, _, stargs) => (sym, stargs.split(",").map(_.trim).toList)
+        case _ => fail()
+      }
+    }
+
+    val sym = if (ssym.endsWith(".type")) mirror.staticModule(ssym.stripSuffix(".type")).moduleClass else mirror.staticClass(ssym)
+    val tycon = sym.asType.toTypeConstructor
+    appliedType(tycon, stargs.map(starg => typeFromString(mirror, starg)))
   }
 }

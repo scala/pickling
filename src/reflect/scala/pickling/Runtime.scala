@@ -128,7 +128,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: TypeTag[_]) {
           val pendingFields = cir.fields.filter(fir => fir.isNonParam || fir.isReifiedParam)
           val fieldVals = pendingFields.map(fir => {
             val freader = reader.readField(fir.name)
-            val fstaticTag = TypeTag(fir.tpe.erasure)
+            val fstaticTag = TypeTag(fir.tpe)
             freader.hintTag(fstaticTag)
 
             val fstaticSym = fstaticTag.tpe.typeSymbol

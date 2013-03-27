@@ -227,10 +227,10 @@ trait TypeTags { self: Universe =>
       new WeakTypeTagImpl[T](mirror1.asInstanceOf[Mirror], tpec1)
     def apply[T](mirror1: scala.reflect.api.Mirror[self.type], tpec1: TypeCreator, precomputedKey: String): WeakTypeTag[T] =
       new WeakTypeTagImpl[T](mirror1.asInstanceOf[Mirror], tpec1) { override def key = precomputedKey }
-    def apply[T](tpe: Type): WeakTypeTag[T] =
-      new WeakTypeTagImpl[T](rootMirror, FixedMirrorTypeCreator(rootMirror, tpe))
-    def apply[T](tpe: Type, precomputedKey: String): WeakTypeTag[T] =
-      new WeakTypeTagImpl[T](rootMirror, FixedMirrorTypeCreator(rootMirror, tpe)) { override def key = precomputedKey }
+    def apply[T](tpe: => Type): WeakTypeTag[T] =
+      new WeakTypeTagImpl[T](rootMirror, new FixedMirrorTypeCreator(rootMirror, tpe))
+    def apply[T](tpe: => Type, precomputedKey: String): WeakTypeTag[T] =
+      new WeakTypeTagImpl[T](rootMirror, new FixedMirrorTypeCreator(rootMirror, tpe)) { override def key = precomputedKey }
 
     def unapply[T](ttag: WeakTypeTag[T]): Option[Type] = Some(ttag.tpe)
   }
@@ -294,10 +294,10 @@ trait TypeTags { self: Universe =>
       new TypeTagImpl[T](mirror1.asInstanceOf[Mirror], tpec1)
     def apply[T](mirror1: scala.reflect.api.Mirror[self.type], tpec1: TypeCreator, precomputedKey: String): TypeTag[T] =
       new TypeTagImpl[T](mirror1.asInstanceOf[Mirror], tpec1) { override def key = precomputedKey }
-    def apply[T](tpe: Type): TypeTag[T] =
-      new TypeTagImpl[T](rootMirror, FixedMirrorTypeCreator(rootMirror, tpe))
-    def apply[T](tpe: Type, precomputedKey: String): TypeTag[T] =
-      new TypeTagImpl[T](rootMirror, FixedMirrorTypeCreator(rootMirror, tpe)) { override def key = precomputedKey }
+    def apply[T](tpe: => Type): TypeTag[T] =
+      new TypeTagImpl[T](rootMirror, new FixedMirrorTypeCreator(rootMirror, tpe))
+    def apply[T](tpe: => Type, precomputedKey: String): TypeTag[T] =
+      new TypeTagImpl[T](rootMirror, new FixedMirrorTypeCreator(rootMirror, tpe)) { override def key = precomputedKey }
 
     def unapply[T](ttag: TypeTag[T]): Option[Type] = Some(ttag.tpe)
   }
