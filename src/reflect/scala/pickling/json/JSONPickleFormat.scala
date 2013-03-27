@@ -123,6 +123,7 @@ package json {
       if (this.areHintsPinned) {
         nested.areHintsPinned = true
         nested.hints = hints
+        nested.lastReadTag = lastReadTag
       }
       nested
     }
