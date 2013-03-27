@@ -41,6 +41,7 @@ object Test extends App {
         builder.hintKnownSize(14)
         builder.beginEntry(p)
         builder.putField("id", b => {
+          b.hintTag(typeTag[Int])
           b.hintStaticallyElidedType()
           intp.pickle(p.id, b)
         })
