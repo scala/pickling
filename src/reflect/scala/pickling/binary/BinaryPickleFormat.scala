@@ -16,6 +16,8 @@ package binary {
   }
 
   class BinaryPickleBuilder(format: BinaryPickleFormat) extends PickleBuilder with PickleTools {
+    import format._
+
     private var byteBuffer: ByteBuffer = _
     private var pos = 0
 
@@ -35,7 +37,7 @@ package binary {
       mkByteBuffer(hints.knownSize)
 
       if (picklee == null) {
-        pos = byteBuffer.encodeByteTo(pos, format.NULL_TAG)
+        pos = byteBuffer.encodeByteTo(pos, NULL_TAG)
       } else {
         def writeTpe() = {
           val tpe = hints.tag.tpe
@@ -45,21 +47,21 @@ package binary {
         }
 
         hints.tag.key match {
-          case "scala.Null" =>
+          case KEY_NULL =>
             if (!hints.isElidedType) writeTpe()
-            pos = byteBuffer.encodeByteTo(pos, format.NULL_TAG)
-          case "scala.Int" =>
+            pos = byteBuffer.encodeByteTo(pos, NULL_TAG)
+          case KEY_INT =>
             if (!hints.isElidedType) writeTpe()
             pos = byteBuffer.encodeIntTo(pos, picklee.asInstanceOf[Int])
-          case "scala.Boolean" =>
+          case KEY_BOOLEAN =>
             if (!hints.isElidedType) writeTpe()
             pos = byteBuffer.encodeBooleanTo(pos, picklee.asInstanceOf[Boolean])
-          case "scala.String" | "java.lang.String" =>
+          case KEY_SCALA_STRING | KEY_JAVA_STRING =>
             if (!hints.isElidedType) writeTpe()
             pos = byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])
           case _ =>
             if (!hints.isElidedType) writeTpe()
-            else pos = byteBuffer.encodeByteTo(pos, format.ELIDED_TAG)
+            else pos = byteBuffer.encodeByteTo(pos, ELIDED_TAG)
         }
       }
 
@@ -92,30 +94,32 @@ package binary {
   }
 
   class BinaryPickleReader(arr: Array[Byte], val mirror: Mirror, format: BinaryPickleFormat) extends PickleReader with PickleTools {
+    import format._
+
     private val byteBuffer: ByteBuffer = new ByteArray(arr)
     private var pos = 0
     private var lastTagRead: TypeTag[_] = null
 
     def beginEntry(): TypeTag[_] = withHints { hints =>
       lastTagRead = {
-        if (hints.tag.key == "scala.String" || hints.tag.key == "java.lang.String") {
+        if (hints.tag.key == KEY_SCALA_STRING || hints.tag.key == KEY_JAVA_STRING) {
           val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
           lookahead match {
-            case format.NULL_TAG =>
+            case NULL_TAG =>
               pos = newpos
               TypeTag.Null
             case _ =>
               hints.tag
           }
-        } else if (hints.isElidedType && format.primitives.contains(hints.tag.key)) {
+        } else if (hints.isElidedType && primitives.contains(hints.tag.key)) {
           hints.tag
         } else {
           val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
           lookahead match {
-            case format.NULL_TAG =>
+            case NULL_TAG =>
               pos = newpos
               TypeTag.Null
-            case format.ELIDED_TAG =>
+            case ELIDED_TAG =>
               pos = newpos
               hints.tag
             case _ =>
@@ -128,15 +132,15 @@ package binary {
       lastTagRead
     }
 
-    def atPrimitive: Boolean = format.primitives.contains(lastTagRead.key)
+    def atPrimitive: Boolean = primitives.contains(lastTagRead.key)
 
     def readPrimitive(): Any = {
       val (res, newpos) = {
         lastTagRead.key match {
-          case "scala.Null" => (null, pos)
-          case "scala.Int" => byteBuffer.decodeIntFrom(pos)
-          case "scala.Boolean" => byteBuffer.decodeIntFrom(pos)
-          case "scala.String" | "java.lang.String" => byteBuffer.decodeIntFrom(pos)
+          case KEY_NULL => (null, pos)
+          case KEY_INT => byteBuffer.decodeIntFrom(pos)
+          case KEY_BOOLEAN => byteBuffer.decodeBooleanFrom(pos)
+          case KEY_SCALA_STRING | KEY_JAVA_STRING => byteBuffer.decodeStringFrom(pos)
         }
       }
       pos = newpos
@@ -166,7 +170,13 @@ package binary {
   class BinaryPickleFormat extends PickleFormat {
     val ELIDED_TAG: Byte = -1
     val NULL_TAG: Byte = -2
-    val primitives = Set("scala.Null", "scala.Int", "scala.Boolean", "scala.String", "java.lang.String")
+
+    val KEY_NULL = typeTag[Null].key
+    val KEY_INT = typeTag[Int].key
+    val KEY_BOOLEAN = typeTag[Boolean].key
+    val KEY_SCALA_STRING = typeTag[scala.Predef.String].key
+    val KEY_JAVA_STRING = typeTag[java.lang.String].key
+    val primitives = Set(KEY_NULL, KEY_INT, KEY_BOOLEAN, KEY_SCALA_STRING, KEY_JAVA_STRING)
 
     type PickleType = BinaryPickle
     def createBuilder() = new BinaryPickleBuilder(this)
