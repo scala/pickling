@@ -11,10 +11,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
       builder.endEntry()
     }
     def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
-      reader.beginEntry()
-      val result = reader.readPrimitive()
-      reader.endEntry()
-      result
+      reader.readPrimitive()
     }
   }
 
@@ -37,6 +34,7 @@ trait ArrayPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
   def mkType(eltpe: c.Type) = appliedType(ArrayClass.toTypeConstructor, List(eltpe))
   def mkArray(picklee: c.Tree) = q"$picklee"
   def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ArrayBuffer[$eltpe]()"
+  def mkResult(buffer: c.Tree) = q"$buffer.toArray"
 }
 
 trait ListPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
@@ -46,12 +44,14 @@ trait ListPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
   def mkType(eltpe: c.Type) = appliedType(ConsClass.toTypeConstructor, List(eltpe))
   def mkArray(picklee: c.Tree) = q"$picklee.toArray"
   def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ListBuffer[$eltpe]()"
+  def mkResult(buffer: c.Tree) = q"$buffer.toList"
 }
 
 trait CollectionPicklerUnpicklerMacro extends Macro {
   def mkType(eltpe: c.Type): c.Type
   def mkArray(picklee: c.Tree): c.Tree
   def mkBuffer(eltpe: c.Type): c.Tree
+  def mkResult(buffer: c.Tree): c.Tree
 
   def impl[T: c.WeakTypeTag](format: c.Tree): c.Tree = {
     import c.universe._
@@ -104,7 +104,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
             }
             def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
               if (!$isPrimitive) throw new PicklingException(s"implementation restriction: non-primitive collections aren't supported")
-              var builder = ${mkBuffer(eltpe)}
+              var buffer = ${mkBuffer(eltpe)}
               val arrReader = reader.beginCollection()
               // TODO: this needs to be adjusted to work with non-primitive types
               arrReader.hintStaticallyElidedType()
@@ -113,12 +113,14 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
               val length = arrReader.readLength()
               var i = 0
               while (i < length) {
-                builder += elunpickler.unpickle(eltag, arrReader.readElement()).asInstanceOf[$eltpe]
+                arrReader.beginEntry()
+                buffer += elunpickler.unpickle(eltag, arrReader.readElement()).asInstanceOf[$eltpe]
+                arrReader.endEntry()
                 i += 1
               }
               arrReader.unpinHints()
               arrReader.endCollection()
-              builder.result
+              ${mkResult(q"buffer")}
             }
           }
         """
