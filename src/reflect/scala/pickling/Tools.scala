@@ -62,7 +62,8 @@ class Tools[U <: Universe with Singleton](val u: U) {
     // TODO: on a more elaborate note
     // given `class C; class D[T] extends C` we of course cannot return the infinite number of `D[X]` types
     // but what we can probably do is to additionally look up custom picklers/unpicklers of for specific `D[X]`
-    val baseSym = tpe.typeSymbol
+    val baseSym = tpe.typeSymbol.asType
+    val baseTargs = tpe match { case TypeRef(_, _, args) => args; case _ => Nil }
 
     def sourcepathScan(): List[Symbol] = {
       val g = u.asInstanceOf[scala.tools.nsc.Global]
@@ -125,13 +126,14 @@ class Tools[U <: Universe with Singleton](val u: U) {
       // NOTE: need to order the list: children first, parents last
       // otherwise pattern match which uses this list might work funnily
       val subSyms = unsorted.distinct.sortWith((c1, c2) => c1.asClass.baseClasses.contains(c2))
-      val subTpes = subSyms.map(subSym => {
-        val tpeWithMaybeTparams = subSym.asType.toType
-        val tparams = tpeWithMaybeTparams match {
-          case TypeRef(_, _, targs) => targs.map(_.typeSymbol)
-          case _ => Nil
-        }
-        existentialAbstraction(tparams, tpeWithMaybeTparams)
+      val subTpes = subSyms.map(_.asClass).map(subSym => {
+        def tparamNames(sym: TypeSymbol) = sym.typeParams.map(_.name.toString)
+        val tparamsMatch = subSym.typeParams.nonEmpty && tparamNames(baseSym) == tparamNames(subSym)
+        val targsAreConcrete = baseTargs.nonEmpty && baseTargs.forall(_.typeSymbol.isClass)
+        // NOTE: this is an extremely naïve heuristics
+        // see http://groups.google.com/group/scala-internals/browse_thread/thread/3a43a6364b97b521 for more information
+        if (tparamsMatch && targsAreConcrete) appliedType(subSym.toTypeConstructor, baseTargs)
+        else existentialAbstraction(subSym.typeParams, subSym.toType)
       })
       subTpes
     }
