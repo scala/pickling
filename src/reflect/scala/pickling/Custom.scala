@@ -8,12 +8,12 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
   class PrimitivePicklerUnpickler[T: TypeTag](implicit val format: PickleFormat) extends Pickler[T] with Unpickler[T] {
     def pickle(picklee: T, builder: PickleBuilder): Unit = {
       builder.beginEntry(picklee)
-      builder.endEntry()
+      // builder.endEntry()
     }
     def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
       reader.beginEntry()
       val result = reader.readPrimitive()
-      reader.endEntry()
+      // reader.endEntry()
       result
     }
   }
@@ -68,6 +68,7 @@ trait ListPicklerUnpicklerMacro extends Macro {
               // 2) val elpicker needs to be turned into def elpickler(el: $eltpe) which would do dispatch
               // 3) hint pinning would need to work with potentially nested picklings of elements
               // ============
+              builder.hintKnownSize(picklee.length * 4 + 1000)
               builder.hintStaticallyElidedType()
               builder.hintTag(eltag)
               builder.pinHints()
