@@ -118,6 +118,14 @@ package json {
       typeTag[String].key -> (() => datum.asInstanceOf[String]),
       typeTag[java.lang.String].key -> (() => datum.asInstanceOf[String])
     )
+    private def mkNestedReader(datum: Any) = {
+      val nested = new JSONPickleReader(datum, mirror, format)
+      if (this.areHintsPinned) {
+        nested.areHintsPinned = true
+        nested.hints = hints
+      }
+      nested
+    }
     def beginEntry(): TypeTag[_] = withHints { hints =>
       lastReadTag = {
         if (datum == null) typeTag[Null]
@@ -134,14 +142,14 @@ package json {
     def atPrimitive: Boolean = primitives.contains(lastReadTag.key)
     def readPrimitive(): Any = {
       datum match {
-        case JSONObject(fields) => new JSONPickleReader(fields("value"), mirror, format).primitives(lastReadTag.key)()
+        case JSONObject(fields) => mkNestedReader(fields("value")).primitives(lastReadTag.key)()
         case _ => primitives(lastReadTag.key)()
       }
     }
     def atObject: Boolean = datum.isInstanceOf[JSONObject]
     def readField(name: String): JSONPickleReader = {
       datum match {
-        case JSONObject(fields) => new JSONPickleReader(fields(name), mirror, format)
+        case JSONObject(fields) => mkNestedReader(fields(name))
       }
     }
     def endEntry(): Unit = {}
@@ -155,7 +163,7 @@ package json {
     def readElement(): PickleReader = {
       val reader = {
         datum match {
-          case JSONArray(list) => new JSONPickleReader(list(i), mirror, format)
+          case JSONArray(list) => mkNestedReader(list(i))
         }
       }
       i += 1

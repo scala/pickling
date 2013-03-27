@@ -113,7 +113,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
               val length = arrReader.readLength()
               var i = 0
               while (i < length) {
-                builder += elunpickler.unpickle(eltag, arrReader).asInstanceOf[$eltpe]
+                builder += elunpickler.unpickle(eltag, arrReader.readElement()).asInstanceOf[$eltpe]
                 i += 1
               }
               arrReader.unpinHints()
