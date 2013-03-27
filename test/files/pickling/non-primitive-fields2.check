@@ -3,8 +3,8 @@
   "nationality": "German",
   "weird": true,
   "mother": {
-  "name": "Gudrun",
-  "age": 62
-}
+    "name": "Gudrun",
+    "age": 62
+  }
 }
 Philipp(German,true,Person(Gudrun,62))

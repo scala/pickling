@@ -33,47 +33,67 @@ package json {
 
   class JSONPickleBuilder(format: JSONPickleFormat) extends PickleBuilder with PickleTools {
     private val buf = new StringBuilder()
+    private var nindent = 0
+    private def indent() = nindent += 1
+    private def unindent() = nindent -= 1
+    private var pendingIndent = false
+    private def append(s: String) = {
+      val sindent = if (pendingIndent) "  " * nindent else ""
+      buf ++= (sindent + s)
+      pendingIndent = false
+    }
+    private def appendLine(s: String = "") = {
+      append(s + "\n")
+      pendingIndent = true
+    }
     private val tags = new Stack[TypeTag[_]]()
     private val primitives = Map[String, Any => Unit](
-      typeTag[Null].key -> ((picklee: Any) => buf ++= "null"),
-      typeTag[Int].key -> ((picklee: Any) => buf ++= picklee.toString),
-      typeTag[Boolean].key -> ((picklee: Any) => buf ++= picklee.toString),
-      typeTag[String].key -> ((picklee: Any) => buf ++= "\"" + JSONFormat.quoteString(picklee.toString) + "\""),
-      typeTag[java.lang.String].key -> ((picklee: Any) => buf ++= "\"" + JSONFormat.quoteString(picklee.toString) + "\"")
+      typeTag[Null].key -> ((picklee: Any) => append("null")),
+      typeTag[Int].key -> ((picklee: Any) => append(picklee.toString)),
+      typeTag[Boolean].key -> ((picklee: Any) => append(picklee.toString)),
+      typeTag[String].key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\"")),
+      typeTag[java.lang.String].key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\""))
     )
     def beginEntry(picklee: Any): this.type = withHints { hints =>
+      indent()
       tags.push(hints.tag)
       if (primitives.contains(hints.tag.key)) {
         // assert(hints.isElidedType)
         primitives(hints.tag.key)(picklee)
       } else {
-        buf ++= "{\n"
-        if (!hints.isElidedType) buf ++= "  \"tpe\": \"" + typeToString(hints.tag.tpe) + "\""
+        appendLine("{")
+        if (!hints.isElidedType) append("\"tpe\": \"" + typeToString(hints.tag.tpe) + "\"")
       }
       this
     }
     def putField(name: String, pickler: this.type => Unit): this.type = {
       assert(!primitives.contains(tags.top.key), tags.top)
-      if (buf.toString.trim.last != '{') buf ++= ",\n" // TODO: very inefficient, but here we don't care much about performance
-      buf ++= "  \"" + name + "\": "
+      if (buf.toString.trim.last != '{') appendLine(",") // TODO: very inefficient, but here we don't care much about performance
+      append("\"" + name + "\": ")
       pickler(this)
       this
     }
     def endEntry(): Unit = {
+      unindent()
       if (primitives.contains(tags.pop().key)) () // do nothing
-      else buf ++= "\n}"
+      else { appendLine(); append("}") }
     }
     def beginCollection(length: Int): this.type = {
       putField("elems", b => ())
-      buf ++= "["
+      appendLine("[")
+      // indent()
       this
     }
     def putElement(pickler: this.type => Unit): this.type = {
-      if (buf.toString.trim.last != '[') buf ++= ", " // TODO: very inefficient, but here we don't care much about performance
+      if (buf.toString.trim.last != '[') appendLine(",") // TODO: very inefficient, but here we don't care much about performance
       pickler(this)
       this
     }
-    def endCollection(): Unit = buf ++= "]"
+    def endCollection(): Unit = {
+      appendLine()
+      append("]")
+      // unindent()
+    }
     def result(): JSONPickle = {
       assert(tags.isEmpty, tags)
       JSONPickle(buf.toString)

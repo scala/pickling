@@ -1,8 +1,8 @@
 {
   "tpe": "Philipp",
   "mother": {
-  "name": "Gudrun",
-  "age": 62
-}
+    "name": "Gudrun",
+    "age": 62
+  }
 }
 Philipp(Person(Gudrun,62))

@@ -1,12 +1,12 @@
 {
   "tpe": "Philipp",
   "mother": {
-  "name": "Gudrun",
-  "age": 62
-},
+    "name": "Gudrun",
+    "age": 62
+  },
   "father": {
-  "name": "Rudolf",
-  "age": 70
-}
+    "name": "Rudolf",
+    "age": 70
+  }
 }
 Philipp(Person(Gudrun,62),Person(Rudolf,70))
