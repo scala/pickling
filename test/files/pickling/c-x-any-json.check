@@ -1,0 +1,10 @@
+generating runtime pickler for class java.lang.Integer
+JSONPickle({
+  "tpe": "C",
+  "x": {
+    "tpe": "scala.Int",
+    "value": 2
+  }
+})
+generating runtime unpickler for Int
+C(2)
