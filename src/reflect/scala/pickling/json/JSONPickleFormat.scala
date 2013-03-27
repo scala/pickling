@@ -58,8 +58,17 @@ package json {
       indent()
       tags.push(hints.tag)
       if (primitives.contains(hints.tag.key)) {
-        // assert(hints.isElidedType)
-        primitives(hints.tag.key)(picklee)
+        if (hints.isElidedType) primitives(hints.tag.key)(picklee)
+        else {
+          appendLine("{")
+          appendLine("\"tpe\": \"" + typeToString(hints.tag.tpe) + "\",")
+          append("\"value\": ")
+          primitives(hints.tag.key)(picklee)
+          appendLine("")
+          unindent()
+          append("}")
+          indent()
+        }
       } else {
         appendLine("{")
         if (!hints.isElidedType) append("\"tpe\": \"" + typeToString(hints.tag.tpe) + "\"")
@@ -122,8 +131,13 @@ package json {
       }
       lastReadTag
     }
-    def atPrimitive: Boolean = !atObject
-    def readPrimitive(): Any = primitives(lastReadTag.key)()
+    def atPrimitive: Boolean = primitives.contains(lastReadTag.key)
+    def readPrimitive(): Any = {
+      datum match {
+        case JSONObject(fields) => new JSONPickleReader(fields("value"), mirror, format).primitives(lastReadTag.key)()
+        case _ => primitives(lastReadTag.key)()
+      }
+    }
     def atObject: Boolean = datum.isInstanceOf[JSONObject]
     def readField(name: String): JSONPickleReader = {
       datum match {

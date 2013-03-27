@@ -1,0 +1,4 @@
+generating runtime pickler for class java.lang.Integer
+BinaryPickle([0,0,0,1,67,0,0,0,9,115,99,97,108,97,46,73,110,116,0,0,0,2])
+generating runtime unpickler for Int
+C(2)
