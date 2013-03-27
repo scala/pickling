@@ -26,7 +26,15 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) {
   val clazz = if (preclazz != null) Runtime.toUnboxed.getOrElse(preclazz, preclazz) else null
   val mirror = runtimeMirror(classLoader)
   val sym = if (clazz != null) mirror.classSymbol(clazz) else NullClass
-  val tpe = sym.toType
+  val tpe = {
+    // TODO: fix duplication w.r.t Tools.scala
+    val tpeWithMaybeTparams = sym.asType.toType
+    val tparams = tpeWithMaybeTparams match {
+      case TypeRef(_, _, targs) => targs.map(_.typeSymbol)
+      case _ => Nil
+    }
+    existentialAbstraction(tparams, tpeWithMaybeTparams)
+  }
   val tag = TypeTag(tpe)
   debug("PicklerRuntime: tpe = " + tpe)
   val irs = new IRs[ru.type](ru)
