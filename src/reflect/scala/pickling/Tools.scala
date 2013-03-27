@@ -264,16 +264,17 @@ abstract class Macro extends scala.reflect.macros.Macro {
   }
 }
 
+case class Hints(
+  tag: TypeTag[_] = null,
+  knownSize: Int = -1,
+  isStaticallyElidedType: Boolean = false,
+  isDynamicallyElidedType: Boolean = false) {
+  def isElidedType = isStaticallyElidedType || isDynamicallyElidedType
+}
+
 trait PickleTools {
   var hints = new Hints()
-  private var areHintsPinned = false
-  case class Hints(
-    tag: TypeTag[_] = null,
-    knownSize: Int = -1,
-    isStaticallyElidedType: Boolean = false,
-    isDynamicallyElidedType: Boolean = false) {
-    def isElidedType = isStaticallyElidedType || isDynamicallyElidedType
-  }
+  var areHintsPinned = false
 
   def hintTag(tag: TypeTag[_]): this.type = { hints = hints.copy(tag = tag); this }
   def hintKnownSize(knownSize: Int): this.type = { hints = hints.copy(knownSize = knownSize); this }
