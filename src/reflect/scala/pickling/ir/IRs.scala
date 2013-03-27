@@ -31,12 +31,16 @@ class IRs[U <: Universe with Singleton](val uni: U) {
 
   // TODO: minimal versus verbose PickleFormat. i.e. someone might want all concrete inherited fields in their pickle
   private def fields(tp: Type): Q = {
-    val ctor = tp.declaration(nme.CONSTRUCTOR)
-    val ctorParams = if (ctor != NoSymbol) ctor.asTerm.alternatives.head.asMethod.paramss.flatten.map(_.asTerm) else Nil
+    val ctor = tp.declaration(nme.CONSTRUCTOR) match {
+      case overloaded: TermSymbol => overloaded.alternatives.head.asMethod // NOTE: primary ctor is always the first in the list
+      case primaryCtor: MethodSymbol => primaryCtor
+      case NoSymbol => NoSymbol
+    }
+    val ctorParams = if (ctor != NoSymbol) ctor.asMethod.paramss.flatten.map(_.asTerm) else Nil
     val allAccessors = tp.declarations.collect{ case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
     val (paramAccessors, otherAccessors) = allAccessors.partition(_.isParamAccessor)
     def mkFieldIR(sym: TermSymbol, param: Option[TermSymbol], accessor: Option[MethodSymbol]) = {
-      val symTp = accessor.getOrElse(sym).typeSignatureIn(tp).typeSymbol.asType.toType
+      val symTp = accessor.getOrElse(sym).typeSignatureIn(tp) match { case NullaryMethodType(tpe) => tpe; case tpe => tpe }
       FieldIR(sym.name.toString.trim, symTp, param, accessor)
     }
     val paramFields = ctorParams.map(sym => mkFieldIR(sym, Some(sym), paramAccessors.find(_.name == sym.name)))
