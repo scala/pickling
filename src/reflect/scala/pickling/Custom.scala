@@ -8,12 +8,12 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
   class PrimitivePicklerUnpickler[T: TypeTag](implicit val format: PickleFormat) extends Pickler[T] with Unpickler[T] {
     def pickle(picklee: T, builder: PickleBuilder): Unit = {
       builder.beginEntry(picklee)
-      // builder.endEntry()
+      builder.endEntry()
     }
     def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
       reader.beginEntry()
       val result = reader.readPrimitive()
-      // reader.endEntry()
+      reader.endEntry()
       result
     }
   }
@@ -23,30 +23,40 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
   implicit def booleanPicklerUnpickler(implicit format: PickleFormat): Pickler[Boolean] with Unpickler[Boolean] = new PrimitivePicklerUnpickler[Boolean]
   implicit def nullPicklerUnpickler(implicit format: PickleFormat): Pickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]
   implicit def genArrayPickler[T](implicit format: PickleFormat): Pickler[Array[T]] with Unpickler[Array[T]] = macro ArrayPicklerUnpicklerMacro.impl[T]
+  // TODO: can't make this work, because then genArrayPickler and getListPickler clash
+  // implicit def genListPickler[T, Coll[_] <: List[_]](implicit format: PickleFormat): Pickler[Coll[T]] with Unpickler[Coll[T]] = macro ListPicklerUnpicklerMacro.impl[T]
   implicit def genListPickler[T](implicit format: PickleFormat): Pickler[::[T]] with Unpickler[::[T]] = macro ListPicklerUnpicklerMacro.impl[T]
   // TODO: if you uncomment this one, it will shadow picklers/unpicklers for Int and String. why?!
   // TODO: due to the inability to implement module pickling/unpickling in a separate macro, I moved the logic into genPickler/genUnpickler
   // implicit def modulePicklerUnpickler[T <: Singleton](implicit format: PickleFormat): Pickler[T] with Unpickler[T] = macro ModulePicklerUnpicklerMacro.impl[T]
 }
 
-trait ArrayPicklerUnpicklerMacro extends Macro {
-  def impl[T: c.WeakTypeTag](format: c.Tree): c.Tree = ???
+trait ArrayPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  def mkType(eltpe: c.Type) = appliedType(ArrayClass.toTypeConstructor, List(eltpe))
+  def mkArray(picklee: c.Tree) = q"$picklee"
+  def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ArrayBuffer[$eltpe]()"
 }
 
-trait ListPicklerUnpicklerMacro extends Macro {
-  // TODO: can't make this work, because then genArrayPickler and getListPickler clash
-  // def impl[T, Coll[_] <: List[_]](format: c.Tree): c.Tree = {
+trait ListPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val ConsClass = c.mirror.staticClass("scala.collection.immutable.$colon$colon")
+  def mkType(eltpe: c.Type) = appliedType(ConsClass.toTypeConstructor, List(eltpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ListBuffer[$eltpe]()"
+}
+
+trait CollectionPicklerUnpicklerMacro extends Macro {
+  def mkType(eltpe: c.Type): c.Type
+  def mkArray(picklee: c.Tree): c.Tree
+  def mkBuffer(eltpe: c.Type): c.Tree
+
   def impl[T: c.WeakTypeTag](format: c.Tree): c.Tree = {
     import c.universe._
-    // val Apply(TypeApply(_, teltpe :: thktpe :: Nil), _) = c.macroApplication
-    // val eltpe = teltpe.tpe
-    // val hktpe = thktpe.tpe
-    // val tpe = appliedType(hktpe, List(eltpe))
-    val tpe = weakTypeOf[::[T]]
+    val tpe = mkType(weakTypeOf[T])
     val eltpe = weakTypeOf[T]
-    val elpickler = c.typeCheck(q"implicitly[Pickler[$eltpe]]")
-    val elunpickler = c.typeCheck(q"implicitly[Unpickler[$eltpe]]")
-    val eltag = c.typeCheck(q"implicitly[scala.reflect.runtime.universe.TypeTag[$eltpe]]")
     val isPrimitive = eltpe.typeSymbol.asClass.isPrimitive
     val picklerUnpickler = {
       c.topLevelRef(syntheticPicklerUnpicklerQualifiedName(tpe)) orElse c.introduceTopLevel(syntheticPackageName, {
@@ -55,29 +65,36 @@ trait ListPicklerUnpicklerMacro extends Macro {
             import scala.reflect.runtime.universe._
             import scala.pickling._
             import scala.pickling.`package`.PickleOps
-            import scala.collection.mutable.ListBuffer
             implicit val format = new ${format.tpe}()
-            implicit val elpickler: Pickler[$eltpe] = $elpickler
-            implicit val elunpickler: Unpickler[$eltpe] = $elunpickler
-            implicit val eltag: scala.reflect.runtime.universe.TypeTag[$eltpe] = $eltag
+            implicit val elpickler: Pickler[$eltpe] = {
+              val elpickler = "bam!"
+              implicitly[Pickler[$eltpe]]
+            }
+            implicit val elunpickler: Unpickler[$eltpe] = {
+              val elunpickler = "bam!"
+              implicitly[Unpickler[$eltpe]]
+            }
+            implicit val eltag: scala.reflect.runtime.universe.TypeTag[$eltpe] = {
+              val eltag = "bam!"
+              implicitly[scala.reflect.runtime.universe.TypeTag[$eltpe]]
+            }
             def pickle(picklee: $tpe, builder: PickleBuilder): Unit = {
-              if (!$isPrimitive) throw new PicklingException(s"implementation restriction: non-primitive lists aren't supported")
+              if (!$isPrimitive) throw new PicklingException(s"implementation restriction: non-primitive collections aren't supported")
               builder.beginEntry()
               // TODO: this needs to be adjusted to work with non-primitive types
               // 1) elisions might need to be set on per-element basis
               // 2) val elpicker needs to be turned into def elpickler(el: $eltpe) which would do dispatch
               // 3) hint pinning would need to work with potentially nested picklings of elements
               // ============
-              builder.hintKnownSize(picklee.length * 4 + 1000)
               builder.hintStaticallyElidedType()
               builder.hintTag(eltag)
               builder.pinHints()
               // ============
-              val length = picklee.length
-              val arr = picklee.toArray
-              builder.beginCollection(length)
+              val arr = ${mkArray(q"picklee")}
+              val length = arr.length
+              builder.beginCollection(arr.length)
               var i = 0
-              while (i < length) {
+              while (i < arr.length) {
                 // TODO: change putElement to get rid of the lambda
                 // builder.putElement(b => elpickler.pickle(arr(i), b))
                 elpickler.pickle(arr(i), builder)
@@ -88,8 +105,8 @@ trait ListPicklerUnpicklerMacro extends Macro {
               builder.endEntry()
             }
             def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
-              if (!$isPrimitive) throw new PicklingException(s"implementation restriction: non-primitive lists aren't supported")
-              var builder = ListBuffer[$eltpe]()
+              if (!$isPrimitive) throw new PicklingException(s"implementation restriction: non-primitive collections aren't supported")
+              var builder = ${mkBuffer(eltpe)}
               val arrReader = reader.beginCollection()
               // TODO: this needs to be adjusted to work with non-primitive types
               arrReader.hintStaticallyElidedType()
@@ -104,35 +121,6 @@ trait ListPicklerUnpicklerMacro extends Macro {
               arrReader.unpinHints()
               arrReader.endCollection()
               builder.result
-            }
-          }
-        """
-      })
-    }
-    q"new $picklerUnpickler"
-  }
-}
-
-trait ModulePicklerUnpicklerMacro extends Macro {
-  def impl[T: c.WeakTypeTag](format: c.Tree): c.Tree = {
-    import c.universe._
-    val tpe = weakTypeOf[T]
-    val module = tpe.typeSymbol.asClass.module
-    if (module == NoSymbol) c.diverge()
-    val picklerUnpickler = {
-      c.topLevelRef(syntheticPicklerUnpicklerQualifiedName(tpe)) orElse c.introduceTopLevel(syntheticPackageName, {
-        q"""
-          class ${syntheticPicklerUnpicklerName(tpe)} extends scala.pickling.Pickler[$tpe] with scala.pickling.Unpickler[$tpe] {
-            import scala.reflect.runtime.universe._
-            import scala.pickling._
-            import scala.pickling.`package`.PickleOps
-            implicit val format = new ${format.tpe}()
-            def pickle(picklee: $tpe, builder: PickleBuilder): Unit = {
-              builder.beginEntry(picklee)
-              builder.endEntry()
-            }
-            def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
-              $module
             }
           }
         """
