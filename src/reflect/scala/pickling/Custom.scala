@@ -95,9 +95,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
               builder.beginCollection(arr.length)
               var i = 0
               while (i < arr.length) {
-                // TODO: change putElement to get rid of the lambda
-                // builder.putElement(b => elpickler.pickle(arr(i), b))
-                elpickler.pickle(arr(i), builder)
+                builder.putElement(b => elpickler.pickle(arr(i), b))
                 i += 1
               }
               builder.unpinHints()
