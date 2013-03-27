@@ -3,10 +3,10 @@ JSONPickle({
   "tpe": "Person",
   "name": "Eugene",
   "hobby": {
-  "name": "hacking",
-  "notes": "mostly Scala",
-  "attitude": "loving it"
-}
+    "name": "hacking",
+    "notes": "mostly Scala",
+    "attitude": "loving it"
+  }
 })
 generating runtime unpickler for Person
 Person(name = Eugene, hobby = Hobby(name = hacking, notes = mostly Scala, attitude = loving it))

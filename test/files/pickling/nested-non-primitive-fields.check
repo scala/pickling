@@ -1,11 +1,11 @@
 {
   "tpe": "Philipp",
   "mother": {
-  "name": "gudrun",
-  "age": 62,
-  "job": {
-  "title": "Teacher"
-}
-}
+    "name": "gudrun",
+    "age": 62,
+    "job": {
+      "title": "Teacher"
+    }
+  }
 }
 Philipp(Person(gudrun,62,Job(Teacher)))
