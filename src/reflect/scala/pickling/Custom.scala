@@ -73,12 +73,14 @@ trait ListPicklerUnpicklerMacro extends Macro {
               builder.hintTag(eltag)
               builder.pinHints()
               // ============
-              builder.beginCollection(picklee.length)
+              val length = picklee.length
+              val arr = picklee.toArray
+              builder.beginCollection(length)
               var i = 0
-              while (i < picklee.length) {
+              while (i < length) {
                 // TODO: change putElement to get rid of the lambda
-                // builder.putElement(b => elpickler.pickle(picklee(i), b))
-                elpickler.pickle(picklee(i), builder)
+                // builder.putElement(b => elpickler.pickle(arr(i), b))
+                elpickler.pickle(arr(i), builder)
                 i += 1
               }
               builder.unpinHints()
