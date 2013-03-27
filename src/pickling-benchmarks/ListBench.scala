@@ -5,7 +5,7 @@ object ListBench extends testing.Benchmark {
   val lst = (1 to 100000).toList
 
   override def run() {
-    val pickle = (1 to 100000).toList.pickle
+    val pickle = lst.pickle
     pickle.unpickle[List[Int]]
   }
 }
