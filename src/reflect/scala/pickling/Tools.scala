@@ -80,7 +80,36 @@ class Tools[U <: Universe with Singleton](val u: U) {
       subclasses.toList.asInstanceOf[List[u.Symbol]]
     }
 
+    def sealedHierarchyScan(): List[Symbol] = {
+      var hierarchyIsSealed = true
+      def loop(sym: ClassSymbol): List[ClassSymbol] = {
+        sym +: {
+          val initialize = sym.typeSignature
+          if (sym.isFinal || sym.isModuleClass) {
+            Nil
+          } else if (sym.isSealed) {
+            val syms: List[ClassSymbol] =
+              sym.knownDirectSubclasses.toList.map {
+                case csym: ClassSymbol => csym
+                case msym: ModuleSymbol => msym.moduleClass.asClass
+                case osym => throw new Exception(s"unexpected known direct subclass: $osym <: $sym")
+              }.flatMap(loop)
+            syms
+          } else {
+            hierarchyIsSealed = false
+            Nil
+          }
+        }
+      }
+      if (baseSym.isClass) {
+        val sealedHierarchy = loop(baseSym.asClass)
+        if (hierarchyIsSealed) sealedHierarchy
+        else sourcepathAndClasspathScan()
+      } else sourcepathAndClasspathScan()
+    }
+
     def sourcepathAndClasspathScan(): List[Symbol] = {
+      println(s"full classpath scan: $tpe")
       lazy val classpathCache = Tools.subclassCache(mirror, {
         val cache = MutableMap[Symbol, MutableList[Symbol]]()
         def updateCache(bc: Symbol, c: Symbol) = {
@@ -121,7 +150,9 @@ class Tools[U <: Universe with Singleton](val u: U) {
       var unsorted =
         u match {
           case u: scala.tools.nsc.Global if u.currentRun.compiles(baseSym.asInstanceOf[u.Symbol]) => sourcepathScan()
-          case _ => sourcepathAndClasspathScan()
+          case _ =>
+            if (baseSym.isClass && baseSym.asClass.isSealed) sealedHierarchyScan()
+            else sourcepathAndClasspathScan()
         }
       // NOTE: need to order the list: children first, parents last
       // otherwise pattern match which uses this list might work funnily
