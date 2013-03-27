@@ -128,7 +128,8 @@ class Tools[U <: Universe with Singleton](val u: U) {
       val subSyms = unsorted.distinct.sortWith((c1, c2) => c1.asClass.baseClasses.contains(c2))
       val subTpes = subSyms.map(_.asClass).map(subSym => {
         def tparamNames(sym: TypeSymbol) = sym.typeParams.map(_.name.toString)
-        val tparamsMatch = subSym.typeParams.nonEmpty && tparamNames(baseSym) == tparamNames(subSym)
+        // val tparamsMatch = subSym.typeParams.nonEmpty && tparamNames(baseSym) == tparamNames(subSym)
+        val tparamsMatch = subSym.typeParams.nonEmpty && tparamNames(baseSym).length == tparamNames(subSym).length
         val targsAreConcrete = baseTargs.nonEmpty && baseTargs.forall(_.typeSymbol.isClass)
         // NOTE: this is an extremely naïve heuristics
         // see http://groups.google.com/group/scala-internals/browse_thread/thread/3a43a6364b97b521 for more information
