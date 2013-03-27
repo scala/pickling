@@ -1,4 +1,4 @@
 generating runtime pickler for class Generic
 [0,0,0,7,71,101,110,101,114,105,99,0,0,0,7,71,101,110,101,114,105,99,0,0,0,6,80,101,114,115,111,110,0,0,0,42]
-generating runtime unpickler for Generic[T]
+generating runtime unpickler for Generic
 unpickled: Generic(Generic(Person(42)))

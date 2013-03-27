@@ -274,21 +274,21 @@ trait TypeTags { self: Universe =>
    * @group TypeTags
    */
   object TypeTag {
-    val Byte:    TypeTag[scala.Byte]       = new PredefTypeTag[scala.Byte]       (ByteTpe,    _.TypeTag.Byte)     { override def key = "Byte" }
-    val Short:   TypeTag[scala.Short]      = new PredefTypeTag[scala.Short]      (ShortTpe,   _.TypeTag.Short)    { override def key = "Short" }
-    val Char:    TypeTag[scala.Char]       = new PredefTypeTag[scala.Char]       (CharTpe,    _.TypeTag.Char)     { override def key = "Char" }
-    val Int:     TypeTag[scala.Int]        = new PredefTypeTag[scala.Int]        (IntTpe,     _.TypeTag.Int)      { override def key = "Int" }
-    val Long:    TypeTag[scala.Long]       = new PredefTypeTag[scala.Long]       (LongTpe,    _.TypeTag.Long)     { override def key = "Long" }
-    val Float:   TypeTag[scala.Float]      = new PredefTypeTag[scala.Float]      (FloatTpe,   _.TypeTag.Float)    { override def key = "Float" }
-    val Double:  TypeTag[scala.Double]     = new PredefTypeTag[scala.Double]     (DoubleTpe,  _.TypeTag.Double)   { override def key = "Double" }
-    val Boolean: TypeTag[scala.Boolean]    = new PredefTypeTag[scala.Boolean]    (BooleanTpe, _.TypeTag.Boolean)  { override def key = "Boolean" }
-    val Unit:    TypeTag[scala.Unit]       = new PredefTypeTag[scala.Unit]       (UnitTpe,    _.TypeTag.Unit)     { override def key = "Unit" }
-    val Any:     TypeTag[scala.Any]        = new PredefTypeTag[scala.Any]        (AnyTpe,     _.TypeTag.Any)      { override def key = "Any" }
-    val AnyVal:  TypeTag[scala.AnyVal]     = new PredefTypeTag[scala.AnyVal]     (AnyValTpe,  _.TypeTag.AnyVal)   { override def key = "AnyVal" }
-    val AnyRef:  TypeTag[scala.AnyRef]     = new PredefTypeTag[scala.AnyRef]     (AnyRefTpe,  _.TypeTag.AnyRef)   { override def key = "AnyRef" }
-    val Object:  TypeTag[java.lang.Object] = new PredefTypeTag[java.lang.Object] (ObjectTpe,  _.TypeTag.Object)   { override def key = "Object" }
-    val Nothing: TypeTag[scala.Nothing]    = new PredefTypeTag[scala.Nothing]    (NothingTpe, _.TypeTag.Nothing)  { override def key = "Nothing" }
-    val Null:    TypeTag[scala.Null]       = new PredefTypeTag[scala.Null]       (NullTpe,    _.TypeTag.Null)     { override def key = "Null" }
+    val Byte:    TypeTag[scala.Byte]       = new PredefTypeTag[scala.Byte]       (ByteTpe,    _.TypeTag.Byte)     { override def key = "scala.Byte" }
+    val Short:   TypeTag[scala.Short]      = new PredefTypeTag[scala.Short]      (ShortTpe,   _.TypeTag.Short)    { override def key = "scala.Short" }
+    val Char:    TypeTag[scala.Char]       = new PredefTypeTag[scala.Char]       (CharTpe,    _.TypeTag.Char)     { override def key = "scala.Char" }
+    val Int:     TypeTag[scala.Int]        = new PredefTypeTag[scala.Int]        (IntTpe,     _.TypeTag.Int)      { override def key = "scala.Int" }
+    val Long:    TypeTag[scala.Long]       = new PredefTypeTag[scala.Long]       (LongTpe,    _.TypeTag.Long)     { override def key = "scala.Long" }
+    val Float:   TypeTag[scala.Float]      = new PredefTypeTag[scala.Float]      (FloatTpe,   _.TypeTag.Float)    { override def key = "scala.Float" }
+    val Double:  TypeTag[scala.Double]     = new PredefTypeTag[scala.Double]     (DoubleTpe,  _.TypeTag.Double)   { override def key = "scala.Double" }
+    val Boolean: TypeTag[scala.Boolean]    = new PredefTypeTag[scala.Boolean]    (BooleanTpe, _.TypeTag.Boolean)  { override def key = "scala.Boolean" }
+    val Unit:    TypeTag[scala.Unit]       = new PredefTypeTag[scala.Unit]       (UnitTpe,    _.TypeTag.Unit)     { override def key = "scala.Unit" }
+    val Any:     TypeTag[scala.Any]        = new PredefTypeTag[scala.Any]        (AnyTpe,     _.TypeTag.Any)      { override def key = "scala.Any" }
+    val AnyVal:  TypeTag[scala.AnyVal]     = new PredefTypeTag[scala.AnyVal]     (AnyValTpe,  _.TypeTag.AnyVal)   { override def key = "scala.AnyVal" }
+    val AnyRef:  TypeTag[scala.AnyRef]     = new PredefTypeTag[scala.AnyRef]     (AnyRefTpe,  _.TypeTag.AnyRef)   { override def key = "scala.AnyRef" }
+    val Object:  TypeTag[java.lang.Object] = new PredefTypeTag[java.lang.Object] (ObjectTpe,  _.TypeTag.Object)   { override def key = "java.lang.Object" }
+    val Nothing: TypeTag[scala.Nothing]    = new PredefTypeTag[scala.Nothing]    (NothingTpe, _.TypeTag.Nothing)  { override def key = "scala.Nothing" }
+    val Null:    TypeTag[scala.Null]       = new PredefTypeTag[scala.Null]       (NullTpe,    _.TypeTag.Null)     { override def key = "scala.Null" }
 
     def apply[T](mirror1: scala.reflect.api.Mirror[self.type], tpec1: TypeCreator): TypeTag[T] =
       new TypeTagImpl[T](mirror1.asInstanceOf[Mirror], tpec1)
