@@ -3,9 +3,57 @@ package scala.pickling
 import scala.reflect.runtime.universe._
 import language.experimental.macros
 import scala.collection.immutable.::
+import scala.collection.generic.CanBuildFrom
 
 trait LowPriorityPicklersUnpicklers {
-  implicit def genArrayPickler[T](implicit format: PickleFormat): Pickler[Array[T]] with Unpickler[Array[T]] = macro ArrayPicklerUnpicklerMacro.impl[T]
+
+  implicit def traversablePickler[T: TypeTag, Coll[_] <: Traversable[_]]
+    (implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T],
+              pf: PickleFormat, cbf: CanBuildFrom[Coll[_], T, Coll[T]]): Pickler[Coll[T]] with Unpickler[Coll[T]] =
+    new Pickler[Coll[T]] with Unpickler[Coll[T]] {
+
+    val format: PickleFormat = pf
+    val elemTag  = typeTag[T]
+
+    def pickle(coll: Coll[T], builder: PickleBuilder): Unit = {
+      builder.beginEntry(coll)
+
+      builder.beginCollection(0)
+      builder.hintStaticallyElidedType()
+      builder.hintTag(elemTag)
+      builder.pinHints()
+
+      var i = 0
+      coll.asInstanceOf[Traversable[T]].foreach { (elem: T) =>
+        builder.beginEntry(elem)
+        builder.endEntry()
+        i += 1
+      }
+
+      builder.unpinHints()
+      builder.endCollection(i)
+      builder.endEntry()
+    }
+
+    def unpickle(tpe: => TypeTag[_], preader: PickleReader): Any = {
+      val reader = preader.beginCollection()
+      reader.hintStaticallyElidedType()
+      reader.hintTag(elemTag)
+      reader.pinHints()
+
+      val length = reader.readLength()
+      var builder = cbf.apply() // builder with element type T
+      var i = 0
+      while (i < length) {
+        reader.beginEntry()
+        builder += reader.readPrimitive().asInstanceOf[T]
+        reader.endEntry()
+        i = i + 1
+      }
+
+      builder.result
+    }
+  }
 }
 
 trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
@@ -24,9 +72,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   implicit def booleanPicklerUnpickler(implicit format: PickleFormat): Pickler[Boolean] with Unpickler[Boolean] = new PrimitivePicklerUnpickler[Boolean]
   implicit def nullPicklerUnpickler(implicit format: PickleFormat): Pickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]
   // TODO: can't make this work, because then genArrayPickler and getListPickler clash
-  implicit def genListPickler[T, Coll[_] <: List[_]](implicit format: PickleFormat): Pickler[Coll[T]] with Unpickler[Coll[T]] = macro ListPicklerUnpicklerMacro.impl[T]
-  //implicit def genListPickler[T](implicit format: PickleFormat): Pickler[::[T]] with Unpickler[::[T]] = macro ListPicklerUnpicklerMacro.impl[T]
-  implicit def genVectorPickler[T, Coll[_] <: Vector[_]](implicit format: PickleFormat): Pickler[Coll[T]] with Unpickler[Coll[T]] = macro VectorPicklerUnpicklerMacro.impl[T]
+  implicit def genArrayPickler[T](implicit format: PickleFormat): Pickler[Array[T]] with Unpickler[Array[T]] = macro ArrayPicklerUnpicklerMacro.impl[T]
   // TODO: if you uncomment this one, it will shadow picklers/unpicklers for Int and String. why?!
   // TODO: due to the inability to implement module pickling/unpickling in a separate macro, I moved the logic into genPickler/genUnpickler
   // implicit def modulePicklerUnpickler[T <: Singleton](implicit format: PickleFormat): Pickler[T] with Unpickler[T] = macro ModulePicklerUnpicklerMacro.impl[T]
