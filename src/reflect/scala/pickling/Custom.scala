@@ -4,7 +4,11 @@ import scala.reflect.runtime.universe._
 import language.experimental.macros
 import scala.collection.immutable.::
 
-trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
+trait LowPriorityPicklersUnpicklers {
+  implicit def genArrayPickler[T](implicit format: PickleFormat): Pickler[Array[T]] with Unpickler[Array[T]] = macro ArrayPicklerUnpicklerMacro.impl[T]
+}
+
+trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
   class PrimitivePicklerUnpickler[T: TypeTag](implicit val format: PickleFormat) extends Pickler[T] with Unpickler[T] {
     def pickle(picklee: T, builder: PickleBuilder): Unit = {
       builder.beginEntry(picklee)
@@ -19,10 +23,10 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
   implicit def stringPicklerUnpickler(implicit format: PickleFormat): Pickler[String] with Unpickler[String] = new PrimitivePicklerUnpickler[String]
   implicit def booleanPicklerUnpickler(implicit format: PickleFormat): Pickler[Boolean] with Unpickler[Boolean] = new PrimitivePicklerUnpickler[Boolean]
   implicit def nullPicklerUnpickler(implicit format: PickleFormat): Pickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]
-  implicit def genArrayPickler[T](implicit format: PickleFormat): Pickler[Array[T]] with Unpickler[Array[T]] = macro ArrayPicklerUnpicklerMacro.impl[T]
   // TODO: can't make this work, because then genArrayPickler and getListPickler clash
-  // implicit def genListPickler[T, Coll[_] <: List[_]](implicit format: PickleFormat): Pickler[Coll[T]] with Unpickler[Coll[T]] = macro ListPicklerUnpicklerMacro.impl[T]
-  implicit def genListPickler[T](implicit format: PickleFormat): Pickler[::[T]] with Unpickler[::[T]] = macro ListPicklerUnpicklerMacro.impl[T]
+  implicit def genListPickler[T, Coll[_] <: List[_]](implicit format: PickleFormat): Pickler[Coll[T]] with Unpickler[Coll[T]] = macro ListPicklerUnpicklerMacro.impl[T]
+  //implicit def genListPickler[T](implicit format: PickleFormat): Pickler[::[T]] with Unpickler[::[T]] = macro ListPicklerUnpicklerMacro.impl[T]
+  implicit def genVectorPickler[T, Coll[_] <: Vector[_]](implicit format: PickleFormat): Pickler[Coll[T]] with Unpickler[Coll[T]] = macro VectorPicklerUnpicklerMacro.impl[T]
   // TODO: if you uncomment this one, it will shadow picklers/unpicklers for Int and String. why?!
   // TODO: due to the inability to implement module pickling/unpickling in a separate macro, I moved the logic into genPickler/genUnpickler
   // implicit def modulePicklerUnpickler[T <: Singleton](implicit format: PickleFormat): Pickler[T] with Unpickler[T] = macro ModulePicklerUnpicklerMacro.impl[T]
@@ -45,6 +49,16 @@ trait ListPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
   def mkArray(picklee: c.Tree) = q"$picklee.toArray"
   def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ListBuffer[$eltpe]()"
   def mkResult(buffer: c.Tree) = q"$buffer.toList"
+}
+
+trait VectorPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val VectorClass = c.mirror.staticClass("scala.collection.immutable.Vector")
+  def mkType(eltpe: c.Type) = appliedType(VectorClass.toTypeConstructor, List(eltpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ListBuffer[$eltpe]()"
+  def mkResult(buffer: c.Tree) = q"$buffer.toVector"
 }
 
 trait CollectionPicklerUnpicklerMacro extends Macro {
