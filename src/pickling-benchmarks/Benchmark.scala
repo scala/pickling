@@ -97,9 +97,11 @@ trait Benchmark {
     if (args.length > 0) {
       val logFile = new java.io.OutputStreamWriter(System.out)
       if (args.length > 1) multiplier = args(1).toInt
-      logFile.write(prefix)
-      for (t <- runBenchmark(args(0).toInt))
-        logFile.write("\t" + t)
+      //logFile.write(prefix)
+      val numbers: List[Long] = runBenchmark(args(0).toInt)
+      for (t <- numbers.init)
+        logFile.write(t + "\t")
+      logFile.write(numbers.last.toString)
 
       logFile.write(Platform.EOL)
       logFile.flush()

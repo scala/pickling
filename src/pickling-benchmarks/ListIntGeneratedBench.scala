@@ -2,7 +2,8 @@ import scala.pickling._
 import binary._
 
 object ListIntGeneratedBench extends testing.Benchmark {
-  val lst = (1 to 100000).toList
+  val size = System.getProperty("size").toInt
+  val lst = (1 to size).toList
 
   override def run() {
     val pickle = lst.pickle
