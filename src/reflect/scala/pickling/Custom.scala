@@ -4,6 +4,7 @@ import scala.reflect.runtime.universe._
 import language.experimental.macros
 import scala.collection.immutable.::
 import scala.collection.generic.CanBuildFrom
+import scala.collection.IndexedSeq
 
 trait LowPriorityPicklersUnpicklers {
 
@@ -20,7 +21,9 @@ trait LowPriorityPicklersUnpicklers {
       builder.hintTag(collTag)
       builder.beginEntry(coll)
 
-      builder.beginCollection(0)
+      if (coll.isInstanceOf[IndexedSeq[_]]) builder.beginCollection(coll.size)
+      else builder.beginCollection(0)
+
       builder.hintStaticallyElidedType()
       builder.hintTag(elemTag)
       builder.pinHints()
