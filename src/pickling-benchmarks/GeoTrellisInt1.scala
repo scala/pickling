@@ -1,0 +1,19 @@
+import scala.pickling._
+import binary._
+
+// taken from geotrellis:
+trait MutableRasterData
+trait IntBasedArray
+final case class IntArrayRasterData(array: Array[Int], cols: Int, rows: Int)
+  extends MutableRasterData with IntBasedArray
+
+object GeoTrellisInt1Bench extends testing.Benchmark {
+  val size = System.getProperty("size").toInt
+  val coll = (1 to size).toArray
+  val data = IntArrayRasterData(coll, 64, 64)
+
+  override def run() {
+    val pickle = data.pickle
+    val res = pickle.unpickle[IntArrayRasterData]
+  }
+}
