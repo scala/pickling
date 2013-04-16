@@ -112,10 +112,19 @@ package binary {
 
     private val byteBuffer: ByteBuffer = new ByteArray(arr)
     private var pos = 0
-    private var lastTagRead: TypeTag[_] = null
+    private var _lastTagRead: TypeTag[_]    = null
+    private var _lastTypeStringRead: String = null
+    private def lastTagRead: TypeTag[_] =
+      if (_lastTagRead != null)
+        _lastTagRead
+      else {
+        // assume _lastTypeStringRead != null
+        _lastTagRead = TypeTag(typeFromString(mirror, _lastTypeStringRead), _lastTypeStringRead)
+        _lastTagRead
+      }
 
-    def beginEntry(): TypeTag[_] = withHints { hints =>
-      lastTagRead = {
+    def beginEntryNoTag(): String = {
+      val res: Any = withHints { hints =>
         if (hints.tag.key == KEY_SCALA_STRING || hints.tag.key == KEY_JAVA_STRING) {
           val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
           lookahead match {
@@ -139,10 +148,22 @@ package binary {
             case _ =>
               val (typeString, newpos) = byteBuffer.decodeStringFrom(pos)
               pos = newpos
-              TypeTag(typeFromString(mirror, typeString), typeString)
+              typeString
           }
         }
       }
+      if (res.isInstanceOf[String]) {
+        _lastTagRead = null
+        _lastTypeStringRead = res.asInstanceOf[String]
+        _lastTypeStringRead
+      } else {
+        _lastTagRead = res.asInstanceOf[TypeTag[_]]
+        _lastTagRead.key
+      }
+    }
+
+    def beginEntry(): TypeTag[_] = {
+      beginEntryNoTag()
       lastTagRead
     }
 
