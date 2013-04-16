@@ -23,6 +23,8 @@ package object pickling {
     def isNotNull = sym.asType.toType.asInstanceOf[scala.reflect.internal.Types#Type].isNotNull
   }
 
+  var mirror: reflect.runtime.universe.Mirror = null // reuse runtime mirror this way, TODO nicer way to do this
+
   def typeFromString(mirror: Mirror, stpe: String): Type = {
     val (ssym, stargs) = {
       val Pattern = """^(.*?)(\[(.*?)\])?$""".r
