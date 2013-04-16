@@ -23,7 +23,13 @@ package object pickling {
     def isNotNull = sym.asType.toType.asInstanceOf[scala.reflect.internal.Types#Type].isNotNull
   }
 
-  var mirror: reflect.runtime.universe.Mirror = null // reuse runtime mirror this way, TODO nicer way to do this
+  private var currentMirror: reflect.runtime.universe.Mirror = null
+
+  def mirror: reflect.runtime.universe.Mirror =
+    if (currentMirror == null) {
+      currentMirror = reflect.runtime.currentMirror
+      currentMirror
+    } else currentMirror
 
   def typeFromString(mirror: Mirror, stpe: String): Type = {
     val (ssym, stargs) = {
