@@ -42,21 +42,28 @@ package binary {
         def writeTpe() = {
           val tpe = hints.tag.tpe
           val tpeBytes = formatType(tpe)
-          pos = byteBuffer.encodeIntTo(pos, tpeBytes.length)
+          // pos = byteBuffer.encodeIntTo(pos, tpeBytes.length)
+          byteBuffer.encodeIntAtEnd(pos, tpeBytes.length)
+          pos += 4
           pos = byteBuffer.copyTo(pos, tpeBytes)
         }
 
-        hints.tag.key match {
+        hints.tag.key match { // PERF: should store typestring once in hints.
           case KEY_NULL =>
             if (!hints.isElidedType) writeTpe()
             pos = byteBuffer.encodeByteTo(pos, NULL_TAG)
           case KEY_INT =>
+            // PERF: why would Int ever not be elided?
             if (!hints.isElidedType) writeTpe()
-            pos = byteBuffer.encodeIntTo(pos, picklee.asInstanceOf[Int])
+            // pos = byteBuffer.encodeIntTo(pos, picklee.asInstanceOf[Int])
+            byteBuffer.encodeIntAtEnd(pos, picklee.asInstanceOf[Int])
+            pos += 4
           case KEY_BOOLEAN =>
+            // PERF: why would Boolean ever not be elided?
             if (!hints.isElidedType) writeTpe()
             pos = byteBuffer.encodeBooleanTo(pos, picklee.asInstanceOf[Boolean])
           case KEY_SCALA_STRING | KEY_JAVA_STRING =>
+            // PERF: why would String ever not be elided?
             if (!hints.isElidedType) writeTpe()
             pos = byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])
           case _ =>

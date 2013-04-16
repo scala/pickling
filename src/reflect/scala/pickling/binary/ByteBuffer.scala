@@ -5,6 +5,8 @@ import scala.collection.mutable.ArrayBuffer
 sealed abstract class ByteBuffer {
   def encodeByteTo(pos: Int, value: Byte): Int
 
+  def encodeIntAtEnd(pos: Int, value: Int): Unit
+
   def encodeIntTo(pos: Int, value: Int): Int
 
   def encodeStringTo(pos: Int, value: String): Int
@@ -36,6 +38,9 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
     arr(pos) = value
     pos + 1
   }
+
+  def encodeIntAtEnd(pos: Int, value: Int): Unit =
+    Util.encodeIntTo(arr, pos, value)
 
   def encodeIntTo(pos: Int, value: Int): Int =
     Util.encodeIntTo(arr, pos, value)
@@ -81,6 +86,19 @@ final class ByteArrayBuffer extends ByteBuffer {
     }
     buf(pos) = value
     pos + 1
+  }
+
+  // pos is ingored!
+  def encodeIntAtEnd(pos: Int, value: Int): Unit = {
+    // assert(buf.size == pos)
+    val fst = (value >>> 24).asInstanceOf[Byte]
+    val snd = (value >>> 16 & 0xff).asInstanceOf[Byte]
+    val thrd = (value >>> 8 & 0xff).asInstanceOf[Byte]
+    val frth = (value & 0xff).asInstanceOf[Byte]
+    buf += fst
+    buf += snd
+    buf += thrd
+    buf += frth
   }
 
   def encodeIntTo(pos: Int, value: Int): Int = {
