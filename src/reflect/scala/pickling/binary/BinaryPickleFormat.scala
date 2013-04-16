@@ -83,8 +83,13 @@ package binary {
 
     def endEntry(): Unit = { /* do nothing */ }
 
+    var beginCollPos = 0
+
     def beginCollection(length: Int): this.type = {
-      pos = byteBuffer.encodeIntTo(pos, length)
+      beginCollPos = pos
+      // pos = byteBuffer.encodeIntTo(pos, length)
+      byteBuffer.encodeIntAtEnd(pos, 0)
+      pos += 4
       this
     }
 
@@ -93,7 +98,9 @@ package binary {
       this
     }
 
-    def endCollection(): Unit = { /* do nothing */ }
+    def endCollection(length: Int): Unit = {
+      byteBuffer.encodeIntTo(beginCollPos, length)
+    }
 
     def result() = {
       BinaryPickle(byteBuffer.toArray)
