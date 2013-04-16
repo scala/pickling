@@ -22,6 +22,23 @@ package object pickling {
     def isEffectivelyFinal = sym.asInstanceOf[scala.reflect.internal.Symbols#Symbol].isEffectivelyFinal
     def isNotNull = sym.asType.toType.asInstanceOf[scala.reflect.internal.Types#Type].isNotNull
   }
+
+  def typeFromString(mirror: Mirror, stpe: String): Type = {
+    val (ssym, stargs) = {
+      val Pattern = """^(.*?)(\[(.*?)\])?$""".r
+      def fail() = throw new PicklingException(s"fatal: cannot unpickle $stpe")
+      stpe match {
+        case Pattern("", _, _) => fail()
+        case Pattern(sym, _, null) => (sym, Nil)
+        case Pattern(sym, _, stargs) => (sym, stargs.split(",").map(_.trim).toList)
+        case _ => fail()
+      }
+    }
+
+    val sym = if (ssym.endsWith(".type")) mirror.staticModule(ssym.stripSuffix(".type")).moduleClass else mirror.staticClass(ssym)
+    val tycon = sym.asType.toTypeConstructor
+    appliedType(tycon, stargs.map(starg => typeFromString(mirror, starg)))
+  }
 }
 
 package pickling {
