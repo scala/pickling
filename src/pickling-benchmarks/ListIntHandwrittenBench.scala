@@ -26,7 +26,7 @@ object ListIntHandwrittenBench extends testing.Benchmark {
       }
 
       builder.unpinHints()
-      builder.endCollection()
+      builder.endCollection(i)
       builder.endEntry()
     }
     def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {

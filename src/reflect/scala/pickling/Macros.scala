@@ -170,6 +170,8 @@ trait PickleMacros extends Macro {
     q"""
       import scala.pickling._
       val picklee: $tpe = $pickleeArg
+      if (mirror == null)
+        mirror = scala.reflect.runtime.currentMirror
       val builder = $format.createBuilder()
       picklee.pickleInto(builder)
       builder.result()
@@ -227,9 +229,12 @@ trait UnpickleMacros extends Macro {
     val tpe = weakTypeOf[T]
     val pickleArg = c.prefix.tree
     q"""
+      import scala.pickling._
       val pickle = $pickleArg
       val format = new ${pickleFormatType(pickleArg)}()
-      val reader = format.createReader(pickle, scala.reflect.runtime.currentMirror)
+      if (mirror == null)
+        mirror = scala.reflect.runtime.currentMirror
+      val reader = format.createReader(pickle, mirror)
       reader.unpickle[$tpe]
     """
   }
