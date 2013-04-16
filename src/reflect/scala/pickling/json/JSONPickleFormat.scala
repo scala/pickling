@@ -127,6 +127,7 @@ package json {
       }
       nested
     }
+    def beginEntryNoTag(): String = beginEntry().key
     def beginEntry(): TypeTag[_] = withHints { hints =>
       lastReadTag = {
         if (datum == null) typeTag[Null]
