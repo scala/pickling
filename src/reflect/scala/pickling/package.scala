@@ -125,6 +125,7 @@ package pickling {
   trait PickleReader extends Hintable {
     def mirror: Mirror
     def beginEntry(): TypeTag[_]
+    def beginEntryNoTag(): String
     def atPrimitive: Boolean
     def readPrimitive(): Any
     def atObject: Boolean
