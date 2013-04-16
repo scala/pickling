@@ -322,20 +322,4 @@ trait PickleTools {
 
   def typeToString(tpe: Type): String = tpe.key
 
-  def typeFromString(mirror: Mirror, stpe: String): Type = {
-    val (ssym, stargs) = {
-      val Pattern = """^(.*?)(\[(.*?)\])?$""".r
-      def fail() = throw new PicklingException(s"fatal: cannot unpickle $stpe")
-      stpe match {
-        case Pattern("", _, _) => fail()
-        case Pattern(sym, _, null) => (sym, Nil)
-        case Pattern(sym, _, stargs) => (sym, stargs.split(",").map(_.trim).toList)
-        case _ => fail()
-      }
-    }
-
-    val sym = if (ssym.endsWith(".type")) mirror.staticModule(ssym.stripSuffix(".type")).moduleClass else mirror.staticClass(ssym)
-    val tycon = sym.asType.toTypeConstructor
-    appliedType(tycon, stargs.map(starg => typeFromString(mirror, starg)))
-  }
 }
