@@ -99,7 +99,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
                 i += 1
               }
               builder.unpinHints()
-              builder.endCollection()
+              builder.endCollection(i)
               builder.endEntry()
             }
             def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {

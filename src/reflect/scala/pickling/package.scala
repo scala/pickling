@@ -110,7 +110,7 @@ package pickling {
     def endEntry(): Unit
     def beginCollection(length: Int): this.type
     def putElement(pickler: this.type => Unit): this.type
-    def endCollection(): Unit
+    def endCollection(length: Int): Unit
     def result(): Pickle
   }
 
