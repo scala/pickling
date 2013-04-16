@@ -52,7 +52,7 @@ object Test extends App {
   implicit def personup(implicit intup: Unpickler[Int]): Unpickler[Person] =
     new Unpickler[Person] {
       val format = intup.format
-      def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
+      def unpickle(tag: => TypeTag[_], reader: PickleReader): Any = {
         reader.hintTag(typeTag[Int])
         reader.hintStaticallyElidedType()
         val tag = reader.beginEntry()

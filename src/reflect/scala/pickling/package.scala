@@ -74,7 +74,7 @@ package pickling {
   @implicitNotFound(msg = "Cannot generate an unpickler for ${T}. Recompile with -Xlog-implicits for details")
   trait Unpickler[T] {
     val format: PickleFormat
-    def unpickle(tag: TypeTag[_], reader: PickleReader): Any
+    def unpickle(tag: => TypeTag[_], reader: PickleReader): Any
   }
 
   trait GenUnpicklers {

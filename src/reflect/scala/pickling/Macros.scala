@@ -150,7 +150,7 @@ trait UnpicklerMacros extends Macro {
             import scala.pickling.ir._
             import scala.reflect.runtime.universe._
             implicit val format = new ${format.tpe}()
-            def unpickle(tag: TypeTag[_], reader: PickleReader): Any = $unpickleLogic
+            def unpickle(tag: => TypeTag[_], reader: PickleReader): Any = $unpickleLogic
           }
         """
       }
