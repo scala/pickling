@@ -130,7 +130,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: TypeTag[_]) {
   def genUnpickler(implicit pf: PickleFormat, p1: Pickler[Int], p2: Pickler[String]): Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
       val format: PickleFormat = pf
-      def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
+      def unpickle(tag: => TypeTag[_], reader: PickleReader): Any = {
         if (reader.atPrimitive) reader.readPrimitive()
         else {
           val pendingFields = cir.fields.filter(fir => fir.isNonParam || fir.isReifiedParam)

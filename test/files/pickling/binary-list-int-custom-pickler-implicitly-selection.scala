@@ -29,7 +29,7 @@ object Test extends App {
       builder.endCollection(i)
       builder.endEntry()
     }
-    def unpickle(tag: TypeTag[_], reader: PickleReader): Any = {
+    def unpickle(tag: => TypeTag[_], reader: PickleReader): Any = {
       val arrReader = reader.beginCollection()
       arrReader.hintStaticallyElidedType()
       arrReader.hintTag(typeTag[Int])
