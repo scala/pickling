@@ -145,7 +145,8 @@ package pickling {
 
   // NOTE: can't call it Pickleable because of a name clash w.r.t pickleable on case-insensitive file systems
   trait PickleableBase {
-    // TODO: what other methods do we want here?
+    def pickler: Pickler[_]
+    def unpickler: Unpickler[_]
   }
 
   case class PicklingException(msg: String) extends Exception(msg)
