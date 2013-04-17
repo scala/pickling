@@ -190,17 +190,22 @@ trait PickleMacros extends Macro {
       if (sym.isNotNull) createPickler(tpe)
       else q"if (picklee != null) ${createPickler(tpe)} else ${createPickler(NullTpe)}"
     }
+
     def nonFinalDispatch = {
       val nullDispatch = CaseDef(Literal(Constant(null)), EmptyTree, createPickler(NullTpe))
       val compileTimeDispatch = compileTimeDispatchees(tpe) filter (_ != NullTpe) map (subtpe =>
         CaseDef(Bind(TermName("clazz"), Ident(nme.WILDCARD)), q"clazz == classOf[$subtpe]", createPickler(subtpe))
       )
+      val picklerFromAnnotation = CaseDef(Ident(nme.WILDCARD), q"picklee.isInstanceOf[PickleableBase]", q"""
+        $builder.hintTag(scala.reflect.runtime.universe.typeTag[$tpe]);
+        picklee.asInstanceOf[PickleableBase].pickler
+      """)
       //TODO OPTIMIZE: do getClass.getClassLoader only once
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Pickler.genPickler(getClass.getClassLoader, clazz)")
       // TODO: do we still want to use something like HasPicklerDispatch?
       q"""
         val clazz = if (picklee != null) picklee.getClass else null
-        ${Match(q"clazz", nullDispatch +: compileTimeDispatch :+ runtimeDispatch)}
+        ${Match(q"clazz", nullDispatch +: picklerFromAnnotation +: compileTimeDispatch :+ runtimeDispatch)}
       """
     }
     val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
@@ -281,9 +286,33 @@ trait PickleableMacro extends AnnotationMacro {
     import c.universe._
     import Flag._
     c.annottee match {
-      case ClassDef(mods, name, tparams, Template(parents, self, body)) =>
-        // TODO: implement PickleableBase methods and append them to body
-        ClassDef(mods, name, tparams, Template(parents :+ tq"scala.pickling.PickleableBase", self, body))
+      case cdef @ ClassDef(mods, name, tparams, Template(parents, self, body)) =>
+        if (!tparams.isEmpty)
+          c.abort(c.enclosingPosition, "Implementation restriction: annotated classes cannot have type parameters")
+
+        val picklerDefDef = if (cdef.symbol.annotations.nonEmpty) {
+          // TODO: implement PickleableBase methods and append them to body
+          q"""
+            def pickler: Pickler[_] = implicitly[Pickler[$name]]
+          """
+        } else {
+          // TODO: implement PickleableBase methods and append them to body
+          q"""
+            override def pickler: Pickler[_] = implicitly[Pickler[$name]]
+          """
+        }
+
+        val unpicklerDefDef = if (cdef.symbol.annotations.nonEmpty) {
+          q"""
+            def unpickler: Unpickler[_] = implicitly[Unpickler[$name]]
+          """
+        } else {
+          q"""
+            override def unpickler: Unpickler[_] = implicitly[Unpickler[$name]]
+          """
+        }
+        val newbody = body ++ List(picklerDefDef, unpicklerDefDef)
+        ClassDef(mods, name, tparams, Template(parents :+ tq"scala.pickling.PickleableBase", self, newbody))
     }
   }
 }
