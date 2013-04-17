@@ -25,12 +25,14 @@ object Test extends App {
     }
   }
 
-  def unpickleManual[T](pickle: Pickle)(implicit pf: PickleFormat): T = {
+  def unpickleManual[T: TypeTag](pickle: Pickle)(implicit pf: PickleFormat): T = {
     val mirror = runtimeMirror(getClass.getClassLoader)
 
-    val reader = pf.createReader(mirror, pickle.asInstanceOf[pf.PickleType])
+    val reader = pf.createReader(pickle.asInstanceOf[pf.PickleType], mirror)
     // read tag: "Generic"
-    val tag = reader.readTag(mirror)
+    reader.hintTag(typeTag[T])
+    reader.pinHints()
+    val tag = reader.beginEntry()
     debug("unpickleManual: tag = " + tag)
     debug("creating unpickler for that tag...")
 
