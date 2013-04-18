@@ -9,13 +9,15 @@ trait LowPriorityPicklersUnpicklers {
 
   implicit def traversablePickler[T: TypeTag, Coll[_] <: Traversable[_]]
     (implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T],
-              pf: PickleFormat, cbf: CanBuildFrom[Coll[_], T, Coll[T]]): Pickler[Coll[T]] with Unpickler[Coll[T]] =
+              pf: PickleFormat, cbf: CanBuildFrom[Coll[_], T, Coll[T]],
+              collTag: TypeTag[Coll[T]]): Pickler[Coll[T]] with Unpickler[Coll[T]] =
     new Pickler[Coll[T]] with Unpickler[Coll[T]] {
 
     val format: PickleFormat = pf
     val elemTag  = typeTag[T]
 
     def pickle(coll: Coll[T], builder: PickleBuilder): Unit = {
+      builder.hintTag(collTag)
       builder.beginEntry(coll)
 
       builder.beginCollection(0)
@@ -71,8 +73,8 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   implicit def stringPicklerUnpickler(implicit format: PickleFormat): Pickler[String] with Unpickler[String] = new PrimitivePicklerUnpickler[String]
   implicit def booleanPicklerUnpickler(implicit format: PickleFormat): Pickler[Boolean] with Unpickler[Boolean] = new PrimitivePicklerUnpickler[Boolean]
   implicit def nullPicklerUnpickler(implicit format: PickleFormat): Pickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]
-  // TODO: can't make this work, because then genArrayPickler and getListPickler clash
   implicit def genArrayPickler[T](implicit format: PickleFormat): Pickler[Array[T]] with Unpickler[Array[T]] = macro ArrayPicklerUnpicklerMacro.impl[T]
+  implicit def genListPickler[T](implicit format: PickleFormat): Pickler[::[T]] with Unpickler[::[T]] = macro ListPicklerUnpicklerMacro.impl[T]
   // TODO: if you uncomment this one, it will shadow picklers/unpicklers for Int and String. why?!
   // TODO: due to the inability to implement module pickling/unpickling in a separate macro, I moved the logic into genPickler/genUnpickler
   // implicit def modulePicklerUnpickler[T <: Singleton](implicit format: PickleFormat): Pickler[T] with Unpickler[T] = macro ModulePicklerUnpicklerMacro.impl[T]
