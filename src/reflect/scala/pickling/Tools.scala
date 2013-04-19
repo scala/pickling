@@ -104,8 +104,8 @@ class Tools[U <: Universe with Singleton](val u: U) {
       if (baseSym.isClass) {
         val sealedHierarchy = loop(baseSym.asClass)
         if (hierarchyIsSealed) sealedHierarchy
-        else sourcepathAndClasspathScan()
-      } else sourcepathAndClasspathScan()
+        else List(baseSym) //sourcepathAndClasspathScan()
+      } else List(baseSym) //sourcepathAndClasspathScan()
     }
 
     def sourcepathAndClasspathScan(): List[Symbol] = {
@@ -152,7 +152,7 @@ class Tools[U <: Universe with Singleton](val u: U) {
           case u: scala.tools.nsc.Global if u.currentRun.compiles(baseSym.asInstanceOf[u.Symbol]) => sourcepathScan()
           case _ =>
             if (baseSym.isClass && baseSym.asClass.isSealed) sealedHierarchyScan()
-            else sourcepathAndClasspathScan()
+            else List(baseSym) //sourcepathAndClasspathScan()
         }
       // NOTE: need to order the list: children first, parents last
       // otherwise pattern match which uses this list might work funnily
