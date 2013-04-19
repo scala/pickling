@@ -87,6 +87,8 @@ trait Benchmark {
    */
   def prefix: String = getClass().getName()
 
+  val enableOutput: Boolean = true
+
   /**
    * The entry point. It takes two arguments:
    * - argument `n` is the number of consecutive runs
@@ -99,12 +101,14 @@ trait Benchmark {
       if (args.length > 1) multiplier = args(1).toInt
       //logFile.write(prefix)
       val numbers: List[Long] = runBenchmark(args(0).toInt)
-      for (t <- numbers.init)
-        logFile.write(t + "\t")
-      logFile.write(numbers.last.toString)
+      if (enableOutput) {
+        for (t <- numbers.init)
+          logFile.write(t + "\t")
+        logFile.write(numbers.last.toString)
 
-      logFile.write(Platform.EOL)
-      logFile.flush()
+        logFile.write(Platform.EOL)
+        logFile.flush()
+      }
     } else {
       println("Usage: scala benchmarks.program <runs> ")
       println("   or: scala benchmarks.program <runs> <multiplier>")
