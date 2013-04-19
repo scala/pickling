@@ -16,7 +16,7 @@ object App {
     else 10
 
     for (len <- (start to finish by increment)) {
-      val runBench: String = "scala -Dsize="+ len +" -cp classes GeoTrellisInt1Bench " + numRuns
+      val runBench: String = "scala -Dsize="+ len +" -cp classes GeoTrellisBench " + numRuns
       runBench.!
     }
   }
