@@ -78,6 +78,22 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   implicit def nullPicklerUnpickler(implicit format: PickleFormat): Pickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]
   implicit def genArrayPickler[T](implicit format: PickleFormat): Pickler[Array[T]] with Unpickler[Array[T]] = macro ArrayPicklerUnpicklerMacro.impl[T]
   implicit def genListPickler[T](implicit format: PickleFormat): Pickler[::[T]] with Unpickler[::[T]] = macro ListPicklerUnpicklerMacro.impl[T]
+
+  implicit def tuple2Pickler[S: TypeTag, T: TypeTag]
+    (implicit comp1Pickler: Pickler[S], comp1Unpickler: Unpickler[S],
+              comp2Pickler: Pickler[T], comp2Unpickler: Unpickler[T],
+              format: PickleFormat,
+              tupleTag: TypeTag[(S, T)]): Pickler[(S, T)] with Unpickler[(S, T)] =
+    new Tuple2Pickler[S, T]
+
+  implicit def tuple3Pickler[T1: TypeTag, T2: TypeTag, T3: TypeTag]
+    (implicit pickler1: Pickler[T1], unpickler1: Unpickler[T1],
+              pickler2: Pickler[T2], unpickler2: Unpickler[T2],
+              pickler3: Pickler[T3], unpickler3: Unpickler[T3],
+              format: PickleFormat,
+              tupleTag: TypeTag[(T1, T2, T3)]): Pickler[(T1, T2, T3)] with Unpickler[(T1, T2, T3)] =
+    new Tuple3Pickler[T1, T2, T3]
+
   // TODO: if you uncomment this one, it will shadow picklers/unpicklers for Int and String. why?!
   // TODO: due to the inability to implement module pickling/unpickling in a separate macro, I moved the logic into genPickler/genUnpickler
   // implicit def modulePicklerUnpickler[T <: Singleton](implicit format: PickleFormat): Pickler[T] with Unpickler[T] = macro ModulePicklerUnpicklerMacro.impl[T]
