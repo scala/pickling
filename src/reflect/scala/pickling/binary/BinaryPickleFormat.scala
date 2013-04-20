@@ -66,6 +66,10 @@ package binary {
             // PERF: why would String ever not be elided?
             if (!hints.isElidedType) writeTpe()
             pos = byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])
+          case KEY_ARRAY_INT =>
+            val ia = picklee.asInstanceOf[Array[Int]]
+            if (!hints.isElidedType) writeTpe()
+            pos = byteBuffer.encodeIntArrayTo(pos, ia)
           case _ =>
             if (!hints.isElidedType) writeTpe()
             else pos = byteBuffer.encodeByteTo(pos, ELIDED_TAG)
@@ -136,6 +140,8 @@ package binary {
           }
         } else if (hints.isElidedType && primitives.contains(hints.tag.key)) {
           hints.tag
+        } else if (hints.isElidedType && hints.tag.key == KEY_ARRAY_INT) {
+          hints.tag
         } else {
           val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
           lookahead match {
@@ -168,6 +174,16 @@ package binary {
     }
 
     def atPrimitive: Boolean = primitives.contains(lastTagRead.key)
+
+    def readArray(): Any = {
+      val (res, newpos) =
+        lastTagRead.key match {
+          case KEY_ARRAY_INT =>
+            byteBuffer.decodeIntArrayFrom(pos)
+        }
+      pos = newpos
+      res
+    }
 
     def readPrimitive(): Any = {
       val (res, newpos) = {
@@ -212,6 +228,10 @@ package binary {
     val KEY_SCALA_STRING = typeTag[scala.Predef.String].key
     val KEY_JAVA_STRING = typeTag[java.lang.String].key
     val primitives = Set(KEY_NULL, KEY_INT, KEY_BOOLEAN, KEY_SCALA_STRING, KEY_JAVA_STRING)
+
+    val KEY_ARRAY_BYTE   = typeTag[Array[Byte]].key
+    val KEY_ARRAY_INT    = typeTag[Array[Int]].key
+    val KEY_ARRAY_LONGT  = typeTag[Array[Long]].key
 
     type PickleType = BinaryPickle
     def createBuilder() = new BinaryPickleBuilder(this)

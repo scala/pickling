@@ -154,10 +154,11 @@ package binary {
   object UnsafeMemory {
     import sun.misc.Unsafe
 
-    private val unsafe: Unsafe =// Unsafe.getUnsafe()
+    private[binary] val unsafe: Unsafe =
       scala.concurrent.util.Unsafe.instance
 
-    private val byteArrayOffset: Long = unsafe.arrayBaseOffset(classOf[Array[Byte]])
+    private[binary] val byteArrayOffset: Long = unsafe.arrayBaseOffset(classOf[Array[Byte]])
+    private[binary] val intArrayOffset: Long  = unsafe.arrayBaseOffset(classOf[Array[Int]])
 
     def putInt(buffer: Array[Byte], pos: Int, value: Int): Unit = {
       unsafe.putInt(buffer, byteArrayOffset + pos, value)
