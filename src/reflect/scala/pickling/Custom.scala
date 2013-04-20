@@ -76,7 +76,10 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   implicit def stringPicklerUnpickler(implicit format: PickleFormat): Pickler[String] with Unpickler[String] = new PrimitivePicklerUnpickler[String]
   implicit def booleanPicklerUnpickler(implicit format: PickleFormat): Pickler[Boolean] with Unpickler[Boolean] = new PrimitivePicklerUnpickler[Boolean]
   implicit def nullPicklerUnpickler(implicit format: PickleFormat): Pickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]
-  implicit def genArrayPickler[T](implicit format: PickleFormat): Pickler[Array[T]] with Unpickler[Array[T]] = macro ArrayPicklerUnpicklerMacro.impl[T]
+
+  implicit def genArrayPickler[T: TypeTag](implicit format: PickleFormat): Pickler[Array[T]] with Unpickler[Array[T]] = //macro ArrayPicklerUnpicklerMacro.impl[T]
+    new ArrayPickler[T]
+
   implicit def genListPickler[T](implicit format: PickleFormat): Pickler[::[T]] with Unpickler[::[T]] = macro ListPicklerUnpicklerMacro.impl[T]
 
   implicit def tuple2Pickler[S: TypeTag, T: TypeTag]

@@ -128,6 +128,7 @@ package pickling {
     def beginEntryNoTag(): String
     def atPrimitive: Boolean
     def readPrimitive(): Any
+    def readArray(): Any
     def atObject: Boolean
     def readField(name: String): PickleReader
     def endEntry(): Unit

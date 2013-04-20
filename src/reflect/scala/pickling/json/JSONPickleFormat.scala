@@ -148,6 +148,7 @@ package json {
         case _ => primitives(lastReadTag.key)()
       }
     }
+    def readArray(): Any = ??? //TODO
     def atObject: Boolean = datum.isInstanceOf[JSONObject]
     def readField(name: String): JSONPickleReader = {
       datum match {

@@ -13,6 +13,8 @@ sealed abstract class ByteBuffer {
 
   def encodeBooleanTo(pos: Int, value: Boolean): Int
 
+  def encodeIntArrayTo(pos: Int, ia: Array[Int]): Int
+
   def copyTo(pos: Int, bytes: Array[Byte]): Int
 
   def decodeByteFrom(pos: Int): (Byte, Int)
@@ -22,6 +24,8 @@ sealed abstract class ByteBuffer {
   def decodeStringFrom(pos: Int): (String, Int)
 
   def decodeBooleanFrom(pos: Int): (Boolean, Int)
+
+  def decodeIntArrayFrom(pos: Int): (Array[Int], Int)
 
   def toArray: Array[Byte]
 }
@@ -51,6 +55,21 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
   def encodeBooleanTo(pos: Int, value: Boolean): Int =
     Util.encodeBooleanTo(arr, pos, value)
 
+  def encodeIntArrayTo(pos: Int, ia: Array[Int]): Int = {
+    // no bounds check
+
+    // 1. store length of array
+    val newpos = encodeIntTo(pos, ia.length)
+
+    // 2. copy memory
+    val srcOffset = UnsafeMemory.intArrayOffset
+    val destOffset = UnsafeMemory.byteArrayOffset
+    // copy ia into arr
+    UnsafeMemory.unsafe.copyMemory(ia, srcOffset, arr, destOffset + newpos, ia.length * 4)
+
+    newpos + ia.length * 4
+  }
+
   def copyTo(pos: Int, bytes: Array[Byte]): Int = {
     Util.copy(arr, pos, bytes)
     pos + bytes.length
@@ -68,6 +87,22 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
 
   def decodeBooleanFrom(pos: Int): (Boolean, Int) =
     Util.decodeBooleanFrom(arr, pos)
+
+  def decodeIntArrayFrom(pos: Int): (Array[Int], Int) = {
+    // arr: Array[Byte]
+    // 1. read length
+    val (len, nextPos) = decodeIntFrom(pos)
+
+    // 2. allocate Array[Int] TODO: use Unsafe
+    val ia = Array.ofDim[Int](len)
+
+    // 3. the copy
+    val srcOffset = UnsafeMemory.byteArrayOffset
+    val destOffset = UnsafeMemory.intArrayOffset
+    UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len*4)
+
+    (ia, nextPos + len*4)
+  }
 
   def toArray: Array[Byte] =
     arr
@@ -125,6 +160,28 @@ final class ByteArrayBuffer extends ByteBuffer {
     pos + 1
   }
 
+  def encodeIntArrayTo(pos: Int, ia: Array[Int]): Int = {
+    // no bounds check
+
+    // 1. store length of array
+    val newpos = encodeIntTo(pos, ia.length)
+
+    // 2. allocate temp byte array
+    val ba = Array.ofDim[Byte](ia.length * 4)
+
+    // 2. copy memory
+    val srcOffset = UnsafeMemory.intArrayOffset
+    val destOffset = UnsafeMemory.byteArrayOffset
+
+    // copy ia into ba
+    UnsafeMemory.unsafe.copyMemory(ia, srcOffset, ba, destOffset, ia.length * 4)
+
+    // 3. concatenate temp byte array to buf
+    buf ++= ba
+
+    newpos + ia.length * 4
+  }
+
   def copyTo(pos: Int, bytes: Array[Byte]): Int = {
     // assume buf.size = buf
     buf ++= bytes
@@ -156,6 +213,25 @@ final class ByteArrayBuffer extends ByteBuffer {
   def decodeBooleanFrom(pos: Int): (Boolean, Int) = {
     val (value, next) = decodeIntFrom(pos)
     (value != 0, next)
+  }
+
+  def decodeIntArrayFrom(pos: Int): (Array[Int], Int) = {
+    // buf: ArrayBuffer[Byte]
+    // 1. read length
+    val (len, nextPos) = decodeIntFrom(pos)
+
+    // 2. allocate Array[Int] TODO: use Unsafe
+    val ia = Array.ofDim[Int](len)
+
+    // 3. the copy
+    val srcOffset = UnsafeMemory.byteArrayOffset
+    val destOffset = UnsafeMemory.intArrayOffset
+    // read the required num of bytes from `buf`
+    val newbuf = buf.slice(nextPos, nextPos + (len*4))
+    val ba: Array[Byte] = newbuf.toArray
+    UnsafeMemory.unsafe.copyMemory(ba, srcOffset, ia, destOffset, len*4)
+
+    (ia, nextPos + (len*4))
   }
 
   def toArray: Array[Byte] =
