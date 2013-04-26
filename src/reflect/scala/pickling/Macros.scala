@@ -15,13 +15,64 @@ trait PicklerMacros extends Macro {
     val tpe = weakTypeOf[T]
     val sym = tpe.typeSymbol.asClass
     import irs._
+
+    val primitiveSizes = Map(
+        typeOf[Int] -> 4,
+        typeOf[Short] -> 2,
+        typeOf[Long] -> 8,
+        typeOf[Double] -> 8,
+        typeOf[Byte] -> 1,
+        typeOf[Char] -> 2,
+        typeOf[Float] -> 4,
+        typeOf[Boolean] -> 1
+      )
+
+    def getField(fir: FieldIR): Tree = if (fir.isPublic) q"picklee.${TermName(fir.name)}"
+      else reflectively("picklee", fir)(fm => q"$fm.get.asInstanceOf[${fir.tpe}]").head //TODO: don't think it's possible for this to return an empty list, so head should be OK
+
+    // this exists so as to provide as much information as possible about the size of the object
+    // to-be-pickled to the picklers at runtime. In the case of the binary format for example,
+    // this allows us to remove array copying and allocation bottlenecks
+    // Note: this takes a "flattened" ClassIR
+    def computeKnownSizeIfPossible(cir: ClassIR): Option[Tree] = {
+      val possibleSizes = cir.fields map {
+        case fld if fld.tpe.typeSymbol.asClass.isPrimitive =>
+          Some(q"${primitiveSizes(fld.tpe)}")
+        case fld if fld.tpe <:< typeOf[Array[_]] =>
+          val TypeRef(_, _, List(elTpe)) = fld.tpe
+          primitiveSizes.get(elTpe) match {
+            case Some(primitiveLen) =>
+              Some(q"${getField(fld)}.length * $primitiveLen + 4")
+            case None =>
+              None
+          }
+        case _ =>
+          None
+      }
+
+      if (possibleSizes.contains(None) || possibleSizes.isEmpty) None
+      else Some(possibleSizes.map(_.get).reduce((t1, t2) => q"$t1 + $t2"))
+    }
+
     val pickler = {
       val picklerPid = syntheticPackageName
       val picklerName = syntheticPicklerName(tpe)
       introduceTopLevel(picklerPid, picklerName) {
         def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
-          val cir = classIR(tpe)
+          val cir = flattenedClassIR(tpe)
+
+          val initTree = computeKnownSizeIfPossible(cir) match {
+            case None => q""
+            case Some(tree) =>
+              val typeNameLen = tpe.key.getBytes("UTF-8").length
+              q"""
+                val size = $tree + $typeNameLen + 4
+                builder.hintKnownSize(size)
+              """
+          }
+
           val beginEntry = q"""
+            $initTree
             builder.beginEntry(picklee)
           """
           val putFields = cir.fields.flatMap(fir => {
@@ -98,7 +149,7 @@ trait UnpicklerMacros extends Macro {
 
           // TODO: validate that the tpe argument of unpickle and weakTypeOf[T] work together
           // NOTE: step 1) this creates an instance and initializes its fields reified from constructor arguments
-          val cir = classIR(tpe)
+          val cir = flattenedClassIR(tpe)
           val isPreciseType = targs.length == sym.typeParams.length && targs.forall(_.typeSymbol.isClass)
           val canCallCtor = !cir.fields.exists(_.isErasedParam) && isPreciseType
           val pendingFields = cir.fields.filter(fir => fir.isNonParam || (!canCallCtor && fir.isReifiedParam))
@@ -175,9 +226,15 @@ trait PickleMacros extends Macro {
       builder.result()
     """
   }
+
+  /** Used by the main `pickle` macro. Its purpose is to pickle the object that it's called on *into* the
+   *  the `builder` which is passed to it as an argument.
+   */
   def pickleInto[T: c.WeakTypeTag](builder: c.Tree): c.Tree = {
+
     import c.universe._
     import definitions._
+
     val tpe = weakTypeOf[T].widen // TODO: I used widen to make module classes work, but I don't think it's okay to do that
     val sym = tpe.typeSymbol.asClass
     val q"${_}($pickleeArg)" = c.prefix.tree
@@ -223,6 +280,7 @@ trait PickleMacros extends Macro {
 // 1) dispatch to the correct unpickler based on the type of the input,
 // 2) insert a call in the generated code to the genUnpickler macro (described above)
 trait UnpickleMacros extends Macro {
+
   // TODO: implement this
   // override def onInfer(tic: c.TypeInferenceContext): Unit = {
   //   c.error(c.enclosingPosition, "must specify the type parameter for method unpickle")
@@ -239,6 +297,7 @@ trait UnpickleMacros extends Macro {
       reader.unpickle[$tpe]
     """
   }
+
   def readerUnpickle[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
     import definitions._
@@ -254,6 +313,7 @@ trait UnpickleMacros extends Macro {
         if (tag != scala.reflect.runtime.universe.typeTag[Null]) ${createUnpickler(tpe)} else ${createUnpickler(NullTpe)}
       """
     }
+
     def nonFinalDispatch = {
       val compileTimeDispatch = compileTimeDispatchees(tpe) map (subtpe => {
         // TODO: do we still want to use something like HasPicklerDispatch (for unpicklers it would be routed throw tpe's companion)?
@@ -265,6 +325,7 @@ trait UnpickleMacros extends Macro {
       """)
       Match(q"typeString", compileTimeDispatch :+ runtimeDispatch)
     }
+
     val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
 
     q"""
@@ -282,6 +343,7 @@ trait UnpickleMacros extends Macro {
 }
 
 trait PickleableMacro extends AnnotationMacro {
+
   def impl = {
     import c.universe._
     import Flag._

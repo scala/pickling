@@ -39,7 +39,7 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) {
   debug("PicklerRuntime: tpe = " + tpe)
   val irs = new IRs[ru.type](ru)
   import irs._
-  val cir = classIR(tpe)
+  val cir = flattenedClassIR(tpe)
   debug("PicklerRuntime: cir = " + cir)
 
   def genPickler(implicit format: PickleFormat): Pickler[_]
@@ -124,7 +124,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: TypeTag[_]) {
   val clazz = mirror.runtimeClass(tpe.erasure)
   val irs = new IRs[ru.type](ru)
   import irs._
-  val cir = classIR(tpe)
+  val cir = flattenedClassIR(tpe)
   debug("UnpicklerRuntime: cir = " + cir)
 
   def genUnpickler(implicit pf: PickleFormat, p1: Pickler[Int], p2: Pickler[String]): Unpickler[Any] = {
