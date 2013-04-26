@@ -70,5 +70,5 @@ class IRs[U <: Universe with Singleton](val uni: U) {
     if (c.parent != null) ClassIR(c.tpe, c.parent, f1(c.fields, flatten(c.parent).fields))
     else c
 
-  def classIR(tpe: Type) = flatten(compose(ClassIR(tpe, null, Nil)))
+  def flattenedClassIR(tpe: Type) = flatten(compose(ClassIR(tpe, null, Nil)))
 }
