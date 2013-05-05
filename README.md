@@ -7,3 +7,8 @@ into a standalone library that targets 2.10.x
 (more precisely, the library will require 2.10.2+, since it's when implicit macros, a key ingredient to our technique,
 [have been fixed](https://issues.scala-lang.org/browse/SI-5923)).
 
+Since we are making extensive use of quasiquotes, which cannot be added to 2.10.x due to binary and source compatibility
+restrictions, building (but not using!) scala-pickling-210x requires [a custom build of scalac](https://github.com/scalamacros/kepler/tree/topic/pickling), 
+as explained in comments to [Build.scala](https://github.com/xeno-by/scala-pickling-210x/blob/master/project/Build.scala). 
+Please note that scala-pickling-210x can be used without any problems with vanilla scalac 2.10.2 - 
+custom scalac is only necessary to _build_ this library, not to compile against it or to link to it at runtime.
