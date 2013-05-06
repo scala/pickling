@@ -4,16 +4,20 @@ import scala.util.Properties
 
 object BuildSettings {
   val buildVersion = "1.0.0"
-  val buildScalaVersion = "2.10.0" // NOTE: will be 2.10.2
-  // path to a build of https://github.com/scalamacros/kepler/tree/topic/pickling
-  val picklingParadise = Properties.envOrElse("PICKLING_PARADISE", "/Users/xeno_by/Projects/Kepler_pickling/build/pack")
+  val buildScalaVersion = "2.10.0"
+  val buildScalaOrganization = "org.scala-lang"
+  // path to a build of https://github.com/scalamacros/kepler/tree/paradise/macros210
+  // NOTE: soon this will be replaced by:
+  // val buildScalaVersion = "2.10.2-SNAPSHOT"
+  // val buildScalaOrganization = "org.scala-lang.macro-paradise"
+  val paradise210 = Properties.envOrElse("MACRO_PARADISE210", "/Users/xeno_by/Projects/Paradise210/build/pack")
 
   val buildSettings = Defaults.defaultSettings ++ Seq(
-    organization := "ch.epfl",
     version := buildVersion,
     scalaVersion := buildScalaVersion,
-    scalaHome := Some(file(picklingParadise)),
-    unmanagedBase := file(picklingParadise + "/lib"),
+    scalaOrganization := buildScalaOrganization,
+    scalaHome := Some(file(paradise210)),
+    unmanagedBase := file(paradise210 + "/lib"),
     scalacOptions ++= Seq()
   )
 }
@@ -31,7 +35,7 @@ object MyBuild extends Build {
     "core",
     file("core"),
     settings = buildSettings ++ Seq(
-      libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _)
+      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _)
     )
   )
 
@@ -39,8 +43,8 @@ object MyBuild extends Build {
     "runtime",
     file("runtime"),
     settings = buildSettings ++ Seq(
-      libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
-      libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _)
+      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _),
+      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-compiler" % _)
     )
   ) dependsOn(core)
 }
