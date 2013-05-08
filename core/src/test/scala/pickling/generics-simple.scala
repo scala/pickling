@@ -12,7 +12,7 @@ class GenericsSimpleTest extends FunSuite {
     val p = c.pickle
     assert(p.toString === """
       |JSONPickle({
-      |  "tpe": "scala.pickling.genericssimple.C[scala.Int]",
+      |  "tpe": "scala.pickling.generics.simple.C[scala.Int]",
       |  "x": 2
       |})
     """.trim.stripMargin)

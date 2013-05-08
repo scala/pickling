@@ -20,15 +20,39 @@ class InheritanceDefaultArgsTest extends FunSuite {
     val f = new Firefighter("Muriel", 41, 30000)
 
     val pickleF = (f: Firefighter).pickle
-    println(pickleF.value)
-    println(pickleF.unpickle[Firefighter])
+    assert(pickleF.value === """
+      |{
+      |  "tpe": "scala.pickling.inheritance.defaultargs.Firefighter",
+      |  "name": "Muriel",
+      |  "age": 41,
+      |  "salary": 30000,
+      |  "species": "human"
+      |}
+    """.trim.stripMargin)
+    assert(pickleF.unpickle[Firefighter] === f)
 
     val pickleP = (f: Person).pickle
-    println(pickleP.value)
-    println(pickleP.unpickle[Person])
+    assert(pickleP.value === """
+      |{
+      |  "tpe": "scala.pickling.inheritance.defaultargs.Firefighter",
+      |  "name": "Muriel",
+      |  "age": 41,
+      |  "salary": 30000,
+      |  "species": "human"
+      |}
+    """.trim.stripMargin)
+    assert(pickleP.unpickle[Person] === f)
 
     val pickleC = (f: Creature).pickle
-    println(pickleC.value)
-    println(pickleC.unpickle[Creature])
+    assert(pickleC.value === """
+      |{
+      |  "tpe": "scala.pickling.inheritance.defaultargs.Firefighter",
+      |  "name": "Muriel",
+      |  "age": 41,
+      |  "salary": 30000,
+      |  "species": "human"
+      |}
+    """.trim.stripMargin)
+    assert(pickleC.unpickle[Creature] === f)
   }
 }

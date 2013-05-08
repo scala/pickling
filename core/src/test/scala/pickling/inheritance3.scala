@@ -25,15 +25,39 @@ class Inheritance3Test extends FunSuite {
     )
 
     val pickleF = (f: Firefighter).pickle
-    println(pickleF.value)
-    println(pickleF.unpickle[Firefighter])
+    assert(pickleF.value === """
+      |{
+      |  "tpe": "scala.pickling.inheritance3.Firefighter",
+      |  "name": "Joey",
+      |  "age": 32,
+      |  "salary": 30000,
+      |  "since": 1999
+      |}
+    """.trim.stripMargin)
+    assert(pickleF.unpickle[Firefighter] === f)
 
     val pickleE = (f: Employee).pickle
-    println(pickleE.value)
-    println(pickleE.unpickle[Employee])
+    assert(pickleE.value === """
+      |{
+      |  "tpe": "scala.pickling.inheritance3.Firefighter",
+      |  "name": "Joey",
+      |  "age": 32,
+      |  "salary": 30000,
+      |  "since": 1999
+      |}
+    """.trim.stripMargin)
+    assert(pickleE.unpickle[Employee] === f)
 
     val pickleP = (f: Person).pickle
-    println(pickleP.value)
-    println(pickleP.unpickle[Person])
+    assert(pickleP.value === """
+      |{
+      |  "tpe": "scala.pickling.inheritance3.Firefighter",
+      |  "name": "Joey",
+      |  "age": 32,
+      |  "salary": 30000,
+      |  "since": 1999
+      |}
+    """.trim.stripMargin)
+    assert(pickleP.unpickle[Person] === f)
   }
 }

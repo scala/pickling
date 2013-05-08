@@ -269,7 +269,7 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
         reflectivePrologueEmitted = true
         val initMirror = q"""
           import scala.reflect.runtime.universe._
-          val mirror = runtimeMirror(getClass.getClassLoader)
+          val mirror = runtimeMirror(this.getClass.getClassLoader)
           val im = mirror.reflect($target)
         """
         initMirror.stats :+ initMirror.expr
@@ -285,7 +285,7 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
     // 3) overridden fields
     val wrappedBody =
       q"""
-        val $firSymbol = scala.pickling.fastTypeTag[${field.owner.asClass.toType.erasure}].tpe.member(TermName(${field.name.toString}))
+        val $firSymbol = scala.pickling.fastTypeTag[${field.owner.asClass.toType.erasure}].tpe.member(newTermName(${field.name.toString}))
         if ($firSymbol.isTerm) ${body(q"im.reflectField($firSymbol.asTerm)")}
       """
     prologue ++ wrappedBody.stats :+ wrappedBody.expr
