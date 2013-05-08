@@ -8,14 +8,14 @@ import scala.collection.IndexedSeq
 
 trait LowPriorityPicklersUnpicklers {
 
-  implicit def traversablePickler[T: TypeTag, Coll[_] <: Traversable[_]]
+  implicit def traversablePickler[T: FastTypeTag, Coll[_] <: Traversable[_]]
     (implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T],
               pf: PickleFormat, cbf: CanBuildFrom[Coll[_], T, Coll[T]],
-              collTag: TypeTag[Coll[T]]): Pickler[Coll[T]] with Unpickler[Coll[T]] =
+              collTag: FastTypeTag[Coll[T]]): Pickler[Coll[T]] with Unpickler[Coll[T]] =
     new Pickler[Coll[T]] with Unpickler[Coll[T]] {
 
     val format: PickleFormat = pf
-    val elemTag  = typeTag[T]
+    val elemTag  = fastTypeTag[T]
 
     def pickle(coll: Coll[T], builder: PickleBuilder): Unit = {
       builder.hintTag(collTag)
@@ -40,7 +40,7 @@ trait LowPriorityPicklersUnpicklers {
       builder.endEntry()
     }
 
-    def unpickle(tpe: => TypeTag[_], preader: PickleReader): Any = {
+    def unpickle(tpe: => FastTypeTag[_], preader: PickleReader): Any = {
       val reader = preader.beginCollection()
       reader.hintStaticallyElidedType()
       reader.hintTag(elemTag)
@@ -62,12 +62,12 @@ trait LowPriorityPicklersUnpicklers {
 }
 
 trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
-  class PrimitivePicklerUnpickler[T: TypeTag](implicit val format: PickleFormat) extends Pickler[T] with Unpickler[T] {
+  class PrimitivePicklerUnpickler[T: FastTypeTag](implicit val format: PickleFormat) extends Pickler[T] with Unpickler[T] {
     def pickle(picklee: T, builder: PickleBuilder): Unit = {
       builder.beginEntry(picklee)
       builder.endEntry()
     }
-    def unpickle(tag: => TypeTag[_], reader: PickleReader): Any = {
+    def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = {
       reader.readPrimitive()
     }
   }
@@ -77,24 +77,24 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   implicit def booleanPicklerUnpickler(implicit format: PickleFormat): Pickler[Boolean] with Unpickler[Boolean] = new PrimitivePicklerUnpickler[Boolean]
   implicit def nullPicklerUnpickler(implicit format: PickleFormat): Pickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]
 
-  implicit def genArrayPickler[T: TypeTag](implicit format: PickleFormat): Pickler[Array[T]] with Unpickler[Array[T]] = //macro ArrayPicklerUnpicklerMacro.impl[T]
+  implicit def genArrayPickler[T: FastTypeTag](implicit format: PickleFormat): Pickler[Array[T]] with Unpickler[Array[T]] = //macro ArrayPicklerUnpicklerMacro.impl[T]
     new ArrayPickler[T]
 
   implicit def genListPickler[T](implicit format: PickleFormat): Pickler[::[T]] with Unpickler[::[T]] = macro Compat.ListPicklerUnpicklerMacro_impl[T]
 
-  implicit def tuple2Pickler[S: TypeTag, T: TypeTag]
+  implicit def tuple2Pickler[S: FastTypeTag, T: FastTypeTag]
     (implicit comp1Pickler: Pickler[S], comp1Unpickler: Unpickler[S],
               comp2Pickler: Pickler[T], comp2Unpickler: Unpickler[T],
               format: PickleFormat,
-              tupleTag: TypeTag[(S, T)]): Pickler[(S, T)] with Unpickler[(S, T)] =
+              tupleTag: FastTypeTag[(S, T)]): Pickler[(S, T)] with Unpickler[(S, T)] =
     new Tuple2Pickler[S, T]
 
-  implicit def tuple3Pickler[T1: TypeTag, T2: TypeTag, T3: TypeTag]
+  implicit def tuple3Pickler[T1: FastTypeTag, T2: FastTypeTag, T3: FastTypeTag]
     (implicit pickler1: Pickler[T1], unpickler1: Unpickler[T1],
               pickler2: Pickler[T2], unpickler2: Unpickler[T2],
               pickler3: Pickler[T3], unpickler3: Unpickler[T3],
               format: PickleFormat,
-              tupleTag: TypeTag[(T1, T2, T3)]): Pickler[(T1, T2, T3)] with Unpickler[(T1, T2, T3)] =
+              tupleTag: FastTypeTag[(T1, T2, T3)]): Pickler[(T1, T2, T3)] with Unpickler[(T1, T2, T3)] =
     new Tuple3Pickler[T1, T2, T3]
 
   // TODO: if you uncomment this one, it will shadow picklers/unpicklers for Int and String. why?!
@@ -158,9 +158,9 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
               val elunpickler = "bam!"
               implicitly[Unpickler[$eltpe]]
             }
-            implicit val eltag: scala.reflect.runtime.universe.TypeTag[$eltpe] = {
+            implicit val eltag: scala.pickling.FastTypeTag[$eltpe] = {
               val eltag = "bam!"
-              implicitly[scala.reflect.runtime.universe.TypeTag[$eltpe]]
+              implicitly[scala.pickling.FastTypeTag[$eltpe]]
             }
             def pickle(picklee: $tpe, builder: PickleBuilder): Unit = {
               if (!$isPrimitive) throw new PicklingException(s"implementation restriction: non-primitive collections aren't supported")
@@ -186,7 +186,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
               builder.endCollection(i)
               builder.endEntry()
             }
-            def unpickle(tag: => TypeTag[_], reader: PickleReader): Any = {
+            def unpickle(tag: => scala.pickling.FastTypeTag[_], reader: PickleReader): Any = {
               if (!$isPrimitive) throw new PicklingException(s"implementation restriction: non-primitive collections aren't supported")
               var buffer = ${mkBuffer(eltpe)}
               val arrReader = reader.beginCollection()

@@ -34,7 +34,7 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) {
     }
     existentialAbstraction(tparams, tpeWithMaybeTparams)
   }
-  val tag = TypeTag(tpe)
+  val tag = FastTypeTag(mirror, tpe, tpe.key)
   debug("PicklerRuntime: tpe = " + tpe)
   val irs = new IRs[ru.type](ru)
   import irs._
@@ -78,7 +78,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
 
           builder.endEntry()
         } else {
-          builder.hintTag(typeTag[Null])
+          builder.hintTag(fastTypeTag[Null])
           builder.beginEntry(null)
           builder.endEntry()
         }
@@ -87,7 +87,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
   }
 }
 
-class InterpretedUnpicklerRuntime(mirror: Mirror, tag: TypeTag[_]) {
+class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_]) {
   val tpe = tag.tpe
   val sym = tpe.typeSymbol.asType
   debug("UnpicklerRuntime: tpe = " + tpe)
@@ -100,13 +100,13 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: TypeTag[_]) {
   def genUnpickler(implicit pf: PickleFormat, p1: Pickler[Int], p2: Pickler[String]): Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
       val format: PickleFormat = pf
-      def unpickle(tag: => TypeTag[_], reader: PickleReader): Any = {
+      def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = {
         if (reader.atPrimitive) reader.readPrimitive()
         else {
           val pendingFields = cir.fields.filter(fir => fir.isNonParam || fir.isReifiedParam)
           val fieldVals = pendingFields.map(fir => {
             val freader = reader.readField(fir.name)
-            val fstaticTag = TypeTag(fir.tpe)
+            val fstaticTag = FastTypeTag(mirror, fir.tpe, fir.tpe.key)
             freader.hintTag(fstaticTag)
 
             val fstaticSym = fstaticTag.tpe.typeSymbol

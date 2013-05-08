@@ -46,13 +46,13 @@ package json {
       append(s + "\n")
       pendingIndent = true
     }
-    private val tags = new Stack[TypeTag[_]]()
+    private val tags = new Stack[FastTypeTag[_]]()
     private val primitives = Map[String, Any => Unit](
-      typeTag[Null].key -> ((picklee: Any) => append("null")),
-      typeTag[Int].key -> ((picklee: Any) => append(picklee.toString)),
-      typeTag[Boolean].key -> ((picklee: Any) => append(picklee.toString)),
-      typeTag[String].key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\"")),
-      typeTag[java.lang.String].key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\""))
+      fastTypeTag[Null].key -> ((picklee: Any) => append("null")),
+      fastTypeTag[Int].key -> ((picklee: Any) => append(picklee.toString)),
+      fastTypeTag[Boolean].key -> ((picklee: Any) => append(picklee.toString)),
+      fastTypeTag[String].key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\"")),
+      fastTypeTag[java.lang.String].key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\""))
     )
     def beginEntry(picklee: Any): this.type = withHints { hints =>
       indent()
@@ -110,13 +110,13 @@ package json {
   }
 
   class JSONPickleReader(datum: Any, val mirror: Mirror, format: JSONPickleFormat) extends PickleReader with PickleTools {
-    private var lastReadTag: TypeTag[_] = null
+    private var lastReadTag: FastTypeTag[_] = null
     private val primitives = Map[String, () => Any](
-      typeTag[Null].key -> (() => null),
-      typeTag[Int].key -> (() => datum.asInstanceOf[Double].toInt),
-      typeTag[Boolean].key -> (() => datum.asInstanceOf[Boolean]),
-      typeTag[String].key -> (() => datum.asInstanceOf[String]),
-      typeTag[java.lang.String].key -> (() => datum.asInstanceOf[String])
+      fastTypeTag[Null].key -> (() => null),
+      fastTypeTag[Int].key -> (() => datum.asInstanceOf[Double].toInt),
+      fastTypeTag[Boolean].key -> (() => datum.asInstanceOf[Boolean]),
+      fastTypeTag[String].key -> (() => datum.asInstanceOf[String]),
+      fastTypeTag[java.lang.String].key -> (() => datum.asInstanceOf[String])
     )
     private def mkNestedReader(datum: Any) = {
       val nested = new JSONPickleReader(datum, mirror, format)
@@ -128,13 +128,13 @@ package json {
       nested
     }
     def beginEntryNoTag(): String = beginEntry().key
-    def beginEntry(): TypeTag[_] = withHints { hints =>
+    def beginEntry(): FastTypeTag[_] = withHints { hints =>
       lastReadTag = {
-        if (datum == null) typeTag[Null]
+        if (datum == null) fastTypeTag[Null]
         else if (hints.isElidedType) hints.tag
         else {
           datum match {
-            case JSONObject(fields) if fields.contains("tpe") => TypeTag(typeFromString(mirror, fields("tpe").asInstanceOf[String]), fields("tpe").asInstanceOf[String])
+            case JSONObject(fields) if fields.contains("tpe") => FastTypeTag(mirror, typeFromString(mirror, fields("tpe").asInstanceOf[String]), fields("tpe").asInstanceOf[String])
             case JSONObject(fields) => hints.tag
           }
         }

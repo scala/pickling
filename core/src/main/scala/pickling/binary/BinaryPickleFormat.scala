@@ -116,14 +116,14 @@ package binary {
 
     private val byteBuffer: ByteBuffer = new ByteArray(arr)
     private var pos = 0
-    private var _lastTagRead: TypeTag[_]    = null
+    private var _lastTagRead: FastTypeTag[_]    = null
     private var _lastTypeStringRead: String = null
-    private def lastTagRead: TypeTag[_] =
+    private def lastTagRead: FastTypeTag[_] =
       if (_lastTagRead != null)
         _lastTagRead
       else {
         // assume _lastTypeStringRead != null
-        _lastTagRead = TypeTag(typeFromString(mirror, _lastTypeStringRead), _lastTypeStringRead)
+        _lastTagRead = FastTypeTag(mirror, typeFromString(mirror, _lastTypeStringRead), _lastTypeStringRead)
         _lastTagRead
       }
 
@@ -134,7 +134,7 @@ package binary {
           lookahead match {
             case NULL_TAG =>
               pos = newpos
-              TypeTag.Null
+              FastTypeTag.Null
             case _ =>
               hints.tag
           }
@@ -147,7 +147,7 @@ package binary {
           lookahead match {
             case NULL_TAG =>
               pos = newpos
-              TypeTag.Null
+              FastTypeTag.Null
             case ELIDED_TAG =>
               pos = newpos
               hints.tag
@@ -163,12 +163,12 @@ package binary {
         _lastTypeStringRead = res.asInstanceOf[String]
         _lastTypeStringRead
       } else {
-        _lastTagRead = res.asInstanceOf[TypeTag[_]]
+        _lastTagRead = res.asInstanceOf[FastTypeTag[_]]
         _lastTagRead.key
       }
     }
 
-    def beginEntry(): TypeTag[_] = {
+    def beginEntry(): FastTypeTag[_] = {
       beginEntryNoTag()
       lastTagRead
     }
@@ -222,16 +222,16 @@ package binary {
     val ELIDED_TAG: Byte = -1
     val NULL_TAG: Byte = -2
 
-    val KEY_NULL = typeTag[Null].key
-    val KEY_INT = typeTag[Int].key
-    val KEY_BOOLEAN = typeTag[Boolean].key
-    val KEY_SCALA_STRING = typeTag[scala.Predef.String].key
-    val KEY_JAVA_STRING = typeTag[java.lang.String].key
+    val KEY_NULL = fastTypeTag[Null].key
+    val KEY_INT = fastTypeTag[Int].key
+    val KEY_BOOLEAN = fastTypeTag[Boolean].key
+    val KEY_SCALA_STRING = fastTypeTag[scala.Predef.String].key
+    val KEY_JAVA_STRING = fastTypeTag[java.lang.String].key
     val primitives = Set(KEY_NULL, KEY_INT, KEY_BOOLEAN, KEY_SCALA_STRING, KEY_JAVA_STRING)
 
-    val KEY_ARRAY_BYTE   = typeTag[Array[Byte]].key
-    val KEY_ARRAY_INT    = typeTag[Array[Int]].key
-    val KEY_ARRAY_LONGT  = typeTag[Array[Long]].key
+    val KEY_ARRAY_BYTE   = fastTypeTag[Array[Byte]].key
+    val KEY_ARRAY_INT    = fastTypeTag[Array[Int]].key
+    val KEY_ARRAY_LONGT  = fastTypeTag[Array[Long]].key
 
     type PickleType = BinaryPickle
     def createBuilder() = new BinaryPickleBuilder(this)

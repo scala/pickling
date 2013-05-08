@@ -2,7 +2,7 @@ package scala.pickling
 
 import scala.reflect.runtime.universe._
 
-class ArrayPickler[T: TypeTag]
+class ArrayPickler[T: FastTypeTag]
   (implicit pf: PickleFormat) extends Pickler[Array[T]] with Unpickler[Array[T]] {
 
   val format: PickleFormat = pf
@@ -13,7 +13,7 @@ class ArrayPickler[T: TypeTag]
     builder.endEntry()
   }
 
-  def unpickle(tag: => TypeTag[_], reader: PickleReader): Any = {
+  def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = {
     reader.readArray()
   }
 

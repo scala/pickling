@@ -65,6 +65,8 @@ package object pickling {
       }
     }
   }
+
+  def fastTypeTag[T: FastTypeTag] = implicitly[FastTypeTag[T]]
 }
 
 package pickling {
@@ -92,12 +94,12 @@ package pickling {
   @implicitNotFound(msg = "Cannot generate an unpickler for ${T}. Recompile with -Xlog-implicits for details")
   trait Unpickler[T] {
     val format: PickleFormat
-    def unpickle(tag: => TypeTag[_], reader: PickleReader): Any
+    def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any
   }
 
   trait GenUnpicklers {
     implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
-    def genUnpickler(mirror: Mirror, tag: TypeTag[_])(implicit format: PickleFormat): Unpickler[_] = {
+    def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit format: PickleFormat): Unpickler[_] = {
       println(s"generating runtime unpickler for ${tag.tpe}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
       //val runtime = new CompiledUnpicklerRuntime(mirror, tag)
       val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
@@ -122,7 +124,7 @@ package pickling {
   }
 
   trait Hintable {
-    def hintTag(tag: TypeTag[_]): this.type
+    def hintTag(tag: FastTypeTag[_]): this.type
     def hintKnownSize(knownSize: Int): this.type
     def hintStaticallyElidedType(): this.type
     def hintDynamicallyElidedType(): this.type
@@ -142,7 +144,7 @@ package pickling {
 
   trait PickleReader extends Hintable {
     def mirror: Mirror
-    def beginEntry(): TypeTag[_]
+    def beginEntry(): FastTypeTag[_]
     def beginEntryNoTag(): String
     def atPrimitive: Boolean
     def readPrimitive(): Any
