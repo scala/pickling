@@ -242,7 +242,7 @@ trait PickleMacros extends Macro {
         CaseDef(Bind(TermName("clazz"), Ident(nme.WILDCARD)), q"clazz == classOf[$subtpe]", createPickler(subtpe))
       )
       //TODO OPTIMIZE: do getClass.getClassLoader only once
-      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Pickler.genPickler(getClass.getClassLoader, clazz)")
+      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Pickler.genPickler(this.getClass.getClassLoader, clazz)")
       // TODO: do we still want to use something like HasPicklerDispatch?
       q"""
         val clazz = if (picklee != null) picklee.getClass else null

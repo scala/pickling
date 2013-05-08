@@ -1,6 +1,10 @@
-/*
-  Custom pickler/unpickler for type `List`.
-*/
+package scala.pickling.binarylistint
+
+import org.scalatest.FunSuite
+import scala.pickling._
+import binary._
+import reflect.runtime.{universe => ru}
+import ru._
 
 import scala.language.higherKinds
 
@@ -19,7 +23,7 @@ class HandwrittenListIntPicklerUnpickler[Coll[_] <: List[_]](val format: PickleF
     val length = arr.length
     builder.beginCollection(arr.length)
     builder.hintStaticallyElidedType()
-    builder.hintTag(typeTag[Int])
+    builder.hintTag(fastTypeTag[Int])
     builder.pinHints()
 
     var i: Int = 0
@@ -34,10 +38,10 @@ class HandwrittenListIntPicklerUnpickler[Coll[_] <: List[_]](val format: PickleF
     builder.endEntry()
   }
 
-  def unpickle(tag: => TypeTag[_], reader: PickleReader): Any = {
+  def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = {
     val arrReader = reader.beginCollection()
     arrReader.hintStaticallyElidedType()
-    arrReader.hintTag(typeTag[Int])
+    arrReader.hintTag(fastTypeTag[Int])
     arrReader.pinHints()
 
     val buffer = ListBuffer[Int]()
@@ -56,14 +60,14 @@ class HandwrittenListIntPicklerUnpickler[Coll[_] <: List[_]](val format: PickleF
   }
 }
 
-object Test extends App {
+class BinaryListIntTest extends FunSuite {
+  test("main") {
+    implicit def genListPickler[Coll[_] <: List[_]](implicit format: PickleFormat): Pickler[Coll[Int]] with Unpickler[Coll[Int]] =
+      new HandwrittenListIntPicklerUnpickler(format)
 
-  implicit def genListPickler[Coll[_] <: List[_]](implicit format: PickleFormat): Pickler[Coll[Int]] with Unpickler[Coll[Int]] =
-    new HandwrittenListIntPicklerUnpickler(format)
-
-  val l = List[Int](7, 24, 30)
-  val pckl = l.pickle
-  println(pckl.value.asInstanceOf[Array[Byte]].mkString("[", ",", "]"))
-  val res = pckl.unpickle[List[Int]]
-  println(res)
+    val l = List[Int](7, 24, 30)
+    val pckl = l.pickle
+    assert(pckl.value.asInstanceOf[Array[Byte]].mkString("[", ",", "]") === "[0,0,0,50,115,99,97,108,97,46,99,111,108,108,101,99,116,105,111,110,46,105,109,109,117,116,97,98,108,101,46,36,99,111,108,111,110,36,99,111,108,111,110,91,115,99,97,108,97,46,73,110,116,93,0,0,0,3,0,0,0,7,0,0,0,24,0,0,0,30]")
+    assert(pckl.unpickle[List[Int]] === List(7, 24, 30))
+  }
 }
