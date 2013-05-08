@@ -37,7 +37,8 @@ object MyBuild extends Build {
     file("core"),
     settings = buildSettings ++ Seq(
       libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _),
-      libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test"
+      libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test",
+      parallelExecution in Test := false // hello, reflection sync!!
     )
   )
 

@@ -1,0 +1,20 @@
+package scala.pickling.arrayjson
+
+import org.scalatest.FunSuite
+import scala.pickling._
+import json._
+
+case class C(arr: Array[Int]) { override def toString = s"""C(${arr.mkString("[", ",", "]")})""" }
+
+class ArrayJsonTest extends FunSuite {
+  test("main") {
+    val expectedPickle = """
+    """.stripMargin.trim
+    val expectedUnpickle = """
+    """.stringMargin.trim
+
+    val pickle = C(Array(1, 2, 3)).pickle
+    assert(pickle.toString === expectedPickle)
+    assert(pickle.unpickle[C].toString === expectedUnpickle)
+  }
+}
