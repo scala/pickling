@@ -104,8 +104,8 @@ class Tools[C <: Context](val c: C) {
       if (baseSym.isClass) {
         val sealedHierarchy = loop(baseSym.asClass)
         if (hierarchyIsSealed) sealedHierarchy
-        else List(baseSym) //sourcepathAndClasspathScan()
-      } else List(baseSym) //sourcepathAndClasspathScan()
+        else sealedHierarchy ++ sourcepathScan() //sourcepathAndClasspathScan()
+      } else sourcepathScan() //sourcepathAndClasspathScan()
     }
 
     def sourcepathAndClasspathScan(): List[Symbol] = {

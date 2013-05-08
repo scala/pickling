@@ -58,6 +58,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
           builder.hintTag(tag)
           builder.beginEntry(picklee)
 
+          // TODO: need to support modules and other special guys here
           lazy val im = mirror.reflect(picklee)
           cir.fields.filter(_.hasGetter).foreach(fir => {
             val fldMirror = im.reflectField(fir.field.get)
@@ -103,6 +104,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_]) {
       def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = {
         if (reader.atPrimitive) reader.readPrimitive()
         else {
+          // TODO: need to support modules and other special guys here
           val pendingFields = cir.fields.filter(fir => fir.isNonParam || fir.isReifiedParam)
           val fieldVals = pendingFields.map(fir => {
             val freader = reader.readField(fir.name)
