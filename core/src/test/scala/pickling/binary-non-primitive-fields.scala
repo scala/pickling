@@ -1,4 +1,4 @@
-package scala.pickling.binarynonprimitivefields
+package scala.pickling.binary.non.primitive.fields
 
 import org.scalatest.FunSuite
 import scala.pickling._
