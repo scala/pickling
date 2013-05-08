@@ -172,7 +172,7 @@ class Tools[U <: Universe with Singleton](val u: U) {
   }
 }
 
-abstract class Macro extends QuasiquoteCompat {
+abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
   val c: Context
   import c.universe._
   import definitions._
