@@ -182,10 +182,11 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
 
   private def innerType(target: Tree, name: String): Type = {
     def fail(msg: String) = c.abort(c.enclosingPosition, s"$msg for ${target} of type ${target.tpe}")
-    val carrier = c.typeCheck(tq"${target.tpe}#${TypeName(name)}", mode = c.TYPEmode, silent = true)
+    // val carrier = c.typeCheck(tq"${target.tpe}#${TypeName(name)}", mode = c.TYPEmode, silent = true)
+    val carrier = c.typeCheck(q"def x: ${target.tpe}#${TypeName(name)} = ???", silent = true)
     carrier match {
       case EmptyTree => fail(s"Couldn't resolve $name")
-      case tree => tree.tpe.normalize match {
+      case ValDef(_, _, tpt, _) => tpt.tpe.normalize match {
         case tpe if tpe.typeSymbol.isClass => tpe
         case tpe => fail(s"$name resolved as $tpe is invalid")
       }
@@ -237,22 +238,22 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
       val padding = "  " * (c.enclosingImplicits.length - 1)
       // Console.err.println(padding + msg)
     }
-    debug("can we enter " + c.enclosingImplicits.head.pt + "?")
+    debug("can we enter " + c.enclosingImplicits.head._1 + "?")
     debug(c.enclosingImplicits)
     c.enclosingImplicits match {
-      case c.ImplicitCandidate(_, _, ourPt, _) :: c.ImplicitCandidate(_, _, theirPt, _) :: _ if ourPt =:= theirPt =>
+      case (ourPt, _) :: (theirPt, _) :: _ if ourPt =:= theirPt =>
         debug(s"no, because: ourPt = $ourPt, theirPt = $theirPt")
-        c.diverge()
-        // c.abort(c.enclosingPosition, "stepping aside: repeating itself")
+        // c.diverge()
+        c.abort(c.enclosingPosition, "stepping aside: repeating itself")
       case _ =>
         debug(s"not sure, need to explore alternatives")
-        c.inferImplicitValue(c.enclosingImplicits.head.pt, silent = true) match {
+        c.inferImplicitValue(c.enclosingImplicits.head._1, silent = true) match {
           case success if success != EmptyTree =>
             debug(s"no, because there's $success")
-            // c.abort(c.enclosingPosition, "stepping aside: there are other candidates")
-            c.diverge()
+            c.abort(c.enclosingPosition, "stepping aside: there are other candidates")
+            // c.diverge()
           case _ =>
-            debug("yes, there are no obstacles. entering " + c.enclosingImplicits.head.pt)
+            debug("yes, there are no obstacles. entering " + c.enclosingImplicits.head._1)
             val result = body
             debug("result: " + result)
             result
