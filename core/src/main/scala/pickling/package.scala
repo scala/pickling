@@ -67,6 +67,15 @@ package object pickling {
   }
 
   def fastTypeTag[T: FastTypeTag] = implicitly[FastTypeTag[T]]
+
+  implicit class RichFieldMirror(fm: FieldMirror) {
+    // workaround for SI-7464
+    def forcefulSet(value: Any): Unit = {
+      import java.lang.reflect.{Field => jField}
+      val jfield = fm.asInstanceOf[{ def jfield: jField }].jfield
+      jfield.set(fm.receiver, value)
+    }
+  }
 }
 
 package pickling {

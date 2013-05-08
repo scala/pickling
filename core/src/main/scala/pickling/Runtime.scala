@@ -132,7 +132,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_]) {
           pendingFields.zip(fieldVals) foreach {
             case (fir, fval) =>
               val fmX = im.reflectField(fir.field.get)
-              fmX.set(fval)
+              fmX.forcefulSet(fval)
           }
 
           inst

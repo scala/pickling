@@ -16,15 +16,15 @@ trait PicklerMacros extends Macro {
     import irs._
 
     val primitiveSizes = Map(
-        typeOf[Int] -> 4,
-        typeOf[Short] -> 2,
-        typeOf[Long] -> 8,
-        typeOf[Double] -> 8,
-        typeOf[Byte] -> 1,
-        typeOf[Char] -> 2,
-        typeOf[Float] -> 4,
-        typeOf[Boolean] -> 1
-      )
+      typeOf[Int] -> 4,
+      typeOf[Short] -> 2,
+      typeOf[Long] -> 8,
+      typeOf[Double] -> 8,
+      typeOf[Byte] -> 1,
+      typeOf[Char] -> 2,
+      typeOf[Float] -> 4,
+      typeOf[Boolean] -> 1
+    )
 
     def getField(fir: FieldIR): Tree = if (fir.isPublic) q"picklee.${TermName(fir.name)}"
       else reflectively("picklee", fir)(fm => q"$fm.get.asInstanceOf[${fir.tpe}]").head //TODO: don't think it's possible for this to return an empty list, so head should be OK
@@ -167,7 +167,7 @@ trait UnpicklerMacros extends Macro {
           val initPendingFields = pendingFields.flatMap(fir => {
             val readFir = readField(fir.name, fir.tpe)
             if (fir.isPublic && fir.hasSetter) List(q"$instance.${TermName(fir.name)} = $readFir")
-            else reflectively(instance, fir)(fm => q"$fm.set($readFir)")
+            else reflectively(instance, fir)(fm => q"$fm.forcefulSet($readFir)")
           })
           q"""
             val $instance = $instantiationLogic

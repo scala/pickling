@@ -33,7 +33,17 @@ class NonPublicWeirdTest extends FunSuite {
     // TODO: when generating a Person pickler at runtime, we should be able to reuse the one which was generated at compile-time
     // but unfortunately this doesn't happen. why?!
     val anyPickle = (person: Any).pickle
-    println(anyPickle)
+    assert(anyPickle.toString === """
+      |JSONPickle({
+      |  "tpe": "scala.pickling.non.public.weird.Person",
+      |  "name": "Eugene",
+      |  "hobby": {
+      |    "name": "hacking",
+      |    "notes": "mostly Scala",
+      |    "attitude": "loving it"
+      |  }
+      |})
+    """.stripMargin.trim)
     assert(anyPickle.unpickle[Person].toString === person.toString)
   }
 }
