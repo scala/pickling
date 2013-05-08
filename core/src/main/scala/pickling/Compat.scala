@@ -48,7 +48,7 @@ object Compat {
   }
 }
 
-trait QuasiquoteCompat {
+trait QuasiquoteCompat { self: Macro =>
   val c: Context
 
   object quasiquoteCompat {
@@ -442,5 +442,20 @@ trait QuasiquoteCompat {
     object Modifiers {
       def unapply(mods: Modifiers): Option[(FlagSet, Name, List[Tree])] = Some((mods.flags, mods.privateWithin, mods.annotations))
     }
+  }
+}
+
+trait Reflection211Compat { self: Macro =>
+  val c: Context
+  import c.universe._
+
+  object TermName {
+    def apply(s: String) = newTermName(s)
+    def unapply(name: TermName): Option[String] = Some(name.toString)
+  }
+
+  object TypeName {
+    def apply(s: String) = newTypeName(s)
+    def unapply(name: TypeName): Option[String] = Some(name.toString)
   }
 }
