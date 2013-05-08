@@ -34,7 +34,8 @@ object Tools {
   val generatedNames = MutableSet[Any]()
 }
 
-class Tools[U <: Universe with Singleton](val u: U) {
+class Tools[C <: Context](val c: C) {
+  val u: c.universe.type = c.universe
   import u._
   import definitions._
 
@@ -66,18 +67,17 @@ class Tools[U <: Universe with Singleton](val u: U) {
     val baseTargs = tpe match { case TypeRef(_, _, args) => args; case _ => Nil }
 
     def sourcepathScan(): List[Symbol] = {
-      val g = u.asInstanceOf[scala.tools.nsc.Global]
-      val subclasses = MutableList[g.Symbol]()
-      def analyze(sym: g.Symbol) = if (isRelevantSubclass(baseSym, sym.asInstanceOf[Symbol])) subclasses += sym
-      def loop(tree: g.Tree): Unit = tree match {
+      val subclasses = MutableList[Symbol]()
+      def analyze(sym: Symbol) = if (isRelevantSubclass(baseSym, sym)) subclasses += sym
+      def loop(tree: Tree): Unit = tree match {
         // NOTE: only looking for top-level classes!
-        case g.PackageDef(_, stats) => stats.foreach(loop)
-        case cdef: g.ClassDef => analyze(cdef.symbol)
-        case mdef: g.ModuleDef => analyze(mdef.symbol.moduleClass)
+        case PackageDef(_, stats) => stats.foreach(loop)
+        case cdef: ClassDef => analyze(cdef.symbol)
+        case mdef: ModuleDef => analyze(mdef.symbol.asModule.moduleClass)
         case _ => // do nothing
       }
-      g.currentRun.units.map(_.body).foreach(loop)
-      subclasses.toList.asInstanceOf[List[u.Symbol]]
+      c.enclosingRun.units.map(_.body).foreach(loop)
+      subclasses.toList
     }
 
     def sealedHierarchyScan(): List[Symbol] = {
@@ -147,13 +147,10 @@ class Tools[U <: Universe with Singleton](val u: U) {
     if (baseSym.isFinal || baseSym.isModuleClass) Nil // FIXME: http://groups.google.com/group/scala-internals/browse_thread/thread/e2b786120b6d118d
     else if (blackList(baseSym)) Nil
     else {
-      var unsorted =
-        u match {
-          case u: scala.tools.nsc.Global if u.currentRun.compiles(baseSym.asInstanceOf[u.Symbol]) => sourcepathScan()
-          case _ =>
-            if (baseSym.isClass && baseSym.asClass.isSealed) sealedHierarchyScan()
-            else List(baseSym) //sourcepathAndClasspathScan()
-        }
+      var unsorted = {
+        if (baseSym.isClass && baseSym.asClass.isSealed) sealedHierarchyScan()
+        else sourcepathScan() // sourcepathAndClasspathScan()
+      }
       // NOTE: need to order the list: children first, parents last
       // otherwise pattern match which uses this list might work funnily
       val subSyms = unsorted.distinct.sortWith((c1, c2) => c1.asClass.baseClasses.contains(c2))
@@ -177,7 +174,7 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
   import c.universe._
   import definitions._
 
-  val tools = new Tools[c.universe.type](c.universe)
+  val tools = new Tools[c.type](c)
   import tools._
 
   val irs = new ir.IRs[c.universe.type](c.universe)
