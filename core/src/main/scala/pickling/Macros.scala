@@ -290,7 +290,7 @@ trait UnpickleMacros extends Macro {
       if (sym.isNotNull) createUnpickler(tpe)
       else q"""
         val tag = scala.pickling.FastTypeTag(scala.pickling.mirror, scala.pickling.typeFromString(scala.pickling.mirror, typeString), typeString)
-        if (tag != scala.reflect.runtime.universe.typeTag[Null]) ${createUnpickler(tpe)} else ${createUnpickler(NullTpe)}
+        if (tag != scala.pickling.FastTypeTag.Null) ${createUnpickler(tpe)} else ${createUnpickler(NullTpe)}
       """
     }
 
