@@ -172,7 +172,8 @@ class Tools[U <: Universe with Singleton](val u: U) {
   }
 }
 
-abstract class Macro extends scala.reflect.macros.Macro {
+abstract class Macro {
+  val c: Context
   import c.universe._
   import definitions._
 

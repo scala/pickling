@@ -13,8 +13,8 @@ package object pickling {
   def debug(output: => String) = if (debugEnabled) println(output)
 
   implicit class PickleOps[T](picklee: T) {
-    def pickle(implicit format: PickleFormat): _ = macro PickleMacros.pickle[T]
-    def pickleInto(builder: PickleBuilder): _ = macro PickleMacros.pickleInto[T]
+    def pickle(implicit format: PickleFormat): Pickle = macro Compat.PickleMacros_pickle[T]
+    def pickleInto(builder: PickleBuilder): Unit = macro Compat.PickleMacros_pickleInto[T]
   }
 
   implicit class RichSymbol(sym: scala.reflect.api.Symbols#Symbol) {
@@ -57,7 +57,7 @@ package pickling {
   }
 
   trait GenPicklers {
-    implicit def genPickler[T](implicit format: PickleFormat): Pickler[T] = macro PicklerMacros.impl[T]
+    implicit def genPickler[T](implicit format: PickleFormat): Pickler[T] = macro Compat.PicklerMacros_impl[T]
     // TODO: the primitive pickler hack employed here is funny, but I think we should fix this one
     // since people probably would also have to deal with the necessity to abstract over pickle formats
     def genPickler(classLoader: ClassLoader, clazz: Class[_])(implicit format: PickleFormat): Pickler[_] = {
@@ -77,7 +77,7 @@ package pickling {
   }
 
   trait GenUnpicklers {
-    implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] = macro UnpicklerMacros.impl[T]
+    implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
     def genUnpickler(mirror: Mirror, tag: TypeTag[_])(implicit format: PickleFormat): Unpickler[_] = {
       println(s"generating runtime unpickler for ${tag.tpe}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
       //val runtime = new CompiledUnpicklerRuntime(mirror, tag)
@@ -93,7 +93,7 @@ package pickling {
     val value: ValueType
 
     type PickleFormatType <: PickleFormat
-    def unpickle[T] = macro UnpickleMacros.pickleUnpickle[T]
+    def unpickle[T] = macro Compat.UnpickleMacros_pickleUnpickle[T]
   }
 
   trait PickleFormat {
@@ -135,7 +135,7 @@ package pickling {
     def readLength(): Int
     def readElement(): PickleReader
     def endCollection(): Unit
-    def unpickle[T] = macro UnpickleMacros.readerUnpickle[T]
+    def unpickle[T] = macro Compat.UnpickleMacros_readerUnpickle[T]
   }
 
   case class PicklingException(msg: String) extends Exception(msg)
