@@ -1,6 +1,5 @@
 package scala.pickling
 
-import scala.reflect.macros.AnnotationMacro
 import scala.reflect.runtime.{universe => ru}
 import ir._
 
@@ -339,42 +338,5 @@ trait UnpickleMacros extends Macro {
       reader.endEntry()
       result.asInstanceOf[$tpe]
     """
-  }
-}
-
-trait PickleableMacro extends AnnotationMacro {
-
-  def impl = {
-    import c.universe._
-    import Flag._
-    c.annottee match {
-      case cdef @ ClassDef(mods, name, tparams, Template(parents, self, body)) =>
-        if (!tparams.isEmpty)
-          c.abort(c.enclosingPosition, "Implementation restriction: annotated classes cannot have type parameters")
-
-        val picklerDefDef = if (cdef.symbol.annotations.nonEmpty) {
-          // TODO: implement PickleableBase methods and append them to body
-          q"""
-            def pickler: Pickler[_] = implicitly[Pickler[$name]]
-          """
-        } else {
-          // TODO: implement PickleableBase methods and append them to body
-          q"""
-            override def pickler: Pickler[_] = implicitly[Pickler[$name]]
-          """
-        }
-
-        val unpicklerDefDef = if (cdef.symbol.annotations.nonEmpty) {
-          q"""
-            def unpickler: Unpickler[_] = implicitly[Unpickler[$name]]
-          """
-        } else {
-          q"""
-            override def unpickler: Unpickler[_] = implicitly[Unpickler[$name]]
-          """
-        }
-        val newbody = body ++ List(picklerDefDef, unpicklerDefDef)
-        ClassDef(mods, name, tparams, Template(parents :+ tq"scala.pickling.PickleableBase", self, newbody))
-    }
   }
 }
