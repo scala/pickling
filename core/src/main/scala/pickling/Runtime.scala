@@ -3,7 +3,6 @@ package scala.pickling
 import scala.reflect.runtime.universe._
 import definitions._
 import scala.reflect.runtime.{universe => ru}
-import scala.tools.reflect.ToolBox
 import ir._
 
 object Runtime {
