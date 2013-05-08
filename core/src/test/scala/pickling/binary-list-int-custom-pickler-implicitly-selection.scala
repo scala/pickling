@@ -1,4 +1,4 @@
-package scala.pickling.binarylistint
+package scala.pickling.binary.list.int.custom.pickler.implicitly.selection
 
 import org.scalatest.FunSuite
 import scala.pickling._

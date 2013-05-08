@@ -1,4 +1,4 @@
-package scala.pickling.arrayjson
+package scala.pickling.array.json
 
 import org.scalatest.FunSuite
 import scala.pickling._

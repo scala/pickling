@@ -1,4 +1,4 @@
-package scala.pickling.binarylisttnew
+package scala.pickling.binary.list.t.`new`
 
 import org.scalatest.FunSuite
 import scala.pickling._

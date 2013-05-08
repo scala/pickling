@@ -1,4 +1,4 @@
-package scala.pickling.binaryarrayint
+package scala.pickling.binary.array.int
 
 import org.scalatest.FunSuite
 import scala.pickling._

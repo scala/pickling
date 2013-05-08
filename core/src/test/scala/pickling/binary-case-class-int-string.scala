@@ -1,4 +1,4 @@
-package scala.pickling.binarycaseclassintstring
+package scala.pickling.binary.`case`.`class`.int.string
 
 import org.scalatest.FunSuite
 import scala.pickling._
