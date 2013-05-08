@@ -30,6 +30,8 @@ package object pickling {
       currentMirror
     } else currentMirror
 
+  def typeToString(tpe: Type): String = tpe.key
+
   def typeFromString(mirror: Mirror, stpe: String): Type = {
     val (ssym, stargs) = {
       val Pattern = """^(.*?)(\[(.*?)\])?$""".r
@@ -45,6 +47,23 @@ package object pickling {
     val sym = if (ssym.endsWith(".type")) mirror.staticModule(ssym.stripSuffix(".type")).moduleClass else mirror.staticClass(ssym)
     val tycon = sym.asType.toTypeConstructor
     appliedType(tycon, stargs.map(starg => typeFromString(mirror, starg)))
+  }
+
+  // FIXME: duplication wrt Tools, but I don't really fancy abstracting away this path-dependent madness
+  implicit class RichType(tpe: Type) {
+    def key: String = {
+      tpe match {
+        case ExistentialType(tparams, TypeRef(pre, sym, targs))
+        if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
+          TypeRef(pre, sym, Nil).key
+        case TypeRef(pre, sym, targs) if pre.typeSymbol.isModuleClass =>
+          sym.fullName +
+          (if (sym.isModuleClass) ".type" else "") +
+          (if (targs.isEmpty) "" else targs.map(_.key).mkString("[", ",", "]"))
+        case _ =>
+          tpe.toString
+      }
+    }
   }
 }
 

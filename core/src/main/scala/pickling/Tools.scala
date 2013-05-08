@@ -192,6 +192,22 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
     }
   }
 
+  implicit class RichType(tpe: Type) {
+    def key: String = {
+      tpe match {
+        case ExistentialType(tparams, TypeRef(pre, sym, targs))
+        if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
+          TypeRef(pre, sym, Nil).key
+        case TypeRef(pre, sym, targs) if pre.typeSymbol.isModuleClass =>
+          sym.fullName +
+          (if (sym.isModuleClass) ".type" else "") +
+          (if (targs.isEmpty) "" else targs.map(_.key).mkString("[", ",", "]"))
+        case _ =>
+          tpe.toString
+      }
+    }
+  }
+
   def pickleFormatType(pickle: Tree): Type = innerType(pickle, "PickleFormatType")
 
   def compileTimeDispatchees(tpe: Type): List[Type] = tools.compileTimeDispatchees(tpe, rootMirror)
@@ -317,7 +333,4 @@ trait PickleTools {
     if (!areHintsPinned) this.hints = new Hints
     body(hints)
   }
-
-  def typeToString(tpe: Type): String = tpe.key
-
 }
