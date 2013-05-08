@@ -222,16 +222,16 @@ package binary {
     val ELIDED_TAG: Byte = -1
     val NULL_TAG: Byte = -2
 
-    val KEY_NULL = fastTypeTag[Null].key
-    val KEY_INT = fastTypeTag[Int].key
-    val KEY_BOOLEAN = fastTypeTag[Boolean].key
-    val KEY_SCALA_STRING = fastTypeTag[scala.Predef.String].key
-    val KEY_JAVA_STRING = fastTypeTag[java.lang.String].key
+    val KEY_NULL = FastTypeTag.Null.key
+    val KEY_INT = FastTypeTag.Int.key
+    val KEY_BOOLEAN = FastTypeTag.Boolean.key
+    val KEY_SCALA_STRING = FastTypeTag.ScalaString.key
+    val KEY_JAVA_STRING = FastTypeTag.JavaString.key
     val primitives = Set(KEY_NULL, KEY_INT, KEY_BOOLEAN, KEY_SCALA_STRING, KEY_JAVA_STRING)
 
-    val KEY_ARRAY_BYTE   = fastTypeTag[Array[Byte]].key
-    val KEY_ARRAY_INT    = fastTypeTag[Array[Int]].key
-    val KEY_ARRAY_LONGT  = fastTypeTag[Array[Long]].key
+    val KEY_ARRAY_BYTE   = FastTypeTag.ArrayByte.key
+    val KEY_ARRAY_INT    = FastTypeTag.ArrayInt.key
+    val KEY_ARRAY_LONG   = FastTypeTag.ArrayLong.key
 
     type PickleType = BinaryPickle
     def createBuilder() = new BinaryPickleBuilder(this)

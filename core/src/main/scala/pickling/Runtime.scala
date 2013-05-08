@@ -78,7 +78,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
 
           builder.endEntry()
         } else {
-          builder.hintTag(fastTypeTag[Null])
+          builder.hintTag(FastTypeTag.Null)
           builder.beginEntry(null)
           builder.endEntry()
         }

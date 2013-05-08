@@ -62,7 +62,7 @@ trait LowPriorityPicklersUnpicklers {
 }
 
 trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
-  class PrimitivePicklerUnpickler[T: FastTypeTag](implicit val format: PickleFormat) extends Pickler[T] with Unpickler[T] {
+  class PrimitivePicklerUnpickler[T](implicit val format: PickleFormat) extends Pickler[T] with Unpickler[T] {
     def pickle(picklee: T, builder: PickleBuilder): Unit = {
       builder.beginEntry(picklee)
       builder.endEntry()
