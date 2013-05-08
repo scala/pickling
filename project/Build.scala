@@ -42,6 +42,18 @@ object MyBuild extends Build {
     )
   )
 
+  lazy val sandbox: Project = Project(
+    "sandbox",
+    file("sandbox"),
+    settings = buildSettings ++ Seq(
+      sourceDirectory in Compile <<= baseDirectory(root => root),
+      sourceDirectory in Test <<= baseDirectory(root => root),
+      libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1",
+      parallelExecution in Test := false,
+      scalacOptions ++= Seq("-Xlog-implicits")
+    )
+  ) dependsOn(core)
+
   lazy val runtime: Project = Project(
     "runtime",
     file("runtime"),
