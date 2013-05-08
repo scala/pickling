@@ -290,24 +290,6 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
       """
     prologue ++ wrappedBody.stats :+ wrappedBody.expr
   }
-
-  def introduceTopLevel(pid: String, name: Name)(body: => ImplDef): Tree = {
-    val fullName = if (name.isTermName) TermName(pid + "." + name) else TypeName(pid + "." + name)
-    try {
-      val existing = if (name.isTermName) c.mirror.staticModule(fullName.toString) else c.mirror.staticClass(fullName.toString)
-      assert(existing != NoSymbol, fullName)
-      // System.err.println(s"existing = $existing")
-      Ident(existing)
-    } catch {
-      case _: scala.reflect.internal.MissingRequirementError =>
-        if (!Tools.generatedNames(fullName)) {
-          // System.err.println(s"introducing $pid.$name")
-          c.introduceTopLevel(pid, body)
-          Tools.generatedNames += fullName
-        }
-        c.topLevelRef(fullName)
-    }
-  }
 }
 
 case class Hints(

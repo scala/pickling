@@ -52,77 +52,71 @@ trait PicklerMacros extends Macro {
       if (possibleSizes.contains(None) || possibleSizes.isEmpty) None
       else Some(possibleSizes.map(_.get).reduce((t1, t2) => q"$t1 + $t2"))
     }
+    def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
+      val cir = flattenedClassIR(tpe)
 
-    val pickler = {
-      val picklerPid = syntheticPackageName
-      val picklerName = syntheticPicklerName(tpe)
-      introduceTopLevel(picklerPid, picklerName) {
-        def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
-          val cir = flattenedClassIR(tpe)
-
-          val initTree = computeKnownSizeIfPossible(cir) match {
-            case None => q""
-            case Some(tree) =>
-              val typeNameLen = tpe.key.getBytes("UTF-8").length
-              q"""
-                val size = $tree + $typeNameLen + 4
-                builder.hintKnownSize(size)
-              """
-          }
-
-          val beginEntry = q"""
-            $initTree
-            builder.beginEntry(picklee)
-          """
-          val putFields = cir.fields.flatMap(fir => {
-            if (sym.isModuleClass) {
-              Nil
-            } else if (fir.hasGetter) {
-              def putField(getterLogic: Tree) = {
-                def wrap(pickleLogic: Tree) = q"builder.putField(${fir.name}, b => $pickleLogic)"
-                wrap {
-                  if (fir.tpe.typeSymbol.isEffectivelyFinal) q"""
-                    b.hintStaticallyElidedType()
-                    $getterLogic.pickleInto(b)
-                  """ else q"""
-                    val subPicklee: ${fir.tpe} = $getterLogic
-                    if (subPicklee == null || subPicklee.getClass == classOf[${fir.tpe}]) b.hintDynamicallyElidedType() else ()
-                    subPicklee.pickleInto(b)
-                  """
-                }
-              }
-              if (fir.isPublic) List(putField(q"picklee.${TermName(fir.name)}"))
-              else reflectively("picklee", fir)(fm => putField(q"$fm.get.asInstanceOf[${fir.tpe}]"))
-            } else {
-              // NOTE: this means that we've encountered a primary constructor parameter elided in the "constructors" phase
-              // we can do nothing about that, so we don't serialize this field right now leaving everything to the unpickler
-              // when deserializing we'll have to use the Unsafe.allocateInstance strategy
-              Nil
-            }
-          })
-          val endEntry = q"builder.endEntry()"
+      val initTree = computeKnownSizeIfPossible(cir) match {
+        case None => q""
+        case Some(tree) =>
+          val typeNameLen = tpe.key.getBytes("UTF-8").length
           q"""
-            import scala.reflect.runtime.universe._
-            $beginEntry
-            ..$putFields
-            $endEntry
+            val size = $tree + $typeNameLen + 4
+            builder.hintKnownSize(size)
           """
-        }
-        def pickleLogic = tpe match {
-          case NothingTpe => c.abort(c.enclosingPosition, "cannot pickle Nothing") // TODO: report the serialization path that brought us here
-          case _ => unifiedPickle
-        }
-        q"""
-          class $picklerName extends scala.pickling.Pickler[$tpe] {
-            import scala.pickling._
-            import scala.pickling.`package`.PickleOps
-            implicit val format = new ${format.tpe}()
-            def pickle(picklee: $tpe, builder: PickleBuilder): Unit = $pickleLogic
-          }
-        """
       }
+
+      val beginEntry = q"""
+        $initTree
+        builder.beginEntry(picklee)
+      """
+      val putFields = cir.fields.flatMap(fir => {
+        if (sym.isModuleClass) {
+          Nil
+        } else if (fir.hasGetter) {
+          def putField(getterLogic: Tree) = {
+            def wrap(pickleLogic: Tree) = q"builder.putField(${fir.name}, b => $pickleLogic)"
+            wrap {
+              if (fir.tpe.typeSymbol.isEffectivelyFinal) q"""
+                b.hintStaticallyElidedType()
+                $getterLogic.pickleInto(b)
+              """ else q"""
+                val subPicklee: ${fir.tpe} = $getterLogic
+                if (subPicklee == null || subPicklee.getClass == classOf[${fir.tpe}]) b.hintDynamicallyElidedType() else ()
+                subPicklee.pickleInto(b)
+              """
+            }
+          }
+          if (fir.isPublic) List(putField(q"picklee.${TermName(fir.name)}"))
+          else reflectively("picklee", fir)(fm => putField(q"$fm.get.asInstanceOf[${fir.tpe}]"))
+        } else {
+          // NOTE: this means that we've encountered a primary constructor parameter elided in the "constructors" phase
+          // we can do nothing about that, so we don't serialize this field right now leaving everything to the unpickler
+          // when deserializing we'll have to use the Unsafe.allocateInstance strategy
+          Nil
+        }
+      })
+      val endEntry = q"builder.endEntry()"
+      q"""
+        import scala.reflect.runtime.universe._
+        $beginEntry
+        ..$putFields
+        $endEntry
+      """
     }
-    q"new $pickler"
+    def pickleLogic = tpe match {
+      case NothingTpe => c.abort(c.enclosingPosition, "cannot pickle Nothing") // TODO: report the serialization path that brought us here
+      case _ => unifiedPickle
+    }
+    val picklerName = c.fresh(syntheticPicklerName(tpe).toTermName)
+    q"""
+      implicit object $picklerName extends scala.pickling.Pickler[$tpe] {
+        import scala.pickling._
+        import scala.pickling.`package`.PickleOps
+        implicit val format = new ${format.tpe}()
+        def pickle(picklee: $tpe, builder: PickleBuilder): Unit = $pickleLogic
+      }
+      $picklerName
+    """
   }
 }
 
@@ -138,74 +132,69 @@ trait UnpicklerMacros extends Macro {
     val targs = tpe match { case TypeRef(_, _, targs) => targs; case _ => Nil }
     val sym = tpe.typeSymbol.asClass
     import irs._
-    val unpickler = {
-      val unpicklerPid = syntheticPackageName
-      val unpicklerName = syntheticUnpicklerName(tpe)
-      introduceTopLevel(unpicklerPid, unpicklerName) {
-        def unpicklePrimitive = q"reader.readPrimitive(tag)"
-        def unpickleObject = {
-          def readField(name: String, tpe: Type) = q"reader.readField($name).unpickle[$tpe]"
+    def unpicklePrimitive = q"reader.readPrimitive(tag)"
+    def unpickleObject = {
+      def readField(name: String, tpe: Type) = q"reader.readField($name).unpickle[$tpe]"
 
-          // TODO: validate that the tpe argument of unpickle and weakTypeOf[T] work together
-          // NOTE: step 1) this creates an instance and initializes its fields reified from constructor arguments
-          val cir = flattenedClassIR(tpe)
-          val isPreciseType = targs.length == sym.typeParams.length && targs.forall(_.typeSymbol.isClass)
-          val canCallCtor = !cir.fields.exists(_.isErasedParam) && isPreciseType
-          val pendingFields = cir.fields.filter(fir => fir.isNonParam || (!canCallCtor && fir.isReifiedParam))
-          val instantiationLogic = {
-            if (sym.isModuleClass) {
-              q"${sym.module}"
-            } else if (canCallCtor) {
-              val ctorSig = cir.fields.filter(_.param.isDefined).map(fir => (fir.param.get: Symbol, fir.tpe)).toMap
-              val ctorArgs = {
-                if (ctorSig.isEmpty) List(List())
-                else {
-                  val ctorSym = ctorSig.head._1.owner.asMethod
-                  ctorSym.paramss.map(_.map(f => readField(f.name.toString, ctorSig(f))))
-                }
-              }
-              q"new $tpe(...$ctorArgs)"
-            } else {
-              q"scala.concurrent.util.Unsafe.instance.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]"
-            }
-          }
-          // NOTE: step 2) this sets values for non-erased fields which haven't been initialized during step 1
-          val initializationLogic = {
-            if (sym.isModuleClass || pendingFields.isEmpty) instantiationLogic
+      // TODO: validate that the tpe argument of unpickle and weakTypeOf[T] work together
+      // NOTE: step 1) this creates an instance and initializes its fields reified from constructor arguments
+      val cir = flattenedClassIR(tpe)
+      val isPreciseType = targs.length == sym.typeParams.length && targs.forall(_.typeSymbol.isClass)
+      val canCallCtor = !cir.fields.exists(_.isErasedParam) && isPreciseType
+      val pendingFields = cir.fields.filter(fir => fir.isNonParam || (!canCallCtor && fir.isReifiedParam))
+      val instantiationLogic = {
+        if (sym.isModuleClass) {
+          q"${sym.module}"
+        } else if (canCallCtor) {
+          val ctorSig = cir.fields.filter(_.param.isDefined).map(fir => (fir.param.get: Symbol, fir.tpe)).toMap
+          val ctorArgs = {
+            if (ctorSig.isEmpty) List(List())
             else {
-              val instance = TermName(tpe.typeSymbol.name + "Instance")
-              val initPendingFields = pendingFields.flatMap(fir => {
-                val readFir = readField(fir.name, fir.tpe)
-                if (fir.isPublic && fir.hasSetter) List(q"$instance.${TermName(fir.name)} = $readFir")
-                else reflectively(instance, fir)(fm => q"$fm.set($readFir)")
-              })
-              q"""
-                val $instance = $instantiationLogic
-                ..$initPendingFields
-                $instance
-              """
+              val ctorSym = ctorSig.head._1.owner.asMethod
+              ctorSym.paramss.map(_.map(f => readField(f.name.toString, ctorSig(f))))
             }
           }
-          q"$initializationLogic"
+          q"new $tpe(...$ctorArgs)"
+        } else {
+          q"scala.concurrent.util.Unsafe.instance.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]"
         }
-        def unpickleLogic = tpe match {
-          case NullTpe => q"null"
-          case NothingTpe => c.abort(c.enclosingPosition, "cannot unpickle Nothing") // TODO: report the deserialization path that brought us here
-          case _ if sym.isPrimitive || sym == StringClass => q"$unpicklePrimitive"
-          case _ => q"$unpickleObject"
-        }
-        q"""
-          class $unpicklerName extends scala.pickling.Unpickler[$tpe] {
-            import scala.pickling._
-            import scala.pickling.ir._
-            import scala.reflect.runtime.universe._
-            implicit val format = new ${format.tpe}()
-            def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = $unpickleLogic
-          }
-        """
       }
+      // NOTE: step 2) this sets values for non-erased fields which haven't been initialized during step 1
+      val initializationLogic = {
+        if (sym.isModuleClass || pendingFields.isEmpty) instantiationLogic
+        else {
+          val instance = TermName(tpe.typeSymbol.name + "Instance")
+          val initPendingFields = pendingFields.flatMap(fir => {
+            val readFir = readField(fir.name, fir.tpe)
+            if (fir.isPublic && fir.hasSetter) List(q"$instance.${TermName(fir.name)} = $readFir")
+            else reflectively(instance, fir)(fm => q"$fm.set($readFir)")
+          })
+          q"""
+            val $instance = $instantiationLogic
+            ..$initPendingFields
+            $instance
+          """
+        }
+      }
+      q"$initializationLogic"
     }
-    q"new $unpickler"
+    def unpickleLogic = tpe match {
+      case NullTpe => q"null"
+      case NothingTpe => c.abort(c.enclosingPosition, "cannot unpickle Nothing") // TODO: report the deserialization path that brought us here
+      case _ if sym.isPrimitive || sym == StringClass => q"$unpicklePrimitive"
+      case _ => q"$unpickleObject"
+    }
+    val unpicklerName = c.fresh(syntheticUnpicklerName(tpe).toTermName)
+    q"""
+      implicit object $unpicklerName extends scala.pickling.Unpickler[$tpe] {
+        import scala.pickling._
+        import scala.pickling.ir._
+        import scala.reflect.runtime.universe._
+        implicit val format = new ${format.tpe}()
+        def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = $unpickleLogic
+      }
+      $unpicklerName
+    """
   }
 }
 
