@@ -112,7 +112,7 @@ trait PicklerMacros extends Macro {
       implicit object $picklerName extends scala.pickling.Pickler[$tpe] {
         import scala.pickling._
         import scala.pickling.`package`.PickleOps
-        implicit val format = new ${format.tpe}()
+        val format = new ${format.tpe}()
         def pickle(picklee: $tpe, builder: PickleBuilder): Unit = $pickleLogic
       }
       $picklerName
@@ -190,7 +190,7 @@ trait UnpicklerMacros extends Macro {
         import scala.pickling._
         import scala.pickling.ir._
         import scala.reflect.runtime.universe._
-        implicit val format = new ${format.tpe}()
+        val format = new ${format.tpe}()
         def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = $unpickleLogic
       }
       $unpicklerName
@@ -241,16 +241,12 @@ trait PickleMacros extends Macro {
       val compileTimeDispatch = compileTimeDispatchees(tpe) filter (_ != NullTpe) map (subtpe =>
         CaseDef(Bind(TermName("clazz"), Ident(nme.WILDCARD)), q"clazz == classOf[$subtpe]", createPickler(subtpe))
       )
-      val picklerFromAnnotation = CaseDef(Ident(nme.WILDCARD), q"picklee.isInstanceOf[PickleableBase]", q"""
-        $builder.hintTag(scala.pickling.fastTypeTag[$tpe]);
-        picklee.asInstanceOf[PickleableBase].pickler
-      """)
       //TODO OPTIMIZE: do getClass.getClassLoader only once
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Pickler.genPickler(getClass.getClassLoader, clazz)")
       // TODO: do we still want to use something like HasPicklerDispatch?
       q"""
         val clazz = if (picklee != null) picklee.getClass else null
-        ${Match(q"clazz", nullDispatch +: picklerFromAnnotation +: compileTimeDispatch :+ runtimeDispatch)}
+        ${Match(q"clazz", nullDispatch +: compileTimeDispatch :+ runtimeDispatch)}
       """
     }
     val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
@@ -293,7 +289,7 @@ trait UnpickleMacros extends Macro {
     def finalDispatch = {
       if (sym.isNotNull) createUnpickler(tpe)
       else q"""
-        val tag = scala.pickling.FastTypeTag(scala.pickling.typeFromString(scala.pickling.mirror, typeString), typeString)
+        val tag = scala.pickling.FastTypeTag(scala.pickling.mirror, scala.pickling.typeFromString(scala.pickling.mirror, typeString), typeString)
         if (tag != scala.reflect.runtime.universe.typeTag[Null]) ${createUnpickler(tpe)} else ${createUnpickler(NullTpe)}
       """
     }
@@ -304,7 +300,7 @@ trait UnpickleMacros extends Macro {
         CaseDef(Literal(Constant(subtpe.key)), EmptyTree, createUnpickler(subtpe))
       })
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""
-        val tag = scala.pickling.FastTypeTag(scala.pickling.typeFromString(scala.pickling.mirror, typeString), typeString)
+        val tag = scala.pickling.FastTypeTag(scala.pickling.mirror, scala.pickling.typeFromString(scala.pickling.mirror, typeString), typeString)
         Unpickler.genUnpickler(reader.mirror, tag)
       """)
       Match(q"typeString", compileTimeDispatch :+ runtimeDispatch)
@@ -318,7 +314,7 @@ trait UnpickleMacros extends Macro {
       ${if (sym.isEffectivelyFinal) (q"reader.hintStaticallyElidedType()": Tree) else q""}
       val typeString = reader.beginEntryNoTag()
       val unpickler = $dispatchLogic
-      val result = unpickler.unpickle({ scala.pickling.FastTypeTag(scala.pickling.typeFromString(scala.pickling.mirror, typeString), typeString) }, reader)
+      val result = unpickler.unpickle({ scala.pickling.FastTypeTag(scala.pickling.mirror, scala.pickling.typeFromString(scala.pickling.mirror, typeString), typeString) }, reader)
       reader.endEntry()
       result.asInstanceOf[$tpe]
     """

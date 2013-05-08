@@ -183,10 +183,10 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
   private def innerType(target: Tree, name: String): Type = {
     def fail(msg: String) = c.abort(c.enclosingPosition, s"$msg for ${target} of type ${target.tpe}")
     // val carrier = c.typeCheck(tq"${target.tpe}#${TypeName(name)}", mode = c.TYPEmode, silent = true)
-    val carrier = c.typeCheck(q"def x: ${target.tpe}#${TypeName(name)} = ???", silent = true)
+    val carrier = c.typeCheck(q"{ val x: ${target.tpe}#${TypeName(name)} = ??? }", silent = true)
     carrier match {
       case EmptyTree => fail(s"Couldn't resolve $name")
-      case ValDef(_, _, tpt, _) => tpt.tpe.normalize match {
+      case Block(ValDef(_, _, tpt, _) :: _, _) => tpt.tpe.normalize match {
         case tpe if tpe.typeSymbol.isClass => tpe
         case tpe => fail(s"$name resolved as $tpe is invalid")
       }

@@ -502,12 +502,13 @@ object FastTypeTag {
 trait FastTypeTagMacros extends Macro {
   def impl[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
+    val T = weakTypeOf[T]
     q"""
-      implicit val typeTag = scala.reflect.runtime.universe.typeTag[T]
-      new FastTypeTag[T] {
+      implicit val typeTag = scala.reflect.runtime.universe.typeTag[$T]
+      new FastTypeTag[$T] {
         def mirror = typeTag.mirror
         def tpe = typeTag.tpe
-        def key = c.literal(c.weakTypeOf[T].key).splice
+        def key = ${T.key}
       }
     """
   }
