@@ -18,6 +18,7 @@ object BuildSettings {
     // scalaHome := Some(file(paradise210)),
     // unmanagedBase := file(paradise210 + "/lib"),
     resolvers += Resolver.sonatypeRepo("snapshots"),
+    resolvers += Resolver.sonatypeRepo("releases"),
     scalacOptions ++= Seq()
   )
 }
@@ -35,7 +36,8 @@ object MyBuild extends Build {
     "core",
     file("core"),
     settings = buildSettings ++ Seq(
-      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _)
+      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _),
+      libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test"
     )
   )
 
