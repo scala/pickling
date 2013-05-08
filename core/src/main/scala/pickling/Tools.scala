@@ -284,7 +284,7 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
     // 3) overridden fields
     val wrappedBody =
       q"""
-        val $firSymbol = typeTag[${field.owner.asClass.toType.erasure}].tpe.member(TermName(${field.name.toString}))
+        val $firSymbol = scala.pickling.fastTypeTag[${field.owner.asClass.toType.erasure}].tpe.member(TermName(${field.name.toString}))
         if ($firSymbol.isTerm) ${body(q"im.reflectField($firSymbol.asTerm)")}
       """
     prologue ++ wrappedBody.stats :+ wrappedBody.expr
@@ -310,7 +310,7 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
 }
 
 case class Hints(
-  tag: TypeTag[_] = null,
+  tag: FastTypeTag[_] = null,
   knownSize: Int = -1,
   isStaticallyElidedType: Boolean = false,
   isDynamicallyElidedType: Boolean = false) {
@@ -321,7 +321,7 @@ trait PickleTools {
   var hints = new Hints()
   var areHintsPinned = false
 
-  def hintTag(tag: TypeTag[_]): this.type = { hints = hints.copy(tag = tag); this }
+  def hintTag(tag: FastTypeTag[_]): this.type = { hints = hints.copy(tag = tag); this }
   def hintKnownSize(knownSize: Int): this.type = { hints = hints.copy(knownSize = knownSize); this }
   def hintStaticallyElidedType(): this.type = { hints = hints.copy(isStaticallyElidedType = true); this }
   def hintDynamicallyElidedType(): this.type = { hints = hints.copy(isDynamicallyElidedType = true); this }
