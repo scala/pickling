@@ -21,18 +21,42 @@ class Inheritance2Test extends FunSuite {
     val f = new Firefighter("Josephine", 48, 40000)
 
     val pickleF = (f: Firefighter).pickle
-    println(pickleF.value)
-    println(pickleF.unpickle[Firefighter])
-    println(pickleF.unpickle[Firefighter].species)
+    assert(pickleF.value === """
+      |{
+      |  "tpe": "scala.pickling.inheritance2.Firefighter",
+      |  "name": "Josephine",
+      |  "age": 48,
+      |  "salary": 40000,
+      |  "species": "human"
+      |}
+    """.trim.stripMargin)
+    assert(pickleF.unpickle[Firefighter] === f)
+    assert(pickleF.unpickle[Firefighter].species === "human")
 
     val pickleP = (f: Person).pickle
-    println(pickleP.value)
-    println(pickleP.unpickle[Person])
-    println(pickleP.unpickle[Person].species)
+    assert(pickleP.value === """
+      |{
+      |  "tpe": "scala.pickling.inheritance2.Firefighter",
+      |  "name": "Josephine",
+      |  "age": 48,
+      |  "salary": 40000,
+      |  "species": "human"
+      |}
+    """.trim.stripMargin)
+    assert(pickleP.unpickle[Person] === f)
+    assert(pickleP.unpickle[Person].species === "human")
 
     val pickleC = (f: Creature).pickle
-    println(pickleC.value)
-    println(pickleC.unpickle[Creature])
-    println(pickleC.unpickle[Creature].species)
+    assert(pickleC.value === """
+      |{
+      |  "tpe": "scala.pickling.inheritance2.Firefighter",
+      |  "name": "Josephine",
+      |  "age": 48,
+      |  "salary": 40000,
+      |  "species": "human"
+      |}
+    """.trim.stripMargin)
+    assert(pickleC.unpickle[Creature] === f)
+    assert(pickleC.unpickle[Creature].species === "human")
   }
 }

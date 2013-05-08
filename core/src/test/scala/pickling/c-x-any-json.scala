@@ -12,7 +12,7 @@ class CXAnyJsonTest extends FunSuite {
     val pckl = c.pickle
     assert(pckl.toString === """
       |JSONPickle({
-      |  "tpe": "scala.pickling.cxanyjson.C",
+      |  "tpe": "scala.pickling.c.x.any.json.C",
       |  "x": {
       |    "tpe": "scala.Int",
       |    "value": 2

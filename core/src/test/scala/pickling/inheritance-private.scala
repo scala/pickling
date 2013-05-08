@@ -23,17 +23,41 @@ class InheritancePrivateTest extends FunSuite {
     f.setSalary(30000)
 
     val pickleF = (f: Firefighter).pickle
-    println(pickleF.value)
-    println(pickleF.unpickle[Firefighter])
-    println(pickleF.unpickle[Firefighter].exposeSalary)
+    assert(pickleF.value === """
+      |{
+      |  "tpe": "scala.pickling.inheritance.private.Firefighter",
+      |  "name": "Jeff",
+      |  "age": 45,
+      |  "since": 1990,
+      |  "salary": 30000
+      |}
+    """.trim.stripMargin)
+    assert(pickleF.unpickle[Firefighter] === f)
+    assert(pickleF.unpickle[Firefighter].exposeSalary === 30000)
 
     val pickleE = (f: Employee).pickle
-    println(pickleE.value)
-    println(pickleE.unpickle[Employee])
-    println(pickleE.unpickle[Employee].exposeSalary)
+    assert(pickleE.value === """
+      |{
+      |  "tpe": "scala.pickling.inheritance.private.Firefighter",
+      |  "name": "Jeff",
+      |  "age": 45,
+      |  "since": 1990,
+      |  "salary": 30000
+      |}
+    """.trim.stripMargin)
+    assert(pickleE.unpickle[Employee] === f)
+    assert(pickleF.unpickle[Employee].exposeSalary === 30000)
 
     val pickleP = (f: Person).pickle
-    println(pickleP.value)
-    println(pickleP.unpickle[Person])
+    assert(pickleP.value === """
+      |{
+      |  "tpe": "scala.pickling.inheritance.private.Firefighter",
+      |  "name": "Jeff",
+      |  "age": 45,
+      |  "since": 1990,
+      |  "salary": 30000
+      |}
+    """.trim.stripMargin)
+    assert(pickleP.unpickle[Person] === f)
   }
 }
