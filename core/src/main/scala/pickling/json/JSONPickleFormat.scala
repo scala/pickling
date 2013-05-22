@@ -1,5 +1,7 @@
 package scala.pickling
 
+import scala.language.implicitConversions
+
 package object json {
   implicit val pickleFormat: JSONPickleFormat = new JSONPickleFormat
   implicit def toJSONPickle(value: String): JSONPickle = JSONPickle(value)

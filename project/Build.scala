@@ -19,7 +19,7 @@ object BuildSettings {
     // unmanagedBase := file(paradise210 + "/lib"),
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += Resolver.sonatypeRepo("releases"),
-    scalacOptions ++= Seq()
+    scalacOptions ++= Seq("-feature")
   )
 }
 
