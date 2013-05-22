@@ -38,6 +38,8 @@ object MyBuild extends Build {
     settings = buildSettings ++ Seq(
       libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _),
       libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test",
+      libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
+      conflictWarning in ThisBuild := ConflictWarning.disable,
       parallelExecution in Test := false // hello, reflection sync!!
     )
   )
