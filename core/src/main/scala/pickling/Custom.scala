@@ -1,7 +1,10 @@
 package scala.pickling
 
+import scala.language.experimental.macros
+import scala.language.higherKinds
+
 import scala.reflect.runtime.universe._
-import language.experimental.macros
+
 import scala.collection.immutable.::
 import scala.collection.generic.CanBuildFrom
 import scala.collection.IndexedSeq

@@ -1,11 +1,15 @@
 package scala.pickling
 
-import scala.reflect.api.Universe
+import scala.language.existentials
+
 import scala.reflect.macros.Context
-import scala.collection.mutable.{Map => MutableMap, ListBuffer => MutableList, WeakHashMap, Set => MutableSet}
-import java.lang.ref.WeakReference
-import scala.collection.mutable.{Stack => MutableStack}
+import scala.reflect.api.Universe
 import scala.reflect.runtime.universe._
+
+import scala.collection.mutable.{Map => MutableMap, ListBuffer => MutableList, WeakHashMap, Set => MutableSet}
+import scala.collection.mutable.{Stack => MutableStack}
+
+import java.lang.ref.WeakReference
 
 object Tools {
   private val subclassCaches = new WeakHashMap[AnyRef, WeakReference[AnyRef]]()

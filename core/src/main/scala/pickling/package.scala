@@ -1,8 +1,8 @@
 package scala
 
-import java.lang.annotation.Inherited
 import scala.language.experimental.macros
-import scala.reflect.runtime.{universe => ru}
+import scala.language.reflectiveCalls
+
 import scala.reflect.runtime.universe._
 import scala.annotation.implicitNotFound
 
