@@ -1,4 +1,0 @@
-#!/bin/sh
-#
-
-jar tf "$1" | sort
