@@ -3,7 +3,7 @@ import Keys._
 import scala.util.Properties
 
 object BuildSettings {
-  val buildVersion = "1.0.0"
+  val buildVersion = "2.11.0-SNAPSHOT"
   val buildScalaVersion = "2.10.2-SNAPSHOT"
   val buildScalaOrganization = "org.scala-lang.macro-paradise"
   // path to a build of https://github.com/scalamacros/kepler/tree/paradise/macros210
@@ -33,7 +33,7 @@ object MyBuild extends Build {
   ) aggregate(core, runtime)
 
   lazy val core: Project = Project(
-    "core",
+    "scala-pickling",
     file("core"),
     settings = buildSettings ++ Seq(
       libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _),
