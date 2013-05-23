@@ -1,8 +1,0 @@
-cls: bar
-obj: foo
-obj: bar
-cls: bar
-obj: bar
-trait: pili
-trait: mili
-trait: foo

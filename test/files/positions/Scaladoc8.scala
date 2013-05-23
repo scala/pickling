@@ -1,6 +1,0 @@
-/**
- * Foo
- */
-object Scaladoc8 {
-
-}

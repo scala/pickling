@@ -1,4 +1,0 @@
-{
-  @new transient() @new volatile() var x = 2;
-  ()
-}

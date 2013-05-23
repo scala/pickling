@@ -1,4 +1,0 @@
-t1009.scala:2: error: empty quoted identifier
-  def `` = "fish"
-      ^
-one error found

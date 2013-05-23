@@ -1,2 +1,0 @@
-private a
-class b

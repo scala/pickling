@@ -1,4 +1,0 @@
-B.scala:4: error: method foo overrides nothing
-  override def foo = "B"
-               ^
-one error found

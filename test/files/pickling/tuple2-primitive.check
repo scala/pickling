@@ -1,5 +1,0 @@
-[0,0,0,40,115,99,97,108,97,46,84,117,112,108,101,50,91,106,97,118,97,46,108,97,110,103,46,83,116,114,105,110,103,44,115,99,97,108,97,46,73,110,116,93,0,0,0,6,104,101,119,114,111,119,0,0,0,2]
-generating runtime unpickler for (java.lang.String, Int)
-(hewrow,2)
-generating runtime unpickler for (java.lang.String, Int, java.lang.String)
-(hewrow,2,bye)

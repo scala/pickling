@@ -1,4 +1,0 @@
-t6214.scala:5: error: missing parameter type
-  	m { s => case class Foo() }
-            ^
-one error found
