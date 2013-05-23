@@ -1,7 +1,0 @@
-generating runtime pickler for class Person
-hooray:
-{
-  "tpe": "Person",
-  "name": "joe",
-  "age": 23
-}

@@ -1,1 +1,0 @@
-object Scalaz extends Tuples

@@ -1,4 +1,0 @@
-xmltruncated3.scala:2: error: input ended while parsing XML
-  val stuff = <a unclosedattr="aaaa
-                                   ^
-one error found

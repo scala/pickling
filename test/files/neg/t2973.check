@@ -1,4 +1,0 @@
-t2973.scala:1: error: ';' expected but 'package' found.
-package foo {} package bar {}
-               ^
-one error found

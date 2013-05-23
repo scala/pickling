@@ -1,9 +1,0 @@
-{
-  @new Foo(bar = "qwe") class C extends AnyRef {
-    def <init>() = {
-      super.<init>();
-      ()
-    }
-  };
-  ()
-}

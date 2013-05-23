@@ -1,2 +1,0 @@
-class R is a static class, use reflectClass on a RuntimeMirror to obtain its ClassMirror
-()

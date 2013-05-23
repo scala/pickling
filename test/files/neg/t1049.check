@@ -1,4 +1,0 @@
-t1049.scala:6: error: not found: value a
-            case a : a.MapTo =>
-                     ^
-one error found

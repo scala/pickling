@@ -1,4 +1,0 @@
-{
-  def foo(@new elidable(0) x: Int) = "";
-  ()
-}

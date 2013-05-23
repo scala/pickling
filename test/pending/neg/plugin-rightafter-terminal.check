@@ -1,2 +1,0 @@
-error: [phase assembly, right after dependency on terminal phase not allowed: rightafterterminal => terminal]
-one error found

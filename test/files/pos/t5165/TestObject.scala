@@ -1,3 +1,0 @@
-
-object TestObject extends TestTrait
-

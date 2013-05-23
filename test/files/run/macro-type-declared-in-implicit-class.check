@@ -1,2 +1,0 @@
-prefix = Expr[Nothing](Macros.foo("2"))
-Some(2)

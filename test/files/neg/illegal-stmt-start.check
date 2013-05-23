@@ -1,4 +1,0 @@
-illegal-stmt-start.scala:3: error: illegal start of statement (no modifiers allowed here)
-    private def bar {}
-    ^
-one error found

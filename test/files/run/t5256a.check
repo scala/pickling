@@ -1,6 +1,0 @@
-class A
-A
-AnyRef {
-  def <init>(): A
-  def foo: Nothing
-}

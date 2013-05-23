@@ -1,4 +1,0 @@
-qualifying-class-error-2.scala:9: error: A is not an enclosing class
-    protected[A] def f() {}
-                     ^
-one error found
