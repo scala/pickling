@@ -307,11 +307,12 @@ trait UnpickleMacros extends Macro {
     }
 
     val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
+    val staticHint = if (sym.isEffectivelyFinal) q"reader.hintStaticallyElidedType()" else q""
 
     q"""
       val reader = $readerArg
       reader.hintTag(scala.pickling.fastTypeTag[$tpe])
-      ${if (sym.isEffectivelyFinal) (q"reader.hintStaticallyElidedType()": Tree) else q""}
+      $staticHint
       val typeString = reader.beginEntryNoTag()
       val unpickler = $dispatchLogic
       val result = unpickler.unpickle({ scala.pickling.FastTypeTag(scala.pickling.mirror, scala.pickling.typeFromString(scala.pickling.mirror, typeString), typeString) }, reader)

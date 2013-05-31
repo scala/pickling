@@ -4,12 +4,12 @@ import scala.util.Properties
 
 object BuildSettings {
   val buildVersion = "2.11.0-SNAPSHOT"
-  val buildScalaVersion = "2.10.2-SNAPSHOT"
+  val buildScalaVersion = "2.11.0-SNAPSHOT"
   val buildScalaOrganization = "org.scala-lang.macro-paradise"
-  // path to a build of https://github.com/scalamacros/kepler/tree/paradise/macros210
-  // val buildScalaVersion = "2.10.0"
+  // path to a build of https://github.com/scalamacros/kepler/tree/paradise/macros
+  // val buildScalaVersion = "2.11.0"
   // val buildScalaOrganization = "org.scala-lang"
-  // val paradise210 = Properties.envOrElse("MACRO_PARADISE210", "/Users/xeno_by/Projects/Paradise210/build/pack")
+  // val paradise210 = Properties.envOrElse("MACRO_PARADISE211", "/Users/xeno_by/Projects/Paradise211/build/pack")
 
   val buildSettings = Defaults.defaultSettings ++ Seq(
     version := buildVersion,
@@ -26,19 +26,14 @@ object BuildSettings {
 object MyBuild extends Build {
   import BuildSettings._
 
-  lazy val root: Project = Project(
-    "root",
-    file("core"),
-    settings = buildSettings
-  ) aggregate(core, runtime)
-
   lazy val core: Project = Project(
     "scala-pickling",
     file("core"),
     settings = buildSettings ++ Seq(
       libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _),
-      libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test",
-      libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
+      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-compiler" % _),
+      libraryDependencies += "org.scalatest" % "scalatest_2.11.0-M3" % "1.9.1" % "test",
+      libraryDependencies += "org.scalacheck" % "scalacheck_2.11.0-M3" % "1.10.1" % "test",
       conflictWarning in ThisBuild := ConflictWarning.disable,
       parallelExecution in Test := false // hello, reflection sync!!
     )
@@ -50,19 +45,10 @@ object MyBuild extends Build {
     settings = buildSettings ++ Seq(
       sourceDirectory in Compile <<= baseDirectory(root => root),
       sourceDirectory in Test <<= baseDirectory(root => root),
-      libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1",
+      libraryDependencies += "org.scalatest" % "scalatest_2.11.0-M3" % "1.9.1",
       parallelExecution in Test := false,
       scalacOptions ++= Seq()
       // scalacOptions ++= Seq("-Xprint:typer")
-    )
-  ) dependsOn(core)
-
-  lazy val runtime: Project = Project(
-    "runtime",
-    file("runtime"),
-    settings = buildSettings ++ Seq(
-      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _),
-      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-compiler" % _)
     )
   ) dependsOn(core)
 }
