@@ -8,7 +8,7 @@ class ArrayPickler[T: FastTypeTag]
   val format: PickleFormat = pf
 
   def pickle(arr: Array[T], builder: PickleBuilder): Unit = {
-    builder.hintStaticallyElidedType()
+    // builder.hintStaticallyElidedType()
     builder.beginEntry(arr)
     builder.endEntry()
   }

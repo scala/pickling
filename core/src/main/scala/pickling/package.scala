@@ -165,7 +165,8 @@ package pickling {
     def readLength(): Int
     def readElement(): PickleReader
     def endCollection(): Unit
-    def unpickle[T] = macro Compat.UnpickleMacros_readerUnpickle[T]
+    def unpickle[T]: T = macro Compat.UnpickleMacros_readerUnpickle[T]
+    def unpickleTopLevel[T]: T = macro Compat.UnpickleMacros_readerUnpickleTopLevel[T]
   }
 
   case class PicklingException(msg: String) extends Exception(msg)

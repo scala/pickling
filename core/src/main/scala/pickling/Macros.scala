@@ -274,11 +274,15 @@ trait UnpickleMacros extends Macro {
       val pickle = $pickleArg
       val format = new ${pickleFormatType(pickleArg)}()
       val reader = format.createReader(pickle, mirror)
-      reader.unpickle[$tpe]
+      reader.unpickleTopLevel[$tpe]
     """
   }
 
-  def readerUnpickle[T: c.WeakTypeTag]: c.Tree = {
+  def readerUnpickleTopLevel[T: c.WeakTypeTag]: c.Tree = {
+    readerUnpickle(true)
+  }
+
+  def readerUnpickle[T: c.WeakTypeTag](isTopLevel: Boolean = false): c.Tree = {
     import c.universe._
     import definitions._
     val tpe = weakTypeOf[T]
@@ -311,7 +315,7 @@ trait UnpickleMacros extends Macro {
     q"""
       val reader = $readerArg
       reader.hintTag(scala.pickling.fastTypeTag[$tpe])
-      ${if (sym.isEffectivelyFinal) (q"reader.hintStaticallyElidedType()": Tree) else q""}
+      ${if (sym.isEffectivelyFinal && !isTopLevel) (q"reader.hintStaticallyElidedType()": Tree) else q""}
       val typeString = reader.beginEntryNoTag()
       val unpickler = $dispatchLogic
       val result = unpickler.unpickle({ scala.pickling.FastTypeTag(scala.pickling.mirror, scala.pickling.typeFromString(scala.pickling.mirror, typeString), typeString) }, reader)
