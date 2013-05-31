@@ -6,17 +6,19 @@ object BuildSettings {
   val buildVersion = "1.0.0-SNAPSHOT"
   val buildScalaVersion = "2.10.2-SNAPSHOT"
   val buildScalaOrganization = "org.scala-lang.macro-paradise"
-  // path to a build of https://github.com/scalamacros/kepler/tree/paradise/macros210
-  // val buildScalaVersion = "2.10.0"
-  // val buildScalaOrganization = "org.scala-lang"
-  // val paradise210 = Properties.envOrElse("MACRO_PARADISE210", "/Users/xeno_by/Projects/Paradise210/build/pack")
+
+  val useLocalBuildOfParadise = false
+  // path to a build of https://github.com/scalamacros/kepler/tree/paradise/macros219
+  val localBuildOfParadise210 = Properties.envOrElse("MACRO_PARADISE210", "/Users/xeno_by/Projects/Paradise210/build/pack")
 
   val buildSettings = Defaults.defaultSettings ++ Seq(
     version := buildVersion,
     scalaVersion := buildScalaVersion,
-    scalaOrganization := buildScalaOrganization,
-    // scalaHome := Some(file(paradise210)),
-    // unmanagedBase := file(paradise210 + "/lib"),
+    scalaOrganization := buildScalaOrganization
+  ) ++ (if (useLocalBuildOfParadise) Seq(
+    scalaHome := Some(file(localBuildOfParadise210)),
+    unmanagedBase := file(localBuildOfParadise210 + "/lib")
+  ) else Nil) ++ Seq(
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += Resolver.sonatypeRepo("releases"),
     scalacOptions ++= Seq("-feature")
@@ -49,8 +51,9 @@ object MyBuild extends Build {
   lazy val core: Project = Project(
     "scala-pickling",
     file("core"),
-    settings = buildSettings ++ Seq(
-      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _),
+    settings = buildSettings ++ (if (useLocalBuildOfParadise) Nil else Seq(
+      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _)
+    )) ++ Seq(
       libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test",
       libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
       conflictWarning in ThisBuild := ConflictWarning.disable,
@@ -81,10 +84,10 @@ object MyBuild extends Build {
   lazy val runtime: Project = Project(
     "runtime",
     file("runtime"),
-    settings = buildSettings ++ Seq(
+    settings = buildSettings ++ (if (useLocalBuildOfParadise) Nil else Seq(
       libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _),
       libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-compiler" % _)
-    )
+    ))
   ) dependsOn(core)
 
   lazy val benchmark: Project = Project(
