@@ -173,10 +173,11 @@ class Tools[C <: Context](val c: C) {
   }
 }
 
-abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
+abstract class Macro extends scala.reflect.macros.Macro {
   val c: Context
   import c.universe._
   import definitions._
+  import c.ImplicitCandidate
 
   val tools = new Tools[c.type](c)
   import tools._
@@ -242,22 +243,22 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
       val padding = "  " * (c.enclosingImplicits.length - 1)
       // Console.err.println(padding + msg)
     }
-    debug("can we enter " + c.enclosingImplicits.head._1 + "?")
+    debug("can we enter " + c.enclosingImplicits.head.pt + "?")
     debug(c.enclosingImplicits)
     c.enclosingImplicits match {
-      case (ourPt, _) :: (theirPt, _) :: _ if ourPt =:= theirPt =>
+      case ImplicitCandidate(_, _, ourPt, _) :: ImplicitCandidate(_, _, theirPt, _) :: _ if ourPt =:= theirPt =>
         debug(s"no, because: ourPt = $ourPt, theirPt = $theirPt")
         // c.diverge()
         c.abort(c.enclosingPosition, "stepping aside: repeating itself")
       case _ =>
         debug(s"not sure, need to explore alternatives")
-        c.inferImplicitValue(c.enclosingImplicits.head._1, silent = true) match {
+        c.inferImplicitValue(c.enclosingImplicits.head.pt, silent = true) match {
           case success if success != EmptyTree =>
             debug(s"no, because there's $success")
             c.abort(c.enclosingPosition, "stepping aside: there are other candidates")
             // c.diverge()
           case _ =>
-            debug("yes, there are no obstacles. entering " + c.enclosingImplicits.head._1)
+            debug("yes, there are no obstacles. entering " + c.enclosingImplicits.head.pt)
             val result = body
             debug("result: " + result)
             result
