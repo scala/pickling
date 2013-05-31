@@ -6,6 +6,9 @@ import scala.language.reflectiveCalls
 import scala.reflect.runtime.universe._
 import scala.annotation.implicitNotFound
 
+import java.lang.annotation.Inherited
+import scala.annotation.MacroAnnotation
+
 package object pickling {
 
   // TOGGLE DEBUGGING
@@ -166,6 +169,17 @@ package pickling {
     def readElement(): PickleReader
     def endCollection(): Unit
     def unpickle[T] = macro UnpickleMacros.readerUnpickle[T]
+  }
+
+  @Inherited
+  class pickleable extends MacroAnnotation {
+    def transform = macro PickleableMacro.impl
+  }
+
+  // NOTE: can't call it Pickleable because of a name clash w.r.t pickleable on case-insensitive file systems
+  trait PickleableBase {
+    def pickler: Pickler[_]
+    def unpickler: Unpickler[_]
   }
 
   case class PicklingException(msg: String) extends Exception(msg)
