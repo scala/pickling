@@ -98,4 +98,16 @@ object PicklingBinarySpec extends Properties("pickling-binary") {
     opt1 == opt
   }
 
+  property("Option[CaseBase]") = Prop forAll { (opt: Option[CaseBase]) =>
+    val pickle: BinaryPickle = opt.pickle
+    val opt1 = pickle.unpickle[Option[CaseBase]]
+    opt1 == opt
+  }
+
+  property("Int") = Prop forAll { (x: Int) =>
+    val pickle: BinaryPickle = x.pickle
+    val x1 = pickle.unpickle[Int]
+    x1 == x
+  }
+
 }

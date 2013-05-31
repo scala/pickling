@@ -168,7 +168,8 @@ package pickling {
     def readLength(): Int
     def readElement(): PickleReader
     def endCollection(): Unit
-    def unpickle[T] = macro UnpickleMacros.readerUnpickle[T]
+    def unpickle[T]: T = macro UnpickleMacros.readerUnpickle[T]
+    def unpickleTopLevel[T]: T = macro UnpickleMacros.readerUnpickleTopLevel[T]
   }
 
   @Inherited
