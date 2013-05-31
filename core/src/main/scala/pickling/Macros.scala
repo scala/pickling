@@ -275,11 +275,19 @@ trait UnpickleMacros extends Macro {
       val pickle = $pickleArg
       val format = new ${pickleFormatType(pickleArg)}()
       val reader = format.createReader(pickle, mirror)
-      reader.unpickle[$tpe]
+      reader.unpickleTopLevel[$tpe]
     """
   }
 
   def readerUnpickle[T: c.WeakTypeTag]: c.Tree = {
+    readerUnpickleHelper(false)
+  }
+
+  def readerUnpickleTopLevel[T: c.WeakTypeTag]: c.Tree = {
+    readerUnpickleHelper(true)
+  }
+
+  def readerUnpickleHelper[T: c.WeakTypeTag](isTopLevel: Boolean = false): c.Tree = {
     import c.universe._
     import definitions._
     val tpe = weakTypeOf[T]
@@ -308,7 +316,7 @@ trait UnpickleMacros extends Macro {
     }
 
     val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
-    val staticHint = if (sym.isEffectivelyFinal) q"reader.hintStaticallyElidedType()" else q""
+    val staticHint = if (sym.isEffectivelyFinal && !isTopLevel) (q"reader.hintStaticallyElidedType()": Tree) else q""
 
     q"""
       val reader = $readerArg
