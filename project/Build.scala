@@ -6,17 +6,19 @@ object BuildSettings {
   val buildVersion = "1.0.0-SNAPSHOT"
   val buildScalaVersion = "2.11.0-SNAPSHOT"
   val buildScalaOrganization = "org.scala-lang.macro-paradise"
+
+  val useLocalBuildOfParadise = false
   // path to a build of https://github.com/scalamacros/kepler/tree/paradise/macros
-  // val buildScalaVersion = "2.11.0"
-  // val buildScalaOrganization = "org.scala-lang"
-  // val paradise210 = Properties.envOrElse("MACRO_PARADISE211", "/Users/xeno_by/Projects/Paradise211/build/pack")
+  val localBuildOfParadise211 = Properties.envOrElse("MACRO_PARADISE211", "/Users/xeno_by/Projects/Paradise211/build/pack")
 
   val buildSettings = Defaults.defaultSettings ++ Seq(
     version := buildVersion,
     scalaVersion := buildScalaVersion,
-    scalaOrganization := buildScalaOrganization,
-    // scalaHome := Some(file(paradise210)),
-    // unmanagedBase := file(paradise210 + "/lib"),
+    scalaOrganization := buildScalaOrganization
+  ) ++ (if (useLocalBuildOfParadise) Seq(
+    scalaHome := Some(file(localBuildOfParadise211)),
+    unmanagedBase := file(localBuildOfParadise211 + "/lib")
+  ) else Nil) ++ Seq(
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += Resolver.sonatypeRepo("releases"),
     scalacOptions ++= Seq("-feature")
@@ -53,9 +55,10 @@ object MyBuild extends Build {
   lazy val core: Project = Project(
     "scala-pickling",
     file("core"),
-    settings = buildSettings ++ Seq(
+    settings = buildSettings ++ (if (useLocalBuildOfParadise) Nil else Seq(
       libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _),
-      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-compiler" % _),
+      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-compiler" % _)
+    )) ++ Seq(
       libraryDependencies += "org.scalatest" % "scalatest_2.11.0-M3" % "1.9.1" % "test",
       libraryDependencies += "org.scalacheck" % "scalacheck_2.11.0-M3" % "1.10.1" % "test",
       conflictWarning in ThisBuild := ConflictWarning.disable,
