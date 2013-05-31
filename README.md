@@ -9,5 +9,5 @@ Known limitations:
   1. No support for `@pickleable`.
   2. In the public API (and everywhere else), vanilla type tags are replaced with `scala.pickling.FastTypeTag/scala.pickling.fastTypeTag`.
   3. Picklers are generated directly at call sites.
-  4. No runtime compilation, since it's not obvious how to package it without inducing a dependency on `scala-compiler.jar`.
+  4. ~~No runtime compilation, since it's not obvious how to package it without inducing a dependency on `scala-compiler.jar`.~~
   5. No classpath scans, because they don't work.
