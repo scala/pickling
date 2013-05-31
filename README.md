@@ -6,7 +6,7 @@ This project aims to turn [a custom build of macro paradise](https://github.com/
 into a standalone library that targets [Macro Paradise 2.11](http://docs.scala-lang.org/overviews/macros/paradise.html#macro_paradise_for_211x).
 
 Known limitations:
-  1. No support for `@pickleable`.
+  1. ~~No support for `@pickleable`.~~
   2. In the public API (and everywhere else), vanilla type tags are replaced with `scala.pickling.FastTypeTag/scala.pickling.fastTypeTag`.
   3. Picklers are generated directly at call sites.
   4. ~~No runtime compilation, since it's not obvious how to package it without inducing a dependency on `scala-compiler.jar`.~~
