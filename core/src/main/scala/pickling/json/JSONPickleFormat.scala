@@ -123,7 +123,7 @@ package json {
     }
   }
 
-  class JSONPickleReader(datum: Any, val mirror: Mirror, format: JSONPickleFormat) extends PickleReader with PickleTools {
+  class JSONPickleReader(var datum: Any, val mirror: Mirror, format: JSONPickleFormat) extends PickleReader with PickleTools {
     private var lastReadTag: FastTypeTag[_] = null
     private val primitives = Map[String, () => Any](
       FastTypeTag.Null.key -> (() => null),
@@ -159,8 +159,15 @@ package json {
     def atPrimitive: Boolean = primitives.contains(lastReadTag.key)
     def readPrimitive(): Any = {
       datum match {
-        case JSONObject(fields) => mkNestedReader(fields("value")).primitives(lastReadTag.key)()
-        case _ => primitives(lastReadTag.key)()
+        case JSONArray(list) if lastReadTag.key != FastTypeTag.ArrayInt.key =>
+          // now this is a hack!
+          val value = mkNestedReader(list.head).primitives(lastReadTag.key)()
+          datum = JSONArray(list.tail)
+          value
+        case JSONObject(fields) =>
+          mkNestedReader(fields("value")).primitives(lastReadTag.key)()
+        case _ =>
+          primitives(lastReadTag.key)()
       }
     }
     def atObject: Boolean = datum.isInstanceOf[JSONObject]
