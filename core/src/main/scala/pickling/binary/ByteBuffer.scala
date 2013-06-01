@@ -5,6 +5,8 @@ import scala.collection.mutable.ArrayBuffer
 sealed abstract class ByteBuffer {
   def encodeByteTo(pos: Int, value: Byte): Int
 
+  def encodeShortAtEnd(pos: Int, value: Short): Unit
+
   def encodeIntAtEnd(pos: Int, value: Int): Unit
 
   def encodeLongAtEnd(pos: Int, value: Long): Unit
@@ -20,6 +22,8 @@ sealed abstract class ByteBuffer {
   def copyTo(pos: Int, bytes: Array[Byte]): Int
 
   def decodeByteFrom(pos: Int): (Byte, Int)
+
+  def decodeShortFrom(pos: Int): (Short, Int)
 
   def decodeIntFrom(pos: Int): (Int, Int)
 
@@ -46,6 +50,9 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
     arr(pos) = value
     pos + 1
   }
+
+  def encodeShortAtEnd(pos: Int, value: Short): Unit =
+    Util.encodeShortTo(arr, pos, value)
 
   def encodeIntAtEnd(pos: Int, value: Int): Unit =
     Util.encodeIntTo(arr, pos, value)
@@ -85,6 +92,9 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
   def decodeByteFrom(pos: Int): (Byte, Int) = {
     (arr(pos), pos + 1)
   }
+
+  def decodeShortFrom(pos: Int): (Short, Int) =
+    Util.decodeShortFrom(arr, pos)
 
   def decodeIntFrom(pos: Int): (Int, Int) =
     Util.decodeIntFrom(arr, pos)
@@ -131,6 +141,14 @@ final class ByteArrayBuffer extends ByteBuffer {
     }
     buf(pos) = value
     pos + 1
+  }
+
+  // pos is ignored!
+  def encodeShortAtEnd(pos: Int, value: Short): Unit = {
+    val fst = (value >>> 8 & 0xff).asInstanceOf[Byte]
+    val snd = (value & 0xff).asInstanceOf[Byte]
+    buf += fst
+    buf += snd
   }
 
   // pos is ignored!
@@ -220,6 +238,12 @@ final class ByteArrayBuffer extends ByteBuffer {
 
   def decodeByteFrom(pos: Int): (Byte, Int) = {
     (buf(pos), pos+1)
+  }
+
+  def decodeShortFrom(pos: Int): (Short, Int) = {
+    val fst = ((buf(pos) << 8) & 0xFFFF).toShort
+    val snd = (buf(pos+1)      & 0x00FF).toShort
+    ((fst | snd).toShort, pos+2)
   }
 
   def decodeIntFrom(pos: Int): (Int, Int) = {
