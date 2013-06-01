@@ -63,7 +63,10 @@ package json {
     private val primitives = Map[String, Any => Unit](
       FastTypeTag.Null.key -> ((picklee: Any) => append("null")),
       FastTypeTag.Int.key -> ((picklee: Any) => append(picklee.toString)),
+      FastTypeTag.Long.key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\"")),
+      FastTypeTag.Short.key -> ((picklee: Any) => append(picklee.toString)),
       FastTypeTag.Boolean.key -> ((picklee: Any) => append(picklee.toString)),
+      FastTypeTag.Byte.key -> ((picklee: Any) => append(picklee.toString)),
       FastTypeTag.ScalaString.key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\"")),
       FastTypeTag.JavaString.key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\"")),
       FastTypeTag.ArrayInt.key -> ((picklee: Any) => pickleArray(picklee.asInstanceOf[Array[Int]], FastTypeTag.Int))
@@ -128,6 +131,9 @@ package json {
     private val primitives = Map[String, () => Any](
       FastTypeTag.Null.key -> (() => null),
       FastTypeTag.Int.key -> (() => datum.asInstanceOf[Double].toInt),
+      FastTypeTag.Short.key -> (() => datum.asInstanceOf[Double].toShort),
+      FastTypeTag.Long.key -> (() => datum.asInstanceOf[String].toLong),
+      FastTypeTag.Byte.key -> (() => datum.asInstanceOf[Double].toByte),
       FastTypeTag.Boolean.key -> (() => datum.asInstanceOf[Boolean]),
       FastTypeTag.ScalaString.key -> (() => datum.asInstanceOf[String]),
       FastTypeTag.JavaString.key -> (() => datum.asInstanceOf[String]),
