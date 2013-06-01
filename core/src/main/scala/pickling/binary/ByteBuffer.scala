@@ -7,6 +7,8 @@ sealed abstract class ByteBuffer {
 
   def encodeIntAtEnd(pos: Int, value: Int): Unit
 
+  def encodeLongAtEnd(pos: Int, value: Long): Unit
+
   def encodeIntTo(pos: Int, value: Int): Int
 
   def encodeStringTo(pos: Int, value: String): Int
@@ -20,6 +22,8 @@ sealed abstract class ByteBuffer {
   def decodeByteFrom(pos: Int): (Byte, Int)
 
   def decodeIntFrom(pos: Int): (Int, Int)
+
+  def decodeLongFrom(pos: Int): (Long, Int)
 
   def decodeStringFrom(pos: Int): (String, Int)
 
@@ -45,6 +49,9 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
 
   def encodeIntAtEnd(pos: Int, value: Int): Unit =
     Util.encodeIntTo(arr, pos, value)
+
+  def encodeLongAtEnd(pos: Int, value: Long): Unit =
+    Util.encodeLongTo(arr, pos, value)
 
   def encodeIntTo(pos: Int, value: Int): Int =
     Util.encodeIntTo(arr, pos, value)
@@ -81,6 +88,9 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
 
   def decodeIntFrom(pos: Int): (Int, Int) =
     Util.decodeIntFrom(arr, pos)
+
+  def decodeLongFrom(pos: Int): (Long, Int) =
+    Util.decodeLongFrom(arr, pos)
 
   def decodeStringFrom(pos: Int): (String, Int) =
     Util.decodeStringFrom(arr, pos)
@@ -123,7 +133,7 @@ final class ByteArrayBuffer extends ByteBuffer {
     pos + 1
   }
 
-  // pos is ingored!
+  // pos is ignored!
   def encodeIntAtEnd(pos: Int, value: Int): Unit = {
     // assert(buf.size == pos)
     val fst = (value >>> 24).asInstanceOf[Byte]
@@ -134,6 +144,26 @@ final class ByteArrayBuffer extends ByteBuffer {
     buf += snd
     buf += thrd
     buf += frth
+  }
+
+  // pos is ignored!
+  def encodeLongAtEnd(pos: Int, value: Long): Unit = {
+    val elem1 = (value >>> 56 & 0xff).asInstanceOf[Byte]
+    val elem2 = (value >>> 48 & 0xff).asInstanceOf[Byte]
+    val elem3 = (value >>> 40 & 0xff).asInstanceOf[Byte]
+    val elem4 = (value >>> 32 & 0xff).asInstanceOf[Byte]
+    val elem5 = (value >>> 24 & 0xff).asInstanceOf[Byte]
+    val elem6 = (value >>> 16 & 0xff).asInstanceOf[Byte]
+    val elem7 = (value >>> 8 & 0xff).asInstanceOf[Byte]
+    val elem8 = (value & 0xff).asInstanceOf[Byte]
+    buf += elem1
+    buf += elem2
+    buf += elem3
+    buf += elem4
+    buf += elem5
+    buf += elem6
+    buf += elem7
+    buf += elem8
   }
 
   def encodeIntTo(pos: Int, value: Int): Int = {
@@ -198,6 +228,18 @@ final class ByteArrayBuffer extends ByteBuffer {
     val thrd = ((buf(pos+2) << 8) & 0x0000FFFF).toInt
     val frth = (buf(pos+3) & 0x000000FF).toInt
     (fst | snd | thrd | frth, pos+4)
+  }
+
+  def decodeLongFrom(pos: Int): (Long, Int) = {
+    val elem1 = ((buf(pos) << 56)   & 0xFFFFFFFFFFFFFFFFL).toLong
+    val elem2 = ((buf(pos+1) << 48) & 0xFFFFFFFFFFFFFFL).toLong
+    val elem3 = ((buf(pos+2) << 40) & 0xFFFFFFFFFFFFL).toLong
+    val elem4 = ((buf(pos+3) << 32) & 0xFFFFFFFFFFL).toLong
+    val elem5 = ((buf(pos+4) << 24) & 0xFFFFFFFF).toLong
+    val elem6 = ((buf(pos+5) << 16) & 0x00FFFFFF).toLong
+    val elem7 = ((buf(pos+6) << 8) & 0x0000FFFF).toLong
+    val elem8 = (buf(pos+7) & 0x000000FF).toLong
+    (elem1 | elem2 | elem3 | elem4 | elem5 | elem6 | elem7 | elem8, pos+8)
   }
 
   def decodeStringFrom(pos: Int): (String, Int) = {

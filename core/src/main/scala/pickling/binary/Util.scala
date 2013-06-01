@@ -21,6 +21,20 @@ package binary {
       (fst | snd | thrd | frth, i+4)
     }
 
+    /** Returns decoded Long plus next "readable" position in target array.
+     */
+    def decodeLongFrom(arr: Array[Byte], i: Int): (Long, Int) = {
+      val elem1 = ((arr(i).toLong   << 56) & 0xFFFFFFFFFFFFFFFFL).toLong
+      val elem2 = ((arr(i+1).toLong << 48) & 0x00FFFFFFFFFFFFFFL).toLong
+      val elem3 = ((arr(i+2).toLong << 40) & 0x0000FFFFFFFFFFFFL).toLong
+      val elem4 = ((arr(i+3).toLong << 32) & 0x000000FFFFFFFFFFL).toLong
+      val elem5 = ((arr(i+4).toLong << 24) & 0x00000000FFFFFFFFL).toLong
+      val elem6 = ((arr(i+5).toLong << 16) & 0x0000000000FFFFFFL).toLong
+      val elem7 = ((arr(i+6).toLong << 8)  & 0x000000000000FFFFL).toLong
+      val elem8 = (arr(i+7).toLong         & 0x00000000000000FFL).toLong
+      (elem1 | elem2 | elem3 | elem4 | elem5 | elem6 | elem7 | elem8, i+8)
+    }
+
     def fastdecodeIntFrom(arr: Array[Byte], i: Int): (Int, Int) = {
       val fst = (getInt(arr, i) << 24).toInt
       val snd = ((getInt(arr, i+1) << 16) & 0x00FFFFFF).toInt
@@ -41,6 +55,28 @@ package binary {
       arr(i+2) = thrd
       arr(i+3) = frth
       i+4
+    }
+
+    /** Returns next "writeable" position in target array.
+     */
+    def encodeLongTo(arr: Array[Byte], i: Int, value: Long): Int = {
+      val elem1 = (value >>> 56 & 0xff).asInstanceOf[Byte]
+      val elem2 = (value >>> 48 & 0xff).asInstanceOf[Byte]
+      val elem3 = (value >>> 40 & 0xff).asInstanceOf[Byte]
+      val elem4 = (value >>> 32 & 0xff).asInstanceOf[Byte]
+      val elem5 = (value >>> 24 & 0xff).asInstanceOf[Byte]
+      val elem6 = (value >>> 16 & 0xff).asInstanceOf[Byte]
+      val elem7 = (value >>> 8 & 0xff).asInstanceOf[Byte]
+      val elem8 = (value & 0xff).asInstanceOf[Byte]
+      arr(i) = elem1
+      arr(i+1) = elem2
+      arr(i+2) = elem3
+      arr(i+3) = elem4
+      arr(i+4) = elem5
+      arr(i+5) = elem6
+      arr(i+6) = elem7
+      arr(i+7) = elem8
+      i+8
     }
 
     def fastencodeIntTo(arr: Array[Byte], i: Int, value: Int): Int = {
