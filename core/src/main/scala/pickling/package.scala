@@ -22,6 +22,7 @@ package object pickling {
 
   implicit class RichSymbol(sym: scala.reflect.api.Symbols#Symbol) {
     def isEffectivelyFinal = sym.asInstanceOf[scala.reflect.internal.Symbols#Symbol].isEffectivelyFinal
+    def isEffectivelyPrimitive = throw new Exception("use Type.isEffectivelyPrimitive instead")
     def isNotNull = sym.isClass && (sym.asClass.isPrimitive || sym.asClass.isDerivedValueClass)
   }
 
@@ -54,6 +55,7 @@ package object pickling {
 
   // FIXME: duplication wrt Tools, but I don't really fancy abstracting away this path-dependent madness
   implicit class RichType(tpe: Type) {
+    import definitions._
     def key: String = {
       tpe match {
         case ExistentialType(tparams, TypeRef(pre, sym, targs))
@@ -66,6 +68,11 @@ package object pickling {
         case _ =>
           tpe.toString
       }
+    }
+    def isEffectivelyPrimitive: Boolean = tpe match {
+      case TypeRef(_, sym: ClassSymbol, _) if sym.isPrimitive => true
+      case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.isEffectivelyPrimitive => true
+      case _ => false
     }
   }
 
@@ -160,7 +167,6 @@ package pickling {
     def beginEntryNoTag(): String
     def atPrimitive: Boolean
     def readPrimitive(): Any
-    def readArray(): Any
     def atObject: Boolean
     def readField(name: String): PickleReader
     def endEntry(): Unit
