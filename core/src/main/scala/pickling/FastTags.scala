@@ -23,7 +23,7 @@ object FastTypeTag {
     c.Expr[FastTypeTag[T]](bundle.impl[T])
   }
 
-  private def stdTag[T: ru.TypeTag] = apply(scala.reflect.runtime.currentMirror, ru.typeOf[T], ru.typeOf[T].key)
+  private def stdTag[T: ru.TypeTag]: FastTypeTag[T] = apply(scala.reflect.runtime.currentMirror, ru.typeOf[T], ru.typeOf[T].key).asInstanceOf[FastTypeTag[T]]
   val Null = stdTag[Null]
   val Short = stdTag[Short]
   val Int = stdTag[Int]
@@ -34,6 +34,7 @@ object FastTypeTag {
   val ArrayByte = stdTag[Array[Byte]]
   val ArrayInt = stdTag[Array[Int]]
   val ArrayLong = stdTag[Array[Long]]
+  implicit val Nothing: FastTypeTag[Nothing] = stdTag[Nothing]
 
   def apply(mirror0: ru.Mirror, tpe0: ru.Type, key0: String): FastTypeTag[_] = {
     new FastTypeTag[Nothing] {

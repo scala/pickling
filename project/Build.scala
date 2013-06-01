@@ -77,7 +77,7 @@ object MyBuild extends Build {
       libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1",
       parallelExecution in Test := false,
       scalacOptions ++= Seq()
-      // scalacOptions ++= Seq("-Xprint:typer")
+      // scalacOptions ++= Seq("-Xprint:typer", "-Xlog-implicits")
     )
   ) dependsOn(core)
 
