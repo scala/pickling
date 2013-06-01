@@ -66,22 +66,6 @@ trait LowPriorityPicklersUnpicklers {
 
 trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
   implicit def genListPickler[T](implicit format: PickleFormat): Pickler[::[T]] with Unpickler[::[T]] = macro ListPicklerUnpicklerMacro.impl[T]
-
-  implicit def tuple2Pickler[S: FastTypeTag, T: FastTypeTag]
-    (implicit comp1Pickler: Pickler[S], comp1Unpickler: Unpickler[S],
-              comp2Pickler: Pickler[T], comp2Unpickler: Unpickler[T],
-              format: PickleFormat,
-              tupleTag: FastTypeTag[(S, T)]): Pickler[(S, T)] with Unpickler[(S, T)] =
-    new Tuple2Pickler[S, T]
-
-  implicit def tuple3Pickler[T1: FastTypeTag, T2: FastTypeTag, T3: FastTypeTag]
-    (implicit pickler1: Pickler[T1], unpickler1: Unpickler[T1],
-              pickler2: Pickler[T2], unpickler2: Unpickler[T2],
-              pickler3: Pickler[T3], unpickler3: Unpickler[T3],
-              format: PickleFormat,
-              tupleTag: FastTypeTag[(T1, T2, T3)]): Pickler[(T1, T2, T3)] with Unpickler[(T1, T2, T3)] =
-    new Tuple3Pickler[T1, T2, T3]
-
   // TODO: if you uncomment this one, it will shadow picklers/unpicklers for Int and String. why?!
   // TODO: due to the inability to implement module pickling/unpickling in a separate macro, I moved the logic into genPickler/genUnpickler
   // implicit def modulePicklerUnpickler[T <: Singleton](implicit format: PickleFormat): Pickler[T] with Unpickler[T] = macro ModulePicklerUnpicklerMacro.impl[T]
