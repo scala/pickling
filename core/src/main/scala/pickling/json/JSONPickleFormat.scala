@@ -27,10 +27,6 @@ package json {
         case None => throw new PicklingException("failed to parse \"" + pickle.value + "\" as JSON")
       }
     }
-    def isPrimitive(tpe: Type): Boolean = {
-      val sym = tpe.typeSymbol.asClass
-      sym == NullClass || sym.isPrimitive || sym == StringClass
-    }
   }
 
   class JSONPickleBuilder(format: JSONPickleFormat) extends PickleBuilder with PickleTools {
@@ -118,7 +114,8 @@ package json {
       FastTypeTag.Int.key -> (() => datum.asInstanceOf[Double].toInt),
       FastTypeTag.Boolean.key -> (() => datum.asInstanceOf[Boolean]),
       FastTypeTag.ScalaString.key -> (() => datum.asInstanceOf[String]),
-      FastTypeTag.JavaString.key -> (() => datum.asInstanceOf[String])
+      FastTypeTag.JavaString.key -> (() => datum.asInstanceOf[String]),
+      FastTypeTag.ArrayInt.key -> (() => ???)
     )
     private def mkNestedReader(datum: Any) = {
       val nested = new JSONPickleReader(datum, mirror, format)
@@ -150,7 +147,6 @@ package json {
         case _ => primitives(lastReadTag.key)()
       }
     }
-    def readArray(): Any = ??? //TODO
     def atObject: Boolean = datum.isInstanceOf[JSONObject]
     def readField(name: String): JSONPickleReader = {
       datum match {

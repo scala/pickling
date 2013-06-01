@@ -212,6 +212,11 @@ abstract class Macro extends scala.reflect.macros.Macro {
           tpe.toString
       }
     }
+    def isEffectivelyPrimitive: Boolean = tpe match {
+      case TypeRef(_, sym: ClassSymbol, _) if sym.isPrimitive => true
+      case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.isEffectivelyPrimitive => true
+      case _ => false
+    }
   }
 
   def pickleFormatType(pickle: Tree): Type = innerType(pickle, "PickleFormatType")
