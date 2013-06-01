@@ -226,13 +226,20 @@ package binary {
     val NULL_TAG: Byte = -2
 
     val KEY_NULL    = FastTypeTag.Null.key
+    val KEY_BYTE    = FastTypeTag.Byte.key
     val KEY_SHORT   = FastTypeTag.Short.key
+    val KEY_CHAR    = FastTypeTag.Char.key
     val KEY_INT     = FastTypeTag.Int.key
     val KEY_LONG    = FastTypeTag.Long.key
     val KEY_BOOLEAN = FastTypeTag.Boolean.key
+    val KEY_FLOAT   = FastTypeTag.Float.key
+    val KEY_DOUBLE  = FastTypeTag.Double.key
+    val KEY_UNIT    = FastTypeTag.Unit.key
+
     val KEY_SCALA_STRING = FastTypeTag.ScalaString.key
     val KEY_JAVA_STRING = FastTypeTag.JavaString.key
-    val primitives = Set(KEY_NULL, KEY_INT, KEY_BOOLEAN, KEY_SCALA_STRING, KEY_JAVA_STRING)
+
+    val primitives = Set(KEY_NULL, KEY_BYTE, KEY_SHORT, KEY_CHAR, KEY_INT, KEY_LONG, KEY_BOOLEAN, KEY_FLOAT, KEY_DOUBLE, KEY_UNIT, KEY_SCALA_STRING, KEY_JAVA_STRING)
 
     val KEY_ARRAY_BYTE   = FastTypeTag.ArrayByte.key
     val KEY_ARRAY_INT    = FastTypeTag.ArrayInt.key
