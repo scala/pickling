@@ -45,12 +45,28 @@ package json {
       pendingIndent = true
     }
     private val tags = new Stack[FastTypeTag[_]]()
+    private def pickleArray(arr: Array[_], tag: FastTypeTag[_]) = {
+      unindent()
+      appendLine("[")
+      hintStaticallyElidedType()
+      hintTag(tag)
+      pinHints()
+      var i = 0
+      while (i < arr.length) {
+        putElement(b => b.beginEntry(arr(i)).endEntry())
+        i += 1
+      }
+      unpinHints()
+      appendLine("")
+      append("]")
+    }
     private val primitives = Map[String, Any => Unit](
       FastTypeTag.Null.key -> ((picklee: Any) => append("null")),
       FastTypeTag.Int.key -> ((picklee: Any) => append(picklee.toString)),
       FastTypeTag.Boolean.key -> ((picklee: Any) => append(picklee.toString)),
       FastTypeTag.ScalaString.key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\"")),
-      FastTypeTag.JavaString.key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\""))
+      FastTypeTag.JavaString.key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\"")),
+      FastTypeTag.ArrayInt.key -> ((picklee: Any) => pickleArray(picklee.asInstanceOf[Array[Int]], FastTypeTag.Int))
     )
     def beginEntry(picklee: Any): this.type = withHints { hints =>
       indent()
@@ -74,7 +90,7 @@ package json {
       this
     }
     def putField(name: String, pickler: this.type => Unit): this.type = {
-      assert(!primitives.contains(tags.top.key), tags.top)
+      // assert(!primitives.contains(tags.top.key), tags.top)
       if (buf.toString.trim.last != '{') appendLine(",") // TODO: very inefficient, but here we don't care much about performance
       append("\"" + name + "\": ")
       pickler(this)
@@ -115,7 +131,7 @@ package json {
       FastTypeTag.Boolean.key -> (() => datum.asInstanceOf[Boolean]),
       FastTypeTag.ScalaString.key -> (() => datum.asInstanceOf[String]),
       FastTypeTag.JavaString.key -> (() => datum.asInstanceOf[String]),
-      FastTypeTag.ArrayInt.key -> (() => ???)
+      FastTypeTag.ArrayInt.key -> (() => datum.asInstanceOf[JSONArray].list.map(el => el.asInstanceOf[Double].toInt).toArray)
     )
     private def mkNestedReader(datum: Any) = {
       val nested = new JSONPickleReader(datum, mirror, format)
