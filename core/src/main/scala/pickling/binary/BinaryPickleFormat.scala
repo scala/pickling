@@ -60,6 +60,10 @@ package binary {
             // pos = byteBuffer.encodeIntTo(pos, picklee.asInstanceOf[Int])
             byteBuffer.encodeIntAtEnd(pos, picklee.asInstanceOf[Int])
             pos += 4
+          case KEY_LONG =>
+            if (!hints.isElidedType) writeTpe()
+            byteBuffer.encodeLongAtEnd(pos, picklee.asInstanceOf[Long])
+            pos += 4
           case KEY_BOOLEAN =>
             // PERF: why would Boolean ever not be elided?
             if (!hints.isElidedType) writeTpe()
@@ -180,8 +184,9 @@ package binary {
     def readPrimitive(): Any = {
       val (res, newpos) = {
         lastTagRead.key match {
-          case KEY_NULL => (null, pos)
-          case KEY_INT => byteBuffer.decodeIntFrom(pos)
+          case KEY_NULL    => (null, pos)
+          case KEY_INT     => byteBuffer.decodeIntFrom(pos)
+          case KEY_LONG    => byteBuffer.decodeLongFrom(pos)
           case KEY_BOOLEAN => byteBuffer.decodeBooleanFrom(pos)
           case KEY_SCALA_STRING | KEY_JAVA_STRING => byteBuffer.decodeStringFrom(pos)
           case KEY_ARRAY_INT => byteBuffer.decodeIntArrayFrom(pos)
@@ -215,8 +220,9 @@ package binary {
     val ELIDED_TAG: Byte = -1
     val NULL_TAG: Byte = -2
 
-    val KEY_NULL = FastTypeTag.Null.key
-    val KEY_INT = FastTypeTag.Int.key
+    val KEY_NULL    = FastTypeTag.Null.key
+    val KEY_INT     = FastTypeTag.Int.key
+    val KEY_LONG    = FastTypeTag.Long.key
     val KEY_BOOLEAN = FastTypeTag.Boolean.key
     val KEY_SCALA_STRING = FastTypeTag.ScalaString.key
     val KEY_JAVA_STRING = FastTypeTag.JavaString.key
