@@ -110,4 +110,10 @@ object PicklingBinarySpec extends Properties("pickling-binary") {
     x1 == x
   }
 
+  property("String") = Prop forAll { (x: String) =>
+    val pickle: BinaryPickle = x.pickle
+    val x1 = pickle.unpickle[String]
+    x1 == x
+  }
+
 }

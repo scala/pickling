@@ -131,7 +131,7 @@ package binary {
 
     def beginEntryNoTag(): String = {
       val res: Any = withHints { hints =>
-        if (hints.tag.key == KEY_SCALA_STRING || hints.tag.key == KEY_JAVA_STRING) {
+        if (hints.isElidedType && (hints.tag.key == KEY_SCALA_STRING || hints.tag.key == KEY_JAVA_STRING)) {
           val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
           lookahead match {
             case NULL_TAG =>
