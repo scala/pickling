@@ -93,6 +93,16 @@ package pickling {
     def pickle(picklee: T, builder: PickleBuilder): Unit
   }
 
+  @implicitNotFound(msg = "Cannot generate a DPickler for ${T}. Recompile with -Xlog-implicits for details")
+  trait DPickler[T] {
+    val format: PickleFormat
+    def pickle(picklee: T, builder: PickleBuilder): Unit = macro Compat.PickleMacros_dpicklerPickle[T]
+  }
+
+  object DPickler {
+    implicit def genDPickler[T](implicit format: PickleFormat): DPickler[T] = macro Compat.PicklerMacros_dpicklerImpl[T]
+  }
+
   trait GenPicklers {
     implicit def genPickler[T](implicit format: PickleFormat): Pickler[T] = macro Compat.PicklerMacros_impl[T]
     // TODO: the primitive pickler hack employed here is funny, but I think we should fix this one
