@@ -54,6 +54,10 @@ package binary {
           case KEY_NULL =>
             if (!hints.isElidedType) writeTpe()
             pos = byteBuffer.encodeByteTo(pos, NULL_TAG)
+          case KEY_SHORT =>
+            if (!hints.isElidedType) writeTpe()
+            byteBuffer.encodeShortAtEnd(pos, picklee.asInstanceOf[Short])
+            pos += 2
           case KEY_INT =>
             // PERF: why would Int ever not be elided?
             if (!hints.isElidedType) writeTpe()
@@ -63,7 +67,7 @@ package binary {
           case KEY_LONG =>
             if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeLongAtEnd(pos, picklee.asInstanceOf[Long])
-            pos += 4
+            pos += 8
           case KEY_BOOLEAN =>
             // PERF: why would Boolean ever not be elided?
             if (!hints.isElidedType) writeTpe()
@@ -185,6 +189,7 @@ package binary {
       val (res, newpos) = {
         lastTagRead.key match {
           case KEY_NULL    => (null, pos)
+          case KEY_SHORT   => byteBuffer.decodeShortFrom(pos)
           case KEY_INT     => byteBuffer.decodeIntFrom(pos)
           case KEY_LONG    => byteBuffer.decodeLongFrom(pos)
           case KEY_BOOLEAN => byteBuffer.decodeBooleanFrom(pos)
@@ -221,6 +226,7 @@ package binary {
     val NULL_TAG: Byte = -2
 
     val KEY_NULL    = FastTypeTag.Null.key
+    val KEY_SHORT   = FastTypeTag.Short.key
     val KEY_INT     = FastTypeTag.Int.key
     val KEY_LONG    = FastTypeTag.Long.key
     val KEY_BOOLEAN = FastTypeTag.Boolean.key
