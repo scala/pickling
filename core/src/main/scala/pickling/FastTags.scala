@@ -24,13 +24,21 @@ object FastTypeTag {
   }
 
   private def stdTag[T: ru.TypeTag]: FastTypeTag[T] = apply(scala.reflect.runtime.currentMirror, ru.typeOf[T], ru.typeOf[T].key).asInstanceOf[FastTypeTag[T]]
-  val Null = stdTag[Null]
-  val Short = stdTag[Short]
-  val Int = stdTag[Int]
-  val Long = stdTag[Long]
+
+  val Null    = stdTag[Null]
+  val Byte    = stdTag[Byte]
+  val Short   = stdTag[Short]
+  val Char    = stdTag[Char]
+  val Int     = stdTag[Int]
+  val Long    = stdTag[Long]
   val Boolean = stdTag[Boolean]
+  val Float   = stdTag[Float]
+  val Double  = stdTag[Double]
+  val Unit    = stdTag[Unit]
+
   val ScalaString = stdTag[String]
   val JavaString = stdTag[java.lang.String]
+
   val ArrayByte = stdTag[Array[Byte]]
   val ArrayInt = stdTag[Array[Int]]
   val ArrayLong = stdTag[Array[Long]]
