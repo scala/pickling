@@ -54,6 +54,18 @@ object Compat {
     val bundle = new { val c: c0.type = c0 } with ListPicklerUnpicklerMacro
     c.Expr[Pickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
   }
+
+  def PicklerMacros_dpicklerImpl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[DPickler[T]] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with PicklerMacros
+    c.Expr[DPickler[T]](bundle.dpicklerImpl[T](format.tree))
+  }
+
+  def PickleMacros_dpicklerPickle[T: c.WeakTypeTag](c: Context)(picklee: c.Expr[T], builder: c.Expr[PickleBuilder]): c.Expr[Unit] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with PickleMacros
+    c.Expr[Unit](bundle.dpicklerPickle[T](picklee.tree, builder.tree))
+  }
 }
 
 trait QuasiquoteCompat { self: Macro =>
