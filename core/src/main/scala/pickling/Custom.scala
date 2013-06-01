@@ -80,9 +80,6 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   implicit def booleanPicklerUnpickler(implicit format: PickleFormat): Pickler[Boolean] with Unpickler[Boolean] = new PrimitivePicklerUnpickler[Boolean]
   implicit def nullPicklerUnpickler(implicit format: PickleFormat): Pickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]
 
-  implicit def genArrayPickler[T: FastTypeTag](implicit format: PickleFormat): Pickler[Array[T]] with Unpickler[Array[T]] = //macro ArrayPicklerUnpicklerMacro.impl[T]
-    new ArrayPickler[T]
-
   implicit def genListPickler[T](implicit format: PickleFormat): Pickler[::[T]] with Unpickler[::[T]] = macro Compat.ListPicklerUnpicklerMacro_impl[T]
 
   implicit def tuple2Pickler[S: FastTypeTag, T: FastTypeTag]
@@ -144,7 +141,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
     import c.universe._
     val tpe = mkType(weakTypeOf[T])
     val eltpe = weakTypeOf[T]
-    val isPrimitive = eltpe.typeSymbol.asClass.isPrimitive
+    val isPrimitive = eltpe.isEffectivelyPrimitive
     val picklerUnpicklerName = c.fresh(syntheticPicklerUnpicklerName(tpe).toTermName)
     q"""
       implicit object $picklerUnpicklerName extends scala.pickling.Pickler[$tpe] with scala.pickling.Unpickler[$tpe] {
