@@ -362,7 +362,7 @@ trait PickleableMacro extends AnnotationMacro {
           """
         }
         val newbody = body ++ List(picklerDefDef, unpicklerDefDef)
-        ClassDef(mods, name, tparams, Template(parents :+ tq"scala.pickling.PickleableBase", self, newbody))
+        ClassDef(mods, name, tparams, Template(parents :+ tq"scala.pickling.PickleableBase", self, newbody)) setSymbol c.annottee.symbol
     }
   }
 }
