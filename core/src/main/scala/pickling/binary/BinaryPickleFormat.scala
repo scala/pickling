@@ -2,14 +2,14 @@ package scala.pickling
 
 import scala.language.implicitConversions
 
+import scala.reflect.runtime.universe.Mirror
+
 package object binary {
   implicit val pickleFormat = new BinaryPickleFormat
   implicit def toBinaryPickle(value: Array[Byte]): BinaryPickle = BinaryPickle(value)
 }
 
 package binary {
-  import scala.reflect.runtime.{universe => ru}
-  import scala.reflect.runtime.universe._
 
   case class BinaryPickle(value: Array[Byte]) extends Pickle {
     type ValueType = Array[Byte]
@@ -23,17 +23,10 @@ package binary {
     private var byteBuffer: ByteBuffer = _
     private var pos = 0
 
-    private def formatType(tpe: Type): Array[Byte] = {
-      typeToString(tpe).getBytes("UTF-8")
-    }
-
-    private def mkByteBuffer(knownSize: Int) = {
+    @inline private[this] def mkByteBuffer(knownSize: Int): Unit =
       if (byteBuffer == null) {
-        byteBuffer =
-          if (knownSize != -1) new ByteArray(knownSize)
-          else new ByteArrayBuffer
+        byteBuffer = if (knownSize != -1) new ByteArray(knownSize) else new ByteArrayBuffer
       }
-    }
 
     def beginEntry(picklee: Any): this.type = withHints { hints =>
       mkByteBuffer(hints.knownSize)
@@ -41,48 +34,35 @@ package binary {
       if (picklee == null) {
         pos = byteBuffer.encodeByteTo(pos, NULL_TAG)
       } else {
-        def writeTpe() = {
+        if (!hints.isElidedType) {
           val tpe = hints.tag.tpe
-          val tpeBytes = formatType(tpe)
-          // pos = byteBuffer.encodeIntTo(pos, tpeBytes.length)
+          val tpeBytes = typeToString(tpe).getBytes("UTF-8")
           byteBuffer.encodeIntAtEnd(pos, tpeBytes.length)
           pos += 4
           pos = byteBuffer.copyTo(pos, tpeBytes)
         }
 
-        hints.tag.key match { // PERF: should store typestring once in hints.
+        pos = hints.tag.key match { // PERF: should store typestring once in hints.
           case KEY_NULL =>
-            if (!hints.isElidedType) writeTpe()
-            pos = byteBuffer.encodeByteTo(pos, NULL_TAG)
+            byteBuffer.encodeByteTo(pos, NULL_TAG)
           case KEY_SHORT =>
-            if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeShortAtEnd(pos, picklee.asInstanceOf[Short])
-            pos += 2
+            pos + 2
           case KEY_INT =>
-            // PERF: why would Int ever not be elided?
-            if (!hints.isElidedType) writeTpe()
-            // pos = byteBuffer.encodeIntTo(pos, picklee.asInstanceOf[Int])
             byteBuffer.encodeIntAtEnd(pos, picklee.asInstanceOf[Int])
-            pos += 4
+            pos + 4
           case KEY_LONG =>
-            if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeLongAtEnd(pos, picklee.asInstanceOf[Long])
-            pos += 8
+            pos + 8
           case KEY_BOOLEAN =>
-            // PERF: why would Boolean ever not be elided?
-            if (!hints.isElidedType) writeTpe()
-            pos = byteBuffer.encodeBooleanTo(pos, picklee.asInstanceOf[Boolean])
+            byteBuffer.encodeBooleanTo(pos, picklee.asInstanceOf[Boolean])
           case KEY_SCALA_STRING | KEY_JAVA_STRING =>
-            // PERF: why would String ever not be elided?
-            if (!hints.isElidedType) writeTpe()
-            pos = byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])
+            byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])
           case KEY_ARRAY_INT =>
-            val ia = picklee.asInstanceOf[Array[Int]]
-            if (!hints.isElidedType) writeTpe()
-            pos = byteBuffer.encodeIntArrayTo(pos, ia)
+            byteBuffer.encodeIntArrayTo(pos, picklee.asInstanceOf[Array[Int]])
           case _ =>
-            if (!hints.isElidedType) writeTpe()
-            else pos = byteBuffer.encodeByteTo(pos, ELIDED_TAG)
+            if (hints.isElidedType) byteBuffer.encodeByteTo(pos, ELIDED_TAG)
+            else pos
         }
       }
 
@@ -101,7 +81,6 @@ package binary {
 
     def beginCollection(length: Int): this.type = {
       beginCollPos = pos
-      // pos = byteBuffer.encodeIntTo(pos, length)
       byteBuffer.encodeIntAtEnd(pos, 0)
       pos += 4
       this
@@ -124,10 +103,11 @@ package binary {
   class BinaryPickleReader(arr: Array[Byte], val mirror: Mirror, format: BinaryPickleFormat) extends PickleReader with PickleTools {
     import format._
 
-    private val byteBuffer: ByteBuffer = new ByteArray(arr)
-    private var pos = 0
-    private var _lastTagRead: FastTypeTag[_]    = null
-    private var _lastTypeStringRead: String = null
+    private val byteBuffer: ByteBuffer       = new ByteArray(arr)
+    private var pos                          = 0
+    private var _lastTagRead: FastTypeTag[_] = null
+    private var _lastTypeStringRead: String  = null
+
     private def lastTagRead: FastTypeTag[_] =
       if (_lastTagRead != null)
         _lastTagRead
@@ -139,18 +119,13 @@ package binary {
 
     def beginEntryNoTag(): String = {
       val res: Any = withHints { hints =>
-        if (hints.isElidedType && (hints.tag.key == KEY_SCALA_STRING || hints.tag.key == KEY_JAVA_STRING)) {
+        if (hints.isElidedType && nullablePrimitives.contains(hints.tag.key)) {
           val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
           lookahead match {
-            case NULL_TAG =>
-              pos = newpos
-              FastTypeTag.Null
-            case _ =>
-              hints.tag
+            case NULL_TAG => pos = newpos; FastTypeTag.Null
+            case _        => hints.tag
           }
         } else if (hints.isElidedType && primitives.contains(hints.tag.key)) {
-          hints.tag
-        } else if (hints.isElidedType && hints.tag.key == KEY_ARRAY_INT) {
           hints.tag
         } else {
           val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
@@ -237,13 +212,14 @@ package binary {
     val KEY_UNIT    = FastTypeTag.Unit.key
 
     val KEY_SCALA_STRING = FastTypeTag.ScalaString.key
-    val KEY_JAVA_STRING = FastTypeTag.JavaString.key
-
-    val primitives = Set(KEY_NULL, KEY_BYTE, KEY_SHORT, KEY_CHAR, KEY_INT, KEY_LONG, KEY_BOOLEAN, KEY_FLOAT, KEY_DOUBLE, KEY_UNIT, KEY_SCALA_STRING, KEY_JAVA_STRING)
+    val KEY_JAVA_STRING  = FastTypeTag.JavaString.key
 
     val KEY_ARRAY_BYTE   = FastTypeTag.ArrayByte.key
     val KEY_ARRAY_INT    = FastTypeTag.ArrayInt.key
     val KEY_ARRAY_LONG   = FastTypeTag.ArrayLong.key
+
+    val primitives = Set(KEY_NULL, KEY_BYTE, KEY_SHORT, KEY_CHAR, KEY_INT, KEY_LONG, KEY_BOOLEAN, KEY_FLOAT, KEY_DOUBLE, KEY_UNIT, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_INT, KEY_ARRAY_LONG)
+    val nullablePrimitives = Set(KEY_NULL, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_INT, KEY_ARRAY_LONG)
 
     type PickleType = BinaryPickle
     def createBuilder() = new BinaryPickleBuilder(this)
