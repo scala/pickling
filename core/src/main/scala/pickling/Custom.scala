@@ -100,7 +100,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
           var i = 0
           while (i < length) {
             arrReader.beginEntry()
-            buffer += reader.readPrimitive().asInstanceOf[$eltpe]
+            buffer += arrReader.readPrimitive().asInstanceOf[$eltpe]
             arrReader.endEntry()
             i += 1
           }
