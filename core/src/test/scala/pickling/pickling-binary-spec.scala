@@ -38,6 +38,18 @@ object PicklingBinarySpec extends Properties("pickling-binary") {
     x1 == x
   }
 
+  case class WithIntArray(a: Array[Int])
+
+  implicit val arbitraryWithIntArray: Arbitrary[WithIntArray] =
+    Arbitrary[WithIntArray](arbitrary[Array[Int]].map(WithIntArray(_)))
+
+  property("case class with Array[Int] field") = Prop forAll { (x: WithIntArray) =>
+    val pickle = x.pickle
+    val x1 = pickle.unpickle[WithIntArray]
+    x1 == x
+    true
+  }
+
   def emptyOrUnicode(s: String) =
     s == "" || s.exists(_.toInt > 255)
 
