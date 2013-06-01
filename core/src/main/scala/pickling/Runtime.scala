@@ -114,7 +114,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_]) {
   val cir = flattenedClassIR(tpe)
   debug("UnpicklerRuntime: cir = " + cir)
 
-  def genUnpickler(implicit pf: PickleFormat, p1: Pickler[Int], p2: Pickler[String]): Unpickler[Any] = {
+  def genUnpickler(implicit pf: PickleFormat): Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
       val format: PickleFormat = pf
       def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = {

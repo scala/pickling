@@ -65,21 +65,6 @@ trait LowPriorityPicklersUnpicklers {
 }
 
 trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
-  class PrimitivePicklerUnpickler[T](implicit val format: PickleFormat) extends Pickler[T] with Unpickler[T] {
-    def pickle(picklee: T, builder: PickleBuilder): Unit = {
-      builder.beginEntry(picklee)
-      builder.endEntry()
-    }
-    def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = {
-      reader.readPrimitive()
-    }
-  }
-
-  implicit def intPicklerUnpickler(implicit format: PickleFormat): Pickler[Int] with Unpickler[Int] = new PrimitivePicklerUnpickler[Int]
-  implicit def stringPicklerUnpickler(implicit format: PickleFormat): Pickler[String] with Unpickler[String] = new PrimitivePicklerUnpickler[String]
-  implicit def booleanPicklerUnpickler(implicit format: PickleFormat): Pickler[Boolean] with Unpickler[Boolean] = new PrimitivePicklerUnpickler[Boolean]
-  implicit def nullPicklerUnpickler(implicit format: PickleFormat): Pickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]
-
   implicit def genListPickler[T](implicit format: PickleFormat): Pickler[::[T]] with Unpickler[::[T]] = macro ListPicklerUnpicklerMacro.impl[T]
 
   implicit def tuple2Pickler[S: FastTypeTag, T: FastTypeTag]
