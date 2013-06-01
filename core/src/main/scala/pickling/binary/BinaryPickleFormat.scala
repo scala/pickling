@@ -177,16 +177,6 @@ package binary {
 
     def atPrimitive: Boolean = primitives.contains(lastTagRead.key)
 
-    def readArray(): Any = {
-      val (res, newpos) =
-        lastTagRead.key match {
-          case KEY_ARRAY_INT =>
-            byteBuffer.decodeIntArrayFrom(pos)
-        }
-      pos = newpos
-      res
-    }
-
     def readPrimitive(): Any = {
       val (res, newpos) = {
         lastTagRead.key match {
@@ -194,6 +184,7 @@ package binary {
           case KEY_INT => byteBuffer.decodeIntFrom(pos)
           case KEY_BOOLEAN => byteBuffer.decodeBooleanFrom(pos)
           case KEY_SCALA_STRING | KEY_JAVA_STRING => byteBuffer.decodeStringFrom(pos)
+          case KEY_ARRAY_INT => byteBuffer.decodeIntArrayFrom(pos)
         }
       }
       pos = newpos

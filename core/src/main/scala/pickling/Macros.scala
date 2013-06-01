@@ -34,23 +34,25 @@ trait PicklerMacros extends Macro {
     // this allows us to remove array copying and allocation bottlenecks
     // Note: this takes a "flattened" ClassIR
     def computeKnownSizeIfPossible(cir: ClassIR): Option[Tree] = {
-      val possibleSizes = cir.fields map {
-        case fld if fld.tpe.typeSymbol.asClass.isPrimitive =>
-          Some(q"${primitiveSizes(fld.tpe)}")
-        case fld if fld.tpe <:< typeOf[Array[_]] =>
-          val TypeRef(_, _, List(elTpe)) = fld.tpe
-          primitiveSizes.get(elTpe) match {
-            case Some(primitiveLen) =>
-              Some(q"${getField(fld)}.length * $primitiveLen + 4")
-            case None =>
-              None
-          }
-        case _ =>
-          None
-      }
+      // TODO: what if tpe itself is effectively primitive?
+      // I can't quite figure out what's going on here, so I'll leave this as a todo
+      if (tpe <:< typeOf[Array[_]]) None
+      else {
+        val possibleSizes = cir.fields map {
+          case fld if fld.tpe.isEffectivelyPrimitive =>
+            val isScalar = !(fld.tpe <:< typeOf[Array[_]])
+            if (isScalar) Some(q"${primitiveSizes(fld.tpe)}")
+            else {
+              val TypeRef(_, _, List(elTpe)) = fld.tpe
+              Some(q"${getField(fld)}.length * ${primitiveSizes(elTpe)} + 4")
+            }
+          case _ =>
+            None
+        }
 
-      if (possibleSizes.contains(None) || possibleSizes.isEmpty) None
-      else Some(possibleSizes.map(_.get).reduce((t1, t2) => q"$t1 + $t2"))
+        if (possibleSizes.contains(None) || possibleSizes.isEmpty) None
+        else Some(possibleSizes.map(_.get).reduce((t1, t2) => q"$t1 + $t2"))
+      }
     }
     def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
       val cir = flattenedClassIR(tpe)
@@ -132,7 +134,7 @@ trait UnpicklerMacros extends Macro {
     val targs = tpe match { case TypeRef(_, _, targs) => targs; case _ => Nil }
     val sym = tpe.typeSymbol.asClass
     import irs._
-    def unpicklePrimitive = q"reader.readPrimitive(tag)"
+    def unpicklePrimitive = q"reader.readPrimitive()"
     def unpickleObject = {
       def readField(name: String, tpe: Type) = q"reader.readField($name).unpickle[$tpe]"
 
@@ -181,7 +183,7 @@ trait UnpicklerMacros extends Macro {
     def unpickleLogic = tpe match {
       case NullTpe => q"null"
       case NothingTpe => c.abort(c.enclosingPosition, "cannot unpickle Nothing") // TODO: report the deserialization path that brought us here
-      case _ if sym.isPrimitive || sym == StringClass => q"$unpicklePrimitive"
+      case _ if tpe.isEffectivelyPrimitive || sym == StringClass => q"$unpicklePrimitive"
       case _ => q"$unpickleObject"
     }
     val unpicklerName = c.fresh(syntheticUnpicklerName(tpe).toTermName)
