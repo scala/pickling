@@ -303,6 +303,7 @@ trait UnpickleMacros extends Macro {
   def pickleUnpickle[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
     val tpe = weakTypeOf[T]
+    if (tpe.typeSymbol.asType.isAbstractType) c.abort(c.enclosingPosition, "unpickle needs an explicitly provided type argument")
     val pickleArg = c.prefix.tree
     q"""
       import scala.pickling._
@@ -325,6 +326,7 @@ trait UnpickleMacros extends Macro {
     import c.universe._
     import definitions._
     val tpe = weakTypeOf[T]
+    if (tpe.typeSymbol.asType.isAbstractType) c.abort(c.enclosingPosition, "unpickle needs an explicitly provided type argument")
     val sym = tpe.typeSymbol.asClass
     val readerArg = c.prefix.tree
 
