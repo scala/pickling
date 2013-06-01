@@ -9,7 +9,7 @@ object BuildSettings {
 
   val useLocalBuildOfParadise = false
   // path to a build of https://github.com/scalamacros/kepler/tree/paradise/macros
-  val localBuildOfParadise211 = Properties.envOrElse("MACRO_PARADISE211", "/Users/xeno_by/Projects/Paradise211/build/pack")
+  val localBuildOfParadise211 = Properties.envOrElse("MACRO_PARADISE211", "/Users/xeno_by/Projects/Paradise/build/pack")
 
   val buildSettings = Defaults.defaultSettings ++ Seq(
     version := buildVersion,
