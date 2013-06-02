@@ -121,7 +121,7 @@ trait PicklerMacros extends Macro {
     }
     val picklerName = c.fresh(syntheticPicklerName(tpe).toTermName)
     q"""
-      implicit object $picklerName extends scala.pickling.Pickler[$tpe] {
+      implicit object $picklerName extends scala.pickling.SPickler[$tpe] {
         import scala.pickling._
         import scala.pickling.`package`.PickleOps
         val format = new ${format.tpe}()
@@ -244,7 +244,7 @@ trait PickleMacros extends Macro {
 
   def createPickler(tpe: c.Type, builder: c.Tree): c.Tree = q"""
     $builder.hintTag(implicitly[scala.pickling.FastTypeTag[$tpe]])
-    implicitly[Pickler[$tpe]]
+    implicitly[SPickler[$tpe]]
   """
 
   def genDispatchLogic(sym: c.Symbol, tpe: c.Type, builder: c.Tree): c.Tree = {
@@ -259,7 +259,7 @@ trait PickleMacros extends Macro {
         CaseDef(Bind(TermName("clazz"), Ident(nme.WILDCARD)), q"clazz == classOf[$subtpe]", createPickler(subtpe, builder))
       )
       //TODO OPTIMIZE: do getClass.getClassLoader only once
-      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Pickler.genPickler(this.getClass.getClassLoader, clazz)")
+      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"SPickler.genPickler(this.getClass.getClassLoader, clazz)")
       // TODO: do we still want to use something like HasPicklerDispatch?
       q"""
         val clazz = if (picklee != null) picklee.getClass else null
@@ -283,7 +283,7 @@ trait PickleMacros extends Macro {
       import scala.pickling._
       val picklee = $pickleeArg
       val pickler = $dispatchLogic
-      pickler.asInstanceOf[Pickler[$tpe]].pickle(picklee, $builder)
+      pickler.asInstanceOf[SPickler[$tpe]].pickle(picklee, $builder)
     """
   }
 
@@ -298,7 +298,7 @@ trait PickleMacros extends Macro {
       import scala.pickling._
       val picklee = $picklee
       val pickler = $dispatchLogic
-      pickler.asInstanceOf[Pickler[$tpe]].pickle($picklee, $builder)
+      pickler.asInstanceOf[SPickler[$tpe]].pickle($picklee, $builder)
     """
   }
 }
@@ -382,12 +382,12 @@ trait PickleableMacro extends AnnotationMacro {
         val picklerDefDef = if (cdef.symbol.annotations.nonEmpty) {
           // TODO: implement PickleableBase methods and append them to body
           q"""
-            def pickler: Pickler[_] = implicitly[Pickler[$name]]
+            def pickler: SPickler[_] = implicitly[SPickler[$name]]
           """
         } else {
           // TODO: implement PickleableBase methods and append them to body
           q"""
-            override def pickler: Pickler[_] = implicitly[Pickler[$name]]
+            override def pickler: SPickler[_] = implicitly[SPickler[$name]]
           """
         }
 

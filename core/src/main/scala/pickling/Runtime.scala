@@ -42,7 +42,7 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) {
   val cir = flattenedClassIR(tpe)
   debug("PicklerRuntime: cir = " + cir)
 
-  def genPickler(implicit format: PickleFormat): Pickler[_]
+  def genPickler(implicit format: PickleFormat): SPickler[_]
 }
 
 class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) extends PicklerRuntime(classLoader, preclazz) {
@@ -50,9 +50,9 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
   debug("InterpretedPicklerRuntime: preclazz = " + preclazz)
   debug("InterpretedPicklerRuntime: clazz    = " + clazz)
 
-  override def genPickler(implicit pf: PickleFormat): Pickler[_] = {
+  override def genPickler(implicit pf: PickleFormat): SPickler[_] = {
     // build "interpreted" runtime pickler
-    new Pickler[Any] with PickleTools {
+    new SPickler[Any] with PickleTools {
       val format: PickleFormat = pf
       def pickle(picklee: Any, builder: PickleBuilder): Unit = {
         if (picklee != null) {
@@ -69,7 +69,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
             // by using only the class we convert Int to Integer
             // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
             val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
-            val fldPickler = fldRuntime.genPickler.asInstanceOf[Pickler[Any]]
+            val fldPickler = fldRuntime.genPickler.asInstanceOf[SPickler[Any]]
             builder.putField(fir.name, b => {
               val fstaticTpe = fir.tpe.erasure
               if (fldClass == null || fldClass == mirror.runtimeClass(fstaticTpe)) builder.hintDynamicallyElidedType()
@@ -90,7 +90,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
 }
 
 class CompiledPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) extends PicklerRuntime(classLoader, clazz) {
-  override def genPickler(implicit format: PickleFormat): Pickler[_] = {
+  override def genPickler(implicit format: PickleFormat): SPickler[_] = {
     // TODO: we should somehow cache toolboxes. maybe even inside the reflection API
     // TODO: toolbox bug. if we don't explicitly import PickleOps, it will fail to be found
     // more precisely: it will be found, but then immediately discarded, because a reference to it won't typecheck
@@ -99,8 +99,8 @@ class CompiledPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) extends 
       import scala.pickling._
       import scala.pickling.`package`.PickleOps
       implicit val format: $formatTpe = new $formatTpe()
-      implicitly[Pickler[$tpe]]
-    """).asInstanceOf[Pickler[_]]
+      implicitly[SPickler[$tpe]]
+    """).asInstanceOf[SPickler[_]]
   }
 }
 
