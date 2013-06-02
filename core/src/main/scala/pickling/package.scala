@@ -32,14 +32,16 @@ package object pickling {
   def currentMirror: ru.Mirror = macro impl
   def impl(c: Context): c.Tree = {
     import c.universe._
-    val cachedMirror = q"scala.pickling.`package`.cachedMirror"
-    q"""
-      if ($cachedMirror != null) $cachedMirror
-      else {
-        $cachedMirror = scala.reflect.runtime.currentMirror
-        $cachedMirror
-      }
-    """
+    c.inferImplicitValue(typeOf[ru.Mirror], silent = true) orElse {
+      val cachedMirror = q"scala.pickling.`package`.cachedMirror"
+      q"""
+        if ($cachedMirror != null) $cachedMirror
+        else {
+          $cachedMirror = scala.reflect.runtime.currentMirror
+          $cachedMirror
+        }
+      """
+    }
   }
 
   def typeToString(tpe: Type): String = tpe.key
