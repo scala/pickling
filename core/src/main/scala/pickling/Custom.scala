@@ -20,7 +20,7 @@ trait LowPriorityPicklersUnpicklers {
     val format: PickleFormat = pf
     val elemTag  = implicitly[FastTypeTag[T]]
 
-    def pickle(coll: Coll[T], builder: PickleBuilder): Unit = {
+    def pickle(coll: Coll[T], builder: PBuilder): Unit = {
       builder.hintTag(collTag)
       builder.beginEntry(coll)
 
@@ -119,7 +119,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
           val eltag = "bam!"
           implicitly[scala.pickling.FastTypeTag[$eltpe]]
         }
-        def pickle(picklee: $tpe, builder: PickleBuilder): Unit = {
+        def pickle(picklee: $tpe, builder: PBuilder): Unit = {
           if (!$isPrimitive) throw new PicklingException(s"implementation restriction: non-primitive collections aren't supported")
           builder.beginEntry()
           // TODO: this needs to be adjusted to work with non-primitive types

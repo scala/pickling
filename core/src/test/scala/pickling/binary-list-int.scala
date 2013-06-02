@@ -17,7 +17,7 @@ import scala.collection.mutable.ListBuffer
 class HandwrittenListIntPicklerUnpickler[Coll[_] <: List[_]](val format: PickleFormat)
     extends SPickler[Coll[Int]] with Unpickler[Coll[Int]] {
 
-  def pickle(picklee: Coll[Int], builder: PickleBuilder): Unit = {
+  def pickle(picklee: Coll[Int], builder: PBuilder): Unit = {
     builder.beginEntry()
     val arr = picklee.toArray
     val length = arr.length

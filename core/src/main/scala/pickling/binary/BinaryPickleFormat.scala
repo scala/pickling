@@ -17,7 +17,7 @@ package binary {
     override def toString = s"""BinaryPickle(${value.mkString("[", ",", "]")})"""
   }
 
-  class BinaryPickleBuilder(format: BinaryPickleFormat) extends PickleBuilder with PickleTools {
+  class BinaryPickleBuilder(format: BinaryPickleFormat) extends PBuilder with PickleTools {
     import format._
 
     private var byteBuffer: ByteBuffer = _
