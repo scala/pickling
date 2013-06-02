@@ -44,6 +44,7 @@ object MyBuild extends Build {
         import scala.sys.process._
         var shellCommand = Seq(
           "java", "-Dsize=" + len, "-cp", toolCP,
+          "-Xms1536M", "-Xmx4096M", "-Xss2M", "-XX:MaxPermSize=512M", "-XX:+UseParallelGC",
           "scala.tools.nsc.MainGenericRunner", "-cp", libraryCP,
           benchClass, numRuns.toString)
         // println(shellCommand)
