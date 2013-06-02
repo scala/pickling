@@ -15,7 +15,7 @@ import reflect.runtime.universe._
 import scala.collection.mutable.ListBuffer
 
 class HandwrittenListIntPicklerUnpickler[Coll[_] <: List[_]](val format: PickleFormat)
-    extends Pickler[Coll[Int]] with Unpickler[Coll[Int]] {
+    extends SPickler[Coll[Int]] with Unpickler[Coll[Int]] {
 
   def pickle(picklee: Coll[Int], builder: PickleBuilder): Unit = {
     builder.beginEntry()
@@ -62,7 +62,7 @@ class HandwrittenListIntPicklerUnpickler[Coll[_] <: List[_]](val format: PickleF
 
 class BinaryListIntTest extends FunSuite {
   test("main") {
-    implicit def genListPickler[Coll[_] <: List[_]](implicit format: PickleFormat): Pickler[Coll[Int]] with Unpickler[Coll[Int]] =
+    implicit def genListPickler[Coll[_] <: List[_]](implicit format: PickleFormat): SPickler[Coll[Int]] with Unpickler[Coll[Int]] =
       new HandwrittenListIntPicklerUnpickler(format)
 
     val l = List[Int](7, 24, 30)

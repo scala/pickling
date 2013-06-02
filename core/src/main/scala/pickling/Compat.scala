@@ -7,10 +7,10 @@ import language.experimental.macros
 
 // this is only necessary because 2.10.x doesn't support macro bundles
 object Compat {
-  def PicklerMacros_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[Pickler[T]] = {
+  def PicklerMacros_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PicklerMacros
-    c.Expr[Pickler[T]](bundle.impl[T](format.tree))
+    c.Expr[SPickler[T]](bundle.impl[T](format.tree))
   }
 
   def UnpicklerMacros_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[Unpickler[T]] = {
@@ -49,10 +49,10 @@ object Compat {
     c.Expr[T](bundle.readerUnpickleTopLevel[T])
   }
 
-  def ListPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[Pickler[T] with Unpickler[T]] = {
+  def ListPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with ListPicklerUnpicklerMacro
-    c.Expr[Pickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
+    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
   }
 
   def PicklerMacros_dpicklerImpl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[DPickler[T]] = {

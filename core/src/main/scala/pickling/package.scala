@@ -88,7 +88,7 @@ package object pickling {
 package pickling {
 
   @implicitNotFound(msg = "Cannot generate a pickler for ${T}. Recompile with -Xlog-implicits for details")
-  trait Pickler[T] {
+  trait SPickler[T] {
     val format: PickleFormat
     def pickle(picklee: T, builder: PickleBuilder): Unit
   }
@@ -104,10 +104,10 @@ package pickling {
   }
 
   trait GenPicklers {
-    implicit def genPickler[T](implicit format: PickleFormat): Pickler[T] = macro Compat.PicklerMacros_impl[T]
+    implicit def genPickler[T](implicit format: PickleFormat): SPickler[T] = macro Compat.PicklerMacros_impl[T]
     // TODO: the primitive pickler hack employed here is funny, but I think we should fix this one
     // since people probably would also have to deal with the necessity to abstract over pickle formats
-    def genPickler(classLoader: ClassLoader, clazz: Class[_])(implicit format: PickleFormat): Pickler[_] = {
+    def genPickler(classLoader: ClassLoader, clazz: Class[_])(implicit format: PickleFormat): SPickler[_] = {
       // println(s"generating runtime pickler for $clazz") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
       //val runtime = new CompiledPicklerRuntime(classLoader, clazz)
       val runtime = new InterpretedPicklerRuntime(classLoader, clazz)
@@ -115,7 +115,7 @@ package pickling {
     }
   }
 
-  object Pickler extends CorePicklersUnpicklers
+  object SPickler extends CorePicklersUnpicklers
 
   @implicitNotFound(msg = "Cannot generate an unpickler for ${T}. Recompile with -Xlog-implicits for details")
   trait Unpickler[T] {
