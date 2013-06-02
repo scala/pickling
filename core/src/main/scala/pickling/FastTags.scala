@@ -56,7 +56,7 @@ trait FastTypeTagMacros extends Macro {
     val T = weakTypeOf[T]
     q"""
       new FastTypeTag[$T] {
-        def mirror = scala.pickling.`package`.mirror
+        def mirror = scala.pickling.`package`.currentMirror
         lazy val tpe = scala.reflect.runtime.universe.typeTag[$T].tpe
         def key = ${T.key}
       }
@@ -64,6 +64,6 @@ trait FastTypeTagMacros extends Macro {
   }
   def apply(key: c.Tree): c.Tree = {
     import c.universe._
-    q"""scala.pickling.FastTypeTag(scala.pickling.mirror, $key)"""
+    q"""scala.pickling.FastTypeTag(scala.pickling.`package`.currentMirror, $key)"""
   }
 }
