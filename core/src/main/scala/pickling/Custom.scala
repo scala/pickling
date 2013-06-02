@@ -43,7 +43,7 @@ trait LowPriorityPicklersUnpicklers {
       builder.endEntry()
     }
 
-    def unpickle(tpe: => FastTypeTag[_], preader: PickleReader): Any = {
+    def unpickle(tpe: => FastTypeTag[_], preader: PReader): Any = {
       val reader = preader.beginCollection()
       reader.hintStaticallyElidedType()
       reader.hintTag(elemTag)
@@ -70,7 +70,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
       builder.beginEntry(picklee)
       builder.endEntry()
     }
-    def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = {
+    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
       reader.readPrimitive()
     }
   }
@@ -166,7 +166,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
           builder.endCollection(i)
           builder.endEntry()
         }
-        def unpickle(tag: => scala.pickling.FastTypeTag[_], reader: PickleReader): Any = {
+        def unpickle(tag: => scala.pickling.FastTypeTag[_], reader: PReader): Any = {
           if (!$isPrimitive) throw new PicklingException(s"implementation restriction: non-primitive collections aren't supported")
           var buffer = ${mkBuffer(eltpe)}
           val arrReader = reader.beginCollection()
