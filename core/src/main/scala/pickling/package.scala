@@ -96,12 +96,30 @@ package object pickling {
 
 package pickling {
 
+  /** A static pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
+   *  static type `T`, and pickles it to an instance of `PBuilder`. In the process the object
+   *  is turned into some external representation like a byte array. The particular external
+   *  representation (the "pickle format") is defined by the `format` val member (of type
+   *  `PickleFormat`).
+   *
+   *  This pickler requires that the dynamic type of the object-to-be-pickled is equal to
+   *  the erasure of its static type `T`.
+   */
   @implicitNotFound(msg = "Cannot generate a pickler for ${T}. Recompile with -Xlog-implicits for details")
   trait SPickler[T] {
     val format: PickleFormat
     def pickle(picklee: T, builder: PBuilder): Unit
   }
 
+  /** A dynamic pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
+   *  static type `T`, and pickles it to an instance of `PBuilder`. In the process the object
+   *  is turned into some external representation like a byte array. The particular external
+   *  representation (the "pickle format") is defined by the `format` val member (of type
+   *  `PickleFormat`).
+   *
+   *  In contrast to static picklers (instances of type `SPickler[T]`), a dynamic pickler of
+   *  type `DPickler[T]` pickles any object of type `T`.
+   */
   @implicitNotFound(msg = "Cannot generate a DPickler for ${T}. Recompile with -Xlog-implicits for details")
   trait DPickler[T] {
     val format: PickleFormat
@@ -129,7 +147,7 @@ package pickling {
   @implicitNotFound(msg = "Cannot generate an unpickler for ${T}. Recompile with -Xlog-implicits for details")
   trait Unpickler[T] {
     val format: PickleFormat
-    def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any
+    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any
   }
 
   trait GenUnpicklers {
@@ -155,7 +173,7 @@ package pickling {
   trait PickleFormat {
     type PickleType <: Pickle
     def createBuilder(): PBuilder
-    def createReader(pickle: PickleType, mirror: Mirror): PickleReader
+    def createReader(pickle: PickleType, mirror: Mirror): PReader
   }
 
   trait Hintable {
@@ -177,25 +195,31 @@ package pickling {
     def result(): Pickle
   }
 
-  trait PickleReader extends Hintable {
+  trait PReader extends Hintable {
     def mirror: Mirror
     def beginEntry(): FastTypeTag[_]
     def beginEntryNoTag(): String
     def atPrimitive: Boolean
     def readPrimitive(): Any
     def atObject: Boolean
-    def readField(name: String): PickleReader
+    def readField(name: String): PReader
     def endEntry(): Unit
-    def beginCollection(): PickleReader
+    def beginCollection(): PReader
     def readLength(): Int
-    def readElement(): PickleReader
+    def readElement(): PReader
     def endCollection(): Unit
     def unpickle[T]: T = macro UnpickleMacros.readerUnpickle[T]
     def unpickleTopLevel[T]: T = macro UnpickleMacros.readerUnpickleTopLevel[T]
   }
 
-  @Inherited
-  class pickleable extends MacroAnnotation {
+  /** This annotation enables library authors to guarantee to their clients that
+   *  picklers for separately-compiled subclasses are fully generated at compile-time.
+   *
+   *  This annotation adds a method that returns a pickler specialized for the runtime
+   *  class of the annotated type. Note that the annotation is expanded in each subclass,
+   *  transitively.
+   */
+  @Inherited class pickleable extends MacroAnnotation {
     def transform = macro PickleableMacro.impl
   }
 

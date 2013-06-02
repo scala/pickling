@@ -110,7 +110,7 @@ package binary {
     }
   }
 
-  class BinaryPickleReader(arr: Array[Byte], val mirror: Mirror, format: BinaryPickleFormat) extends PickleReader with PickleTools {
+  class BinaryPickleReader(arr: Array[Byte], val mirror: Mirror, format: BinaryPickleFormat) extends PReader with PickleTools {
     import format._
 
     private val byteBuffer: ByteBuffer       = new ByteArray(arr)
@@ -198,7 +198,7 @@ package binary {
 
     def endEntry(): Unit = { /* do nothing */ }
 
-    def beginCollection(): PickleReader = this
+    def beginCollection(): PReader = this
 
     def readLength(): Int = {
       val (length, newpos) = byteBuffer.decodeIntFrom(pos)
@@ -206,7 +206,7 @@ package binary {
       length
     }
 
-    def readElement(): PickleReader = this
+    def readElement(): PReader = this
 
     def endCollection(): Unit = { /* do nothing */ }
   }

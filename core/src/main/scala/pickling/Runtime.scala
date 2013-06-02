@@ -117,7 +117,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_]) {
   def genUnpickler(implicit pf: PickleFormat): Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
       val format: PickleFormat = pf
-      def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = {
+      def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
         if (reader.atPrimitive) reader.readPrimitive()
         else {
           // TODO: need to support modules and other special guys here
