@@ -72,6 +72,12 @@ object Compat {
     val bundle = new { val c: c0.type = c0 } with PickleMacros
     c.Expr[Unit](bundle.dpicklerPickle[T](picklee.tree, builder.tree))
   }
+
+  def CurrentMirrorMacro_impl(c: Context): c.Expr[ru.Mirror] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with CurrentMirrorMacro
+    c.Expr[ru.Mirror](bundle.impl)
+  }
 }
 
 trait QuasiquoteCompat { self: Macro =>
