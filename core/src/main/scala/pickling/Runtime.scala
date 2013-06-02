@@ -41,7 +41,7 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) {
   val cir = flattenedClassIR(tpe)
   debug("PicklerRuntime: cir = " + cir)
 
-  def genPickler(implicit format: PickleFormat): Pickler[_]
+  def genPickler(implicit format: PickleFormat): SPickler[_]
 }
 
 class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) extends PicklerRuntime(classLoader, preclazz) {
@@ -49,9 +49,9 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
   debug("InterpretedPicklerRuntime: preclazz = " + preclazz)
   debug("InterpretedPicklerRuntime: clazz    = " + clazz)
 
-  override def genPickler(implicit pf: PickleFormat): Pickler[_] = {
+  override def genPickler(implicit pf: PickleFormat): SPickler[_] = {
     // build "interpreted" runtime pickler
-    new Pickler[Any] with PickleTools {
+    new SPickler[Any] with PickleTools {
       val format: PickleFormat = pf
       def pickle(picklee: Any, builder: PickleBuilder): Unit = {
         if (picklee != null) {
@@ -68,7 +68,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
             // by using only the class we convert Int to Integer
             // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
             val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
-            val fldPickler = fldRuntime.genPickler.asInstanceOf[Pickler[Any]]
+            val fldPickler = fldRuntime.genPickler.asInstanceOf[SPickler[Any]]
             builder.putField(fir.name, b => {
               val fstaticTpe = fir.tpe.erasure
               if (fldClass == null || fldClass == mirror.runtimeClass(fstaticTpe)) builder.hintDynamicallyElidedType()
@@ -98,7 +98,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_]) {
   val cir = flattenedClassIR(tpe)
   debug("UnpicklerRuntime: cir = " + cir)
 
-  def genUnpickler(implicit pf: PickleFormat, p1: Pickler[Int], p2: Pickler[String]): Unpickler[Any] = {
+  def genUnpickler(implicit pf: PickleFormat, p1: SPickler[Int], p2: SPickler[String]): Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
       val format: PickleFormat = pf
       def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = {

@@ -20,7 +20,7 @@ class GenericsManualTest extends FunSuite {
       picklee.getClass match {
         case clazz if clazz == classOf[Generic[_]] =>
           val picklerRuntime = new InterpretedPicklerRuntime(getClass.getClassLoader, clazz)
-          val pickler = picklerRuntime.genPickler.asInstanceOf[Pickler[T]]
+          val pickler = picklerRuntime.genPickler.asInstanceOf[SPickler[T]]
           val builder = pf.createBuilder()
           pickler.pickle(picklee, builder)
           builder.result()
