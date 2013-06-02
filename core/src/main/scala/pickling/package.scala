@@ -194,8 +194,14 @@ package pickling {
     def unpickleTopLevel[T]: T = macro UnpickleMacros.readerUnpickleTopLevel[T]
   }
 
-  @Inherited
-  class pickleable extends MacroAnnotation {
+  /** This annotation enables library authors to guarantee to their clients that
+   *  picklers for separately-compiled subclasses are fully generated at compile-time.
+   *
+   *  This annotation adds a method that returns a pickler specialized for the runtime
+   *  class of the annotated type. Note that the annotation is expanded in each subclass,
+   *  transitively.
+   */
+  @Inherited class pickleable extends MacroAnnotation {
     def transform = macro PickleableMacro.impl
   }
 
