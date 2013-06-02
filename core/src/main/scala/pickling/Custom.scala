@@ -75,9 +75,16 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
     }
   }
 
+  // TODO: figure out why removing these picklers/unpicklers slows down evactor1
+  implicit def bytePicklerUnpickler(implicit format: PickleFormat): SPickler[Byte] with Unpickler[Byte] = new PrimitivePicklerUnpickler[Byte]
+  implicit def shortPicklerUnpickler(implicit format: PickleFormat): SPickler[Short] with Unpickler[Short] = new PrimitivePicklerUnpickler[Short]
+  implicit def charPicklerUnpickler(implicit format: PickleFormat): SPickler[Char] with Unpickler[Char] = new PrimitivePicklerUnpickler[Char]
   implicit def intPicklerUnpickler(implicit format: PickleFormat): SPickler[Int] with Unpickler[Int] = new PrimitivePicklerUnpickler[Int]
+  implicit def longPicklerUnpickler(implicit format: PickleFormat): SPickler[Long] with Unpickler[Long] = new PrimitivePicklerUnpickler[Long]
   implicit def stringPicklerUnpickler(implicit format: PickleFormat): SPickler[String] with Unpickler[String] = new PrimitivePicklerUnpickler[String]
   implicit def booleanPicklerUnpickler(implicit format: PickleFormat): SPickler[Boolean] with Unpickler[Boolean] = new PrimitivePicklerUnpickler[Boolean]
+  implicit def floatPicklerUnpickler(implicit format: PickleFormat): SPickler[Float] with Unpickler[Float] = new PrimitivePicklerUnpickler[Float]
+  implicit def doublePicklerUnpickler(implicit format: PickleFormat): SPickler[Double] with Unpickler[Double] = new PrimitivePicklerUnpickler[Double]
   implicit def nullPicklerUnpickler(implicit format: PickleFormat): SPickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]
 
   implicit def genListPickler[T](implicit format: PickleFormat): SPickler[::[T]] with Unpickler[::[T]] = macro Compat.ListPicklerUnpicklerMacro_impl[T]
