@@ -131,7 +131,7 @@ package json {
     }
   }
 
-  class JSONPickleReader(var datum: Any, val mirror: Mirror, format: JSONPickleFormat) extends PickleReader with PickleTools {
+  class JSONPickleReader(var datum: Any, val mirror: Mirror, format: JSONPickleFormat) extends PReader with PickleTools {
     private var lastReadTag: FastTypeTag[_] = null
     private val primitives = Map[String, () => Any](
       FastTypeTag.Null.key -> (() => null),
@@ -191,14 +191,14 @@ package json {
       }
     }
     def endEntry(): Unit = {}
-    def beginCollection(): PickleReader = readField("elems")
+    def beginCollection(): PReader = readField("elems")
     def readLength(): Int = {
       datum match {
         case JSONArray(list) => list.length
       }
     }
     private var i = 0
-    def readElement(): PickleReader = {
+    def readElement(): PReader = {
       val reader = {
         datum match {
           case JSONArray(list) => mkNestedReader(list(i))
