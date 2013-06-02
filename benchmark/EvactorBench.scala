@@ -40,7 +40,25 @@ object EvactorBench extends scala.testing.PicklingBenchmark {
     val pickles = for (evt <- evts) yield
       evt.pickle
 
-    val results = for (pickle <- pickles) yield
-      pickle.unpickle[DataEvent]
+    var i = 0
+    while (i < size) {
+      // val format: scala.pickling.binary.BinaryPickleFormat = new scala.pickling.binary.BinaryPickleFormat();
+      // val reader: scala.pickling.binary.BinaryPickleReader = format.createReader(pickle, myLittlePony);
+      // reader.hintTag(implicitly[FastTypeTag[DataEvent]](tagOfDataEvent));
+      // val typeString: String = reader.beginEntryNoTag();
+      // val unpickler: scala.pickling.Unpickler[_] = typeString match {
+      //   case "scala.Null" => implicitly[Unpickler[Null]](Unpickler.nullPicklerUnpickler(scala.pickling.binary.`package`.pickleFormat))
+      //   case "DataEvent" => implicitly[Unpickler[DataEvent]](unpicklerOfDataEvent)
+      //   case _ => {
+      //     val tag: FastTypeTag[_] = FastTypeTag(myLittlePony, typeString);
+      //     Unpickler.genUnpickler(reader.mirror, tag)(pickleFormat)
+      //   }
+      // };
+      // val result: Any = unpickler.unpickle(FastTypeTag(myLittlePony, typeString), reader);
+      // reader.endEntry();
+      // result.asInstanceOf[DataEvent]
+      pickles(i).unpickle[DataEvent]
+      i += 1
+    }
   }
 }
