@@ -37,7 +37,7 @@ class CombinatorPickleIntoTest extends FunSuite {
     implicit def personp(implicit intp: SPickler[Int]): SPickler[Person] =
       new SPickler[Person] {
         val format = intp.format
-        def pickle(p: Person, builder: PickleBuilder): Unit = {
+        def pickle(p: Person, builder: PBuilder): Unit = {
           // let's say we only want to pickle id, since we can look up name and age based on id
           // then we can make use of a size hint, so that a fixed-size array can be used for pickling
           builder.hintTag(implicitly[FastTypeTag[Person]])

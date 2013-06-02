@@ -54,7 +54,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
     // build "interpreted" runtime pickler
     new SPickler[Any] with PickleTools {
       val format: PickleFormat = pf
-      def pickle(picklee: Any, builder: PickleBuilder): Unit = {
+      def pickle(picklee: Any, builder: PBuilder): Unit = {
         if (picklee != null) {
           builder.hintTag(tag)
           builder.beginEntry(picklee)
