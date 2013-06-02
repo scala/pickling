@@ -11,8 +11,6 @@ object GeoTrellisBench extends scala.testing.PicklingBenchmark {
   val coll = (1 to size).toArray
   val data = IntArrayRasterData(coll, 64, 64)
 
-  scala.pickling.currentMirror = scala.reflect.runtime.currentMirror
-
   override def run() {
     val pickle = data.pickle
     val res = pickle.unpickle[IntArrayRasterData]
