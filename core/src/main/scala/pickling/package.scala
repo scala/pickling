@@ -96,12 +96,30 @@ package object pickling {
 
 package pickling {
 
+  /** A static pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
+   *  static type `T`, and pickles it to an instance of `PBuilder`. In the process the object
+   *  is turned into some external representation like a byte array. The particular external
+   *  representation (the "pickle format") is defined by the `format` val member (of type
+   *  `PickleFormat`).
+   *
+   *  This pickler requires that the dynamic type of the object-to-be-pickled is equal to
+   *  the erasure of its static type `T`.
+   */
   @implicitNotFound(msg = "Cannot generate a pickler for ${T}. Recompile with -Xlog-implicits for details")
   trait SPickler[T] {
     val format: PickleFormat
     def pickle(picklee: T, builder: PBuilder): Unit
   }
 
+  /** A dynamic pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
+   *  static type `T`, and pickles it to an instance of `PBuilder`. In the process the object
+   *  is turned into some external representation like a byte array. The particular external
+   *  representation (the "pickle format") is defined by the `format` val member (of type
+   *  `PickleFormat`).
+   *
+   *  In contrast to static picklers (instances of type `SPickler[T]`), a dynamic pickler of
+   *  type `DPickler[T]` pickles any object of type `T`.
+   */
   @implicitNotFound(msg = "Cannot generate a DPickler for ${T}. Recompile with -Xlog-implicits for details")
   trait DPickler[T] {
     val format: PickleFormat
