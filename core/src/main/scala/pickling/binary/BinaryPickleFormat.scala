@@ -62,6 +62,10 @@ package binary {
             pos + 8
           case KEY_BOOLEAN =>
             byteBuffer.encodeBooleanTo(pos, picklee.asInstanceOf[Boolean])
+          case KEY_FLOAT =>
+            val intValue = java.lang.Float.floatToRawIntBits(picklee.asInstanceOf[Float])
+            byteBuffer.encodeIntAtEnd(pos, intValue)
+            pos + 4
           case KEY_SCALA_STRING | KEY_JAVA_STRING =>
             byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])
           case KEY_ARRAY_INT =>
@@ -176,6 +180,9 @@ package binary {
           case KEY_INT     => byteBuffer.decodeIntFrom(pos)
           case KEY_LONG    => byteBuffer.decodeLongFrom(pos)
           case KEY_BOOLEAN => byteBuffer.decodeBooleanFrom(pos)
+          case KEY_FLOAT   =>
+            val (r, np) = byteBuffer.decodeIntFrom(pos)
+            (java.lang.Float.intBitsToFloat(r), np)
           case KEY_SCALA_STRING | KEY_JAVA_STRING => byteBuffer.decodeStringFrom(pos)
           case KEY_ARRAY_INT => byteBuffer.decodeIntArrayFrom(pos)
         }
