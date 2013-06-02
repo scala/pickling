@@ -66,6 +66,7 @@ trait LowPriorityPicklersUnpicklers {
 
 trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
   implicit def genListPickler[T](implicit format: PickleFormat): SPickler[::[T]] with Unpickler[::[T]] = macro ListPicklerUnpicklerMacro.impl[T]
+  // TODO: figure out why this is slower than traversablePickler
   // implicit def genVectorPickler[T](implicit format: PickleFormat): Pickler[Vector[T]] with Unpickler[Vector[T]] = macro VectorPicklerUnpicklerMacro.impl[T]
 }
 
