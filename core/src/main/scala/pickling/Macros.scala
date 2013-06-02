@@ -342,7 +342,7 @@ trait UnpickleMacros extends Macro {
     def finalDispatch = {
       if (sym.isNotNull) createUnpickler(tpe)
       else q"""
-        val tag = scala.pickling.FastTypeTag(scala.pickling.mirror, scala.pickling.typeFromString(scala.pickling.mirror, typeString), typeString)
+        val tag = scala.pickling.FastTypeTag(scala.pickling.mirror, typeString)
         if (tag != scala.pickling.FastTypeTag.Null) ${createUnpickler(tpe)} else ${createUnpickler(NullTpe)}
       """
     }
@@ -353,7 +353,7 @@ trait UnpickleMacros extends Macro {
         CaseDef(Literal(Constant(subtpe.key)), EmptyTree, createUnpickler(subtpe))
       })
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""
-        val tag = scala.pickling.FastTypeTag(scala.pickling.mirror, scala.pickling.typeFromString(scala.pickling.mirror, typeString), typeString)
+        val tag = scala.pickling.FastTypeTag(scala.pickling.mirror, typeString)
         Unpickler.genUnpickler(reader.mirror, tag)
       """)
       Match(q"typeString", compileTimeDispatch :+ runtimeDispatch)
@@ -368,7 +368,7 @@ trait UnpickleMacros extends Macro {
       $staticHint
       val typeString = reader.beginEntryNoTag()
       val unpickler = $dispatchLogic
-      val result = unpickler.unpickle({ scala.pickling.FastTypeTag(scala.pickling.mirror, scala.pickling.typeFromString(scala.pickling.mirror, typeString), typeString) }, reader)
+      val result = unpickler.unpickle({ scala.pickling.FastTypeTag(scala.pickling.mirror, typeString) }, reader)
       reader.endEntry()
       result.asInstanceOf[$tpe]
     """
