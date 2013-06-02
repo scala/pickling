@@ -5,7 +5,11 @@ import scala.collection.mutable.ArrayBuffer
 sealed abstract class ByteBuffer {
   def encodeByteTo(pos: Int, value: Byte): Int
 
+  def encodeByteAtEnd(pos: Int, value: Byte): Unit
+
   def encodeShortAtEnd(pos: Int, value: Short): Unit
+
+  def encodeCharAtEnd(pos: Int, value: Char): Unit
 
   def encodeIntAtEnd(pos: Int, value: Int): Unit
 
@@ -24,6 +28,8 @@ sealed abstract class ByteBuffer {
   def decodeByteFrom(pos: Int): (Byte, Int)
 
   def decodeShortFrom(pos: Int): (Short, Int)
+
+  def decodeCharFrom(pos: Int): (Char, Int)
 
   def decodeIntFrom(pos: Int): (Int, Int)
 
@@ -51,8 +57,14 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
     pos + 1
   }
 
+  def encodeByteAtEnd(pos: Int, value: Byte): Unit =
+    arr(pos) = value
+
   def encodeShortAtEnd(pos: Int, value: Short): Unit =
     Util.encodeShortTo(arr, pos, value)
+
+  def encodeCharAtEnd(pos: Int, value: Char): Unit =
+    Util.encodeCharTo(arr, pos, value)
 
   def encodeIntAtEnd(pos: Int, value: Int): Unit =
     Util.encodeIntTo(arr, pos, value)
@@ -95,6 +107,9 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
 
   def decodeShortFrom(pos: Int): (Short, Int) =
     Util.decodeShortFrom(arr, pos)
+
+  def decodeCharFrom(pos: Int): (Char, Int) =
+    Util.decodeCharFrom(arr, pos)
 
   def decodeIntFrom(pos: Int): (Int, Int) =
     Util.decodeIntFrom(arr, pos)
@@ -144,7 +159,20 @@ final class ByteArrayBuffer extends ByteBuffer {
   }
 
   // pos is ignored!
+  def encodeByteAtEnd(pos: Int, value: Byte): Unit = {
+    buf += value
+  }
+
+  // pos is ignored!
   def encodeShortAtEnd(pos: Int, value: Short): Unit = {
+    val fst = (value >>> 8 & 0xff).asInstanceOf[Byte]
+    val snd = (value & 0xff).asInstanceOf[Byte]
+    buf += fst
+    buf += snd
+  }
+
+  // pos is ignored!
+  def encodeCharAtEnd(pos: Int, value: Char): Unit = {
     val fst = (value >>> 8 & 0xff).asInstanceOf[Byte]
     val snd = (value & 0xff).asInstanceOf[Byte]
     buf += fst
@@ -244,6 +272,12 @@ final class ByteArrayBuffer extends ByteBuffer {
     val fst = ((buf(pos) << 8) & 0xFFFF).toShort
     val snd = (buf(pos+1)      & 0x00FF).toShort
     ((fst | snd).toShort, pos+2)
+  }
+
+  def decodeCharFrom(pos: Int): (Char, Int) = {
+    val fst = ((buf(pos) << 8) & 0xFFFF).toChar
+    val snd = (buf(pos+1)      & 0x00FF).toChar
+    ((fst | snd).toChar, pos+2)
   }
 
   def decodeIntFrom(pos: Int): (Int, Int) = {
