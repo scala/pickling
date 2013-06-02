@@ -341,7 +341,7 @@ trait UnpickleMacros extends Macro {
     def createUnpickler(tpe: Type) = q"implicitly[Unpickler[$tpe]]"
     def finalDispatch = {
       if (sym.isNotNull) createUnpickler(tpe)
-      else q"if (tag != scala.pickling.FastTypeTag.Null) ${createUnpickler(tpe)} else ${createUnpickler(NullTpe)}"
+      else q"if (tag.key != scala.pickling.FastTypeTag.Null.key) ${createUnpickler(tpe)} else ${createUnpickler(NullTpe)}"
     }
 
     def nonFinalDispatch = {
