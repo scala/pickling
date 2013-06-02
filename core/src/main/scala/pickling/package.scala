@@ -120,7 +120,7 @@ package pickling {
   @implicitNotFound(msg = "Cannot generate an unpickler for ${T}. Recompile with -Xlog-implicits for details")
   trait Unpickler[T] {
     val format: PickleFormat
-    def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any
+    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any
   }
 
   trait GenUnpicklers {
@@ -146,7 +146,7 @@ package pickling {
   trait PickleFormat {
     type PickleType <: Pickle
     def createBuilder(): PBuilder
-    def createReader(pickle: PickleType, mirror: Mirror): PickleReader
+    def createReader(pickle: PickleType, mirror: Mirror): PReader
   }
 
   trait Hintable {
@@ -168,18 +168,18 @@ package pickling {
     def result(): Pickle
   }
 
-  trait PickleReader extends Hintable {
+  trait PReader extends Hintable {
     def mirror: Mirror
     def beginEntry(): FastTypeTag[_]
     def beginEntryNoTag(): String
     def atPrimitive: Boolean
     def readPrimitive(): Any
     def atObject: Boolean
-    def readField(name: String): PickleReader
+    def readField(name: String): PReader
     def endEntry(): Unit
-    def beginCollection(): PickleReader
+    def beginCollection(): PReader
     def readLength(): Int
-    def readElement(): PickleReader
+    def readElement(): PReader
     def endCollection(): Unit
     def unpickle[T]: T = macro Compat.UnpickleMacros_readerUnpickle[T]
     def unpickleTopLevel[T]: T = macro Compat.UnpickleMacros_readerUnpickleTopLevel[T]
