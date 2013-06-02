@@ -216,7 +216,7 @@ trait UnpicklerMacros extends Macro {
         import scala.pickling.ir._
         import scala.reflect.runtime.universe._
         val format = new ${format.tpe}()
-        def unpickle(tag: => FastTypeTag[_], reader: PickleReader): Any = $unpickleLogic
+        def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = $unpickleLogic
       }
       $unpicklerName
     """
