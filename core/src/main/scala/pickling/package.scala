@@ -3,7 +3,9 @@ package scala
 import scala.language.experimental.macros
 import scala.language.reflectiveCalls
 
+import scala.reflect.macros.Context
 import scala.reflect.runtime.universe._
+import scala.reflect.runtime.{universe => ru}
 import scala.annotation.implicitNotFound
 
 package object pickling {
@@ -24,13 +26,21 @@ package object pickling {
     def isNotNull = sym.asType.toType.asInstanceOf[scala.reflect.internal.Types#Type].isNotNull
   }
 
-  var currentMirror: reflect.runtime.universe.Mirror = null
-
-  def mirror: reflect.runtime.universe.Mirror =
-    if (currentMirror == null) {
-      currentMirror = reflect.runtime.currentMirror
-      currentMirror
-    } else currentMirror
+  var cachedMirror: ru.Mirror = null
+  def currentMirror: ru.Mirror = macro Compat.CurrentMirrorMacro_impl
+  trait CurrentMirrorMacro extends Macro {
+    import c.universe._
+    def impl: c.Tree = {
+      val cachedMirror = q"scala.pickling.`package`.cachedMirror"
+      q"""
+        if ($cachedMirror != null) $cachedMirror
+        else {
+          $cachedMirror = scala.reflect.runtime.currentMirror
+          $cachedMirror
+        }
+      """
+    }
+  }
 
   def typeToString(tpe: Type): String = tpe.key
 
