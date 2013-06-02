@@ -23,6 +23,14 @@ object EvactorBench extends scala.testing.PicklingBenchmark {
     val tagOfInt = "boom!"
     implicitly[FastTypeTag[Int]]
   }
+  implicit lazy val picklerOfDataEvent: SPickler[DataEvent] = {
+    val picklerOfDataEvent = "boom!"
+    implicitly[SPickler[DataEvent]]
+  }
+  implicit lazy val unpicklerOfDataEvent: Unpickler[DataEvent] = {
+    val unpicklerOfDataEvent = "boom!"
+    implicitly[Unpickler[DataEvent]]
+  }
 
   override def run() {
     // random events
