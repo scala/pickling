@@ -10,6 +10,23 @@ object EvactorBench extends testing.Benchmark {
 
   val time: Int = System.currentTimeMillis.toInt
 
+  implicit lazy val tagOfDataEvent: FastTypeTag[DataEvent] = {
+    val tagOfDataEvent = "boom!"
+    implicitly[FastTypeTag[DataEvent]]
+  }
+  implicit lazy val tagOfNull: FastTypeTag[Null] = {
+    val tagOfNull = "boom!"
+    implicitly[FastTypeTag[Null]]
+  }
+  implicit lazy val tagOfString: FastTypeTag[String] = {
+    val tagOfString = "boom!"
+    implicitly[FastTypeTag[String]]
+  }
+  implicit lazy val tagOfInt: FastTypeTag[Int] = {
+    val tagOfInt = "boom!"
+    implicitly[FastTypeTag[Int]]
+  }
+
   override def run() {
     // random events
     val evts = for (i <- 1 to size) yield
@@ -17,7 +34,7 @@ object EvactorBench extends testing.Benchmark {
 
     val pickles = for (evt <- evts) yield
       evt.pickle
-    
+
     val results = for (pickle <- pickles) yield
       pickle.unpickle[DataEvent]
   }
