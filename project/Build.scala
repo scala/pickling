@@ -55,6 +55,7 @@ object MyBuild extends Build {
       libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _),
       libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-compiler" % _)
     )) ++ Seq(
+      scalacOptions ++= Seq("-optimise"),
       libraryDependencies += "org.scalatest" % "scalatest_2.11.0-M3" % "1.9.1" % "test",
       libraryDependencies += "org.scalacheck" % "scalacheck_2.11.0-M3" % "1.10.1" % "test",
       conflictWarning in ThisBuild := ConflictWarning.disable,
@@ -89,6 +90,7 @@ object MyBuild extends Build {
     settings = buildSettings ++ Seq(
       sourceDirectory in Compile <<= baseDirectory(root => root),
       sourceDirectory in Test <<= baseDirectory(root => root),
+      scalacOptions ++= Seq("-optimise"),
       InputKey[Unit]("travInt") <<= benchTask("TraversableIntBench", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntFreeMem") <<= benchTask("TraversableIntBenchFreeMem", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntSize") <<= benchTask("TraversableIntBenchSize", 100000 to 1000000 by 100000),
