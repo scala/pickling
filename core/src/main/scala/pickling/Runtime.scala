@@ -161,7 +161,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_]) {
 }
 
 // TODO: copy/paste wrt CompiledPicklerRuntime
-class CompiledUnpicklerRuntime(mirror: Mirror, tag: TypeTag[_]) {
+class CompiledUnpicklerRuntime(mirror: Mirror, tpe: Type) {
   def genUnpickler(implicit format: PickleFormat): Unpickler[_] = {
     // see notes and todos in CompiledPicklerRuntime.genPickler
     val formatTpe = mirror.reflect(format).symbol.asType.toType
@@ -169,7 +169,7 @@ class CompiledUnpicklerRuntime(mirror: Mirror, tag: TypeTag[_]) {
       import scala.pickling._
       import scala.pickling.`package`.PickleOps
       implicit val format: $formatTpe = new $formatTpe()
-      implicitly[Unpickler[$tag]]
+      implicitly[Unpickler[$tpe]]
     """).asInstanceOf[Unpickler[_]]
   }
 }

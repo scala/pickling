@@ -136,7 +136,7 @@ package pickling {
     implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] = macro UnpicklerMacros.impl[T]
     def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit format: PickleFormat): Unpickler[_] = {
       // println(s"generating runtime unpickler for ${tag.tpe}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
-      //val runtime = new CompiledUnpicklerRuntime(mirror, tag)
+      //val runtime = new CompiledUnpicklerRuntime(mirror, tag.tpe)
       val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
       runtime.genUnpickler
     }
