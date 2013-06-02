@@ -124,7 +124,7 @@ trait PicklerMacros extends Macro {
       implicit object $picklerName extends scala.pickling.SPickler[$tpe] {
         import scala.pickling._
         import scala.pickling.`package`.PickleOps
-        val format = new ${format.tpe}()
+        val format = implicitly[${format.tpe}]
         def pickle(picklee: $tpe, builder: PBuilder): Unit = $pickleLogic
       }
       $picklerName
@@ -138,7 +138,7 @@ trait PicklerMacros extends Macro {
       implicit object $picklerName extends scala.pickling.DPickler[$tpe] {
         import scala.pickling._
         import scala.pickling.`package`.PickleOps
-        val format = new ${format.tpe}()
+        val format = implicitly[${format.tpe}]
       }
       $picklerName
     """
@@ -215,7 +215,7 @@ trait UnpicklerMacros extends Macro {
         import scala.pickling._
         import scala.pickling.ir._
         import scala.reflect.runtime.universe._
-        val format = new ${format.tpe}()
+        val format = implicitly[${format.tpe}]
         def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = $unpickleLogic
       }
       $unpicklerName
