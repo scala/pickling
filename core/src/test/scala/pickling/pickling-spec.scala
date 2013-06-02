@@ -173,6 +173,24 @@ object PicklingJsonSpec extends Properties("pickling-json") {
     x1 == x
     true
   }
+
+  property("Char") = Prop forAll { (x: Char) =>
+    val pickle: JSONPickle = x.pickle
+    val x1 = pickle.unpickle[Char]
+    x1 == x
+  }
+
+  property("Float") = Prop forAll { (x: Float) =>
+    val pickle: JSONPickle = x.pickle
+    val x1 = pickle.unpickle[Float]
+    x1 == x
+  }
+
+  property("Double") = Prop forAll { (x: Double) =>
+    val pickle: JSONPickle = x.pickle
+    val x1 = pickle.unpickle[Double]
+    x1 == x
+  }
 }
 
 
