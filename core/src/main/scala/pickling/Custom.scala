@@ -9,9 +9,64 @@ import scala.collection.immutable.::
 import scala.collection.generic.CanBuildFrom
 import scala.collection.IndexedSeq
 
-trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
+trait LowPriorityPicklersUnpicklers {
+
+  implicit def traversablePickler[T: FastTypeTag, Coll[_] <: Traversable[_]]
+    (implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T],
+              pf: PickleFormat, cbf: CanBuildFrom[Coll[_], T, Coll[T]],
+              collTag: FastTypeTag[Coll[T]]): Pickler[Coll[T]] with Unpickler[Coll[T]] =
+    new Pickler[Coll[T]] with Unpickler[Coll[T]] {
+
+    val format: PickleFormat = pf
+    val elemTag  = implicitly[FastTypeTag[T]]
+
+    def pickle(coll: Coll[T], builder: PickleBuilder): Unit = {
+      builder.hintTag(collTag)
+      builder.beginEntry(coll)
+
+      if (coll.isInstanceOf[IndexedSeq[_]]) builder.beginCollection(coll.size)
+      else builder.beginCollection(0)
+
+      builder.hintStaticallyElidedType()
+      builder.hintTag(elemTag)
+      builder.pinHints()
+
+      var i = 0
+      coll.asInstanceOf[Traversable[T]].foreach { (elem: T) =>
+        builder.beginEntry(elem)
+        builder.endEntry()
+        i += 1
+      }
+
+      builder.unpinHints()
+      builder.endCollection(i)
+      builder.endEntry()
+    }
+
+    def unpickle(tpe: => FastTypeTag[_], preader: PickleReader): Any = {
+      val reader = preader.beginCollection()
+      reader.hintStaticallyElidedType()
+      reader.hintTag(elemTag)
+      reader.pinHints()
+
+      val length = reader.readLength()
+      var builder = cbf.apply() // builder with element type T
+      var i = 0
+      while (i < length) {
+        reader.beginEntry()
+        builder += reader.readPrimitive().asInstanceOf[T]
+        reader.endEntry()
+        i = i + 1
+      }
+
+      builder.result
+    }
+  }
+}
+
+trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
   implicit def genListPickler[T](implicit format: PickleFormat): Pickler[::[T]] with Unpickler[::[T]] = macro ListPicklerUnpicklerMacro.impl[T]
-  implicit def genVectorPickler[T](implicit format: PickleFormat): Pickler[Vector[T]] with Unpickler[Vector[T]] = macro VectorPicklerUnpicklerMacro.impl[T]
+  // implicit def genVectorPickler[T](implicit format: PickleFormat): Pickler[Vector[T]] with Unpickler[Vector[T]] = macro VectorPicklerUnpicklerMacro.impl[T]
 }
 
 trait ListPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
