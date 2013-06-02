@@ -124,7 +124,7 @@ trait PicklerMacros extends Macro {
         import scala.pickling._
         import scala.pickling.`package`.PickleOps
         val format = new ${format.tpe}()
-        def pickle(picklee: $tpe, builder: PickleBuilder): Unit = $pickleLogic
+        def pickle(picklee: $tpe, builder: PBuilder): Unit = $pickleLogic
       }
       $picklerName
     """

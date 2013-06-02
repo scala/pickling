@@ -29,7 +29,7 @@ package json {
     }
   }
 
-  class JSONPickleBuilder(format: JSONPickleFormat) extends PickleBuilder with PickleTools {
+  class JSONPickleBuilder(format: JSONPickleFormat) extends PBuilder with PickleTools {
     private val buf = new StringBuilder()
     private var nindent = 0
     private def indent() = nindent += 1
