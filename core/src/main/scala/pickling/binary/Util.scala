@@ -19,6 +19,14 @@ package binary {
       ((fst | snd).toShort, i+2)
     }
 
+    /** Returns decoded Char plus next "readable" position in target array.
+     */
+    def decodeCharFrom(arr: Array[Byte], i: Int): (Char, Int) = {
+      val fst = ((arr(i) << 8) & 0xFFFF).toChar
+      val snd = (arr(i+1)      & 0x00FF).toChar
+      ((fst | snd).toChar, i+2)
+    }
+
     /** Returns decoded Int plus next "readable" position in target array.
      */
     def decodeIntFrom(arr: Array[Byte], i: Int): (Int, Int) = {
@@ -54,6 +62,16 @@ package binary {
     /** Returns next "writeable" position in target array.
      */
     def encodeShortTo(arr: Array[Byte], i: Int, value: Short): Int = {
+      val fst = (value >>> 8 & 0xff).asInstanceOf[Byte]
+      val snd = (value & 0xff).asInstanceOf[Byte]
+      arr(i) = fst
+      arr(i+1) = snd
+      i+2
+    }
+
+    /** Returns next "writeable" position in target array.
+     */
+    def encodeCharTo(arr: Array[Byte], i: Int, value: Char): Int = {
       val fst = (value >>> 8 & 0xff).asInstanceOf[Byte]
       val snd = (value & 0xff).asInstanceOf[Byte]
       arr(i) = fst
