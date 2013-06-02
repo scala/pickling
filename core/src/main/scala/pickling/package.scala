@@ -46,21 +46,30 @@ package object pickling {
 
   def typeToString(tpe: Type): String = tpe.key
 
+  private val typeFromStringCache = scala.collection.mutable.Map[String, Type]()
   def typeFromString(mirror: Mirror, stpe: String): Type = {
-    val (ssym, stargs) = {
-      val Pattern = """^(.*?)(\[(.*?)\])?$""".r
-      def fail() = throw new PicklingException(s"fatal: cannot unpickle $stpe")
-      stpe match {
-        case Pattern("", _, _) => fail()
-        case Pattern(sym, _, null) => (sym, Nil)
-        case Pattern(sym, _, stargs) => (sym, stargs.split(",").map(_.trim).toList)
-        case _ => fail()
-      }
-    }
+    // TODO: find out why typeFromString is called repeatedly for scala.Predef.String (at least in the evactor1 bench)
+    if (typeFromStringCache.contains(stpe)) typeFromStringCache(stpe)
+    else {
+      val result = {
+        val (ssym, stargs) = {
+          val Pattern = """^(.*?)(\[(.*?)\])?$""".r
+          def fail() = throw new PicklingException(s"fatal: cannot unpickle $stpe")
+          stpe match {
+            case Pattern("", _, _) => fail()
+            case Pattern(sym, _, null) => (sym, Nil)
+            case Pattern(sym, _, stargs) => (sym, stargs.split(",").map(_.trim).toList)
+            case _ => fail()
+          }
+        }
 
-    val sym = if (ssym.endsWith(".type")) mirror.staticModule(ssym.stripSuffix(".type")).moduleClass else mirror.staticClass(ssym)
-    val tycon = sym.asType.toTypeConstructor
-    appliedType(tycon, stargs.map(starg => typeFromString(mirror, starg)))
+        val sym = if (ssym.endsWith(".type")) mirror.staticModule(ssym.stripSuffix(".type")).moduleClass else mirror.staticClass(ssym)
+        val tycon = sym.asType.toTypeConstructor
+        appliedType(tycon, stargs.map(starg => typeFromString(mirror, starg)))
+      }
+      typeFromStringCache(stpe) = result
+      result
+    }
   }
 
   // FIXME: duplication wrt Tools, but I don't really fancy abstracting away this path-dependent madness
