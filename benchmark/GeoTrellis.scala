@@ -7,10 +7,11 @@ trait IntBasedArray
 final case class IntArrayRasterData(array: Array[Int], cols: Int, rows: Int)
   extends MutableRasterData with IntBasedArray
 
-object GeoTrellisInt1Bench extends testing.Benchmark {
-  val size = System.getProperty("size").toInt
+object GeoTrellisBench extends scala.testing.PicklingBenchmark {
   val coll = (1 to size).toArray
   val data = IntArrayRasterData(coll, 64, 64)
+
+  scala.pickling.currentMirror = scala.reflect.runtime.currentMirror
 
   override def run() {
     val pickle = data.pickle

@@ -1,8 +1,7 @@
 import scala.pickling._
 import binary._
 
-object ListIntGeneratedBench extends testing.Benchmark {
-  val size = System.getProperty("size").toInt
+object ListIntGeneratedBench extends scala.testing.PicklingBenchmark {
   val lst = (1 to size).toList
 
   override def run() {

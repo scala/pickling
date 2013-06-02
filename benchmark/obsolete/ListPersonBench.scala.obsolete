@@ -2,8 +2,6 @@ import scala.pickling._
 import binary._
 import reflect.runtime.universe._
 
-case class Person(name: String, age: Int)
-
 object ListPersonBench extends testing.Benchmark {
 
   implicit def genListPickler[T: TypeTag](implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T], pf: PickleFormat): Pickler[List[T]] with Unpickler[List[T]] = new Pickler[List[T]] with Unpickler[List[T]] {
@@ -15,7 +13,7 @@ object ListPersonBench extends testing.Benchmark {
     def pickle(picklee: Any, builder: PickleBuilder): Unit = {
       val list = picklee.asInstanceOf[List[T]]
       val tpe  = typeTag[Int]
-      builder.beginEntryNoType(typeTag[AnyRef], picklee)
+      builder.beginEntryNoType(FastTypeTag.AnyRef, picklee)
 
       builder.putField("numElems", b => {
         b.beginEntryNoType(tpe, list.length)
@@ -34,7 +32,7 @@ object ListPersonBench extends testing.Benchmark {
     def unpickle(tpe: TypeTag[_], reader: PickleReader): Any = {
       //val tpe  = typeTag[T]
       val next = reader.readField("numElems")
-      val num  = next.readPrimitive(typeTag[Int]).asInstanceOf[Int]
+      val num  = next.readPrimitive(FastTypeTag.Int).asInstanceOf[Int]
 
       var listbuf = ListBuffer[T]()
       for (i <- 1 to num) {
@@ -67,7 +65,7 @@ object ListPersonBench extends testing.Benchmark {
 
     val listUnpickler = listPicklerRaw.asInstanceOf[Unpickler[_]]
 
-    val res = listUnpickler.unpickle(typeTag[List[Person]], pf.createReader(pckl))
+    val res = listUnpickler.unpickle(implicitly[FastTypeTag[List[Person]]], pf.createReader(pckl))
   }
 }
 
