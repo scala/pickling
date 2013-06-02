@@ -3,10 +3,15 @@ import binary._
 
 import org.evactor.model.events.DataEvent
 import scala.util.Random
+import scala.reflect.runtime.{universe => ru}
 
 object EvactorBench extends scala.testing.PicklingBenchmark {
   val time: Int = System.currentTimeMillis.toInt
 
+  implicit lazy val myLittlePony: ru.Mirror = {
+    val currentMirror = "boom!"
+    ru.runtimeMirror(getClass.getClassLoader)
+  }
   implicit lazy val tagOfDataEvent: FastTypeTag[DataEvent] = {
     val tagOfDataEvent = "boom!"
     implicitly[FastTypeTag[DataEvent]]
