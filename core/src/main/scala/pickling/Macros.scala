@@ -341,7 +341,10 @@ trait UnpickleMacros extends Macro {
     def createUnpickler(tpe: Type) = q"implicitly[Unpickler[$tpe]]"
     def finalDispatch = {
       if (sym.isNotNull) createUnpickler(tpe)
-      else q"if (tag.key != scala.pickling.FastTypeTag.Null.key) ${createUnpickler(tpe)} else ${createUnpickler(NullTpe)}"
+      else q"""
+        val tag = scala.pickling.FastTypeTag(typeString)
+        if (tag.key != scala.pickling.FastTypeTag.Null.key) ${createUnpickler(tpe)} else ${createUnpickler(NullTpe)}
+      """
     }
 
     def nonFinalDispatch = {
@@ -349,7 +352,10 @@ trait UnpickleMacros extends Macro {
         // TODO: do we still want to use something like HasPicklerDispatch (for unpicklers it would be routed throw tpe's companion)?
         CaseDef(Literal(Constant(subtpe.key)), EmptyTree, createUnpickler(subtpe))
       })
-      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"Unpickler.genUnpickler(reader.mirror, tag)")
+      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""
+        val tag = scala.pickling.FastTypeTag(typeString)
+        Unpickler.genUnpickler(reader.mirror, tag)
+      """)
       Match(q"typeString", compileTimeDispatch :+ runtimeDispatch)
     }
 
@@ -361,9 +367,8 @@ trait UnpickleMacros extends Macro {
       reader.hintTag(implicitly[scala.pickling.FastTypeTag[$tpe]])
       $staticHint
       val typeString = reader.beginEntryNoTag()
-      val tag = scala.pickling.FastTypeTag(typeString)
       val unpickler = $dispatchLogic
-      val result = unpickler.unpickle(tag, reader)
+      val result = unpickler.unpickle({ scala.pickling.FastTypeTag(typeString) }, reader)
       reader.endEntry()
       result.asInstanceOf[$tpe]
     """
