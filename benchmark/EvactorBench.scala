@@ -4,10 +4,7 @@ import binary._
 import org.evactor.model.events.DataEvent
 import scala.util.Random
 
-object EvactorBench extends testing.Benchmark {
-  val size = System.getProperty("size").toInt
-  //val coll = (1 to size).toArray
-
+object EvactorBench extends scala.testing.PicklingBenchmark {
   val time: Int = System.currentTimeMillis.toInt
 
   implicit lazy val tagOfDataEvent: FastTypeTag[DataEvent] = {
