@@ -47,8 +47,8 @@ object EvactorBench extends scala.testing.PicklingBenchmark {
 
     var i = 0
     while (i < size) {
-      // val format: scala.pickling.binary.BinaryPickleFormat = new scala.pickling.binary.BinaryPickleFormat();
-      // val reader: scala.pickling.binary.BinaryPickleReader = format.createReader(pickle, myLittlePony);
+      // val format: scala.pickling.binary.BinaryPickleFormat = implicitly[scala.pickling.binary.BinaryPickleFormat];
+      // val reader: scala.pickling.binary.BinaryPickleReader = format.createReader(pickles(i), myLittlePony);
       // reader.hintTag(implicitly[FastTypeTag[DataEvent]](tagOfDataEvent));
       // val typeString: String = reader.beginEntryNoTag();
       // val unpickler: scala.pickling.Unpickler[_] = typeString match {
