@@ -12,10 +12,10 @@ import scala.collection.IndexedSeq
 trait LowPriorityPicklersUnpicklers {
 
   implicit def traversablePickler[T: FastTypeTag, Coll[_] <: Traversable[_]]
-    (implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T],
+    (implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T],
               pf: PickleFormat, cbf: CanBuildFrom[Coll[_], T, Coll[T]],
-              collTag: FastTypeTag[Coll[T]]): Pickler[Coll[T]] with Unpickler[Coll[T]] =
-    new Pickler[Coll[T]] with Unpickler[Coll[T]] {
+              collTag: FastTypeTag[Coll[T]]): SPickler[Coll[T]] with Unpickler[Coll[T]] =
+    new SPickler[Coll[T]] with Unpickler[Coll[T]] {
 
     val format: PickleFormat = pf
     val elemTag  = implicitly[FastTypeTag[T]]
@@ -65,7 +65,7 @@ trait LowPriorityPicklersUnpicklers {
 }
 
 trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
-  implicit def genListPickler[T](implicit format: PickleFormat): Pickler[::[T]] with Unpickler[::[T]] = macro ListPicklerUnpicklerMacro.impl[T]
+  implicit def genListPickler[T](implicit format: PickleFormat): SPickler[::[T]] with Unpickler[::[T]] = macro ListPicklerUnpicklerMacro.impl[T]
   // implicit def genVectorPickler[T](implicit format: PickleFormat): Pickler[Vector[T]] with Unpickler[Vector[T]] = macro VectorPicklerUnpicklerMacro.impl[T]
 }
 
@@ -102,14 +102,14 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
     val isPrimitive = eltpe.isEffectivelyPrimitive
     val picklerUnpicklerName = c.fresh(syntheticPicklerUnpicklerName(tpe).toTermName)
     q"""
-      implicit object $picklerUnpicklerName extends scala.pickling.Pickler[$tpe] with scala.pickling.Unpickler[$tpe] {
+      implicit object $picklerUnpicklerName extends scala.pickling.SPickler[$tpe] with scala.pickling.Unpickler[$tpe] {
         import scala.reflect.runtime.universe._
         import scala.pickling._
         import scala.pickling.`package`.PickleOps
         val format = new ${format.tpe}()
-        implicit val elpickler: Pickler[$eltpe] = {
+        implicit val elpickler: SPickler[$eltpe] = {
           val elpickler = "bam!"
-          implicitly[Pickler[$eltpe]]
+          implicitly[SPickler[$eltpe]]
         }
         implicit val elunpickler: Unpickler[$eltpe] = {
           val elunpickler = "bam!"
