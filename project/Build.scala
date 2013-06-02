@@ -78,6 +78,7 @@ object MyBuild extends Build {
       parallelExecution in Test := false,
       scalacOptions ++= Seq()
       // scalacOptions ++= Seq("-Xlog-implicits")
+      // scalacOptions ++= Seq("-Xprint:typer")
     )
   ) dependsOn(core)
 

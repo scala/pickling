@@ -317,7 +317,7 @@ trait UnpickleMacros extends Macro {
       import scala.pickling._
       val pickle = $pickleArg
       val format = new ${pickleFormatType(pickleArg)}()
-      val reader = format.createReader(pickle, mirror)
+      val reader = format.createReader(pickle, scala.pickling.`package`.currentMirror)
       reader.unpickleTopLevel[$tpe]
     """
   }
