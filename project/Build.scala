@@ -54,6 +54,7 @@ object MyBuild extends Build {
     settings = buildSettings ++ (if (useLocalBuildOfParadise) Nil else Seq(
       libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _)
     )) ++ Seq(
+      scalacOptions ++= Seq("-optimise"),
       libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test",
       libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
       conflictWarning in ThisBuild := ConflictWarning.disable,
@@ -96,6 +97,7 @@ object MyBuild extends Build {
     settings = buildSettings ++ Seq(
       sourceDirectory in Compile <<= baseDirectory(root => root),
       sourceDirectory in Test <<= baseDirectory(root => root),
+      scalacOptions ++= Seq("-optimise"),
       InputKey[Unit]("travInt") <<= benchTask("TraversableIntBench", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntFreeMem") <<= benchTask("TraversableIntBenchFreeMem", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntSize") <<= benchTask("TraversableIntBenchSize", 100000 to 1000000 by 100000),
