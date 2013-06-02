@@ -33,7 +33,7 @@ class GenericsManualTest extends FunSuite {
 
       val reader = pf.createReader(pickle.asInstanceOf[pf.PickleType], mirror)
       // read tag: "Generic"
-      reader.hintTag(fastTypeTag[T])
+      reader.hintTag(implicitly[FastTypeTag[T]])
       reader.pinHints()
       val tag = reader.beginEntry()
       debug("unpickleManual: tag = " + tag)

@@ -243,7 +243,7 @@ trait PickleMacros extends Macro {
   }
 
   def createPickler(tpe: c.Type, builder: c.Tree): c.Tree = q"""
-    $builder.hintTag(scala.pickling.fastTypeTag[$tpe])
+    $builder.hintTag(implicitly[scala.pickling.FastTypeTag[$tpe]])
     implicitly[Pickler[$tpe]]
   """
 
@@ -358,10 +358,10 @@ trait UnpickleMacros extends Macro {
 
     q"""
       val reader = $readerArg
-      reader.hintTag(scala.pickling.fastTypeTag[$tpe])
+      reader.hintTag(implicitly[scala.pickling.FastTypeTag[$tpe]])
       $staticHint
       val typeString = reader.beginEntryNoTag()
-      val tag = scala.pickling.FastTypeTag(scala.pickling.mirror, typeString)
+      val tag = scala.pickling.FastTypeTag(typeString)
       val unpickler = $dispatchLogic
       val result = unpickler.unpickle(tag, reader)
       reader.endEntry()
