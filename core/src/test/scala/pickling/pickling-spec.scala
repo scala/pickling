@@ -322,6 +322,12 @@ object PicklingBinarySpec extends Properties("pickling-binary") {
     x1 == x
   }
 
+  property("Float") = Prop forAll { (x: Float) =>
+    val pickle: BinaryPickle = x.pickle
+    val x1 = pickle.unpickle[Float]
+    x1 == x
+  }
+
   property("Array") = forAll((ia: Array[Int]) => {
     val pickle: BinaryPickle = ia.pickle
     val readArr = pickle.unpickle[Array[Int]]
