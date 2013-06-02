@@ -310,7 +310,17 @@ object PicklingBinarySpec extends Properties("pickling-binary") {
     x1 == x
   }
 
-  // TODO add a test for Byte (binary)!!
+  property("Byte") = Prop forAll { (x: Byte) =>
+    val pickle: BinaryPickle = x.pickle
+    val x1 = pickle.unpickle[Byte]
+    x1 == x
+  }
+
+  property("Char") = Prop forAll { (x: Char) =>
+    val pickle: BinaryPickle = x.pickle
+    val x1 = pickle.unpickle[Char]
+    x1 == x
+  }
 
   property("Array") = forAll((ia: Array[Int]) => {
     val pickle: BinaryPickle = ia.pickle

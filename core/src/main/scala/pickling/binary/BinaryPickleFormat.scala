@@ -45,8 +45,14 @@ package binary {
         pos = hints.tag.key match { // PERF: should store typestring once in hints.
           case KEY_NULL =>
             byteBuffer.encodeByteTo(pos, NULL_TAG)
+          case KEY_BYTE =>
+            byteBuffer.encodeByteAtEnd(pos, picklee.asInstanceOf[Byte])
+            pos + 1
           case KEY_SHORT =>
             byteBuffer.encodeShortAtEnd(pos, picklee.asInstanceOf[Short])
+            pos + 2
+          case KEY_CHAR =>
+            byteBuffer.encodeCharAtEnd(pos, picklee.asInstanceOf[Char])
             pos + 2
           case KEY_INT =>
             byteBuffer.encodeIntAtEnd(pos, picklee.asInstanceOf[Int])
@@ -164,7 +170,9 @@ package binary {
       val (res, newpos) = {
         lastTagRead.key match {
           case KEY_NULL    => (null, pos)
+          case KEY_BYTE    => byteBuffer.decodeByteFrom(pos)
           case KEY_SHORT   => byteBuffer.decodeShortFrom(pos)
+          case KEY_CHAR    => byteBuffer.decodeCharFrom(pos)
           case KEY_INT     => byteBuffer.decodeIntFrom(pos)
           case KEY_LONG    => byteBuffer.decodeLongFrom(pos)
           case KEY_BOOLEAN => byteBuffer.decodeBooleanFrom(pos)
