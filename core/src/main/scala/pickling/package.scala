@@ -14,7 +14,7 @@ package object pickling {
 
   implicit class PickleOps[T](picklee: T) {
     def pickle(implicit format: PickleFormat): Pickle = macro Compat.PickleMacros_pickle[T]
-    def pickleInto(builder: PickleBuilder): Unit = macro Compat.PickleMacros_pickleInto[T]
+    def pickleInto(builder: PBuilder): Unit = macro Compat.PickleMacros_pickleInto[T]
   }
 
   implicit class RichSymbol(sym: scala.reflect.api.Symbols#Symbol) {
@@ -90,13 +90,13 @@ package pickling {
   @implicitNotFound(msg = "Cannot generate a pickler for ${T}. Recompile with -Xlog-implicits for details")
   trait SPickler[T] {
     val format: PickleFormat
-    def pickle(picklee: T, builder: PickleBuilder): Unit
+    def pickle(picklee: T, builder: PBuilder): Unit
   }
 
   @implicitNotFound(msg = "Cannot generate a DPickler for ${T}. Recompile with -Xlog-implicits for details")
   trait DPickler[T] {
     val format: PickleFormat
-    def pickle(picklee: T, builder: PickleBuilder): Unit = macro Compat.PickleMacros_dpicklerPickle[T]
+    def pickle(picklee: T, builder: PBuilder): Unit = macro Compat.PickleMacros_dpicklerPickle[T]
   }
 
   object DPickler {
@@ -145,7 +145,7 @@ package pickling {
 
   trait PickleFormat {
     type PickleType <: Pickle
-    def createBuilder(): PickleBuilder
+    def createBuilder(): PBuilder
     def createReader(pickle: PickleType, mirror: Mirror): PickleReader
   }
 
@@ -158,7 +158,7 @@ package pickling {
     def unpinHints(): this.type
   }
 
-  trait PickleBuilder extends Hintable {
+  trait PBuilder extends Hintable {
     def beginEntry(picklee: Any): this.type
     def putField(name: String, pickler: this.type => Unit): this.type
     def endEntry(): Unit

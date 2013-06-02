@@ -25,7 +25,7 @@ object Compat {
     c.Expr[Pickle](bundle.pickle[T](format.tree))
   }
 
-  def PickleMacros_pickleInto[T: c.WeakTypeTag](c: Context)(builder: c.Expr[PickleBuilder]): c.Expr[Unit] = {
+  def PickleMacros_pickleInto[T: c.WeakTypeTag](c: Context)(builder: c.Expr[PBuilder]): c.Expr[Unit] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PickleMacros
     c.Expr[Unit](bundle.pickleInto[T](builder.tree))
@@ -61,7 +61,7 @@ object Compat {
     c.Expr[DPickler[T]](bundle.dpicklerImpl[T](format.tree))
   }
 
-  def PickleMacros_dpicklerPickle[T: c.WeakTypeTag](c: Context)(picklee: c.Expr[T], builder: c.Expr[PickleBuilder]): c.Expr[Unit] = {
+  def PickleMacros_dpicklerPickle[T: c.WeakTypeTag](c: Context)(picklee: c.Expr[T], builder: c.Expr[PBuilder]): c.Expr[Unit] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PickleMacros
     c.Expr[Unit](bundle.dpicklerPickle[T](picklee.tree, builder.tree))
