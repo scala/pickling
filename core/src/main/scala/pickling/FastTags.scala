@@ -51,6 +51,8 @@ object FastTypeTag {
       def key = key0
     }
   }
+
+  def apply(mirror: ru.Mirror, key: String): FastTypeTag[_] = apply(mirror, typeFromString(mirror, key), key)
 }
 
 trait FastTypeTagMacros extends Macro {

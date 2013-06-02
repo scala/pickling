@@ -157,7 +157,7 @@ package json {
         else if (hints.isElidedType) hints.tag
         else {
           datum match {
-            case JSONObject(fields) if fields.contains("tpe") => FastTypeTag(mirror, typeFromString(mirror, fields("tpe").asInstanceOf[String]), fields("tpe").asInstanceOf[String])
+            case JSONObject(fields) if fields.contains("tpe") => FastTypeTag(mirror, fields("tpe").asInstanceOf[String])
             case JSONObject(fields) => hints.tag
           }
         }

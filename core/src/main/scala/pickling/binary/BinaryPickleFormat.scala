@@ -113,7 +113,7 @@ package binary {
         _lastTagRead
       else {
         // assume _lastTypeStringRead != null
-        _lastTagRead = FastTypeTag(mirror, typeFromString(mirror, _lastTypeStringRead), _lastTypeStringRead)
+        _lastTagRead = FastTypeTag(mirror, _lastTypeStringRead)
         _lastTagRead
       }
 
