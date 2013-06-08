@@ -3,7 +3,7 @@ import Keys._
 import scala.util.Properties
 
 object BuildSettings {
-  val buildVersion = "1.0.0-SNAPSHOT"
+  val buildVersion = "0.8.0-SNAPSHOT"
   val buildScalaVersion = "2.10.2-SNAPSHOT"
   val buildScalaOrganization = "org.scala-lang.macro-paradise"
 
