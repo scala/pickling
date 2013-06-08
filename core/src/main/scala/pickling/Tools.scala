@@ -287,6 +287,7 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
       }
     }
     val field = fir.field.get
+    val ownerSymbol = TermName(fir.name + "Owner")
     val firSymbol = TermName(fir.name + "Symbol")
     // TODO: make sure this works for:
     // 1) private[this] fields
@@ -294,7 +295,8 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
     // 3) overridden fields
     val wrappedBody =
       q"""
-        val $firSymbol = scala.pickling.fastTypeTag[${field.owner.asClass.toType.erasure}].tpe.member(newTermName(${field.name.toString}))
+        val $ownerSymbol = implicitly[scala.pickling.FastTypeTag[${field.owner.asClass.toType.erasure}]].tpe
+        val $firSymbol = $ownerSymbol.member(newTermName(${field.name.toString}))
         if ($firSymbol.isTerm) ${body(q"im.reflectField($firSymbol.asTerm)")}
       """
     prologue ++ wrappedBody.stats :+ wrappedBody.expr
