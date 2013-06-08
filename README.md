@@ -1,5 +1,5 @@
-scala-pickling 2.10.x
-=====================
+scala-pickling
+==============
 
 This project aims to turn [a custom build of macro paradise](https://github.com/heathermiller/scala-pickling/tree/topic/scala-pickling) that we used in
 [Object-Oriented Pickler Combinators and an Extensible Generation Framework](http://lampwww.epfl.ch/~hmiller/files/pickling.pdf)
@@ -8,9 +8,8 @@ into a standalone library that targets 2.10.x
 [have been fixed](https://issues.scala-lang.org/browse/SI-5923)).
 
 Since we are making extensive use of quasiquotes, which cannot be added to 2.10.x due to binary and source compatibility
-restrictions, building (but not using!) scala-pickling-210x requires [a custom build of scalac](https://github.com/scalamacros/kepler/tree/topic/pickling),
-as explained in comments to [Build.scala](https://github.com/xeno-by/scala-pickling-210x/blob/master/project/Build.scala).
-Please note that scala-pickling-210x can be used without any problems with vanilla scalac 2.10.2 -
+restrictions, building (but not using!) scala-pickling requires [a custom build of scalac](http://docs.scala-lang.org/overviews/macros/paradise.html#macro_paradise_for_210x).
+Please note that scala-pickling can be used without any problems with vanilla scalac 2.10.2 -
 custom scalac is only necessary to _build_ this library, not to compile against it or to link to it at runtime.
 
 Known limitations:
