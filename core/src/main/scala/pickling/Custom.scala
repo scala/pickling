@@ -18,7 +18,7 @@ trait LowPriorityPicklersUnpicklers {
     new SPickler[Coll[T]] with Unpickler[Coll[T]] {
 
     val format: PickleFormat = pf
-    val elemTag  = fastTypeTag[T]
+    val elemTag  = implicitly[FastTypeTag[T]]
 
     def pickle(coll: Coll[T], builder: PBuilder): Unit = {
       builder.hintTag(collTag)
