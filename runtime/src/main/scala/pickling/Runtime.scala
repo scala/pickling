@@ -7,7 +7,7 @@ import scala.tools.reflect.ToolBox
 import ir._
 
 class CompiledPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) extends PicklerRuntime(classLoader, clazz) {
-  override def genPickler(implicit format: PickleFormat): Pickler[_] = {
+  override def genPickler(implicit format: PickleFormat): SPickler[_] = {
     // TODO: we should somehow cache toolboxes. maybe even inside the reflection API
     // TODO: toolbox bug. if we don't explicitly import PickleOps, it will fail to be found
     // more precisely: it will be found, but then immediately discarded, because a reference to it won't typecheck
@@ -16,8 +16,8 @@ class CompiledPicklerRuntime(classLoader: ClassLoader, clazz: Class[_]) extends 
       import scala.pickling._
       import scala.pickling.`package`.PickleOps
       implicit val format: $formatTpe = new $formatTpe()
-      implicitly[Pickler[$tpe]]
-    """).asInstanceOf[Pickler[_]]
+      implicitly[SPickler[$tpe]]
+    """).asInstanceOf[SPickler[_]]
   }
 }
 
