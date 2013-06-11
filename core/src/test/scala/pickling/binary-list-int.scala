@@ -1,18 +1,13 @@
 package scala.pickling.binary.list.int
 
-import org.scalatest.FunSuite
-import scala.pickling._
-import binary._
-import reflect.runtime.{universe => ru}
-import ru._
-
 import scala.language.higherKinds
 
 import scala.pickling._
 import binary._
-
 import reflect.runtime.universe._
 import scala.collection.mutable.ListBuffer
+
+import org.scalatest.FunSuite
 
 class HandwrittenListIntPicklerUnpickler[Coll[_] <: List[_]](val format: PickleFormat)
     extends SPickler[Coll[Int]] with Unpickler[Coll[Int]] {
