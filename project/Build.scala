@@ -1,9 +1,11 @@
 import sbt._
 import Keys._
 import scala.util.Properties
+import scala.xml.{Node => XmlNode, NodeSeq => XmlNodeSeq, _}
+import scala.xml.transform._
 
 object BuildSettings {
-  val buildVersion = "1.0.0-SNAPSHOT"
+  val buildVersion = "0.8.0-SNAPSHOT"
   val buildScalaVersion = "2.10.2-SNAPSHOT"
   val buildScalaOrganization = "org.scala-lang.macro-paradise"
 
@@ -48,6 +50,31 @@ object MyBuild extends Build {
     }
   })
 
+  def loadCredentials(): List[Credentials] = {
+    val mavenSettingsFile = System.getProperty("maven.settings.file")
+    if (mavenSettingsFile != null) {
+      println("Loading Sonatype credentials from " + mavenSettingsFile)
+      try {
+        import scala.xml._
+        val settings = XML.loadFile(mavenSettingsFile)
+        def readServerConfig(key: String) = (settings \\ "settings" \\ "servers" \\ "server" \\ key).head.text
+        List(Credentials(
+          "Sonatype Nexus Repository Manager",
+          "oss.sonatype.org",
+          readServerConfig("username"),
+          readServerConfig("password")
+        ))
+      } catch {
+        case ex: Exception =>
+          println("Failed to load Maven settings from " + mavenSettingsFile + ": " + ex)
+          Nil
+      }
+    } else {
+      println("Sonatype credentials cannot be loaded: -Dmaven.settings.file is not specified.")
+      Nil
+    }
+  }
+
   lazy val core: Project = Project(
     "scala-pickling",
     file("core"),
@@ -65,7 +92,70 @@ object MyBuild extends Build {
       InputKey[Unit]("travIntSize") <<= InputKey[Unit]("travIntSize") in Compile in benchmark,
       InputKey[Unit]("geoTrellis") <<= InputKey[Unit]("geoTrellis") in Compile in benchmark,
       InputKey[Unit]("evactor1") <<= InputKey[Unit]("evactor1") in Compile in benchmark,
-      InputKey[Unit]("evactor2") <<= InputKey[Unit]("evactor2") in Compile in benchmark
+      InputKey[Unit]("evactor2") <<= InputKey[Unit]("evactor2") in Compile in benchmark,
+      organization := "org.scala-lang",
+      publishMavenStyle := true,
+      publishArtifact in Test := false,
+      publishTo <<= version { v: String =>
+        val nexus = "https://oss.sonatype.org/"
+        if (v.trim.endsWith("SNAPSHOT"))
+          Some("snapshots" at nexus + "content/repositories/snapshots")
+        else
+          Some("releases" at nexus + "service/local/staging/deploy/maven2")
+      },
+      pomIncludeRepository := { x => false },
+      pomExtra := (
+        <url>https://github.com/scala/pickling</url>
+        <inceptionYear>2013</inceptionYear>
+        <organization>
+          <name>LAMP/EPFL</name>
+          <url>http://lamp.epfl.ch/</url>
+        </organization>
+        <licenses>
+          <license>
+            <name>BSD-like</name>
+            <url>http://www.scala-lang.org/downloads/license.html
+            </url>
+            <distribution>repo</distribution>
+          </license>
+        </licenses>
+        <scm>
+          <url>git://github.com/scala/pickling.git</url>
+          <connection>scm:git:git://github.com/scala/pickling.git</connection>
+        </scm>
+        <developers>
+          <developer>
+            <id>lamp</id>
+            <name>EPFL LAMP</name>
+          </developer>
+        </developers>
+      ),
+      pomPostProcess := { (node: XmlNode) =>
+        val hardcodeDeps = new RewriteRule {
+          override def transform(n: XmlNode): XmlNodeSeq = n match {
+            case e: Elem if e != null && e.label == "dependencies" =>
+              // NOTE: this is necessary to unbind from paradise 210
+              // we need to be compiled with paradise 210, because it's the only way to get quasiquotes in 210
+              // however we don't need to be run with paradise 210, because all quasiquotes expand at compile-time
+              // http://docs.scala-lang.org/overviews/macros/paradise.html#macro_paradise_for_210x
+              <dependencies>
+                <dependency>
+                    <groupId>org.scala-lang</groupId>
+                    <artifactId>scala-library</artifactId>
+                    <version>2.10.2</version>
+                </dependency>
+                <dependency>
+                    <groupId>org.scala-lang</groupId>
+                    <artifactId>scala-reflect</artifactId>
+                    <version>2.10.2</version>
+                </dependency>
+              </dependencies>
+            case _ => n
+          }
+        }
+        new RuleTransformer(hardcodeDeps).transform(node).head
+      },
+      credentials ++= loadCredentials()
     )
   )
 

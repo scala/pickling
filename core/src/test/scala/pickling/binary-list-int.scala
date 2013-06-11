@@ -23,7 +23,7 @@ class HandwrittenListIntPicklerUnpickler[Coll[_] <: List[_]](val format: PickleF
     val length = arr.length
     builder.beginCollection(arr.length)
     builder.hintStaticallyElidedType()
-    builder.hintTag(fastTypeTag[Int])
+    builder.hintTag(FastTypeTag.Int)
     builder.pinHints()
 
     var i: Int = 0
@@ -41,7 +41,7 @@ class HandwrittenListIntPicklerUnpickler[Coll[_] <: List[_]](val format: PickleF
   def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
     val arrReader = reader.beginCollection()
     arrReader.hintStaticallyElidedType()
-    arrReader.hintTag(fastTypeTag[Int])
+    arrReader.hintTag(FastTypeTag.Int)
     arrReader.pinHints()
 
     val buffer = ListBuffer[Int]()
