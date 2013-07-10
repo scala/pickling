@@ -19,6 +19,7 @@ trait LowPriorityPicklersUnpicklers {
 
     val format: PickleFormat = pf
     val elemTag  = implicitly[FastTypeTag[T]]
+    val isPrimitive = elemTag.tpe.isEffectivelyPrimitive
 
     def pickle(coll: Coll[T], builder: PBuilder): Unit = {
       builder.hintTag(collTag)
@@ -27,38 +28,49 @@ trait LowPriorityPicklersUnpicklers {
       if (coll.isInstanceOf[IndexedSeq[_]]) builder.beginCollection(coll.size)
       else builder.beginCollection(0)
 
-      builder.hintStaticallyElidedType()
-      builder.hintTag(elemTag)
-      builder.pinHints()
+      if (isPrimitive) {
+        builder.hintStaticallyElidedType()
+        builder.hintTag(elemTag)
+        builder.pinHints()
+      }
 
       var i = 0
       coll.asInstanceOf[Traversable[T]].foreach { (elem: T) =>
-        builder.beginEntry(elem)
-        builder.endEntry()
+        builder putElement { b =>
+          if (!isPrimitive) b.hintTag(elemTag)
+          elemPickler.pickle(elem, b)
+        }
         i += 1
       }
 
-      builder.unpinHints()
+      if (isPrimitive) builder.unpinHints()
       builder.endCollection(i)
       builder.endEntry()
     }
 
     def unpickle(tpe: => FastTypeTag[_], preader: PReader): Any = {
       val reader = preader.beginCollection()
-      reader.hintStaticallyElidedType()
-      reader.hintTag(elemTag)
-      reader.pinHints()
+
+      if (isPrimitive) {
+        reader.hintStaticallyElidedType()
+        reader.hintTag(elemTag)
+        reader.pinHints()
+      }
 
       val length = reader.readLength()
-      var builder = cbf.apply() // builder with element type T
+      val builder = cbf.apply() // builder with element type T
       var i = 0
       while (i < length) {
-        reader.beginEntry()
-        builder += reader.readPrimitive().asInstanceOf[T]
-        reader.endEntry()
+        val r = reader.readElement()
+        r.beginEntryNoTag()
+        val elem = elemUnpickler.unpickle(elemTag, r)
+        r.endEntry()
+        builder += elem.asInstanceOf[T]
         i = i + 1
       }
 
+      if (isPrimitive) reader.unpinHints()
+      preader.endCollection()
       builder.result
     }
   }
