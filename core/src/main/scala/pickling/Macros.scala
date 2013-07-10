@@ -230,6 +230,17 @@ trait PickleMacros extends Macro {
   import c.universe._
   import definitions._
 
+  def pickleTo[T: c.WeakTypeTag](output: c.Tree)(format: c.Tree): c.Tree = {
+    val tpe = weakTypeOf[T]
+    val q"${_}($pickleeArg)" = c.prefix.tree
+    q"""
+      import scala.pickling._
+      val picklee: $tpe = $pickleeArg
+      val builder = $format.createBuilder($output)
+      picklee.pickleInto(builder)
+    """
+  }
+
   def pickle[T: c.WeakTypeTag](format: c.Tree): c.Tree = {
     val tpe = weakTypeOf[T]
     val q"${_}($pickleeArg)" = c.prefix.tree
