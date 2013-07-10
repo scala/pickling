@@ -20,7 +20,9 @@ package json {
 
   class JSONPickleFormat extends PickleFormat {
     type PickleType = JSONPickle
-    def createBuilder() = new JSONPickleBuilder(this)
+    type OutputType = Output[String]
+    def createBuilder() = new JSONPickleBuilder(this, new StringOutput)
+    def createBuilder(out: Output[String]): PBuilder = new JSONPickleBuilder(this, out)
     def createReader(pickle: JSONPickle, mirror: Mirror) = {
       JSON.parseRaw(pickle.value) match {
         case Some(raw) => new JSONPickleReader(raw, mirror, this)
@@ -29,16 +31,24 @@ package json {
     }
   }
 
-  class JSONPickleBuilder(format: JSONPickleFormat) extends PBuilder with PickleTools {
-    private val buf = new StringBuilder()
+  class JSONPickleBuilder(format: JSONPickleFormat, buf: Output[String]) extends PBuilder with PickleTools {
+    // private val buf = new StringBuilder()
     private var nindent = 0
     private def indent() = nindent += 1
     private def unindent() = nindent -= 1
     private var pendingIndent = false
+    private var lastIsBrace = false
+    private var lastIsBracket = false
     private def append(s: String) = {
       val sindent = if (pendingIndent) "  " * nindent else ""
-      buf ++= (sindent + s)
+      buf.put(sindent + s)
       pendingIndent = false
+      val trimmed = s.trim
+      if (trimmed.nonEmpty) {
+        val lastChar = trimmed.last
+        lastIsBrace = lastChar == '{'
+        lastIsBracket = lastChar == '['
+      }
     }
     private def appendLine(s: String = "") = {
       append(s + "\n")
@@ -99,7 +109,7 @@ package json {
     }
     def putField(name: String, pickler: this.type => Unit): this.type = {
       // assert(!primitives.contains(tags.top.key), tags.top)
-      if (buf.toString.trim.last != '{') appendLine(",") // TODO: very inefficient, but here we don't care much about performance
+      if (!lastIsBrace) appendLine(",") // TODO: very inefficient, but here we don't care much about performance
       append("\"" + name + "\": ")
       pickler(this)
       this
@@ -116,7 +126,7 @@ package json {
       this
     }
     def putElement(pickler: this.type => Unit): this.type = {
-      if (buf.toString.trim.last != '[') appendLine(",") // TODO: very inefficient, but here we don't care much about performance
+      if (!lastIsBracket) appendLine(",") // TODO: very inefficient, but here we don't care much about performance
       pickler(this)
       this
     }
