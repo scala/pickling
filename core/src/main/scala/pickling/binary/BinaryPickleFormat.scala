@@ -17,10 +17,12 @@ package binary {
     override def toString = s"""BinaryPickle(${value.mkString("[", ",", "]")})"""
   }
 
-  class BinaryPickleBuilder(format: BinaryPickleFormat) extends PBuilder with PickleTools {
+  class BinaryPickleBuilder(format: BinaryPickleFormat, out: EncodingOutput[Array[Byte]]) extends PBuilder with PickleTools {
     import format._
 
-    private var byteBuffer: ByteBuffer = _
+    private var byteBuffer: EncodingOutput[Array[Byte]] =
+      out.asInstanceOf[EncodingOutput[Array[Byte]]]
+
     private var pos = 0
 
     @inline private[this] def mkByteBuffer(knownSize: Int): Unit =
@@ -106,7 +108,7 @@ package binary {
     }
 
     def result() = {
-      BinaryPickle(byteBuffer.toArray)
+      BinaryPickle(byteBuffer.result())
     }
   }
 
@@ -237,7 +239,9 @@ package binary {
     val nullablePrimitives = Set(KEY_NULL, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_INT, KEY_ARRAY_LONG)
 
     type PickleType = BinaryPickle
-    def createBuilder() = new BinaryPickleBuilder(this)
+    type OutputType = EncodingOutput[Array[Byte]]
+    def createBuilder() = new BinaryPickleBuilder(this, null)
+    def createBuilder(out: EncodingOutput[Array[Byte]]): PBuilder = new BinaryPickleBuilder(this, out)
     def createReader(pickle: PickleType, mirror: Mirror) = new BinaryPickleReader(pickle.value, mirror, this)
   }
 }

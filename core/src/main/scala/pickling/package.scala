@@ -15,6 +15,7 @@ package object pickling {
   implicit class PickleOps[T](picklee: T) {
     def pickle(implicit format: PickleFormat): Pickle = macro Compat.PickleMacros_pickle[T]
     def pickleInto(builder: PBuilder): Unit = macro Compat.PickleMacros_pickleInto[T]
+    def pickleTo(output: Output[_])(implicit format: PickleFormat): Unit = macro Compat.PickleMacros_pickleTo[T]
   }
 
   implicit class RichSymbol(sym: scala.reflect.api.Symbols#Symbol) {
@@ -170,7 +171,9 @@ package pickling {
 
   trait PickleFormat {
     type PickleType <: Pickle
+    type OutputType <: Output[_]
     def createBuilder(): PBuilder
+    def createBuilder(out: OutputType): PBuilder
     def createReader(pickle: PickleType, mirror: Mirror): PReader
   }
 
