@@ -83,8 +83,18 @@ package binary {
             if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeIntArrayTo(pos, picklee.asInstanceOf[Array[Int]])
           case _ =>
-            if (hints.isElidedType) byteBuffer.encodeByteTo(pos, ELIDED_TAG)
-            else { writeTpe(); pos }
+            if (hints.oid != -1) {
+              byteBuffer.encodeByteTo(pos, REF_TAG)
+              byteBuffer.encodeIntAtEnd(pos + 1, hints.oid)
+              pos + 5
+            } else {
+              // NOTE: it looks like we don't have to write object ids at all
+              // traversals employed by pickling and unpickling are exactly the same
+              // hence when unpickling it's enough to just increment the nextUnpicklee counter
+              // and everything will work out automatically!
+              if (hints.isElidedType) byteBuffer.encodeByteTo(pos, ELIDED_TAG)
+              else { writeTpe(); pos }
+            }
         }
       }
 
@@ -158,6 +168,9 @@ package binary {
             case ELIDED_TAG =>
               pos = newpos
               hints.tag
+            case REF_TAG =>
+              pos = newpos
+              FastTypeTag.Ref
             case _ =>
               val (typeString, newpos) = byteBuffer.decodeStringFrom(pos)
               pos = newpos
@@ -186,6 +199,7 @@ package binary {
       val (res, newpos) = {
         lastTagRead.key match {
           case KEY_NULL    => (null, pos)
+          case KEY_REF     => (lookupUnpicklee(byteBuffer.decodeIntFrom(pos)._1), pos + 4)
           case KEY_BYTE    => byteBuffer.decodeByteFrom(pos)
           case KEY_SHORT   => byteBuffer.decodeShortFrom(pos)
           case KEY_CHAR    => byteBuffer.decodeCharFrom(pos)
@@ -226,6 +240,7 @@ package binary {
   class BinaryPickleFormat extends PickleFormat {
     val ELIDED_TAG: Byte = -1
     val NULL_TAG: Byte = -2
+    val REF_TAG: Byte = -3
 
     val KEY_NULL    = FastTypeTag.Null.key
     val KEY_BYTE    = FastTypeTag.Byte.key
@@ -244,6 +259,8 @@ package binary {
     val KEY_ARRAY_BYTE   = FastTypeTag.ArrayByte.key
     val KEY_ARRAY_INT    = FastTypeTag.ArrayInt.key
     val KEY_ARRAY_LONG   = FastTypeTag.ArrayLong.key
+
+    val KEY_REF = FastTypeTag.Ref.key
 
     val primitives = Set(KEY_NULL, KEY_BYTE, KEY_SHORT, KEY_CHAR, KEY_INT, KEY_LONG, KEY_BOOLEAN, KEY_FLOAT, KEY_DOUBLE, KEY_UNIT, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_INT, KEY_ARRAY_LONG)
     val nullablePrimitives = Set(KEY_NULL, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_INT, KEY_ARRAY_LONG)

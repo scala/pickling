@@ -7,7 +7,7 @@ import scala.reflect.api.Universe
 import scala.reflect.runtime.universe._
 
 import scala.collection.mutable.{Map => MutableMap, ListBuffer => MutableList, WeakHashMap, Set => MutableSet}
-import scala.collection.mutable.{Stack => MutableStack}
+import scala.collection.mutable.{Stack => MutableStack, Queue => MutableQueue}
 
 import java.lang.ref.WeakReference
 
@@ -197,6 +197,10 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
     }
   }
 
+  implicit class RichFieldIR(fir: FieldIR) {
+    def canCauseLoops = fir.hasSetter && fir.tpe.canCauseLoops
+  }
+
   implicit class RichType(tpe: Type) {
     def key: String = {
       tpe match {
@@ -216,7 +220,31 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
       case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.isEffectivelyPrimitive => true
       case _ => false
     }
+    def isNotNullable = tpe.typeSymbol.isNotNullable
+    def isNullable = tpe.typeSymbol.isNullable
+    def canCauseLoops: Boolean = {
+      if (isNotNullable || isEffectivelyPrimitive || tpe.typeSymbol == StringClass) return false
+      // TODO: make sure this sanely works for polymorphic types
+      // TODO: cache this
+      val queue = MutableQueue[Symbol](tpe.typeSymbol)
+      val visited = MutableSet[Symbol]()
+      while (queue.nonEmpty) {
+        val curr = queue.dequeue
+        val fields = flattenedClassIR(curr.asType.toType).fields
+        fields.foreach(f => {
+          if (tpe <:< f.tpe) return true
+          val next = f.tpe.typeSymbol
+          if (!visited.contains(next)) {
+            visited += next
+            queue += next
+          }
+        })
+      }
+      return false
+    }
   }
+
+  def noRefs = c.inferImplicitValue(typeOf[refs.NoRefs]) != EmptyTree
 
   def pickleFormatType(pickle: Tree): Type = innerType(pickle, "PickleFormatType")
 
@@ -307,7 +335,8 @@ case class Hints(
   tag: FastTypeTag[_] = null,
   knownSize: Int = -1,
   isStaticallyElidedType: Boolean = false,
-  isDynamicallyElidedType: Boolean = false) {
+  isDynamicallyElidedType: Boolean = false,
+  oid: Int = -1) {
   def isElidedType = isStaticallyElidedType || isDynamicallyElidedType
 }
 
@@ -319,6 +348,7 @@ trait PickleTools {
   def hintKnownSize(knownSize: Int): this.type = { hints = hints.copy(knownSize = knownSize); this }
   def hintStaticallyElidedType(): this.type = { hints = hints.copy(isStaticallyElidedType = true); this }
   def hintDynamicallyElidedType(): this.type = { hints = hints.copy(isDynamicallyElidedType = true); this }
+  def hintOid(oid: Int): this.type = { hints = hints.copy(oid = oid); this }
   def pinHints(): this.type = { areHintsPinned = true; this }
   def unpinHints(): this.type = { areHintsPinned = false; hints = new Hints(); this }
 
