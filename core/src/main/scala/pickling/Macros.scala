@@ -24,6 +24,7 @@ trait PicklerMacros extends Macro {
       typeOf[Byte] -> 1,
       typeOf[Char] -> 2,
       typeOf[Float] -> 4,
+      typeOf[Double] -> 8,
       typeOf[Boolean] -> 1
     )
 
