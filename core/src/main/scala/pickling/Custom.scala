@@ -94,14 +94,36 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   implicit val charPicklerUnpickler: SPickler[Char] with Unpickler[Char] = new PrimitivePicklerUnpickler[Char]
   implicit val intPicklerUnpickler: SPickler[Int] with Unpickler[Int] = new PrimitivePicklerUnpickler[Int]
   implicit val longPicklerUnpickler: SPickler[Long] with Unpickler[Long] = new PrimitivePicklerUnpickler[Long]
-  implicit val stringPicklerUnpickler: SPickler[String] with Unpickler[String] = new PrimitivePicklerUnpickler[String]
   implicit val booleanPicklerUnpickler: SPickler[Boolean] with Unpickler[Boolean] = new PrimitivePicklerUnpickler[Boolean]
   implicit val floatPicklerUnpickler: SPickler[Float] with Unpickler[Float] = new PrimitivePicklerUnpickler[Float]
   implicit val doublePicklerUnpickler: SPickler[Double] with Unpickler[Double] = new PrimitivePicklerUnpickler[Double]
   implicit val nullPicklerUnpickler: SPickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]
 
-  implicit def genListPickler[T](implicit format: PickleFormat): SPickler[::[T]] with Unpickler[::[T]] =
-    macro Compat.ListPicklerUnpicklerMacro_impl[T]
+  class StringPicklerUnpickler(shareConfig: refs.Share) extends SPickler[String] with Unpickler[String] {
+    val format = null // not used
+    val share = shareConfig.isInstanceOf[refs.ShareEverything]
+    def pickle(picklee: String, builder: PBuilder): Unit = {
+      if (share) {
+        val oid = lookupPicklee(picklee)
+        builder.hintOid(oid)
+        if (oid == -1) scala.pickling.`package`.registerPicklee(picklee)
+      }
+      builder.beginEntry(picklee)
+      builder.endEntry()
+    }
+    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+      val result = reader.readPrimitive().asInstanceOf[String]
+      if (share) registerUnpicklee(result, preregisterUnpicklee())
+      result
+    }
+  }
+  implicit def stringPicklerUnpickler(implicit shareConfig: refs.Share): SPickler[String] with Unpickler[String] =
+    new StringPicklerUnpickler(shareConfig)
+
+  implicit def refPickler: SPickler[refs.Ref] = throw new Error("cannot pickle refs") // TODO: make this a macro
+  implicit val refUnpickler: Unpickler[refs.Ref] = new PrimitivePicklerUnpickler[refs.Ref]
+
+  implicit def genListPickler[T](implicit format: PickleFormat): SPickler[::[T]] with Unpickler[::[T]] = macro Compat.ListPicklerUnpicklerMacro_impl[T]
   // TODO: figure out why this is slower than traversablePickler
   // implicit def genVectorPickler[T](implicit format: PickleFormat): Pickler[Vector[T]] with Unpickler[Vector[T]] = macro VectorPicklerUnpicklerMacro.impl[T]
 }

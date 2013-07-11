@@ -44,6 +44,8 @@ object FastTypeTag {
   val ArrayLong = stdTag[Array[Long]]
   implicit val Nothing: FastTypeTag[Nothing] = stdTag[Nothing]
 
+  val Ref = stdTag[refs.Ref]
+
   def apply(mirror0: ru.Mirror, tpe0: ru.Type, key0: String): FastTypeTag[_] = {
     new FastTypeTag[Nothing] {
       def mirror = mirror0
