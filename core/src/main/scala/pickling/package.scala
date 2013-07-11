@@ -25,7 +25,8 @@ package object pickling {
   implicit class RichSymbol(sym: scala.reflect.api.Symbols#Symbol) {
     def isEffectivelyFinal = sym.asInstanceOf[scala.reflect.internal.Symbols#Symbol].isEffectivelyFinal
     def isEffectivelyPrimitive = throw new Exception("use Type.isEffectivelyPrimitive instead")
-    def isNotNull = sym.isClass && (sym.asClass.isPrimitive || sym.asClass.isDerivedValueClass)
+    def isNotNullable = sym.isClass && (sym.asClass.isPrimitive || sym.asClass.isDerivedValueClass)
+    def isNullable = sym.isClass && !isNotNullable
   }
 
   var cachedMirror: ru.Mirror = null
@@ -102,6 +103,33 @@ package object pickling {
       val jfield = fm.asInstanceOf[{ def jfield: jField }].jfield
       jfield.set(fm.receiver, value)
     }
+  }
+
+  private var picklees = scala.collection.mutable.Map[Any, Int]()
+  private var nextPicklee = 0
+  def lookupPicklee(picklee: Any) = if (picklees.contains(picklee)) picklees(picklee) else -1
+  def registerPicklee(picklee: Any) = {
+    val index = nextPicklee
+    picklees(picklee) = index
+    nextPicklee += 1
+    index
+  }
+  def clearPicklees() = {
+    picklees.clear()
+    nextPicklee = 0
+  }
+
+  private var unpicklees = new Array[AnyRef](1024)
+  private var nextUnpicklee = 0
+  def lookupUnpicklee(index: Int): AnyRef = unpicklees(index)
+  def registerUnpicklee(unpicklee: AnyRef) = {
+    // TODO: dynamically resize the array!
+    unpicklees(nextUnpicklee) = unpicklee
+    nextUnpicklee += 1
+  }
+  def clearUnpicklees() = {
+    java.util.Arrays.fill(unpicklees, null)
+    nextUnpicklee = 0
   }
 }
 
@@ -192,6 +220,7 @@ package pickling {
     def hintKnownSize(knownSize: Int): this.type
     def hintStaticallyElidedType(): this.type
     def hintDynamicallyElidedType(): this.type
+    def hintOid(id: Int): this.type
     def pinHints(): this.type
     def unpinHints(): this.type
   }
