@@ -76,6 +76,11 @@ package binary {
             val intValue = java.lang.Float.floatToRawIntBits(picklee.asInstanceOf[Float])
             byteBuffer.encodeIntAtEnd(pos, intValue)
             pos + 4
+          case KEY_DOUBLE =>
+            if (!hints.isElidedType) writeTpe()
+            val longValue = java.lang.Double.doubleToRawLongBits(picklee.asInstanceOf[Double])
+            byteBuffer.encodeLongAtEnd(pos, longValue)
+            pos + 8
           case KEY_SCALA_STRING | KEY_JAVA_STRING =>
             if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])
@@ -209,6 +214,9 @@ package binary {
           case KEY_FLOAT   =>
             val (r, np) = byteBuffer.decodeIntFrom(pos)
             (java.lang.Float.intBitsToFloat(r), np)
+          case KEY_DOUBLE  =>
+            val (r, np) = byteBuffer.decodeLongFrom(pos)
+            (java.lang.Double.longBitsToDouble(r), np)
           case KEY_SCALA_STRING | KEY_JAVA_STRING => byteBuffer.decodeStringFrom(pos)
           case KEY_ARRAY_INT => byteBuffer.decodeIntArrayFrom(pos)
         }
