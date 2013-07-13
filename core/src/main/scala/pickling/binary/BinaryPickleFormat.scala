@@ -35,8 +35,12 @@ package binary {
 
       if (picklee == null) {
         pos = byteBuffer.encodeByteTo(pos, NULL_TAG)
+      } else if (hints.oid != -1) {
+        byteBuffer.encodeByteTo(pos, REF_TAG)
+        byteBuffer.encodeIntAtEnd(pos + 1, hints.oid)
+        pos = pos + 5
       } else {
-        def writeTpe() = {
+        if (!hints.isElidedType) {
           val tpe = hints.tag.tpe
           val tpeBytes = typeToString(tpe).getBytes("UTF-8")
           byteBuffer.encodeIntAtEnd(pos, tpeBytes.length)
@@ -44,62 +48,46 @@ package binary {
           pos = byteBuffer.copyTo(pos, tpeBytes)
         }
 
+        // NOTE: it looks like we don't have to write object ids at all
+        // traversals employed by pickling and unpickling are exactly the same
+        // hence when unpickling it's enough to just increment the nextUnpicklee counter
+        // and everything will work out automatically!
+
         pos = hints.tag.key match { // PERF: should store typestring once in hints.
           case KEY_NULL =>
-            if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeByteTo(pos, NULL_TAG)
           case KEY_BYTE =>
-            if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeByteAtEnd(pos, picklee.asInstanceOf[Byte])
             pos + 1
           case KEY_SHORT =>
-            if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeShortAtEnd(pos, picklee.asInstanceOf[Short])
             pos + 2
           case KEY_CHAR =>
-            if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeCharAtEnd(pos, picklee.asInstanceOf[Char])
             pos + 2
           case KEY_INT =>
-            if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeIntAtEnd(pos, picklee.asInstanceOf[Int])
             pos + 4
           case KEY_LONG =>
-            if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeLongAtEnd(pos, picklee.asInstanceOf[Long])
             pos + 8
           case KEY_BOOLEAN =>
-            if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeBooleanTo(pos, picklee.asInstanceOf[Boolean])
           case KEY_FLOAT =>
-            if (!hints.isElidedType) writeTpe()
             val intValue = java.lang.Float.floatToRawIntBits(picklee.asInstanceOf[Float])
             byteBuffer.encodeIntAtEnd(pos, intValue)
             pos + 4
           case KEY_DOUBLE =>
-            if (!hints.isElidedType) writeTpe()
             val longValue = java.lang.Double.doubleToRawLongBits(picklee.asInstanceOf[Double])
             byteBuffer.encodeLongAtEnd(pos, longValue)
             pos + 8
           case KEY_SCALA_STRING | KEY_JAVA_STRING =>
-            if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])
           case KEY_ARRAY_INT =>
-            if (!hints.isElidedType) writeTpe()
             byteBuffer.encodeIntArrayTo(pos, picklee.asInstanceOf[Array[Int]])
           case _ =>
-            if (hints.oid != -1) {
-              byteBuffer.encodeByteTo(pos, REF_TAG)
-              byteBuffer.encodeIntAtEnd(pos + 1, hints.oid)
-              pos + 5
-            } else {
-              // NOTE: it looks like we don't have to write object ids at all
-              // traversals employed by pickling and unpickling are exactly the same
-              // hence when unpickling it's enough to just increment the nextUnpicklee counter
-              // and everything will work out automatically!
-              if (hints.isElidedType) byteBuffer.encodeByteTo(pos, ELIDED_TAG)
-              else { writeTpe(); pos }
-            }
+            if (hints.isElidedType) byteBuffer.encodeByteTo(pos, ELIDED_TAG)
+            else pos
         }
       }
 
@@ -160,6 +148,7 @@ package binary {
           val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
           lookahead match {
             case NULL_TAG => pos = newpos; FastTypeTag.Null
+            case REF_TAG  => pos = newpos; FastTypeTag.Ref
             case _        => hints.tag
           }
         } else if (hints.isElidedType && primitives.contains(hints.tag.key)) {

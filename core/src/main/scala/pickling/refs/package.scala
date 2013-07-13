@@ -1,11 +1,22 @@
 package scala.pickling
 
-package object norefs {
-  implicit val NoRefs: refs.NoRefs = new refs.NoRefs{}
+package object shareEverything {
+  implicit object ShareEverything extends refs.ShareEverything
+}
+
+package object shareNothing {
+  implicit object ShareNothing extends refs.ShareNothing
 }
 
 package refs {
   trait Ref
 
-  trait NoRefs
+  sealed trait Share
+  object Share {
+    implicit object ShareNonPrimitives extends ShareNonPrimitives
+  }
+
+  sealed trait ShareNonPrimitives extends Share
+  sealed trait ShareEverything extends Share
+  sealed trait ShareNothing extends Share
 }
