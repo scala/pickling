@@ -406,7 +406,7 @@ trait UnpickleMacros extends Macro {
 
     val staticHint = if (sym.isEffectivelyFinal && !isTopLevel) (q"reader.hintStaticallyElidedType()": Tree) else q"";
     val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
-    val unpickleeCleanup = if (isTopLevel) q"clearUnpicklees()" else q""
+    val unpickleeCleanup = if (isTopLevel && shouldBotherAboutSharing(tpe)) q"clearUnpicklees()" else q""
 
     q"""
       val reader = $readerArg

@@ -192,25 +192,28 @@ abstract class ShareAnalyzer[U <: Universe](val u: U) {
   def shareEverything: Boolean
   def shareNothing: Boolean
 
+  // TODO: cache this, because it's not cheap and it's going to be called a lot of times for the same types
   def canCauseLoops(tpe: Type): Boolean = {
-    if (tpe.isNotNullable || tpe.isEffectivelyPrimitive || tpe.typeSymbol == StringClass) return false
-    // TODO: make sure this sanely works for polymorphic types
-    // TODO: cache this
-    val queue = MutableQueue[Symbol](tpe.typeSymbol)
-    val visited = MutableSet[Symbol]()
-    while (queue.nonEmpty) {
-      val curr = queue.dequeue
-      val fields = flattenedClassIR(curr.asType.toType).fields
-      fields.foreach(f => {
-        if (tpe <:< f.tpe) return true
-        val next = f.tpe.typeSymbol
-        if (!visited.contains(next)) {
-          visited += next
-          queue += next
-        }
-      })
+    def loop(todo: List[Type], visited: Set[Type]): Boolean = {
+      todo match {
+        case currTpe :: rest =>
+          val currSym = currTpe.typeSymbol.asType
+          if (visited(currTpe)) loop(rest, visited)
+          else if (currTpe.isNotNullable || currTpe.isEffectivelyPrimitive || currSym == StringClass) loop(rest, visited)
+          // TODO: extend the traversal logic to support sealed classes
+          // when doing that don't forget:
+          // 1) sealeds can themselves be extended, so we need to recur
+          // 2) the entire sealed hierarchy should be added to todo
+          else if (!currSym.isFinal) true // NOTE: returning true here is important for soundness!
+          else if (tpe <:< currTpe) true // TODO: make sure this sanely works for polymorphic types
+          else {
+            val more = flattenedClassIR(currTpe).fields.map(_.tpe)
+            loop(todo ++ more, visited + currTpe)
+          }
+        case _ => false
+      }
     }
-    return false
+    loop(List(tpe), Set())
   }
 
   def shouldBotherAboutSharing(tpe: Type): Boolean = {
