@@ -247,7 +247,7 @@ abstract class Macro extends scala.reflect.macros.Macro {
     if (shareEverything && shareNothing) c.abort(c.enclosingPosition, "inconsistent sharing configuration: both ShareEverything and ShareNothing are in scope")
 
     if (shareNothing) false
-    else if (shareEverything) tpe.isNullable
+    else if (shareEverything) !tpe.isEffectivelyPrimitive
     else tpe.canCauseLoops
   }
 
