@@ -183,6 +183,13 @@ trait UnpicklerMacros extends Macro {
       // just outside the constructor of B, but outside the enclosing constructor of C!
       //   class С(val b: B)
       //   class B(var c: C)
+      // TODO: don't forget about the previous todo when describing the sharing algorithm for the paper
+      // it's a very important detail, without which everything will crumble
+      // no idea how to fix that, because hoisting might very well break reading order beyond repair
+      // so that it becomes hopelessly unsync with writing order
+      // nevertheless don't despair and try to prove whether this is or is not the fact
+      // i was super scared that string sharing is going to fail due to the same reason, but it did not :)
+      // in the worst case we can do the same as the interpreted runtime does - just go for allocateInstance
       val pendingFields = cir.fields.filter(fir =>
         fir.isNonParam ||
         (!canCallCtor && fir.isReifiedParam) ||
