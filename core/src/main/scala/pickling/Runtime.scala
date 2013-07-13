@@ -20,7 +20,7 @@ object Runtime {
   )
 }
 
-abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) {
+abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_], share: refs.Share) {
 
   val clazz = if (preclazz != null) Runtime.toUnboxed.getOrElse(preclazz, preclazz) else null
   val mirror = runtimeMirror(classLoader)
@@ -51,7 +51,7 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) {
   def genPickler(implicit format: PickleFormat): SPickler[_]
 }
 
-class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) extends PicklerRuntime(classLoader, preclazz) {
+class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(implicit share: refs.Share) extends PicklerRuntime(classLoader, preclazz, share) {
 
   debug("InterpretedPicklerRuntime: preclazz = " + preclazz)
   debug("InterpretedPicklerRuntime: clazz    = " + clazz)
@@ -62,29 +62,42 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
       val format: PickleFormat = pf
       def pickle(picklee: Any, builder: PBuilder): Unit = {
         if (picklee != null) {
-          builder.hintTag(tag)
-          builder.beginEntry(picklee)
-
-          // TODO: need to support modules and other special guys here
-          lazy val im = mirror.reflect(picklee)
-          cir.fields.filter(_.hasGetter).foreach(fir => {
-            val fldMirror = im.reflectField(fir.field.get)
-            val fldValue = fldMirror.get
-            debug("pickling field value: " + fldValue)
-            val fldClass = if (fldValue != null) fldValue.getClass else null
-            // by using only the class we convert Int to Integer
-            // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
-            val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
-            val fldPickler = fldRuntime.genPickler.asInstanceOf[SPickler[Any]]
-            builder.putField(fir.name, b => {
-              val fstaticTpe = fir.tpe.erasure
-              if (fldClass == null || fldClass == mirror.runtimeClass(fstaticTpe)) builder.hintDynamicallyElidedType()
-              if (fstaticTpe.typeSymbol.isEffectivelyFinal) builder.hintStaticallyElidedType()
-              fldPickler.pickle(fldValue, b)
+          def putFields() = {
+            // TODO: need to support modules and other special guys here
+            lazy val im = mirror.reflect(picklee)
+            val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
+            (nonLoopyFields ++ loopyFields).filter(_.hasGetter).foreach(fir => {
+              val fldMirror = im.reflectField(fir.field.get)
+              val fldValue = fldMirror.get
+              debug("pickling field value: " + fldValue)
+              val fldClass = if (fldValue != null) fldValue.getClass else null
+              // by using only the class we convert Int to Integer
+              // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
+              val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
+              val fldPickler = fldRuntime.genPickler.asInstanceOf[SPickler[Any]]
+              builder.putField(fir.name, b => {
+                val fstaticTpe = fir.tpe.erasure
+                if (fldClass == null || fldClass == mirror.runtimeClass(fstaticTpe)) builder.hintDynamicallyElidedType()
+                if (fstaticTpe.typeSymbol.isEffectivelyFinal) builder.hintStaticallyElidedType()
+                fldPickler.pickle(fldValue, b)
+              })
             })
-          })
+          }
 
-          builder.endEntry()
+          if (shouldBotherAboutSharing(tpe)) {
+            val oid = lookupPicklee(picklee)
+            builder.hintOid(oid)
+            if (oid == -1) registerPicklee(picklee)
+            builder.hintTag(tag)
+            builder.beginEntry(picklee)
+            if (oid == -1) { putFields() }
+            builder.endEntry()
+          } else {
+            builder.hintTag(tag)
+            builder.beginEntry(picklee)
+            putFields()
+            builder.endEntry()
+          }
         } else {
           builder.hintTag(FastTypeTag.Null)
           builder.beginEntry(null)
@@ -95,7 +108,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) ex
   }
 }
 
-class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_]) {
+class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit share: refs.Share) {
   val tpe = tag.tpe
   val sym = tpe.typeSymbol.asType
   debug("UnpicklerRuntime: tpe = " + tpe)
@@ -105,15 +118,25 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_]) {
   val cir = flattenedClassIR(tpe)
   debug("UnpicklerRuntime: cir = " + cir)
 
-  def genUnpickler(implicit pf: PickleFormat, p1: SPickler[Int], p2: SPickler[String]): Unpickler[Any] = {
+  val shareAnalyzer = new ShareAnalyzer[ru.type](ru) {
+    def shareEverything = share.isInstanceOf[refs.ShareEverything]
+    def shareNothing = share.isInstanceOf[refs.ShareNothing]
+  }
+  def shouldBotherAboutSharing(tpe: Type) = shareAnalyzer.shouldBotherAboutSharing(tpe)
+  def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
+
+  def genUnpickler(implicit pf: PickleFormat): Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
       val format: PickleFormat = pf
       def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
-        if (reader.atPrimitive) reader.readPrimitive()
-        else {
-          // TODO: need to support modules and other special guys here
-          val pendingFields = cir.fields.filter(fir => fir.isNonParam || fir.isReifiedParam)
-          val fieldVals = pendingFields.map(fir => {
+        if (reader.atPrimitive) {
+          val result = reader.readPrimitive()
+          if (shouldBotherAboutSharing(tpe)) registerUnpicklee(result, preregisterUnpicklee())
+          result
+        } else {
+          val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
+          val pendingFields = (nonLoopyFields ++ loopyFields).filter(fir => fir.isNonParam || fir.isReifiedParam)
+          def fieldVals = pendingFields.map(fir => {
             val freader = reader.readField(fir.name)
             val fstaticTag = FastTypeTag(mirror, fir.tpe, fir.tpe.key)
             freader.hintTag(fstaticTag)
@@ -123,8 +146,11 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_]) {
             val fdynamicTag = freader.beginEntry()
 
             val fval = {
-              if (freader.atPrimitive) freader.readPrimitive()
-              else {
+              if (freader.atPrimitive) {
+                val result = freader.readPrimitive()
+                if (shouldBotherAboutSharing(fir.tpe)) registerUnpicklee(result, preregisterUnpicklee())
+                result
+              } else {
                 val fieldRuntime = new InterpretedUnpicklerRuntime(mirror, fdynamicTag)
                 val fieldUnpickler = fieldRuntime.genUnpickler
                 fieldUnpickler.unpickle(fdynamicTag, freader)
@@ -135,7 +161,10 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_]) {
             fval
           })
 
+          // TODO: need to support modules and other special guys here
+          // TODO: in principle, we could invoke a constructor here
           val inst = scala.concurrent.util.Unsafe.instance.allocateInstance(clazz)
+          if (shouldBotherAboutSharing(tpe)) registerUnpicklee(inst, preregisterUnpicklee())
           val im = mirror.reflect(inst)
 
           pendingFields.zip(fieldVals) foreach {

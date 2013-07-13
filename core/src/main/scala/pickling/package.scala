@@ -124,6 +124,7 @@ package object pickling {
   def registerPicklee(picklee: Any) = {
     val index = nextPicklee
     picklees(picklee) = index
+    // println(s"registerPicklee($picklee, $index)")
     nextPicklee += 1
     index
   }
@@ -135,18 +136,22 @@ package object pickling {
   private var unpicklees = new Array[Any](1024)
   private var nextUnpicklee = 0
   def lookupUnpicklee(index: Int): Any = {
+    // println(s"lookupUnpicklee($index)")
+    if (index >= nextUnpicklee) throw new Error(s"fatal error: invalid index $index in unpicklee cache of length $nextUnpicklee")
     val result = unpicklees(index)
-    if (result == null) throw new Error("fatal error: unpicklee cache is corrupted")
+    if (result == null) throw new Error(s"fatal error: unpicklee cache is corrupted at $index")
     result
   }
   def preregisterUnpicklee() = {
     val index = nextUnpicklee
     // TODO: dynamically resize the array!
     unpicklees(index) = null
+    // println(s"preregisterUnpicklee() at $index")
     nextUnpicklee += 1
     index
   }
   def registerUnpicklee(unpicklee: Any, index: Int) = {
+    // println(s"registerUnpicklee($unpicklee, $index)")
     unpicklees(index) = unpicklee
   }
   def clearUnpicklees() = {
@@ -195,7 +200,7 @@ package pickling {
     implicit def genPickler[T](implicit format: PickleFormat): SPickler[T] = macro Compat.PicklerMacros_impl[T]
     // TODO: the primitive pickler hack employed here is funny, but I think we should fix this one
     // since people probably would also have to deal with the necessity to abstract over pickle formats
-    def genPickler(classLoader: ClassLoader, clazz: Class[_])(implicit format: PickleFormat): SPickler[_] = {
+    def genPickler(classLoader: ClassLoader, clazz: Class[_])(implicit format: PickleFormat, share: refs.Share): SPickler[_] = {
       // println(s"generating runtime pickler for $clazz") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
       //val runtime = new CompiledPicklerRuntime(classLoader, clazz)
       val runtime = new InterpretedPicklerRuntime(classLoader, clazz)
@@ -213,7 +218,7 @@ package pickling {
 
   trait GenUnpicklers {
     implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
-    def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit format: PickleFormat): Unpickler[_] = {
+    def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit format: PickleFormat, share: refs.Share): Unpickler[_] = {
       // println(s"generating runtime unpickler for ${tag.tpe}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
       //val runtime = new CompiledUnpicklerRuntime(mirror, tag)
       val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
