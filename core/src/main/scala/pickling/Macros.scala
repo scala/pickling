@@ -214,18 +214,26 @@ trait UnpicklerMacros extends Macro {
         if (sym.isModuleClass || pendingFields.isEmpty) instantiationLogic
         else {
           val instance = TermName(tpe.typeSymbol.name + "Instance")
-          val registerUnpicklee = if (shouldBotherAboutSharing(tpe)) q"scala.pickling.`package`.registerUnpicklee($instance)" else q"";
           val initPendingFields = pendingFields.flatMap(fir => {
             val readFir = readField(fir.name, fir.tpe)
             if (fir.isPublic && fir.hasSetter) List(q"$instance.${TermName(fir.name)} = $readFir")
             else reflectively(instance, fir)(fm => q"$fm.forcefulSet($readFir)")
           })
-          q"""
-            val $instance = $instantiationLogic
-            $registerUnpicklee
-            ..$initPendingFields
-            $instance
-          """
+          if (shouldBotherAboutSharing(tpe)) {
+            q"""
+              val oid = scala.pickling.`package`.preregisterUnpicklee()
+              val $instance = $instantiationLogic
+              scala.pickling.`package`.registerUnpicklee($instance, oid)
+              ..$initPendingFields
+              $instance
+            """
+          } else {
+            q"""
+              val $instance = $instantiationLogic
+              ..$initPendingFields
+              $instance
+            """
+          }
         }
       }
       q"$initializationLogic"

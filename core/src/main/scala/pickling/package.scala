@@ -119,11 +119,20 @@ package object pickling {
 
   private var unpicklees = new Array[Any](1024)
   private var nextUnpicklee = 0
-  def lookupUnpicklee(index: Int): Any = unpicklees(index)
-  def registerUnpicklee(unpicklee: Any) = {
+  def lookupUnpicklee(index: Int): Any = {
+    val result = unpicklees(index)
+    if (result == null) throw new Error("fatal error: unpicklee cache is corrupted")
+    result
+  }
+  def preregisterUnpicklee() = {
+    val index = nextUnpicklee
     // TODO: dynamically resize the array!
-    unpicklees(nextUnpicklee) = unpicklee
+    unpicklees(index) = null
     nextUnpicklee += 1
+    index
+  }
+  def registerUnpicklee(unpicklee: Any, index: Int) = {
+    unpicklees(index) = unpicklee
   }
   def clearUnpicklees() = {
     java.util.Arrays.fill(unpicklees.asInstanceOf[Array[AnyRef]], null)
