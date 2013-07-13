@@ -69,6 +69,7 @@ package json {
       unpinHints()
       appendLine("")
       append("]")
+      indent()
     }
     private val primitives = Map[String, Any => Unit](
       FastTypeTag.Null.key -> ((picklee: Any) => append("null")),
