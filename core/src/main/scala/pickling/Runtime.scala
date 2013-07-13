@@ -26,13 +26,19 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_], shar
   val mirror = runtimeMirror(classLoader)
   val sym = if (clazz != null) mirror.classSymbol(clazz) else NullClass
   val tpe = {
-    // TODO: fix duplication w.r.t Tools.scala
-    val tpeWithMaybeTparams = sym.asType.toType
-    val tparams = tpeWithMaybeTparams match {
-      case TypeRef(_, _, targs) => targs.map(_.typeSymbol)
-      case _ => Nil
+    val elType = if (clazz != null) clazz.getComponentType() else null
+    if (elType != null) {
+      // TODO: correctly convert elType
+      appliedType(ArrayClass.toType, List(mirror.classSymbol(elType).asType.toType))
+    } else {
+      // TODO: fix duplication w.r.t Tools.scala
+      val tpeWithMaybeTparams = sym.asType.toType
+      val tparams = tpeWithMaybeTparams match {
+        case TypeRef(_, _, targs) => targs.map(_.typeSymbol)
+        case _ => Nil
+      }
+      existentialAbstraction(tparams, tpeWithMaybeTparams)
     }
-    existentialAbstraction(tparams, tpeWithMaybeTparams)
   }
   val tag = FastTypeTag(mirror, tpe, tpe.key)
   debug("PicklerRuntime: tpe = " + tpe)
