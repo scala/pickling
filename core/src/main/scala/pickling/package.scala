@@ -258,11 +258,11 @@ package pickling {
   }
 
   trait PBuilder extends Hintable {
-    def beginEntry(picklee: Any): this.type
-    def putField(name: String, pickler: this.type => Unit): this.type
+    def beginEntry(picklee: Any): PBuilder
+    def putField(name: String, pickler: PBuilder => Unit): PBuilder
     def endEntry(): Unit
-    def beginCollection(length: Int): this.type
-    def putElement(pickler: this.type => Unit): this.type
+    def beginCollection(length: Int): PBuilder
+    def putElement(pickler: PBuilder => Unit): PBuilder
     def endCollection(length: Int): Unit
     def result(): Pickle
   }
