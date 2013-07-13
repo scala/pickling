@@ -183,6 +183,13 @@ trait UnpicklerMacros extends Macro {
       // just outside the constructor of B, but outside the enclosing constructor of C!
       //   class С(val b: B)
       //   class B(var c: C)
+      // TODO: don't forget about the previous todo when describing the sharing algorithm for the paper
+      // it's a very important detail, without which everything will crumble
+      // no idea how to fix that, because hoisting might very well break reading order beyond repair
+      // so that it becomes hopelessly unsync with writing order
+      // nevertheless don't despair and try to prove whether this is or is not the fact
+      // i was super scared that string sharing is going to fail due to the same reason, but it did not :)
+      // in the worst case we can do the same as the interpreted runtime does - just go for allocateInstance
       val pendingFields = cir.fields.filter(fir =>
         fir.isNonParam ||
         (!canCallCtor && fir.isReifiedParam) ||
@@ -268,11 +275,13 @@ trait PickleMacros extends Macro {
   def pickleTo[T: c.WeakTypeTag](output: c.Tree)(format: c.Tree): c.Tree = {
     val tpe = weakTypeOf[T]
     val q"${_}($pickleeArg)" = c.prefix.tree
+    val endPickle = if (shouldBotherAboutSharing(tpe)) q"clearPicklees()" else q"";
     q"""
       import scala.pickling._
       val picklee: $tpe = $pickleeArg
       val builder = $format.createBuilder($output)
       picklee.pickleInto(builder)
+      $endPickle
     """
   }
 
@@ -356,6 +365,9 @@ trait PickleMacros extends Macro {
 // 2) insert a call in the generated code to the genUnpickler macro (described above)
 trait UnpickleMacros extends Macro {
 
+  // TODO: currently this works with an assumption that sharing settings for unpickling are the same as for pickling
+  // of course this might not be the case, so we should be able to read settings from the pickle itself
+  // this is not going to be particularly pretty. unlike the fix for the runtime interpreter, this fix will be a bit of a shotgun one
   def pickleUnpickle[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
     val tpe = weakTypeOf[T]
@@ -406,7 +418,7 @@ trait UnpickleMacros extends Macro {
 
     val staticHint = if (sym.isEffectivelyFinal && !isTopLevel) (q"reader.hintStaticallyElidedType()": Tree) else q"";
     val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
-    val unpickleeCleanup = if (isTopLevel) q"clearUnpicklees()" else q""
+    val unpickleeCleanup = if (isTopLevel && shouldBotherAboutSharing(tpe)) q"clearUnpicklees()" else q""
 
     q"""
       val reader = $readerArg
