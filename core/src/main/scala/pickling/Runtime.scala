@@ -131,6 +131,8 @@ class CompiledPicklerRuntime(classLoader: ClassLoader, clazz: Class[_])(implicit
   }
 }
 
+// TODO: currently this works with an assumption that sharing settings for unpickling are the same as for pickling
+// of course this might not be the case, so we should be able to read `share` from the pickle itself
 class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit share: refs.Share) {
   val tpe = tag.tpe
   val sym = tpe.typeSymbol.asType
