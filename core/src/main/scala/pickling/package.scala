@@ -117,16 +117,16 @@ package object pickling {
     nextPicklee = 0
   }
 
-  private var unpicklees = new Array[AnyRef](1024)
+  private var unpicklees = new Array[Any](1024)
   private var nextUnpicklee = 0
-  def lookupUnpicklee(index: Int): AnyRef = unpicklees(index)
-  def registerUnpicklee(unpicklee: AnyRef) = {
+  def lookupUnpicklee(index: Int): Any = unpicklees(index)
+  def registerUnpicklee(unpicklee: Any) = {
     // TODO: dynamically resize the array!
     unpicklees(nextUnpicklee) = unpicklee
     nextUnpicklee += 1
   }
   def clearUnpicklees() = {
-    java.util.Arrays.fill(unpicklees, null)
+    java.util.Arrays.fill(unpicklees.asInstanceOf[Array[AnyRef]], null)
     nextUnpicklee = 0
   }
 }
