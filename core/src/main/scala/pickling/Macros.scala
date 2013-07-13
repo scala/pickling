@@ -268,11 +268,13 @@ trait PickleMacros extends Macro {
   def pickleTo[T: c.WeakTypeTag](output: c.Tree)(format: c.Tree): c.Tree = {
     val tpe = weakTypeOf[T]
     val q"${_}($pickleeArg)" = c.prefix.tree
+    val endPickle = if (shouldBotherAboutSharing(tpe)) q"clearPicklees()" else q"";
     q"""
       import scala.pickling._
       val picklee: $tpe = $pickleeArg
       val builder = $format.createBuilder($output)
       picklee.pickleInto(builder)
+      $endPickle
     """
   }
 
