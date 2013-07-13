@@ -107,7 +107,7 @@ trait PicklerMacros extends Macro {
         }
       })
       val endEntry = q"builder.endEntry()"
-      if (tpe.canCauseLoops && !noRefs) {
+      if (shouldBotherAboutSharing(tpe)) {
         q"""
           import scala.reflect.runtime.universe._
           val oid = scala.pickling.`package`.lookupPicklee(picklee)
@@ -182,7 +182,11 @@ trait UnpicklerMacros extends Macro {
       // just outside the constructor of B, but outside the enclosing constructor of C!
       //   class С(val b: B)
       //   class B(var c: C)
-      val pendingFields = cir.fields.filter(fir => fir.isNonParam || (!canCallCtor && fir.isReifiedParam) || (fir.canCauseLoops && !noRefs))
+      val pendingFields = cir.fields.filter(fir =>
+        fir.isNonParam ||
+        (!canCallCtor && fir.isReifiedParam) ||
+        shouldBotherAboutSharing(fir.tpe)
+      )
       val instantiationLogic = {
         if (sym.isModuleClass) {
           q"${sym.module}"
@@ -194,7 +198,7 @@ trait UnpicklerMacros extends Macro {
             else {
               val ctorSym = ctorSig.head._1.owner.asMethod
               ctorSym.paramss.map(_.map(f => {
-                val delayInitialization = ctorFirs.find(_.param.get == f).map(_.canCauseLoops && !noRefs).getOrElse(false)
+                val delayInitialization = pendingFields.exists(_.param.map(_ == f).getOrElse(false))
                 if (delayInitialization) q"null" else readField(f.name.toString, ctorSig(f))
               }))
             }
@@ -209,7 +213,7 @@ trait UnpicklerMacros extends Macro {
         if (sym.isModuleClass || pendingFields.isEmpty) instantiationLogic
         else {
           val instance = TermName(tpe.typeSymbol.name + "Instance")
-          val registerUnpicklee = if (tpe.canCauseLoops && !noRefs) q"scala.pickling.`package`.registerUnpicklee($instance)" else q"";
+          val registerUnpicklee = if (shouldBotherAboutSharing(tpe)) q"scala.pickling.`package`.registerUnpicklee($instance)" else q"";
           val initPendingFields = pendingFields.flatMap(fir => {
             val readFir = readField(fir.name, fir.tpe)
             if (fir.isPublic && fir.hasSetter) List(q"$instance.${TermName(fir.name)} = $readFir")
@@ -266,7 +270,7 @@ trait PickleMacros extends Macro {
   def pickle[T: c.WeakTypeTag](format: c.Tree): c.Tree = {
     val tpe = weakTypeOf[T]
     val q"${_}($pickleeArg)" = c.prefix.tree
-    val endPickle = if (tpe.canCauseLoops && !noRefs) q"clearPicklees()" else q"";
+    val endPickle = if (shouldBotherAboutSharing(tpe)) q"clearPicklees()" else q"";
     q"""
       import scala.pickling._
       val picklee: $tpe = $pickleeArg

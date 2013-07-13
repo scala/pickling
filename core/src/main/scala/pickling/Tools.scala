@@ -197,10 +197,6 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
     }
   }
 
-  implicit class RichFieldIR(fir: FieldIR) {
-    def canCauseLoops = fir.hasSetter && fir.tpe.canCauseLoops
-  }
-
   implicit class RichType(tpe: Type) {
     def key: String = {
       tpe match {
@@ -244,7 +240,15 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
     }
   }
 
-  def noRefs = c.inferImplicitValue(typeOf[refs.NoRefs]) != EmptyTree
+  def shouldBotherAboutSharing(tpe: Type) = {
+    val shareEverything = c.inferImplicitValue(typeOf[refs.ShareEverything]) != EmptyTree
+    val shareNothing = c.inferImplicitValue(typeOf[refs.ShareNothing]) != EmptyTree
+    if (shareEverything && shareNothing) c.abort(c.enclosingPosition, "inconsistent sharing configuration: both ShareEverything and ShareNothing are in scope")
+
+    if (shareNothing) false
+    else if (shareEverything) tpe.isNullable
+    else tpe.canCauseLoops
+  }
 
   def pickleFormatType(pickle: Tree): Type = innerType(pickle, "PickleFormatType")
 
