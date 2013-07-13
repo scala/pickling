@@ -73,6 +73,7 @@ package json {
     }
     private val primitives = Map[String, Any => Unit](
       FastTypeTag.Null.key -> ((picklee: Any) => append("null")),
+      FastTypeTag.Ref.key -> ((picklee: Any) => throw new Error("fatal error: shouldn't be invoked explicitly")),
       FastTypeTag.Int.key -> ((picklee: Any) => append(picklee.toString)),
       FastTypeTag.Long.key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\"")),
       FastTypeTag.Short.key -> ((picklee: Any) => append(picklee.toString)),
@@ -87,24 +88,29 @@ package json {
     )
     def beginEntry(picklee: Any): this.type = withHints { hints =>
       indent()
-      tags.push(hints.tag)
-      if (primitives.contains(hints.tag.key)) {
-        if (hints.isElidedType) primitives(hints.tag.key)(picklee)
-        else {
-          appendLine("{")
-          appendLine("\"tpe\": \"" + typeToString(hints.tag.tpe) + "\",")
-          append("\"value\": ")
-          indent()
-          primitives(hints.tag.key)(picklee)
-          unindent()
-          appendLine("")
-          unindent()
-          append("}")
-          indent()
-        }
+      if (hints.oid != -1) {
+        tags.push(FastTypeTag.Ref)
+        append("{ \"$ref\": " + hints.oid + " }")
       } else {
-        appendLine("{")
-        if (!hints.isElidedType) append("\"tpe\": \"" + typeToString(hints.tag.tpe) + "\"")
+        tags.push(hints.tag)
+        if (primitives.contains(hints.tag.key)) {
+          if (hints.isElidedType) primitives(hints.tag.key)(picklee)
+          else {
+            appendLine("{")
+            appendLine("\"tpe\": \"" + typeToString(hints.tag.tpe) + "\",")
+            append("\"value\": ")
+            indent()
+            primitives(hints.tag.key)(picklee)
+            unindent()
+            appendLine("")
+            unindent()
+            append("}")
+            indent()
+          }
+        } else {
+          appendLine("{")
+          if (!hints.isElidedType) append("\"tpe\": \"" + typeToString(hints.tag.tpe) + "\"")
+        }
       }
       this
     }
@@ -146,6 +152,7 @@ package json {
     private var lastReadTag: FastTypeTag[_] = null
     private val primitives = Map[String, () => Any](
       FastTypeTag.Null.key -> (() => null),
+      FastTypeTag.Ref.key -> (() => lookupUnpicklee(datum.asInstanceOf[JSONObject].obj("$ref").asInstanceOf[Double].toInt)),
       FastTypeTag.Int.key -> (() => datum.asInstanceOf[Double].toInt),
       FastTypeTag.Short.key -> (() => datum.asInstanceOf[Double].toShort),
       FastTypeTag.Double.key -> (() => datum.asInstanceOf[Double]),
@@ -171,9 +178,14 @@ package json {
     def beginEntry(): FastTypeTag[_] = withHints { hints =>
       lastReadTag = {
         if (datum == null) FastTypeTag.Null
-        else if (hints.isElidedType) hints.tag
-        else {
+        else if (hints.isElidedType) {
           datum match {
+            case JSONObject(fields) if fields.contains("$ref") => FastTypeTag.Ref
+            case _ => hints.tag
+          }
+        } else {
+          datum match {
+            case JSONObject(fields) if fields.contains("$ref") => FastTypeTag.Ref
             case JSONObject(fields) if fields.contains("tpe") => FastTypeTag(mirror, fields("tpe").asInstanceOf[String])
             case JSONObject(fields) => hints.tag
           }
@@ -189,7 +201,7 @@ package json {
           val value = mkNestedReader(list.head).primitives(lastReadTag.key)()
           datum = JSONArray(list.tail)
           value
-        case JSONObject(fields) =>
+        case JSONObject(fields) if lastReadTag.key != FastTypeTag.Ref.key =>
           mkNestedReader(fields("value")).primitives(lastReadTag.key)()
         case _ =>
           primitives(lastReadTag.key)()
