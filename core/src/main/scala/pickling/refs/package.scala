@@ -9,7 +9,7 @@ package object shareNothing {
 }
 
 package refs {
-  trait Ref
+  final class Ref
 
   sealed trait Share
   object Share {

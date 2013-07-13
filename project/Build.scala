@@ -167,9 +167,9 @@ object MyBuild extends Build {
       sourceDirectory in Test <<= baseDirectory(root => root),
       libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1",
       parallelExecution in Test := false,
-      scalacOptions ++= Seq()
+      // scalacOptions ++= Seq()
       // scalacOptions ++= Seq("-Xlog-implicits")
-      // scalacOptions ++= Seq("-Xprint:typer")
+      scalacOptions ++= Seq("-Xprint:typer")
     )
   ) dependsOn(core)
 
