@@ -246,7 +246,7 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
     if (shareEverything && shareNothing) c.abort(c.enclosingPosition, "inconsistent sharing configuration: both ShareEverything and ShareNothing are in scope")
 
     if (shareNothing) false
-    else if (shareEverything) tpe.isNullable
+    else if (shareEverything) !tpe.isEffectivelyPrimitive
     else tpe.canCauseLoops
   }
 
