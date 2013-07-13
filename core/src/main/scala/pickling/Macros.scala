@@ -358,6 +358,9 @@ trait PickleMacros extends Macro {
 // 2) insert a call in the generated code to the genUnpickler macro (described above)
 trait UnpickleMacros extends Macro {
 
+  // TODO: currently this works with an assumption that sharing settings for unpickling are the same as for pickling
+  // of course this might not be the case, so we should be able to read settings from the pickle itself
+  // this is not going to be particularly pretty. unlike the fix for the runtime interpreter, this fix will be a bit of a shotgun one
   def pickleUnpickle[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
     val tpe = weakTypeOf[T]
