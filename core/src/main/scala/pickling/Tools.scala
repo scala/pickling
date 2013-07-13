@@ -173,13 +173,70 @@ class Tools[C <: Context](val c: C) {
   }
 }
 
-abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
+abstract class ShareAnalyzer[U <: Universe](val u: U) {
+  import u._
+  import definitions._
+
+  val irs = new ir.IRs[u.type](u)
+  import irs._
+
+  // FIXME: duplication wrt pickling.`package`, but I don't really fancy abstracting away this path-dependent madness
+  implicit class RichTypeFIXME(tpe: Type) {
+    def isEffectivelyPrimitive: Boolean = tpe match {
+      case TypeRef(_, sym: ClassSymbol, _) if sym.isPrimitive => true
+      case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.isEffectivelyPrimitive => true
+      case _ => false
+    }
+  }
+
+  def shareEverything: Boolean
+  def shareNothing: Boolean
+
+  def canCauseLoops(tpe: Type): Boolean = {
+    if (tpe.isNotNullable || tpe.isEffectivelyPrimitive || tpe.typeSymbol == StringClass) return false
+    // TODO: make sure this sanely works for polymorphic types
+    // TODO: cache this
+    val queue = MutableQueue[Symbol](tpe.typeSymbol)
+    val visited = MutableSet[Symbol]()
+    while (queue.nonEmpty) {
+      val curr = queue.dequeue
+      val fields = flattenedClassIR(curr.asType.toType).fields
+      fields.foreach(f => {
+        if (tpe <:< f.tpe) return true
+        val next = f.tpe.typeSymbol
+        if (!visited.contains(next)) {
+          visited += next
+          queue += next
+        }
+      })
+    }
+    return false
+  }
+
+  def shouldBotherAboutSharing(tpe: Type): Boolean = {
+    if (shareNothing) false
+    else if (shareEverything) !tpe.isEffectivelyPrimitive
+    else canCauseLoops(tpe)
+  }
+
+  def shouldBotherAboutLooping(tpe: Type): Boolean = {
+    if (shareNothing) false
+    else canCauseLoops(tpe)
+  }
+}
+
+abstract class Macro extends QuasiquoteCompat with Reflection211Compat { self =>
   val c: Context
   import c.universe._
   import definitions._
 
   val tools = new Tools[c.type](c)
   import tools._
+
+  val shareAnalyzer = new ShareAnalyzer[c.universe.type](c.universe) {
+    def shareEverything = self.shareEverything
+    def shareNothing = self.shareNothing
+  }
 
   val irs = new ir.IRs[c.universe.type](c.universe)
   import irs._
@@ -197,7 +254,8 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
     }
   }
 
-  implicit class RichType(tpe: Type) {
+  // FIXME: duplication wrt pickling.`package`, but I don't really fancy abstracting away this path-dependent madness
+  implicit class RichTypeFIXME(tpe: Type) {
     def key: String = {
       tpe match {
         case ExistentialType(tparams, TypeRef(pre, sym, targs))
@@ -211,49 +269,29 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
           tpe.toString
       }
     }
+    def canCauseLoops: Boolean = shareAnalyzer.canCauseLoops(tpe)
     def isEffectivelyPrimitive: Boolean = tpe match {
       case TypeRef(_, sym: ClassSymbol, _) if sym.isPrimitive => true
       case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.isEffectivelyPrimitive => true
       case _ => false
     }
-    def isNotNullable = tpe.typeSymbol.isNotNullable
-    def isNullable = tpe.typeSymbol.isNullable
-    def canCauseLoops: Boolean = {
-      if (isNotNullable || isEffectivelyPrimitive || tpe.typeSymbol == StringClass) return false
-      // TODO: make sure this sanely works for polymorphic types
-      // TODO: cache this
-      val queue = MutableQueue[Symbol](tpe.typeSymbol)
-      val visited = MutableSet[Symbol]()
-      while (queue.nonEmpty) {
-        val curr = queue.dequeue
-        val fields = flattenedClassIR(curr.asType.toType).fields
-        fields.foreach(f => {
-          if (tpe <:< f.tpe) return true
-          val next = f.tpe.typeSymbol
-          if (!visited.contains(next)) {
-            visited += next
-            queue += next
-          }
-        })
-      }
-      return false
-    }
   }
 
-  def shareEverything = c.inferImplicitValue(typeOf[refs.ShareEverything]) != EmptyTree
-  def shareNothing = c.inferImplicitValue(typeOf[refs.ShareNothing]) != EmptyTree
+  def shouldBotherAboutSharing(tpe: Type) = shareAnalyzer.shouldBotherAboutSharing(tpe)
+  def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
 
-  def shouldBotherAboutSharing(tpe: Type) = {
+  def shareEverything = {
+    val shareEverything = c.inferImplicitValue(typeOf[refs.ShareEverything]) != EmptyTree
+    val shareNothing = c.inferImplicitValue(typeOf[refs.ShareNothing]) != EmptyTree
     if (shareEverything && shareNothing) c.abort(c.enclosingPosition, "inconsistent sharing configuration: both ShareEverything and ShareNothing are in scope")
-    if (shareNothing) false
-    else if (shareEverything) !tpe.isEffectivelyPrimitive
-    else tpe.canCauseLoops
+    shareEverything
   }
 
-  def shouldBotherAboutLooping(tpe: Type) = {
+  def shareNothing = {
+    val shareEverything = c.inferImplicitValue(typeOf[refs.ShareEverything]) != EmptyTree
+    val shareNothing = c.inferImplicitValue(typeOf[refs.ShareNothing]) != EmptyTree
     if (shareEverything && shareNothing) c.abort(c.enclosingPosition, "inconsistent sharing configuration: both ShareEverything and ShareNothing are in scope")
-    if (shareNothing) false
-    else tpe.canCauseLoops
+    shareNothing
   }
 
   def pickleFormatType(pickle: Tree): Type = innerType(pickle, "PickleFormatType")

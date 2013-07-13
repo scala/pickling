@@ -20,11 +20,26 @@ package object pickling {
     def pickleTo(output: Output[_])(implicit format: PickleFormat): Unit = macro Compat.PickleMacros_pickleTo[T]
   }
 
-  implicit class RichSymbol(sym: scala.reflect.api.Symbols#Symbol) {
+  implicit class RichSymbol(sym: scala.reflect.api.Universe#Symbol) {
     def isEffectivelyFinal = sym.asInstanceOf[scala.reflect.internal.Symbols#Symbol].isEffectivelyFinal
     def isEffectivelyPrimitive = throw new Exception("use Type.isEffectivelyPrimitive instead")
     def isNotNullable = sym.isClass && (sym.asClass.isPrimitive || sym.asClass.isDerivedValueClass)
     def isNullable = sym.isClass && !isNotNullable
+  }
+
+  implicit class RichType(tpe: scala.reflect.api.Universe#Type) {
+    def isEffectivelyFinal = tpe.typeSymbol.isEffectivelyFinal
+    // TODO: doesn't work...
+    // def isEffectivelyPrimitive: Boolean = {
+    //   tpe.typeSymbol.isPrimitive || {
+    //     val args = tpe.asInstanceOf[scala.reflect.internal.SymbolTable#Type].typeArguments
+    //     def isArrayOfSomething = tpe.toString.startsWith("scala.Array[") || tpe.toString.startsWith("Array[")
+    //     def isParameterizedByPrimitive = args.nonEmpty && args.head.isEffectivelyPrimitive
+    //     isArrayOfSomething && isParameterizedByPrimitive
+    //   }
+    // }
+    def isNotNullable = tpe.typeSymbol.isNotNullable
+    def isNullable = tpe.typeSymbol.isNullable
   }
 
   var cachedMirror: ru.Mirror = null
@@ -72,7 +87,7 @@ package object pickling {
   }
 
   // FIXME: duplication wrt Tools, but I don't really fancy abstracting away this path-dependent madness
-  implicit class RichType(tpe: Type) {
+  implicit class RichTypeFIXME(tpe: Type) {
     import definitions._
     def key: String = {
       tpe match {

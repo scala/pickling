@@ -41,6 +41,13 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_]) {
   val cir = flattenedClassIR(tpe)
   debug("PicklerRuntime: cir = " + cir)
 
+  val shareAnalyzer = new ShareAnalyzer[ru.type](ru) {
+    def shareEverything = share.isInstanceOf[refs.ShareEverything]
+    def shareNothing = share.isInstanceOf[refs.ShareNothing]
+  }
+  def shouldBotherAboutSharing(tpe: Type) = shareAnalyzer.shouldBotherAboutSharing(tpe)
+  def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
+
   def genPickler(implicit format: PickleFormat): SPickler[_]
 }
 
