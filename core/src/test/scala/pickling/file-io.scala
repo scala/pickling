@@ -48,6 +48,7 @@ class FileIOTest extends FunSuite {
 
     val builder = pickleFormat.createBuilder(fileOut)
     p.pickleInto(builder)
+    clearPicklees() // TODO: need something more convenient here
     fileOut.close()
 
     val fileContents = Source.fromFile(tmpFile).getLines.mkString("\n")
