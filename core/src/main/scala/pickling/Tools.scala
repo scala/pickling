@@ -240,13 +240,19 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
     }
   }
 
-  def shouldBotherAboutSharing(tpe: Type) = {
-    val shareEverything = c.inferImplicitValue(typeOf[refs.ShareEverything]) != EmptyTree
-    val shareNothing = c.inferImplicitValue(typeOf[refs.ShareNothing]) != EmptyTree
-    if (shareEverything && shareNothing) c.abort(c.enclosingPosition, "inconsistent sharing configuration: both ShareEverything and ShareNothing are in scope")
+  def shareEverything = c.inferImplicitValue(typeOf[refs.ShareEverything]) != EmptyTree
+  def shareNothing = c.inferImplicitValue(typeOf[refs.ShareNothing]) != EmptyTree
 
+  def shouldBotherAboutSharing(tpe: Type) = {
+    if (shareEverything && shareNothing) c.abort(c.enclosingPosition, "inconsistent sharing configuration: both ShareEverything and ShareNothing are in scope")
     if (shareNothing) false
     else if (shareEverything) !tpe.isEffectivelyPrimitive
+    else tpe.canCauseLoops
+  }
+
+  def shouldBotherAboutLooping(tpe: Type) = {
+    if (shareEverything && shareNothing) c.abort(c.enclosingPosition, "inconsistent sharing configuration: both ShareEverything and ShareNothing are in scope")
+    if (shareNothing) false
     else tpe.canCauseLoops
   }
 
