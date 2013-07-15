@@ -242,9 +242,14 @@ package pickling {
   trait PickleFormat {
     type PickleType <: Pickle
     type OutputType <: Output[_]
+    type InputType
+
     def createBuilder(): PBuilder
     def createBuilder(out: OutputType): PBuilder
     def createReader(pickle: PickleType, mirror: Mirror): PReader
+
+    def unpickleFrom[T](input: InputType): T =
+      macro UnpickleMacros.formatUnpickleFrom[T]
   }
 
   trait Hintable {

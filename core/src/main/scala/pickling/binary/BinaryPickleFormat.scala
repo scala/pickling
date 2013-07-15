@@ -125,10 +125,10 @@ package binary {
     }
   }
 
-  class BinaryPickleReader(arr: Array[Byte], val mirror: Mirror, format: BinaryPickleFormat) extends PReader with PickleTools {
+  class BinaryPickleReader(in: DecodingInput, val mirror: Mirror, format: BinaryPickleFormat) extends PReader with PickleTools {
     import format._
 
-    private val byteBuffer: ByteBuffer       = new ByteArray(arr)
+    private val byteBuffer: DecodingInput    = in
     private var pos                          = 0
     private var _lastTagRead: FastTypeTag[_] = null
     private var _lastTypeStringRead: String  = null
@@ -262,10 +262,13 @@ package binary {
     val primitives = Set(KEY_NULL, KEY_REF, KEY_BYTE, KEY_SHORT, KEY_CHAR, KEY_INT, KEY_LONG, KEY_BOOLEAN, KEY_FLOAT, KEY_DOUBLE, KEY_UNIT, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_INT, KEY_ARRAY_LONG)
     val nullablePrimitives = Set(KEY_NULL, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_INT, KEY_ARRAY_LONG)
 
+    type InputType  = DecodingInput
     type PickleType = BinaryPickle
     type OutputType = EncodingOutput[Array[Byte]]
+
     def createBuilder() = new BinaryPickleBuilder(this, null)
     def createBuilder(out: EncodingOutput[Array[Byte]]): PBuilder = new BinaryPickleBuilder(this, out)
-    def createReader(pickle: PickleType, mirror: Mirror) = new BinaryPickleReader(pickle.value, mirror, this)
+    def createReader(pickle: BinaryPickle, mirror: Mirror) = new BinaryPickleReader(new ByteArray(pickle.value), mirror, this)
+    def createReader(in: DecodingInput, mirror: Mirror) = new BinaryPickleReader(in, mirror, this)
   }
 }

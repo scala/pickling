@@ -1,9 +1,9 @@
 package scala.pickling.binary
 
 import scala.collection.mutable.ArrayBuffer
-import scala.pickling.EncodingOutput
+import scala.pickling.{EncodingOutput, DecodingInput}
 
-sealed abstract class ByteBuffer extends EncodingOutput[Array[Byte]] {
+sealed abstract class ByteBuffer extends EncodingOutput[Array[Byte]] with DecodingInput {
   def encodeByteTo(pos: Int, value: Byte): Int
 
   def encodeByteAtEnd(pos: Int, value: Byte): Unit
