@@ -102,10 +102,10 @@ package binary {
 
     def endEntry(): Unit = { /* do nothing */ }
 
-    var beginCollPos = 0
+    var beginCollPos = List[Int]()
 
     def beginCollection(length: Int): this.type = {
-      beginCollPos = pos
+      beginCollPos = pos :: beginCollPos
       byteBuffer.encodeIntAtEnd(pos, 0)
       pos += 4
       this
@@ -117,7 +117,9 @@ package binary {
     }
 
     def endCollection(length: Int): Unit = {
-      byteBuffer.encodeIntTo(beginCollPos, length)
+      val localBeginCollPos = beginCollPos.head
+      beginCollPos = beginCollPos.tail
+      byteBuffer.encodeIntTo(localBeginCollPos, length)
     }
 
     def result() = {
