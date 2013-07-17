@@ -135,6 +135,11 @@ package object pickling {
 
   private var unpicklees = new Array[Any](1024)
   private var nextUnpicklee = 0
+  private var preregistered = List[Int]()
+
+  def isRegistered(index: Int): Boolean =
+    unpicklees(index) != null
+
   def lookupUnpicklee(index: Int): Any = {
     // println(s"lookupUnpicklee($index)")
     if (index >= nextUnpicklee) throw new Error(s"fatal error: invalid index $index in unpicklee cache of length $nextUnpicklee")
@@ -146,13 +151,25 @@ package object pickling {
     val index = nextUnpicklee
     // TODO: dynamically resize the array!
     unpicklees(index) = null
+    preregistered = index +: preregistered
     // println(s"preregisterUnpicklee() at $index")
     nextUnpicklee += 1
     index
   }
+  def registerUnpickleeAtCurrentIndex(unpicklee: Any) = {
+    preregistered match {
+      case top :: rest =>
+        unpicklees(top) = unpicklee
+        // println(s"registerUnpickleeAtCurrentIndex($unpicklee): $top")
+        preregistered = rest
+      case List() =>
+        throw new Error("fatal error: unpicklee cache (preregistered) is corrupted")
+    }
+  }
   def registerUnpicklee(unpicklee: Any, index: Int) = {
     // println(s"registerUnpicklee($unpicklee, $index)")
     unpicklees(index) = unpicklee
+    preregistered = preregistered.tail
   }
   def clearUnpicklees() = {
     java.util.Arrays.fill(unpicklees.asInstanceOf[Array[AnyRef]], null)
