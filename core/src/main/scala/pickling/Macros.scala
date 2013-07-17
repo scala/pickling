@@ -77,8 +77,8 @@ trait PicklerMacros extends Macro {
           """
       }
       val beginEntry = q"""
-        $hintKnownSize
         builder.beginEntry(picklee)
+        $hintKnownSize
       """
       val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
       val putFields = (nonLoopyFields ++ loopyFields).flatMap(fir => {
@@ -108,24 +108,12 @@ trait PicklerMacros extends Macro {
         }
       })
       val endEntry = q"builder.endEntry()"
-      if (shouldBotherAboutSharing(tpe)) {
-        q"""
-          import scala.reflect.runtime.universe._
-          val oid = scala.pickling.`package`.lookupPicklee(picklee)
-          builder.hintOid(oid)
-          if (oid == -1) scala.pickling.`package`.registerPicklee(picklee)
-          $beginEntry
-          if (oid == -1) { ..$putFields }
-          $endEntry
-        """
-      } else {
-        q"""
-          import scala.reflect.runtime.universe._
-          $beginEntry
-          ..$putFields
-          $endEntry
-        """
-      }
+      q"""
+        import scala.reflect.runtime.universe._
+        $beginEntry
+        ..$putFields
+        $endEntry
+      """
     }
     def pickleLogic = tpe match {
       case NothingTpe => c.abort(c.enclosingPosition, "cannot pickle Nothing") // TODO: report the serialization path that brought us here
@@ -218,29 +206,23 @@ trait UnpicklerMacros extends Macro {
       }
       // NOTE: step 2) this sets values for non-erased fields which haven't been initialized during step 1
       val initializationLogic = {
-        if (sym.isModuleClass || pendingFields.isEmpty) instantiationLogic
-        else {
+        if (sym.isModuleClass || pendingFields.isEmpty) {
+          instantiationLogic
+        } else {
           val instance = TermName(tpe.typeSymbol.name + "Instance")
+
           val initPendingFields = pendingFields.flatMap(fir => {
             val readFir = readField(fir.name, fir.tpe)
             if (fir.isPublic && fir.hasSetter) List(q"$instance.${TermName(fir.name)} = $readFir")
             else reflectively(instance, fir)(fm => q"$fm.forcefulSet($readFir)")
           })
-          if (shouldBotherAboutSharing(tpe)) {
-            q"""
-              val oid = scala.pickling.`package`.preregisterUnpicklee()
-              val $instance = $instantiationLogic
-              scala.pickling.`package`.registerUnpicklee($instance, oid)
-              ..$initPendingFields
-              $instance
-            """
-          } else {
-            q"""
-              val $instance = $instantiationLogic
-              ..$initPendingFields
-              $instance
-            """
-          }
+
+          q"""
+            val $instance = $instantiationLogic
+            scala.pickling.`package`.registerUnpickleeAtCurrentIndex($instance)
+            ..$initPendingFields
+            $instance
+          """
         }
       }
       q"$initializationLogic"
@@ -335,12 +317,33 @@ trait PickleMacros extends Macro {
     val q"${_}($pickleeArg)" = c.prefix.tree
 
     val dispatchLogic = genDispatchLogic(sym, tpe, builder)
+    val pickleLogic = if (shouldBotherAboutSharing(tpe)) {
+      q"""
+        picklee match {
+          case null => pickler.asInstanceOf[SPickler[$tpe]].pickle(picklee, $builder)
+          case _ =>
+            val oid = scala.pickling.`package`.lookupPicklee(picklee)
+            $builder.hintOid(oid)
+            if (oid == -1) {
+              scala.pickling.`package`.registerPicklee(picklee)
+              pickler.asInstanceOf[SPickler[$tpe]].pickle(picklee, $builder)
+            } else {
+              $builder.beginEntry(picklee)
+              $builder.endEntry()
+            }
+        }
+      """
+    } else {
+      q"""
+        pickler.asInstanceOf[SPickler[$tpe]].pickle(picklee, $builder)
+      """
+    }
 
     q"""
       import scala.pickling._
       val picklee = $pickleeArg
       val pickler = $dispatchLogic
-      pickler.asInstanceOf[SPickler[$tpe]].pickle(picklee, $builder)
+      $pickleLogic
     """
   }
 
@@ -420,16 +423,34 @@ trait UnpickleMacros extends Macro {
     val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
     val unpickleeCleanup = if (isTopLevel && shouldBotherAboutSharing(tpe)) q"clearUnpicklees()" else q""
 
+    def withUnpickleLogic(rest: Tree) = if (shouldBotherAboutSharing(tpe)) {
+      q"""
+        val oid = scala.pickling.`package`.preregisterUnpicklee()
+        val result = unpickler.unpickle({ scala.pickling.FastTypeTag(typeString) }, reader)
+        if (!scala.pickling.`package`.isRegistered(oid))
+          scala.pickling.`package`.registerUnpicklee(result, oid)
+        $rest
+      """
+    } else {
+      q"""
+        val result = unpickler.unpickle({ scala.pickling.FastTypeTag(typeString) }, reader)
+        $rest
+      """
+    }
+
+    val secondPart = withUnpickleLogic(q"""
+      reader.endEntry()
+      $unpickleeCleanup
+      result.asInstanceOf[$tpe]
+    """)
+
     q"""
       val reader = $readerArg
       reader.hintTag(implicitly[scala.pickling.FastTypeTag[$tpe]])
       ${if (sym.isEffectivelyFinal && !isTopLevel) (q"reader.hintStaticallyElidedType()": Tree) else q""}
       val typeString = reader.beginEntryNoTag()
       val unpickler = $dispatchLogic
-      val result = unpickler.unpickle({ scala.pickling.FastTypeTag(typeString) }, reader)
-      reader.endEntry()
-      $unpickleeCleanup
-      result.asInstanceOf[$tpe]
+      $secondPart
     """
   }
 }
