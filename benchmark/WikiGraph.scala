@@ -1,9 +1,13 @@
-import scala.collection.mutable.{Map, HashMap}
-import scala.collection.mutable.ListBuffer
-
 import scala.util.parsing.combinator._
-import scala.util.parsing.input.{ Reader }
+import scala.util.parsing.input.Reader
 import scala.util.parsing.input.CharArrayReader.EofCh
+
+import scala.collection.mutable.{Map, HashMap}
+import scala.testing.PicklingBenchmark
+import scala.io.Source
+
+import scala.pickling._
+import binary._
 
 class Vertex(val label: String) {
   var neighbors: List[Vertex] = List()
@@ -18,7 +22,7 @@ class Vertex(val label: String) {
 }
 
 class Graph {
-  var vertices: List[Vertex] = List()
+  var vertices: Vector[Vertex] = Vector()
 
   def addVertex(v: Vertex): Vertex = {
     v.graph = this
@@ -66,16 +70,18 @@ object GraphReader extends RegexParsers {
           val newVertex = graph.addVertex(new Vertex(names(targetLabel)))
           vertices.put(targetLabel, newVertex)
           newVertex
-        } else
+        } else {
           vertexOpt.get
+        }
 
         firstVertex.connectTo(targetVertex)
       }
     }
+
     graph
   }
 
-  def printGraph(g: Graph) {
+  def printGraph(g: Graph): Unit = {
     for (v <- g.vertices) {
       print(v.label + ":")
       for (to <- v.neighbors) {
@@ -86,24 +92,29 @@ object GraphReader extends RegexParsers {
   }
 }
 
-object WikiGraph extends {
-    val titlesPath = "benchmark/data/titles-sorted.txt"
-    val linksPath = "benchmark/data/links-sorted.txt"
+object WikiGraph extends PicklingBenchmark {
+  val titlesPath = "benchmark/data/titles-sorted.txt"
+  val linksPath  = "benchmark/data/links-sorted.txt"
 
-    val names: Map[String, String] = new HashMap[String, String] {
-      override def default(label: String) = {
-        "no_title[" + label + "]"
-      }
+  val names: Map[String, String] = new HashMap[String, String] {
+    override def default(label: String) = {
+      "no_title[" + label + "]"
     }
-    println("Building page title map...")
-    val titles = scala.io.Source.fromFile(titlesPath).getLines()
-    for ((title, i) <- titles zipWithIndex)
-      names.put("" + i, title)
+  }
+  println("Building page title map...")
+  val titles = Source.fromFile(titlesPath).getLines()
+  for ((title, i) <- titles.zipWithIndex)
+    names.put("" + i, title)
 
-    println("Reading wikipedia graph from file... " + linksPath)
-    val lines = scala.io.Source.fromFile(linksPath).getLines()
-    val wikigraph = GraphReader.readGraph(lines, names)
+  println("Reading wikipedia graph from file... " + linksPath)
+  val lines: Iterator[String] = Source.fromFile(linksPath).getLines()
+  val wikigraph: Graph        = GraphReader.readGraph(lines, names)
 
-    GraphReader.printGraph(wikigraph)
-    println("#vertices: " + wikigraph.vertices.size)
+  //GraphReader.printGraph(wikigraph)
+  println("#vertices: " + wikigraph.vertices.size)
+
+  override def run(): Unit = {
+    val pickle = wikigraph.pickle
+    //val res = pickle.unpickle[Graph]
+  }
 }
