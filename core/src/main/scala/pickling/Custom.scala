@@ -187,7 +187,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
           while (i < arr.length) {
             builder putElement { b =>
               if (!$isPrimitive) b.hintTag(eltag)
-              elpickler.pickle(arr(i), b)
+              arr(i).pickleInto(b)
             }
             i += 1
           }
@@ -207,9 +207,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
           var i = 0
           while (i < length) {
             val r = arrReader.readElement()
-            r.beginEntryNoTag()
-            val elem = elunpickler.unpickle(eltag, r)
-            r.endEntry()
+            val elem = r.unpickle[$eltpe]
             buffer += elem.asInstanceOf[$eltpe]
             i += 1
           }
