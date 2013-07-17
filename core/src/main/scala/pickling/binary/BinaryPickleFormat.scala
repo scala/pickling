@@ -41,8 +41,7 @@ package binary {
         pos = pos + 5
       } else {
         if (!hints.isElidedType) {
-          val tpe = hints.tag.tpe
-          val tpeBytes = typeToString(tpe).getBytes("UTF-8")
+          val tpeBytes = hints.tag.key.getBytes("UTF-8")
           byteBuffer.encodeIntAtEnd(pos, tpeBytes.length)
           pos += 4
           pos = byteBuffer.copyTo(pos, tpeBytes)
