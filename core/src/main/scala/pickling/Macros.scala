@@ -80,8 +80,7 @@ trait PicklerMacros extends Macro {
         builder.beginEntry(picklee)
         $hintKnownSize
       """
-      val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
-      val putFields = (nonLoopyFields ++ loopyFields).flatMap(fir => {
+      val putFields = cir.fields.flatMap(fir => {
         if (sym.isModuleClass) {
           Nil
         } else if (fir.hasGetter) {
@@ -183,6 +182,7 @@ trait UnpicklerMacros extends Macro {
         (!canCallCtor && fir.isReifiedParam) ||
         shouldBotherAboutLooping(fir.tpe)
       )
+
       val instantiationLogic = {
         if (sym.isModuleClass) {
           q"${sym.module}"
