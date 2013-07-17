@@ -101,20 +101,12 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
 
   class StringPicklerUnpickler(shareConfig: refs.Share) extends SPickler[String] with Unpickler[String] {
     val format = null // not used
-    val share = shareConfig.isInstanceOf[refs.ShareEverything]
     def pickle(picklee: String, builder: PBuilder): Unit = {
-      if (share) {
-        val oid = lookupPicklee(picklee)
-        builder.hintOid(oid)
-        if (oid == -1) scala.pickling.`package`.registerPicklee(picklee)
-      }
       builder.beginEntry(picklee)
       builder.endEntry()
     }
     def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
-      val result = reader.readPrimitive().asInstanceOf[String]
-      if (share) registerUnpicklee(result, preregisterUnpicklee())
-      result
+      reader.readPrimitive().asInstanceOf[String]
     }
   }
   implicit def stringPicklerUnpickler(implicit shareConfig: refs.Share): SPickler[String] with Unpickler[String] =

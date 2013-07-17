@@ -218,7 +218,7 @@ abstract class ShareAnalyzer[U <: Universe](val u: U) {
 
   def shouldBotherAboutSharing(tpe: Type): Boolean = {
     if (shareNothing) false
-    else if (shareEverything) !tpe.isEffectivelyPrimitive
+    else if (shareEverything) !tpe.isEffectivelyPrimitive || (tpe.typeSymbol.asType == StringClass)
     else canCauseLoops(tpe)
   }
 
