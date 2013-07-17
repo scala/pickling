@@ -87,12 +87,16 @@ object MyBuild extends Build {
       conflictWarning in ThisBuild := ConflictWarning.disable,
       parallelExecution in Test := false, // hello, reflection sync!!
       run <<= run in Compile in sandbox, // http://www.scala-sbt.org/release/docs/Detailed-Topics/Tasks
-      InputKey[Unit]("travInt") <<= InputKey[Unit]("travInt") in Compile in benchmark,
+      InputKey[Unit]("travInt")        <<= InputKey[Unit]("travInt")        in Compile in benchmark,
       InputKey[Unit]("travIntFreeMem") <<= InputKey[Unit]("travIntFreeMem") in Compile in benchmark,
-      InputKey[Unit]("travIntSize") <<= InputKey[Unit]("travIntSize") in Compile in benchmark,
-      InputKey[Unit]("geoTrellis") <<= InputKey[Unit]("geoTrellis") in Compile in benchmark,
-      InputKey[Unit]("evactor1") <<= InputKey[Unit]("evactor1") in Compile in benchmark,
-      InputKey[Unit]("evactor2") <<= InputKey[Unit]("evactor2") in Compile in benchmark,
+      InputKey[Unit]("travIntSize")    <<= InputKey[Unit]("travIntSize")    in Compile in benchmark,
+      InputKey[Unit]("geoTrellis")     <<= InputKey[Unit]("geoTrellis")     in Compile in benchmark,
+      InputKey[Unit]("evactor1")       <<= InputKey[Unit]("evactor1")       in Compile in benchmark,
+      InputKey[Unit]("evactor2")       <<= InputKey[Unit]("evactor2")       in Compile in benchmark,
+      InputKey[Unit]("graph")          <<= InputKey[Unit]("graph")          in Compile in benchmark,
+      InputKey[Unit]("graphjava")      <<= InputKey[Unit]("graphjava")      in Compile in benchmark,
+      InputKey[Unit]("graphkryo")      <<= InputKey[Unit]("graphkryo")      in Compile in benchmark,
+      InputKey[Unit]("vectorkryo")     <<= InputKey[Unit]("vectorkryo")     in Compile in benchmark,
       organization := "org.scala-lang",
       publishMavenStyle := true,
       publishArtifact in Test := false,
@@ -180,13 +184,20 @@ object MyBuild extends Build {
       sourceDirectory in Compile <<= baseDirectory(root => root),
       sourceDirectory in Test <<= baseDirectory(root => root),
       scalacOptions ++= Seq("-optimise"),
-      InputKey[Unit]("travInt") <<= benchTask("TraversableIntBench", 100000 to 1000000 by 100000),
+      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-compiler" % _),
+      libraryDependencies += "de.javakaffee" % "kryo-serializers" % "0.22",
+      libraryDependencies += "com.esotericsoftware.kryo" % "kryo" % "2.20",
+      InputKey[Unit]("travInt")        <<= benchTask("TraversableIntBench", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntFreeMem") <<= benchTask("TraversableIntBenchFreeMem", 100000 to 1000000 by 100000),
-      InputKey[Unit]("travIntSize") <<= benchTask("TraversableIntBenchSize", 100000 to 1000000 by 100000),
-      InputKey[Unit]("listInt") <<= benchTask("ListIntBench", 100000 to 1000000 by 100000),
-      InputKey[Unit]("geoTrellis") <<= benchTask("GeoTrellisBench", 100000 to 1000000 by 100000),
-      InputKey[Unit]("evactor1") <<= benchTask("EvactorBench", 1000 to 10000 by 1000),
-      InputKey[Unit]("evactor2") <<= benchTask("EvactorBench", 20000 to 40000 by 2000)
+      InputKey[Unit]("travIntSize")    <<= benchTask("TraversableIntBenchSize", 100000 to 1000000 by 100000),
+      InputKey[Unit]("listInt")        <<= benchTask("ListIntBench", 100000 to 1000000 by 100000),
+      InputKey[Unit]("geoTrellis")     <<= benchTask("GeoTrellisBench", 100000 to 1000000 by 100000),
+      InputKey[Unit]("evactor1")       <<= benchTask("EvactorBench", 1000 to 10000 by 1000),
+      InputKey[Unit]("evactor2")       <<= benchTask("EvactorBench", 20000 to 40000 by 2000),
+      InputKey[Unit]("graph")          <<= benchTask("WikiGraphBench", 20000 to 40000 by 20000),
+      InputKey[Unit]("graphjava")      <<= benchTask("WikiGraphJavaBench", 20000 to 40000 by 20000),
+      InputKey[Unit]("graphkryo")      <<= benchTask("WikiGraphKryoBench", 20000 to 40000 by 20000),
+      InputKey[Unit]("vectorkryo")     <<= benchTask("KryoVectorBench", 100000 to 1000000 by 100000)
     )
   ) dependsOn(core)
 }
