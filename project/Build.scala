@@ -94,6 +94,7 @@ object MyBuild extends Build {
       InputKey[Unit]("geoTrellis") <<= InputKey[Unit]("geoTrellis") in Compile in benchmark,
       InputKey[Unit]("evactor1") <<= InputKey[Unit]("evactor1") in Compile in benchmark,
       InputKey[Unit]("evactor2") <<= InputKey[Unit]("evactor2") in Compile in benchmark,
+      InputKey[Unit]("graph") <<= InputKey[Unit]("graph") in Compile in benchmark,
       organization := "org.scala-lang.macro-paradise",
       publishMavenStyle := true,
       publishArtifact in Test := false,
@@ -185,13 +186,14 @@ object MyBuild extends Build {
       sourceDirectory in Compile <<= baseDirectory(root => root),
       sourceDirectory in Test <<= baseDirectory(root => root),
       scalacOptions ++= Seq("-optimise"),
-      InputKey[Unit]("travInt") <<= benchTask("TraversableIntBench", 100000 to 1000000 by 100000),
+      InputKey[Unit]("travInt")        <<= benchTask("TraversableIntBench", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntFreeMem") <<= benchTask("TraversableIntBenchFreeMem", 100000 to 1000000 by 100000),
-      InputKey[Unit]("travIntSize") <<= benchTask("TraversableIntBenchSize", 100000 to 1000000 by 100000),
-      InputKey[Unit]("listInt") <<= benchTask("ListIntBench", 100000 to 1000000 by 100000),
-      InputKey[Unit]("geoTrellis") <<= benchTask("GeoTrellisBench", 100000 to 1000000 by 100000),
-      InputKey[Unit]("evactor1") <<= benchTask("EvactorBench", 1000 to 10000 by 1000),
-      InputKey[Unit]("evactor2") <<= benchTask("EvactorBench", 20000 to 40000 by 2000)
+      InputKey[Unit]("travIntSize")    <<= benchTask("TraversableIntBenchSize", 100000 to 1000000 by 100000),
+      InputKey[Unit]("listInt")        <<= benchTask("ListIntBench", 100000 to 1000000 by 100000),
+      InputKey[Unit]("geoTrellis")     <<= benchTask("GeoTrellisBench", 100000 to 1000000 by 100000),
+      InputKey[Unit]("evactor1")       <<= benchTask("EvactorBench", 1000 to 10000 by 1000),
+      InputKey[Unit]("evactor2")       <<= benchTask("EvactorBench", 20000 to 40000 by 2000),
+      InputKey[Unit]("graph")          <<= benchTask("WikiGraph", 20000 to 40000 by 2000)
     )
   ) dependsOn(core)
 }
