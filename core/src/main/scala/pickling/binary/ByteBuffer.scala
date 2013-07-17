@@ -153,8 +153,6 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
 /* Implementation of `ByteBuffer` using `ArrayBuffer`.
  */
 final class ByteArrayBuffer extends ByteBuffer {
-  def trace(msg: String): Unit =
-    println("trace: " + msg)
 
   private val buf = ArrayBuffer[Byte]()
 
