@@ -5,11 +5,8 @@ import org.scalatest.FunSuite
 import scala.pickling._
 import json._
 
-// specialized to Double for now
-class Vertex(val label: String, initialValue: Double = 0.0d) {
+class Vertex(val label: String) {
   var neighbors: List[Vertex] = List()
-
-  var value: Double = initialValue
 
   var graph: Graph = null
 
@@ -43,10 +40,6 @@ class GraphJsonTest extends FunSuite {
     d3.connectTo(d1)
     d4.connectTo(d1)
     d4.connectTo(d3)
-
-    for (v <- g.vertices) {
-      v.value = 0.25d
-    }
 
     val pickle = g.pickle
     val res = pickle.unpickle[Graph]
