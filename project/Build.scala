@@ -186,6 +186,8 @@ object MyBuild extends Build {
       sourceDirectory in Compile <<= baseDirectory(root => root),
       sourceDirectory in Test <<= baseDirectory(root => root),
       scalacOptions ++= Seq("-optimise"),
+      libraryDependencies += "de.javakaffee" % "kryo-serializers" % "0.22",
+      libraryDependencies += "com.esotericsoftware.kryo" % "kryo" % "2.20",
       InputKey[Unit]("travInt")        <<= benchTask("TraversableIntBench", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntFreeMem") <<= benchTask("TraversableIntBenchFreeMem", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntSize")    <<= benchTask("TraversableIntBenchSize", 100000 to 1000000 by 100000),
@@ -193,7 +195,8 @@ object MyBuild extends Build {
       InputKey[Unit]("geoTrellis")     <<= benchTask("GeoTrellisBench", 100000 to 1000000 by 100000),
       InputKey[Unit]("evactor1")       <<= benchTask("EvactorBench", 1000 to 10000 by 1000),
       InputKey[Unit]("evactor2")       <<= benchTask("EvactorBench", 20000 to 40000 by 2000),
-      InputKey[Unit]("graph")          <<= benchTask("WikiGraph", 20000 to 40000 by 2000)
+      InputKey[Unit]("graph")          <<= benchTask("WikiGraph", 20000 to 40000 by 2000),
+      InputKey[Unit]("vectorkryo")     <<= benchTask("KryoVectorBench", 100000 to 1000000 by 100000)
     )
   ) dependsOn(core)
 }
