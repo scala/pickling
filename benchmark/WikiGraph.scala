@@ -5,14 +5,17 @@ import scala.util.parsing.input.CharArrayReader.EofCh
 import scala.collection.mutable.{Map, HashMap}
 import scala.testing.PicklingBenchmark
 import scala.io.Source
+import scala.util.Random
+
+// for Java Serialization:
+import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream, ObjectInputStream}
 
 import scala.pickling._
 import binary._
 
-class Vertex(val label: String) {
-  var neighbors: List[Vertex] = List()
+final class Vertex(val label: String, var neighbors: List[Vertex]) extends Serializable {
 
-  var graph: Graph = null
+  //var graph: Graph = null
 
   def connectTo(v: Vertex) {
     neighbors = v +: neighbors
@@ -21,11 +24,11 @@ class Vertex(val label: String) {
   override def toString = "Vertex(" + label + ")"
 }
 
-class Graph {
+class Graph extends Serializable {
   var vertices: Vector[Vertex] = Vector()
 
   def addVertex(v: Vertex): Vertex = {
-    v.graph = this
+    //v.graph = this
     vertices = v +: vertices
     v
   }
@@ -60,22 +63,23 @@ object GraphReader extends RegexParsers {
       val firstLabel = labels.head.substring(0, labels.head.length - 1)
       val firstVertexOpt = vertices.get(firstLabel)
       val firstVertex =
-        if (firstVertexOpt.isEmpty) graph.addVertex(new Vertex(names(firstLabel)))
+        if (firstVertexOpt.isEmpty) graph.addVertex(new Vertex(names(firstLabel), List()))
         else firstVertexOpt.get
       vertices.put(firstLabel, firstVertex)
 
-      for (targetLabel <- labels.tail) {
+      val targetVertices = for (targetLabel <- labels.tail) yield {
         val vertexOpt = vertices.get(targetLabel)
-        val targetVertex = if (vertexOpt.isEmpty) {
-          val newVertex = graph.addVertex(new Vertex(names(targetLabel)))
+
+        if (vertexOpt.isEmpty) {
+          val newVertex = graph.addVertex(new Vertex(names(targetLabel), List()))
           vertices.put(targetLabel, newVertex)
           newVertex
         } else {
           vertexOpt.get
         }
-
-        firstVertex.connectTo(targetVertex)
       }
+
+      firstVertex.neighbors = targetVertices
     }
 
     graph
@@ -92,7 +96,7 @@ object GraphReader extends RegexParsers {
   }
 }
 
-object WikiGraph extends PicklingBenchmark {
+object WikiGraph {
   val titlesPath = "benchmark/data/titles-sorted.txt"
   val linksPath  = "benchmark/data/links-sorted.txt"
 
@@ -112,9 +116,42 @@ object WikiGraph extends PicklingBenchmark {
 
   //GraphReader.printGraph(wikigraph)
   println("#vertices: " + wikigraph.vertices.size)
+}
 
+object WikiGraphBench extends PicklingBenchmark {
   override def run(): Unit = {
-    val pickle = wikigraph.pickle
+    val pickle = WikiGraph.wikigraph.pickle
     //val res = pickle.unpickle[Graph]
+  }
+}
+
+object WikiGraphJavaBench extends PicklingBenchmark {
+  override def run(): Unit = {
+    val bos = new ByteArrayOutputStream()
+    val out = new ObjectOutputStream(bos)
+    out.writeObject(WikiGraph.wikigraph)
+    val ba = bos.toByteArray()
+    // println("Bytes: " + ba.length)
+    //val bis = new ByteArrayInputStream(ba)
+    //val in = new ObjectInputStream(bis)
+    //val res = in.readObject.asInstanceOf[List[Int]]
+  }
+}
+
+object WikiGraphKryoBench extends testing.Benchmark {
+  var ser: KryoSerializer = _
+
+  override def tearDown() {
+    ser = null
+  }
+
+  override def run() {
+    val rnd: Int = Random.nextInt(10)
+    val arr = Array.ofDim[Byte](32 * 2048 * 2048 + rnd)
+    ser = new KryoSerializer
+
+    val pickled = ser.toBytes(WikiGraph.wikigraph, arr)
+    // println("Size: "+pickled.length)
+    //val res = ser.fromBytes[Vector[Int]](pickled)
   }
 }
