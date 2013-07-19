@@ -93,14 +93,8 @@ object MyBuild extends Build {
       InputKey[Unit]("geoTrellis") <<= InputKey[Unit]("geoTrellis") in Compile in benchmark,
       InputKey[Unit]("evactor1") <<= InputKey[Unit]("evactor1") in Compile in benchmark,
       InputKey[Unit]("evactor2") <<= InputKey[Unit]("evactor2") in Compile in benchmark,
-<<<<<<< HEAD
-      organization := "org.scala-lang",
-||||||| parent of 44620e985d... WikiGraph benchmark complete
-      organization := "org.scala-lang.macro-paradise",
-=======
       InputKey[Unit]("graph") <<= InputKey[Unit]("graph") in Compile in benchmark,
-      organization := "org.scala-lang.macro-paradise",
->>>>>>> 44620e985d... WikiGraph benchmark complete
+      organization := "org.scala-lang",
       publishMavenStyle := true,
       publishArtifact in Test := false,
       publishTo <<= version { v: String =>
