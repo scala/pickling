@@ -82,8 +82,22 @@ package binary {
             pos + 8
           case KEY_SCALA_STRING | KEY_JAVA_STRING =>
             byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])
+          case KEY_ARRAY_BYTE =>
+            byteBuffer.encodeByteArrayTo(pos, picklee.asInstanceOf[Array[Byte]])
+          case KEY_ARRAY_CHAR =>
+            byteBuffer.encodeCharArrayTo(pos, picklee.asInstanceOf[Array[Char]])
+          case KEY_ARRAY_SHORT =>
+            byteBuffer.encodeShortArrayTo(pos, picklee.asInstanceOf[Array[Short]])
           case KEY_ARRAY_INT =>
             byteBuffer.encodeIntArrayTo(pos, picklee.asInstanceOf[Array[Int]])
+          case KEY_ARRAY_LONG =>
+            byteBuffer.encodeLongArrayTo(pos, picklee.asInstanceOf[Array[Long]])
+          case KEY_ARRAY_BOOLEAN =>
+            byteBuffer.encodeBooleanArrayTo(pos, picklee.asInstanceOf[Array[Boolean]])
+          case KEY_ARRAY_FLOAT =>
+            byteBuffer.encodeFloatArrayTo(pos, picklee.asInstanceOf[Array[Float]])
+          case KEY_ARRAY_DOUBLE =>
+            byteBuffer.encodeDoubleArrayTo(pos, picklee.asInstanceOf[Array[Double]])
           case _ =>
             if (hints.isElidedType) byteBuffer.encodeByteTo(pos, ELIDED_TAG)
             else pos
@@ -208,7 +222,14 @@ package binary {
             val (r, np) = byteBuffer.decodeLongFrom(pos)
             (java.lang.Double.longBitsToDouble(r), np)
           case KEY_SCALA_STRING | KEY_JAVA_STRING => byteBuffer.decodeStringFrom(pos)
+          case KEY_ARRAY_BYTE => byteBuffer.decodeByteArrayFrom(pos)
+          case KEY_ARRAY_SHORT => byteBuffer.decodeShortArrayFrom(pos)
+          case KEY_ARRAY_CHAR => byteBuffer.decodeCharArrayFrom(pos)
           case KEY_ARRAY_INT => byteBuffer.decodeIntArrayFrom(pos)
+          case KEY_ARRAY_LONG => byteBuffer.decodeLongArrayFrom(pos)
+          case KEY_ARRAY_BOOLEAN => byteBuffer.decodeBooleanArrayFrom(pos)
+          case KEY_ARRAY_FLOAT => byteBuffer.decodeFloatArrayFrom(pos)
+          case KEY_ARRAY_DOUBLE => byteBuffer.decodeDoubleArrayFrom(pos)
         }
       }
       pos = newpos
@@ -254,14 +275,19 @@ package binary {
     val KEY_SCALA_STRING = FastTypeTag.ScalaString.key
     val KEY_JAVA_STRING  = FastTypeTag.JavaString.key
 
-    val KEY_ARRAY_BYTE   = FastTypeTag.ArrayByte.key
-    val KEY_ARRAY_INT    = FastTypeTag.ArrayInt.key
-    val KEY_ARRAY_LONG   = FastTypeTag.ArrayLong.key
+    val KEY_ARRAY_BYTE    = FastTypeTag.ArrayByte.key
+    val KEY_ARRAY_SHORT   = FastTypeTag.ArrayShort.key
+    val KEY_ARRAY_CHAR    = FastTypeTag.ArrayChar.key
+    val KEY_ARRAY_INT     = FastTypeTag.ArrayInt.key
+    val KEY_ARRAY_LONG    = FastTypeTag.ArrayLong.key
+    val KEY_ARRAY_BOOLEAN = FastTypeTag.ArrayBoolean.key
+    val KEY_ARRAY_FLOAT   = FastTypeTag.ArrayFloat.key
+    val KEY_ARRAY_DOUBLE  = FastTypeTag.ArrayDouble.key
 
     val KEY_REF = FastTypeTag.Ref.key
 
     val primitives = Set(KEY_NULL, KEY_REF, KEY_BYTE, KEY_SHORT, KEY_CHAR, KEY_INT, KEY_LONG, KEY_BOOLEAN, KEY_FLOAT, KEY_DOUBLE, KEY_UNIT, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_INT, KEY_ARRAY_LONG)
-    val nullablePrimitives = Set(KEY_NULL, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_INT, KEY_ARRAY_LONG)
+    val nullablePrimitives = Set(KEY_NULL, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_SHORT, KEY_ARRAY_CHAR, KEY_ARRAY_INT, KEY_ARRAY_LONG, KEY_ARRAY_BOOLEAN, KEY_ARRAY_FLOAT, KEY_ARRAY_DOUBLE)
 
     type PickleType = BinaryPickle
     type OutputType = EncodingOutput[Array[Byte]]
