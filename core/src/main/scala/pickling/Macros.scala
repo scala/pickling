@@ -69,7 +69,7 @@ trait PicklerMacros extends Macro {
         case (None, lst) => q""
         case (Some(tree), lst) =>
           val typeNameLen = tpe.key.getBytes("UTF-8").length
-          val noNullTree  = lst.foldLeft(q"true")((acc, curr) => q"$acc && ($curr != null)")
+          val noNullTree  = lst.foldLeft[Tree](Literal(Constant(true)))((acc, curr) => q"$acc && ($curr != null)")
           q"""
             if ($noNullTree) {
               val size = $tree + $typeNameLen + 4
