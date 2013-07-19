@@ -37,10 +37,13 @@ trait PicklerMacros extends Macro {
     // Note: this takes a "flattened" ClassIR
     // returns a tree with the size and a list of trees that have to be checked for null
     def computeKnownSizeIfPossible(cir: ClassIR): (Option[Tree], List[Tree]) = {
-      // TODO: what if tpe itself is effectively primitive?
-      // I can't quite figure out what's going on here, so I'll leave this as a todo
-      if (tpe <:< typeOf[Array[_]]) None -> List()
-      else {
+      if (tpe <:< typeOf[Array[_]]) {
+        val TypeRef(_, _, List(elTpe)) = tpe
+        val knownSize =
+          if (elTpe.isEffectivelyPrimitive) Some(q"picklee.length * ${primitiveSizes(elTpe)} + 4")
+          else None
+        knownSize -> Nil
+      } else {
         val possibleSizes: List[(Option[Tree], Option[Tree])] = cir.fields map {
           case fld if fld.tpe.isEffectivelyPrimitive =>
             val isScalar = !(fld.tpe <:< typeOf[Array[_]])
