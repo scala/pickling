@@ -44,21 +44,6 @@ package object pickling {
 
   var cachedMirror: ru.Mirror = null
   def currentMirror: ru.Mirror = macro Compat.CurrentMirrorMacro_impl
-  trait CurrentMirrorMacro extends Macro {
-    def impl: c.Tree = {
-      import c.universe._
-      c.inferImplicitValue(typeOf[ru.Mirror], silent = true) orElse {
-        val cachedMirror = q"scala.pickling.`package`.cachedMirror"
-        q"""
-          if ($cachedMirror != null) $cachedMirror
-          else {
-            $cachedMirror = scala.reflect.runtime.currentMirror
-            $cachedMirror
-          }
-        """
-      }
-    }
-  }
 
   def typeToString(tpe: Type): String = tpe.key
 
