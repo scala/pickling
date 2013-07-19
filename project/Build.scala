@@ -96,6 +96,7 @@ object MyBuild extends Build {
       InputKey[Unit]("graph")          <<= InputKey[Unit]("graph")          in Compile in benchmark,
       InputKey[Unit]("graphjava")      <<= InputKey[Unit]("graphjava")      in Compile in benchmark,
       InputKey[Unit]("graphkryo")      <<= InputKey[Unit]("graphkryo")      in Compile in benchmark,
+      InputKey[Unit]("vectorkryo")     <<= InputKey[Unit]("vectorkryo")     in Compile in benchmark,
       organization := "org.scala-lang",
       publishMavenStyle := true,
       publishArtifact in Test := false,
