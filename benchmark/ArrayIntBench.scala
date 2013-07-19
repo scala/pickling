@@ -1,7 +1,7 @@
 import scala.pickling._
 import binary._
 
-object ArrayIntGeneratedBench extends scala.testing.PicklingBenchmark {
+object ArrayIntBench extends scala.testing.PicklingBenchmark {
   val coll = (1 to size).toArray
 
   override def run() {

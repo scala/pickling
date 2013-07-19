@@ -97,6 +97,7 @@ object MyBuild extends Build {
       InputKey[Unit]("graphjava")      <<= InputKey[Unit]("graphjava")      in Compile in benchmark,
       InputKey[Unit]("graphkryo")      <<= InputKey[Unit]("graphkryo")      in Compile in benchmark,
       InputKey[Unit]("vectorkryo")     <<= InputKey[Unit]("vectorkryo")     in Compile in benchmark,
+      InputKey[Unit]("arrayInt")       <<= InputKey[Unit]("arrayInt")       in Compile in benchmark,
       organization := "org.scala-lang",
       publishMavenStyle := true,
       publishArtifact in Test := false,
@@ -197,7 +198,8 @@ object MyBuild extends Build {
       InputKey[Unit]("graph")          <<= benchTask("WikiGraphBench", 20000 to 40000 by 20000),
       InputKey[Unit]("graphjava")      <<= benchTask("WikiGraphJavaBench", 20000 to 40000 by 20000),
       InputKey[Unit]("graphkryo")      <<= benchTask("WikiGraphKryoBench", 20000 to 40000 by 20000),
-      InputKey[Unit]("vectorkryo")     <<= benchTask("KryoVectorBench", 100000 to 1000000 by 100000)
+      InputKey[Unit]("vectorkryo")     <<= benchTask("KryoVectorBench", 100000 to 1000000 by 100000),
+      InputKey[Unit]("arrayInt")       <<= benchTask("ArrayIntBench", 500000 to 5000000 by 500000)
     )
   ) dependsOn(core)
 }
