@@ -138,7 +138,7 @@ object WikiGraphJavaBench extends PicklingBenchmark {
   }
 }
 
-object WikiGraphKryoBench extends testing.Benchmark {
+object WikiGraphKryoBench extends scala.testing.Benchmark {
   var ser: KryoSerializer = _
 
   override def tearDown() {
