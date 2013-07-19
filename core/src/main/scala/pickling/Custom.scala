@@ -115,8 +115,11 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   implicit def refPickler: SPickler[refs.Ref] = throw new Error("cannot pickle refs") // TODO: make this a macro
   implicit val refUnpickler: Unpickler[refs.Ref] = new PrimitivePicklerUnpickler[refs.Ref]
 
-  implicit def genListPickler[T](implicit format: PickleFormat): SPickler[::[T]] with Unpickler[::[T]] = macro Compat.ListPicklerUnpicklerMacro_impl[T]
-  implicit def genVectorPickler[T](implicit format: PickleFormat): SPickler[Vector[T]] with Unpickler[Vector[T]] = macro Compat.VectorPicklerUnpicklerMacro_impl[T]
+  implicit def genListPickler[T](implicit format: PickleFormat): SPickler[::[T]] with Unpickler[::[T]] =
+    macro Compat.ListPicklerUnpicklerMacro_impl[T]
+
+  implicit def genVectorPickler[T](implicit format: PickleFormat): SPickler[Vector[T]] with Unpickler[Vector[T]] =
+    macro Compat.VectorPicklerUnpicklerMacro_impl[T]
 }
 
 trait ListPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
