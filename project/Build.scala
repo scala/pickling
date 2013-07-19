@@ -173,15 +173,6 @@ object MyBuild extends Build {
     )
   ) dependsOn(core)
 
-  lazy val runtime: Project = Project(
-    "runtime",
-    file("runtime"),
-    settings = buildSettings ++ (if (useLocalBuildOfParadise) Nil else Seq(
-      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _),
-      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-compiler" % _)
-    ))
-  ) dependsOn(core)
-
   lazy val benchmark: Project = Project(
     "benchmark",
     file("benchmark"),
@@ -189,6 +180,7 @@ object MyBuild extends Build {
       sourceDirectory in Compile <<= baseDirectory(root => root),
       sourceDirectory in Test <<= baseDirectory(root => root),
       scalacOptions ++= Seq("-optimise"),
+      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-compiler" % _),
       InputKey[Unit]("travInt") <<= benchTask("TraversableIntBench", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntFreeMem") <<= benchTask("TraversableIntBenchFreeMem", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntSize") <<= benchTask("TraversableIntBenchSize", 100000 to 1000000 by 100000),
@@ -197,5 +189,5 @@ object MyBuild extends Build {
       InputKey[Unit]("evactor1") <<= benchTask("EvactorBench", 1000 to 10000 by 1000),
       InputKey[Unit]("evactor2") <<= benchTask("EvactorBench", 20000 to 40000 by 2000)
     )
-  ) dependsOn(core, runtime)
+  ) dependsOn(core)
 }
