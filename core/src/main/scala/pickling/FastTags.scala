@@ -34,8 +34,13 @@ object FastTypeTag {
   val JavaString = stdTag[java.lang.String]
 
   val ArrayByte = stdTag[Array[Byte]]
+  val ArrayShort = stdTag[Array[Short]]
+  val ArrayChar = stdTag[Array[Char]]
   val ArrayInt = stdTag[Array[Int]]
   val ArrayLong = stdTag[Array[Long]]
+  val ArrayBoolean = stdTag[Array[Boolean]]
+  val ArrayFloat = stdTag[Array[Float]]
+  val ArrayDouble = stdTag[Array[Double]]
   implicit val Nothing: FastTypeTag[Nothing] = stdTag[Nothing]
 
   val Ref = stdTag[refs.Ref]
