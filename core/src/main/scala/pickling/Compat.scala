@@ -46,7 +46,7 @@ object Compat {
   def UnpickleMacros_readerUnpickle[T: c.WeakTypeTag](c: Context): c.Expr[T] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with UnpickleMacros
-    c.Expr[T](bundle.readerUnpickle[T](false))
+    c.Expr[T](bundle.readerUnpickle[T])
   }
 
   def UnpickleMacros_readerUnpickleTopLevel[T: c.WeakTypeTag](c: Context): c.Expr[T] = {
@@ -83,6 +83,18 @@ object Compat {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with CurrentMirrorMacro
     c.Expr[ru.Mirror](bundle.impl)
+  }
+
+  def FastTypeTagMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[FastTypeTag[T]] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with FastTypeTagMacros
+    c.Expr[FastTypeTag[T]](bundle.impl[T])
+  }
+
+  def FastTypeTagMacros_apply(c: Context)(key: c.Expr[String]): c.Expr[FastTypeTag[_]] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with FastTypeTagMacros
+    c.Expr[FastTypeTag[_]](bundle.apply(key.tree))
   }
 }
 

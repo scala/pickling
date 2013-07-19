@@ -16,15 +16,9 @@ trait FastTypeTag[T] extends Equals {
 }
 
 object FastTypeTag {
-  implicit def materializeFastTypeTag[T]: FastTypeTag[T] = macro materializeImpl[T]
-  def materializeImpl[T: c.WeakTypeTag](c: Context): c.Expr[FastTypeTag[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with FastTypeTagMacros
-    c.Expr[FastTypeTag[T]](bundle.materializeImpl[T])
-  }
+  implicit def materializeFastTypeTag[T]: FastTypeTag[T] = macro Compat.FastTypeTagMacros_impl[T]
 
   private def stdTag[T: ru.TypeTag]: FastTypeTag[T] = apply(scala.reflect.runtime.currentMirror, ru.typeOf[T], ru.typeOf[T].key).asInstanceOf[FastTypeTag[T]]
-
   val Null    = stdTag[Null]
   val Byte    = stdTag[Byte]
   val Short   = stdTag[Short]
@@ -55,16 +49,11 @@ object FastTypeTag {
   }
 
   def apply(mirror: ru.Mirror, key: String): FastTypeTag[_] = apply(mirror, typeFromString(mirror, key), key)
-  def apply(key: String): FastTypeTag[_] = macro applyImpl
-  def applyImpl(c: Context)(key: c.Expr[String]): c.Expr[FastTypeTag[_]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with FastTypeTagMacros
-    c.Expr[FastTypeTag[_]](bundle.applyImpl(key.tree))
-  }
+  def apply(key: String): FastTypeTag[_] = macro Compat.FastTypeTagMacros_apply
 }
 
 trait FastTypeTagMacros extends Macro {
-  def materializeImpl[T: c.WeakTypeTag]: c.Tree = {
+  def impl[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
     val T = weakTypeOf[T]
     q"""
@@ -75,7 +64,7 @@ trait FastTypeTagMacros extends Macro {
       }
     """
   }
-  def applyImpl(key: c.Tree): c.Tree = {
+  def apply(key: c.Tree): c.Tree = {
     import c.universe._
     q"""scala.pickling.FastTypeTag(scala.pickling.`package`.currentMirror, $key)"""
   }

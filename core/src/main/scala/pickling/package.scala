@@ -45,16 +45,18 @@ package object pickling {
   var cachedMirror: ru.Mirror = null
   def currentMirror: ru.Mirror = macro Compat.CurrentMirrorMacro_impl
   trait CurrentMirrorMacro extends Macro {
-    import c.universe._
     def impl: c.Tree = {
-      val cachedMirror = q"scala.pickling.`package`.cachedMirror"
-      q"""
-        if ($cachedMirror != null) $cachedMirror
-        else {
-          $cachedMirror = scala.reflect.runtime.currentMirror
-          $cachedMirror
-        }
-      """
+      import c.universe._
+      c.inferImplicitValue(typeOf[ru.Mirror], silent = true) orElse {
+        val cachedMirror = q"scala.pickling.`package`.cachedMirror"
+        q"""
+          if ($cachedMirror != null) $cachedMirror
+          else {
+            $cachedMirror = scala.reflect.runtime.currentMirror
+            $cachedMirror
+          }
+        """
+      }
     }
   }
 
@@ -237,7 +239,7 @@ package pickling {
     implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
     def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit format: PickleFormat, share: refs.Share): Unpickler[_] = {
       // println(s"generating runtime unpickler for ${tag.tpe}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
-      //val runtime = new CompiledUnpicklerRuntime(mirror, tag)
+      //val runtime = new CompiledUnpicklerRuntime(mirror, tag.tpe)
       val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
       runtime.genUnpickler
     }

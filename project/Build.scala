@@ -70,7 +70,7 @@ object MyBuild extends Build {
           Nil
       }
     } else {
-      println("Sonatype credentials cannot be loaded: -Dmaven.settings.file is not specified.")
+      // println("Sonatype credentials cannot be loaded: -Dmaven.settings.file is not specified.")
       Nil
     }
   }
