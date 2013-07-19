@@ -5,6 +5,7 @@ import scala.language.existentials
 import scala.reflect.macros.Context
 import scala.reflect.api.Universe
 import scala.reflect.runtime.universe._
+import scala.reflect.runtime.{universe => ru}
 
 import scala.collection.mutable.{Map => MutableMap, ListBuffer => MutableList, WeakHashMap, Set => MutableSet}
 import scala.collection.mutable.{Stack => MutableStack, Queue => MutableQueue}
@@ -407,5 +408,21 @@ trait PickleTools {
     val hints = this.hints
     if (!areHintsPinned) this.hints = new Hints
     body(hints)
+  }
+}
+
+trait CurrentMirrorMacro extends Macro {
+  def impl: c.Tree = {
+    import c.universe._
+    c.inferImplicitValue(typeOf[ru.Mirror], silent = true) orElse {
+      val cachedMirror = q"scala.pickling.`package`.cachedMirror"
+      q"""
+        if ($cachedMirror != null) $cachedMirror
+        else {
+          $cachedMirror = scala.reflect.runtime.currentMirror
+          $cachedMirror
+        }
+      """
+    }
   }
 }
