@@ -409,7 +409,9 @@ trait UnpickleMacros extends Macro {
       if (sym.isNotNullable) createUnpickler(tpe)
       else q"""
         val tag = scala.pickling.FastTypeTag(typeString)
-        if (tag.key != scala.pickling.FastTypeTag.Null.key) ${createUnpickler(tpe)} else ${createUnpickler(NullTpe)}
+        if (tag.key == scala.pickling.FastTypeTag.Null.key) ${createUnpickler(NullTpe)}
+        else if (tag.key == scala.pickling.FastTypeTag.Ref.key) ${createUnpickler(RefTpe)}
+        else ${createUnpickler(tpe)}
       """
     }
 

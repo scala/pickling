@@ -234,6 +234,7 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat { self =>
   val c: Context
   import c.universe._
   import definitions._
+  val RefTpe = weakTypeOf[refs.Ref]
 
   val tools = new Tools[c.type](c)
   import tools._
