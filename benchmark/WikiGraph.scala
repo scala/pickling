@@ -136,16 +136,7 @@ object WikiGraph {
   // println("#vertices: " + wikigraph.vertices.size)
 }
 
-object WikiGraphPicklingSlowBench extends PicklingBenchmark {
-  override def run(): Unit = {
-    val pickle = WikiGraph.wikigraph.pickle
-    scala.pickling.`package`.clearPicklees()
-    val res = pickle.unpickle[Graph]
-    scala.pickling.`package`.clearUnpicklees()
-  }
-}
-
-object WikiGraphPicklingFastBench extends PicklingBenchmark {
+object WikiGraphPicklingBench extends PicklingBenchmark {
   override def run(): Unit = {
     val pickle = WikiGraph.wikigraph.pickle
     val res = pickle.unpickle[Graph]
