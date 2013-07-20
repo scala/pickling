@@ -118,7 +118,7 @@ object WikiGraph {
   println("#vertices: " + wikigraph.vertices.size)
 }
 
-object WikiGraphBench extends PicklingBenchmark {
+object WikiGraphPicklingBench extends PicklingBenchmark {
   override def run(): Unit = {
     val pickle = WikiGraph.wikigraph.pickle
     //val res = pickle.unpickle[Graph]
