@@ -2,7 +2,7 @@ import scala.pickling._
 import binary._
 import java.lang.{Runtime => JRuntime}
 
-object TraversableIntBenchFreeMem extends scala.testing.PicklingBenchmark {
+object TraversableIntBenchFreeMem extends scala.pickling.testing.PicklingBenchmark {
   override val enableOutput = false
 
   val coll = (1 to size).toVector

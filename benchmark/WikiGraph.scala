@@ -3,7 +3,7 @@ import scala.util.parsing.input.Reader
 import scala.util.parsing.input.CharArrayReader.EofCh
 
 import scala.collection.mutable.{Map, HashMap}
-import scala.testing.PicklingBenchmark
+import scala.pickling.testing.PicklingBenchmark
 import scala.io.Source
 import scala.util.Random
 
@@ -138,7 +138,7 @@ object WikiGraphJavaBench extends PicklingBenchmark {
   }
 }
 
-object WikiGraphKryoBench extends scala.testing.Benchmark {
+object WikiGraphKryoBench extends scala.pickling.testing.Benchmark {
   var ser: KryoSerializer = _
 
   override def tearDown() {

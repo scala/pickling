@@ -9,7 +9,7 @@ import scala.collection.mutable.ArrayBuffer
 import spark.util.Vector
 final case class DataPoint(x: Vector, y: Double) extends Serializable
 
-trait SparkLRBenchmark extends scala.testing.PicklingBenchmark {
+trait SparkLRBenchmark extends scala.pickling.testing.PicklingBenchmark {
   val data = {
     def generatePoint(i: Int) = {
       val y = if (i % 2 == 0) -1 else 1
