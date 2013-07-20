@@ -163,9 +163,14 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
           val eltag = "bam!"
           implicitly[scala.pickling.FastTypeTag[$eltpe]]
         }
+        implicit val colltag: scala.pickling.FastTypeTag[$tpe] = {
+          val colltag = "bam!"
+          implicitly[scala.pickling.FastTypeTag[$tpe]]
+        }
 
         def pickle(picklee: $tpe, builder: PBuilder): Unit = {
-          builder.beginEntry()
+          builder.hintTag(colltag)
+          builder.beginEntry(picklee)
           if ($isPrimitive) {
             builder.hintStaticallyElidedType()
             builder.hintTag(eltag)
