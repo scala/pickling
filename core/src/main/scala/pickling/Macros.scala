@@ -280,7 +280,7 @@ trait PickleMacros extends Macro {
   def pickleTo[T: c.WeakTypeTag](output: c.Tree)(format: c.Tree): c.Tree = {
     val tpe = weakTypeOf[T]
     val q"${_}($pickleeArg)" = c.prefix.tree
-    val endPickle = if (shouldBotherAboutSharing(tpe)) q"clearPicklees()" else q"";
+    val endPickle = if (shouldBotherAboutCleaning(tpe)) q"clearPicklees()" else q"";
     q"""
       import scala.pickling._
       val picklee: $tpe = $pickleeArg
@@ -293,7 +293,7 @@ trait PickleMacros extends Macro {
   def pickle[T: c.WeakTypeTag](format: c.Tree): c.Tree = {
     val tpe = weakTypeOf[T]
     val q"${_}($pickleeArg)" = c.prefix.tree
-    val endPickle = if (shouldBotherAboutSharing(tpe)) q"clearPicklees()" else q"";
+    val endPickle = if (shouldBotherAboutCleaning(tpe)) q"clearPicklees()" else q"";
     q"""
       import scala.pickling._
       val picklee: $tpe = $pickleeArg
@@ -429,7 +429,7 @@ trait UnpickleMacros extends Macro {
 
     val staticHint = if (sym.isEffectivelyFinal && !isTopLevel) (q"reader.hintStaticallyElidedType()": Tree) else q"";
     val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
-    val unpickleeCleanup = if (isTopLevel && shouldBotherAboutSharing(tpe)) q"clearUnpicklees()" else q""
+    val unpickleeCleanup = if (isTopLevel && shouldBotherAboutCleaning(tpe)) q"clearUnpicklees()" else q""
 
     q"""
       val reader = $readerArg

@@ -108,8 +108,6 @@ object MyBuild extends Build {
       InputKey[Unit]("sparklrpick")        <<= InputKey[Unit]("sparklrpick")        in Compile in benchmark,
       InputKey[Unit]("sparklrjava")        <<= InputKey[Unit]("sparklrjava")        in Compile in benchmark,
       InputKey[Unit]("sparklrkryo")        <<= InputKey[Unit]("sparklrkryo")        in Compile in benchmark,
-      InputKey[Unit]("slow")               <<= InputKey[Unit]("slow")               in Compile in benchmark,
-      InputKey[Unit]("fast")               <<= InputKey[Unit]("fast")               in Compile in benchmark,
       organization := "org.scala-lang",
       publishMavenStyle := true,
       publishArtifact in Test := false,
@@ -220,9 +218,7 @@ object MyBuild extends Build {
       InputKey[Unit]("arrayInt")           <<= benchTask("ArrayIntBench", 500000 to 5000000 by 500000),
       InputKey[Unit]("sparklrpick")        <<= benchTask("SparkLRPicklingBench", 20000 to 40000 by 2000),
       InputKey[Unit]("sparklrjava")        <<= benchTask("SparkLRJavaBench", 20000 to 40000 by 2000),
-      InputKey[Unit]("sparklrkryo")        <<= benchTask("SparkLRKryoBench", 20000 to 40000 by 2000),
-      InputKey[Unit]("slow")               <<= benchTask("WikiGraphPicklingSlowBench", 20000 to 40000 by 20000),
-      InputKey[Unit]("fast")               <<= benchTask("WikiGraphPicklingFastBench", 20000 to 40000 by 20000)
+      InputKey[Unit]("sparklrkryo")        <<= benchTask("SparkLRKryoBench", 20000 to 40000 by 2000)
     )
   ) dependsOn(core)
 }
