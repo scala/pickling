@@ -1,3 +1,6 @@
+import scala.testing.PicklingBenchmark
+import scala.util.Random
+
 import scala.pickling._
 import binary._
 
@@ -25,5 +28,23 @@ object TraversableJavaIntBench extends scala.testing.PicklingBenchmark {
     val bis = new ByteArrayInputStream(ba)
     val in = new ObjectInputStream(bis)
     val res = in.readObject.asInstanceOf[Vector[Int]]
+  }
+}
+
+object TraversableKryoIntBench extends scala.testing.PicklingBenchmark {
+  var ser: KryoSerializer = _
+  val coll = (1 to size).toVector
+
+  override def tearDown() {
+    ser = null
+  }
+
+  override def run() {
+    val rnd: Int = Random.nextInt(10)
+    val arr = Array.ofDim[Byte](32 * 2048 * 2048 + rnd)
+    ser = new KryoSerializer
+
+    val pickled = ser.toBytes(coll, arr)
+    val unpickled = ser.fromBytes[List[Int]](pickled)
   }
 }
