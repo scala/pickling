@@ -38,8 +38,8 @@ trait PicklerMacros extends Macro {
     // Note: this takes a "flattened" ClassIR
     // returns a tree with the size and a list of trees that have to be checked for null
     def computeKnownSizeIfPossible(cir: ClassIR): (Option[Tree], List[Tree]) = {
-      if (tpe <:< typeOf[Array[_]]) {
-        val TypeRef(_, _, List(elTpe)) = tpe
+      if (cir.tpe <:< typeOf[Array[_]]) {
+        val TypeRef(_, _, List(elTpe)) = cir.tpe
         val knownSize =
           if (elTpe.isEffectivelyPrimitive) Some(q"picklee.length * ${primitiveSizes(elTpe)} + 4")
           else None
