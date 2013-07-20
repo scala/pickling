@@ -228,6 +228,11 @@ abstract class ShareAnalyzer[U <: Universe](val u: U) {
     if (shareNothing) false
     else canCauseLoops(tpe)
   }
+
+  def shouldBotherAboutCleaning(tpe: Type): Boolean = {
+    if (shareNothing) false
+    else true // TODO: need to be more precise here
+  }
 }
 
 abstract class Macro extends QuasiquoteCompat with Reflection211Compat { self =>
@@ -287,6 +292,7 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat { self =>
     }
   }
 
+  def shouldBotherAboutCleaning(tpe: Type) = shareAnalyzer.shouldBotherAboutCleaning(tpe)
   def shouldBotherAboutSharing(tpe: Type) = shareAnalyzer.shouldBotherAboutSharing(tpe)
   def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
 
