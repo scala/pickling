@@ -3,14 +3,14 @@ package scala.pickling
 import scala.reflect.ClassTag
 
 class ReactMap {
-  val emptyValNil = Int.MinValue
+  val emptyValNil = -1
 
   private var keytable: Array[AnyRef]   = new Array[AnyRef](ReactMap.initSize)
   private var valtable: Array[Int] = Array.fill[Int](ReactMap.initSize)(Int.MinValue)
 
   private var sz = 0
 
-  private def lookup(k: AnyRef): Int = {
+  def lookup(k: AnyRef): Int = {
     var pos = index(k)
     val nil = null
     var curr = keytable(pos)
@@ -24,7 +24,7 @@ class ReactMap {
     else valtable(pos)
   }
 
-  private def insert(k: AnyRef, v: Int): Int = {
+  def insert(k: AnyRef, v: Int): Int = {
     checkResize()
 
     var pos = index(k)
@@ -153,7 +153,7 @@ class ReactMap {
   }
 
   def size: Int = sz
-  
+
 }
 
 
@@ -161,7 +161,7 @@ object ReactMap {
 
   def apply() = new ReactMap
 
-  val initSize = 16
+  val initSize = 1024
 
   val loadFactor = 450
 
