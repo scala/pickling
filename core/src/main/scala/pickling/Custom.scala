@@ -146,6 +146,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
     val tpe = mkType(weakTypeOf[T])
     val eltpe = weakTypeOf[T]
     val isPrimitive = eltpe.isEffectivelyPrimitive
+    val isFinal = eltpe.isEffectivelyFinal
     val picklerUnpicklerName = c.fresh(syntheticPicklerUnpicklerName(tpe).toTermName)
     q"""
       implicit object $picklerUnpicklerName extends scala.pickling.SPickler[$tpe] with scala.pickling.Unpickler[$tpe] {
@@ -175,10 +176,9 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
         def pickle(picklee: $tpe, builder: PBuilder): Unit = {
           builder.hintTag(colltag)
           builder.beginEntry(picklee)
-          if ($isPrimitive) {
-            builder.hintStaticallyElidedType()
-            builder.hintTag(eltag)
-            builder.pinHints()
+          ${
+            if (isPrimitive) q"builder.hintStaticallyElidedType(); builder.hintTag(eltag); builder.pinHints()".asInstanceOf[Tree]
+            else q"".asInstanceOf[Tree]
           }
           val arr = ${mkArray(q"picklee")}
           val length = arr.length
@@ -195,16 +195,18 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
             }
             i += 1
           }
-          if ($isPrimitive) builder.unpinHints()
+          ${
+            if (isPrimitive) q"builder.unpinHints()".asInstanceOf[Tree]
+            else q"".asInstanceOf[Tree]
+          }
           builder.endCollection(i)
           builder.endEntry()
         }
         def unpickle(tag: => scala.pickling.FastTypeTag[_], reader: PReader): Any = {
           val arrReader = reader.beginCollection()
-          if ($isPrimitive) {
-            arrReader.hintStaticallyElidedType()
-            arrReader.hintTag(eltag)
-            arrReader.pinHints()
+          ${
+            if (isPrimitive) q"arrReader.hintStaticallyElidedType(); arrReader.hintTag(eltag); arrReader.pinHints()".asInstanceOf[Tree]
+            else q"".asInstanceOf[Tree]
           }
           val length = arrReader.readLength()
           var buffer = ${mkBuffer(eltpe)}
@@ -222,7 +224,10 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
             }
             i += 1
           }
-          if ($isPrimitive) arrReader.unpinHints()
+          ${
+            if (isPrimitive) q"arrReader.unpinHints()".asInstanceOf[Tree]
+            else q"".asInstanceOf[Tree]
+          }
           arrReader.endCollection()
           ${mkResult(q"buffer")}
         }
