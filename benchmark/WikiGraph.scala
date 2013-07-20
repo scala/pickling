@@ -159,10 +159,9 @@ object WikiGraphJavaBench extends PicklingBenchmark {
     out.writeObject(WikiGraph.wikigraph)
     val ba = bos.toByteArray()
     // println("Bytes: " + ba.length)
-    // TODO: uncrash this
-    // val bis = new ByteArrayInputStream(ba)
-    // val in = new ObjectInputStream(bis)
-    // val res = in.readObject.asInstanceOf[Graph]
+    val bis = new ByteArrayInputStream(ba)
+    val in = new ObjectInputStream(bis)
+    val res = in.readObject.asInstanceOf[Graph]
   }
 }
 
@@ -180,6 +179,7 @@ object WikiGraphKryoBench extends scala.pickling.testing.Benchmark {
 
     val pickled = ser.toBytes(WikiGraph.wikigraph, arr)
     // println("Size: "+pickled.length)
-    val res = ser.fromBytes[Graph](pickled)
+    // TODO: uncrash this
+    // val res = ser.fromBytes[Graph](pickled)
   }
 }
