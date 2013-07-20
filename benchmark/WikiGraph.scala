@@ -123,26 +123,32 @@ object WikiGraph {
       "no_title[" + label + "]"
     }
   }
-  println("Building page title map...")
+  // println("Building page title map...")
   val titles = Source.fromFile(titlesPath).getLines()
   for ((title, i) <- titles.zipWithIndex)
     names.put("" + i, title)
 
-  println("Reading wikipedia graph from file... " + linksPath)
+  // println("Reading wikipedia graph from file... " + linksPath)
   val lines: Iterator[String] = Source.fromFile(linksPath).getLines()
   val wikigraph: Graph        = GraphReader.readGraph(lines, names)
 
   //GraphReader.printGraph(wikigraph)
-  println("#vertices: " + wikigraph.vertices.size)
+  // println("#vertices: " + wikigraph.vertices.size)
 }
 
-object WikiGraphPicklingBench extends PicklingBenchmark {
+object WikiGraphPicklingSlowBench extends PicklingBenchmark {
   override def run(): Unit = {
     val pickle = WikiGraph.wikigraph.pickle
     scala.pickling.`package`.clearPicklees()
     val res = pickle.unpickle[Graph]
     scala.pickling.`package`.clearUnpicklees()
-    // if (!WikiGraph.wikigraph.sameAs(res)) println("fail!")
+  }
+}
+
+object WikiGraphPicklingFastBench extends PicklingBenchmark {
+  override def run(): Unit = {
+    val pickle = WikiGraph.wikigraph.pickle
+    val res = pickle.unpickle[Graph]
   }
 }
 
@@ -153,9 +159,10 @@ object WikiGraphJavaBench extends PicklingBenchmark {
     out.writeObject(WikiGraph.wikigraph)
     val ba = bos.toByteArray()
     // println("Bytes: " + ba.length)
-    val bis = new ByteArrayInputStream(ba)
-    val in = new ObjectInputStream(bis)
-    val res = in.readObject.asInstanceOf[Graph]
+    // TODO: uncrash this
+    // val bis = new ByteArrayInputStream(ba)
+    // val in = new ObjectInputStream(bis)
+    // val res = in.readObject.asInstanceOf[Graph]
   }
 }
 
