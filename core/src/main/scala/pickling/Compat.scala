@@ -96,6 +96,12 @@ object Compat {
     val bundle = new { val c: c0.type = c0 } with FastTypeTagMacros
     c.Expr[FastTypeTag[_]](bundle.apply(key.tree))
   }
+
+  def ArrayBufferPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with ArrayBufferPicklerUnpicklerMacro
+    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
+  }
 }
 
 trait QuasiquoteCompat { self: Macro =>
