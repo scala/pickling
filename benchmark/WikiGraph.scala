@@ -137,6 +137,30 @@ object WikiGraph {
 }
 
 object WikiGraphPicklingBench extends PicklingBenchmark {
+  implicit val VertexTag = FastTypeTag.materializeFastTypeTag[Vertex]
+  implicit val GraphTag = FastTypeTag.materializeFastTypeTag[Graph]
+  implicit val StringTag = FastTypeTag.materializeFastTypeTag[String]
+  implicit val ColonColonVertexTag = FastTypeTag.materializeFastTypeTag[::[Vertex]]
+  import scala.reflect.runtime.{universe => ru}
+  implicit val myLittlePony: ru.Mirror = ru.runtimeMirror(getClass.getClassLoader)
+  implicit val VectorVertexTag = FastTypeTag.materializeFastTypeTag[Vector[Vertex]]
+  implicit val ListVertexTag = FastTypeTag.materializeFastTypeTag[List[Vertex]]
+  implicit val NilTag = FastTypeTag.materializeFastTypeTag[Nil.type]
+  implicit val picklerNil = implicitly[SPickler[Nil.type]]
+  implicit val unpicklerNil = implicitly[Unpickler[Nil.type]]
+  implicit lazy val picklerVertex: SPickler[Vertex] = {
+    val picklerVertex = "boom!"
+    implicitly[SPickler[Vertex]]
+  }
+  implicit lazy val unpicklerVertex: Unpickler[Vertex] = {
+    val unpicklerVertex = "boom!"
+    implicitly[Unpickler[Vertex]]
+  }
+  implicit lazy val picklerUnpicklerColonColonVertex: SPickler[::[Vertex]] with Unpickler[::[Vertex]] = SPickler.genListPickler[Vertex]
+  implicit lazy val picklerUnpicklerVectorVertex: SPickler[Vector[Vertex]] with Unpickler[Vector[Vertex]] = SPickler.genVectorPickler[Vertex]
+  implicit val picklerGraph = implicitly[SPickler[Graph]]
+  implicit val unpicklerGraph = implicitly[Unpickler[Graph]]
+
   override def run(): Unit = {
     val pickle = WikiGraph.wikigraph.pickle
     val res = pickle.unpickle[Graph]
