@@ -5,7 +5,7 @@ import org.evactor.model.events.DataEvent
 import scala.util.Random
 import scala.reflect.runtime.{universe => ru}
 
-object EvactorBench extends scala.testing.PicklingBenchmark {
+object EvactorBench extends scala.pickling.testing.PicklingBenchmark {
   val time: Int = System.currentTimeMillis.toInt
 
   implicit lazy val myLittlePony: ru.Mirror = {

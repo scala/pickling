@@ -1,7 +1,7 @@
 import scala.pickling._
 import binary._
 
-object ListIntBench extends scala.testing.PicklingBenchmark {
+object ListIntBench extends scala.pickling.testing.PicklingBenchmark {
   val lst = (1 to size).toList
 
   override def run() {
