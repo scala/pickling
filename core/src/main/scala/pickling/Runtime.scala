@@ -186,19 +186,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
               } else {
                 val fieldRuntime = new InterpretedUnpicklerRuntime(mirror, fdynamicTag)
                 val fieldUnpickler = fieldRuntime.genUnpickler
-
-                scala.pickling.`package`.preregisterUnpicklee()
                 fieldUnpickler.unpickle(fdynamicTag, freader)
-
-                // if (shouldBotherAboutSharing(fir.tpe)) {
-                //   val oid = scala.pickling.`package`.preregisterUnpicklee()
-                //   val result = fieldUnpickler.unpickle(fdynamicTag, freader)
-                //   if (!scala.pickling.`package`.isRegistered(oid))
-                //     scala.pickling.`package`.registerUnpicklee(result, oid)
-                //   result
-                // } else {
-                //   fieldUnpickler.unpickle(fdynamicTag, freader)
-                // }
               }
             }
 
@@ -209,10 +197,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
           // TODO: need to support modules and other special guys here
           // TODO: in principle, we could invoke a constructor here
           val inst = scala.concurrent.util.Unsafe.instance.allocateInstance(clazz)
-          if (shouldBotherAboutSharing(tpe)) {
-            //registerUnpicklee(inst, preregisterUnpicklee())
-            registerUnpickleeAtCurrentIndex(inst)
-          }
+          if (shouldBotherAboutSharing(tpe)) registerUnpicklee(inst, preregisterUnpicklee())
           val im = mirror.reflect(inst)
 
           pendingFields.zip(fieldVals) foreach {
