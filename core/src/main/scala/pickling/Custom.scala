@@ -186,11 +186,13 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
           var i = 0
           while (i < arr.length) {
             builder putElement { b =>
-              if (!$isPrimitive) {
-                b.hintTag(eltag)
-                arr(i).pickleInto(b)
-              } else {
-                elpickler.pickle(arr(i), b)
+              ${
+                if (!isPrimitive) q"""
+                  b.hintTag(eltag)
+                  arr(i).pickleInto(b)
+                """.asInstanceOf[Tree] else q"""
+                  elpickler.pickle(arr(i), b)
+                """.asInstanceOf[Tree]
               }
             }
             i += 1
@@ -213,14 +215,16 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
           var i = 0
           while (i < length) {
             val r = arrReader.readElement()
-            if ($isPrimitive) {
-              r.beginEntryNoTag()
-              val elem = elunpickler.unpickle(eltag, r).asInstanceOf[$eltpe]
-              r.endEntry()
-              buffer += elem
-            } else {
-              val elem = r.unpickle[$eltpe]
-              buffer += elem
+            ${
+              if (isPrimitive) q"""
+                r.beginEntryNoTag()
+                val elem = elunpickler.unpickle(eltag, r).asInstanceOf[$eltpe]
+                r.endEntry()
+                buffer += elem
+              """.asInstanceOf[Tree] else q"""
+                val elem = r.unpickle[$eltpe]
+                buffer += elem
+              """.asInstanceOf[Tree]
             }
             i += 1
           }
