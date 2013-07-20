@@ -262,7 +262,7 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat { self =>
   // FIXME: duplication wrt pickling.`package`, but I don't really fancy abstracting away this path-dependent madness
   implicit class RichTypeFIXME(tpe: Type) {
     def key: String = {
-      tpe match {
+      tpe.normalize match {
         case ExistentialType(tparams, TypeRef(pre, sym, targs))
         if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
           TypeRef(pre, sym, Nil).key

@@ -77,7 +77,7 @@ package object pickling {
   implicit class RichTypeFIXME(tpe: Type) {
     import definitions._
     def key: String = {
-      tpe match {
+      tpe.normalize match {
         case ExistentialType(tparams, TypeRef(pre, sym, targs))
         if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
           TypeRef(pre, sym, Nil).key
