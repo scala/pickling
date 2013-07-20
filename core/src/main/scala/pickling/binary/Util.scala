@@ -13,33 +13,33 @@ package binary {
 
     /** Returns decoded Short plus next "readable" position in target array.
      */
-    def decodeShortFrom(arr: Array[Byte], i: Int): (Short, Int) = {
+    def decodeShortFrom(arr: Array[Byte], i: Int): Short = {
       val fst = ((arr(i) << 8) & 0xFFFF).toShort
       val snd = (arr(i+1)      & 0x00FF).toShort
-      ((fst | snd).toShort, i+2)
+      (fst | snd).toShort
     }
 
     /** Returns decoded Char plus next "readable" position in target array.
      */
-    def decodeCharFrom(arr: Array[Byte], i: Int): (Char, Int) = {
+    def decodeCharFrom(arr: Array[Byte], i: Int): Char = {
       val fst = ((arr(i) << 8) & 0xFFFF).toChar
       val snd = (arr(i+1)      & 0x00FF).toChar
-      ((fst | snd).toChar, i+2)
+      (fst | snd).toChar
     }
 
     /** Returns decoded Int plus next "readable" position in target array.
      */
-    def decodeIntFrom(arr: Array[Byte], i: Int): (Int, Int) = {
+    def decodeIntFrom(arr: Array[Byte], i: Int): Int = {
       val fst = (arr(i) << 24).toInt
       val snd = ((arr(i+1) << 16) & 0x00FFFFFF).toInt
       val thrd = ((arr(i+2) << 8) & 0x0000FFFF).toInt
       val frth = (arr(i+3) & 0x000000FF).toInt
-      (fst | snd | thrd | frth, i+4)
+      fst | snd | thrd | frth
     }
 
     /** Returns decoded Long plus next "readable" position in target array.
      */
-    def decodeLongFrom(arr: Array[Byte], i: Int): (Long, Int) = {
+    def decodeLongFrom(arr: Array[Byte], i: Int): Long = {
       val elem1 = ((arr(i).toLong   << 56) & 0xFFFFFFFFFFFFFFFFL).toLong
       val elem2 = ((arr(i+1).toLong << 48) & 0x00FFFFFFFFFFFFFFL).toLong
       val elem3 = ((arr(i+2).toLong << 40) & 0x0000FFFFFFFFFFFFL).toLong
@@ -48,15 +48,15 @@ package binary {
       val elem6 = ((arr(i+5).toLong << 16) & 0x0000000000FFFFFFL).toLong
       val elem7 = ((arr(i+6).toLong << 8)  & 0x000000000000FFFFL).toLong
       val elem8 = (arr(i+7).toLong         & 0x00000000000000FFL).toLong
-      (elem1 | elem2 | elem3 | elem4 | elem5 | elem6 | elem7 | elem8, i+8)
+      elem1 | elem2 | elem3 | elem4 | elem5 | elem6 | elem7 | elem8
     }
 
-    def fastdecodeIntFrom(arr: Array[Byte], i: Int): (Int, Int) = {
+    def fastdecodeIntFrom(arr: Array[Byte], i: Int): Int = {
       val fst = (getInt(arr, i) << 24).toInt
       val snd = ((getInt(arr, i+1) << 16) & 0x00FFFFFF).toInt
       val thrd = ((getInt(arr, i+2) << 8) & 0x0000FFFF).toInt
       val frth = (getInt(arr, i+3) & 0x000000FF).toInt
-      (fst | snd | thrd | frth, i+4)
+      fst | snd | thrd | frth
     }
 
     /** Returns next "writeable" position in target array.
@@ -149,14 +149,12 @@ package binary {
       buf += frth
     }
 
-    def decodeBooleanFrom(arr: Array[Byte], i: Int): (Boolean, Int) = {
-      val res = arr(i) != 0
-      (res, i + 1)
+    def decodeBooleanFrom(arr: Array[Byte], i: Int): Boolean = {
+      arr(i) != 0
     }
 
-    def fastdecodeBooleanFrom(arr: Array[Byte], i: Int): (Boolean, Int) = {
-      val res = getInt(arr, i) != 0
-      (res, i + 1)
+    def fastdecodeBooleanFrom(arr: Array[Byte], i: Int): Boolean = {
+      getInt(arr, i) != 0
     }
 
     def encodeBooleanTo(arr: Array[Byte], i: Int, value: Boolean): Int = {
@@ -181,14 +179,14 @@ package binary {
     }
 
     def decodeStringFrom(arr: Array[Byte], i: Int): (String, Int) = {
-      val (len, _) = decodeIntFrom(arr, i)
+      val len = decodeIntFrom(arr, i)
       val bytes = Array.ofDim[Byte](len)
       Array.copy(arr, i + 4, bytes, 0, len)
       (new String(bytes, "UTF-8"), i + 4 + len)
     }
 
     def fastdecodeStringFrom(arr: Array[Byte], i: Int): (String, Int) = {
-      val (len, _) = fastdecodeIntFrom(arr, i)
+      val len = fastdecodeIntFrom(arr, i)
       val bytes = Array.ofDim[Byte](len)
       Array.copy(arr, i + 4, bytes, 0, len)
       (new String(bytes, "UTF-8"), i + 4 + len)
