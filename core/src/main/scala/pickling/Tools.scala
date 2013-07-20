@@ -199,17 +199,18 @@ abstract class ShareAnalyzer[U <: Universe](val u: U) {
       todo match {
         case currTpe :: rest =>
           val currSym = currTpe.typeSymbol.asType
-          if (visited(currTpe)) loop(rest, visited)
-          else if (currTpe.isNotNullable || currTpe.isEffectivelyPrimitive || currSym == StringClass) loop(rest, visited)
+          if (visited(currTpe)) {
+            if (tpe <:< currTpe) true  // TODO: make sure this sanely works for polymorphic types
+            else loop(rest, visited)
+          } else if (currTpe.isNotNullable || currTpe.isEffectivelyPrimitive || currSym == StringClass) loop(rest, visited)
           // TODO: extend the traversal logic to support sealed classes
           // when doing that don't forget:
           // 1) sealeds can themselves be extended, so we need to recur
           // 2) the entire sealed hierarchy should be added to todo
           else if (!currSym.isFinal) true // NOTE: returning true here is important for soundness!
-          else if (tpe <:< currTpe) true // TODO: make sure this sanely works for polymorphic types
           else {
             val more = flattenedClassIR(currTpe).fields.map(_.tpe)
-            loop(todo ++ more, visited + currTpe)
+            loop(rest ++ more, visited + currTpe)
           }
         case _ => false
       }

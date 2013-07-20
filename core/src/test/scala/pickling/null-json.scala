@@ -17,8 +17,8 @@ class NullJsonTest extends FunSuite {
       |  "tpe": "scala.pickling.null.json.C",
       |  "x": null,
       |  "y": 0,
-      |  "d": null,
-      |  "e": null
+      |  "e": null,
+      |  "d": null
       |}
     """.stripMargin.trim)
     assert(pickle.unpickle[C].toString === c.toString)
