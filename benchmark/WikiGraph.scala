@@ -21,16 +21,34 @@ final class Vertex(val label: String, var neighbors: List[Vertex]) extends Seria
     neighbors = v +: neighbors
   }
 
+  def sameAs(other: Vertex): Boolean = {
+    (this ne other) &&
+    this.label == other.label && (
+      this.neighbors.length == other.neighbors.length &&
+      this.neighbors.zip(other.neighbors).forall {
+        case (thisv, otherv) => thisv.label == otherv.label
+      }
+    )
+  }
+
   override def toString = "Vertex(" + label + ")"
 }
 
-class Graph extends Serializable {
+final class Graph extends Serializable {
   var vertices: Vector[Vertex] = Vector()
 
   def addVertex(v: Vertex): Vertex = {
     //v.graph = this
     vertices = v +: vertices
     v
+  }
+
+  def sameAs(other: Graph): Boolean = {
+    (this ne other) &&
+    this.vertices.length == other.vertices.length &&
+    this.vertices.zip(other.vertices).forall {
+      case (thisv, otherv) => thisv.sameAs(otherv)
+    }
   }
 }
 
@@ -122,6 +140,7 @@ object WikiGraphPicklingBench extends PicklingBenchmark {
   override def run(): Unit = {
     val pickle = WikiGraph.wikigraph.pickle
     val res = pickle.unpickle[Graph]
+    if (!WikiGraph.wikigraph.sameAs(res)) println("fail!")
   }
 }
 
