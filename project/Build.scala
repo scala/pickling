@@ -94,11 +94,14 @@ object MyBuild extends Build {
       InputKey[Unit]("geoTrellis")     <<= InputKey[Unit]("geoTrellis")     in Compile in benchmark,
       InputKey[Unit]("evactor1")       <<= InputKey[Unit]("evactor1")       in Compile in benchmark,
       InputKey[Unit]("evactor2")       <<= InputKey[Unit]("evactor2")       in Compile in benchmark,
-      InputKey[Unit]("graph")          <<= InputKey[Unit]("graph")          in Compile in benchmark,
+      InputKey[Unit]("graphpick")      <<= InputKey[Unit]("graphpick")      in Compile in benchmark,
       InputKey[Unit]("graphjava")      <<= InputKey[Unit]("graphjava")      in Compile in benchmark,
       InputKey[Unit]("graphkryo")      <<= InputKey[Unit]("graphkryo")      in Compile in benchmark,
       InputKey[Unit]("vectorkryo")     <<= InputKey[Unit]("vectorkryo")     in Compile in benchmark,
       InputKey[Unit]("arrayInt")       <<= InputKey[Unit]("arrayInt")       in Compile in benchmark,
+      InputKey[Unit]("sparklrpick")    <<= InputKey[Unit]("sparklrpick")    in Compile in benchmark,
+      InputKey[Unit]("sparklrjava")    <<= InputKey[Unit]("sparklrjava")    in Compile in benchmark,
+      InputKey[Unit]("sparklrkryo")    <<= InputKey[Unit]("sparklrkryo")    in Compile in benchmark,
       organization := "org.scala-lang",
       publishMavenStyle := true,
       publishArtifact in Test := false,
@@ -196,11 +199,14 @@ object MyBuild extends Build {
       InputKey[Unit]("geoTrellis")     <<= benchTask("GeoTrellisBench", 100000 to 1000000 by 100000),
       InputKey[Unit]("evactor1")       <<= benchTask("EvactorBench", 1000 to 10000 by 1000),
       InputKey[Unit]("evactor2")       <<= benchTask("EvactorBench", 20000 to 40000 by 2000),
-      InputKey[Unit]("graph")          <<= benchTask("WikiGraphBench", 20000 to 40000 by 20000),
+      InputKey[Unit]("graphpick")      <<= benchTask("WikiGraphPicklingBench", 20000 to 40000 by 20000),
       InputKey[Unit]("graphjava")      <<= benchTask("WikiGraphJavaBench", 20000 to 40000 by 20000),
       InputKey[Unit]("graphkryo")      <<= benchTask("WikiGraphKryoBench", 20000 to 40000 by 20000),
       InputKey[Unit]("vectorkryo")     <<= benchTask("KryoVectorBench", 100000 to 1000000 by 100000),
-      InputKey[Unit]("arrayInt")       <<= benchTask("ArrayIntBench", 500000 to 5000000 by 500000)
+      InputKey[Unit]("arrayInt")       <<= benchTask("ArrayIntBench", 500000 to 5000000 by 500000),
+      InputKey[Unit]("sparklrpick")    <<= benchTask("SparkLRPicklingBench", 20000 to 40000 by 2000),
+      InputKey[Unit]("sparklrjava")    <<= benchTask("SparkLRJavaBench", 20000 to 40000 by 2000),
+      InputKey[Unit]("sparklrkryo")    <<= benchTask("SparkLRKryoBench", 20000 to 40000 by 2000)
     )
   ) dependsOn(core)
 }
