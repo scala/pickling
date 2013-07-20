@@ -96,7 +96,6 @@ trait PicklerMacros extends Macro {
                 $getterLogic.pickleInto(b)
               """ else q"""
                 val subPicklee: ${fir.tpe} = $getterLogic
-                if (subPicklee == null || subPicklee.getClass == classOf[${fir.tpe}]) b.hintDynamicallyElidedType() else ()
                 subPicklee.pickleInto(b)
               """
             }

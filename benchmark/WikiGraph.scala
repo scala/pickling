@@ -137,6 +137,24 @@ object WikiGraph {
 }
 
 object WikiGraphPicklingBench extends PicklingBenchmark {
+  implicit val VertexTag = FastTypeTag.materializeFastTypeTag[Vertex]
+  implicit val GraphTag = FastTypeTag.materializeFastTypeTag[Graph]
+  implicit val StringTag = FastTypeTag.materializeFastTypeTag[String]
+  implicit val ColonColonVertexTag = FastTypeTag.materializeFastTypeTag[::[Vertex]]
+  import scala.reflect.runtime.{universe => ru}
+  implicit val myLittlePony: ru.Mirror = ru.runtimeMirror(getClass.getClassLoader)
+  implicit val VectorVertexTag = FastTypeTag.materializeFastTypeTag[Vector[Vertex]]
+  implicit val ListVertexTag = FastTypeTag.materializeFastTypeTag[List[Vertex]]
+  implicit val NilTag = FastTypeTag.materializeFastTypeTag[Nil.type]
+  implicit val picklerNil = implicitly[SPickler[Nil.type]]
+  implicit val unpicklerNil = implicitly[Unpickler[Nil.type]]
+  implicit val picklerColonColonVertex = implicitly[SPickler[::[Vertex]]]
+  implicit val unpicklerColonColonVertex = implicitly[Unpickler[::[Vertex]]]
+  implicit val elpickler = implicitly[SPickler[Vertex]]
+  implicit val elunpickler = implicitly[Unpickler[Vertex]]
+  implicit val picklerGraph = implicitly[SPickler[Graph]]
+  implicit val unpicklerGraph = implicitly[Unpickler[Graph]]
+
   override def run(): Unit = {
     val pickle = WikiGraph.wikigraph.pickle
     val res = pickle.unpickle[Graph]
