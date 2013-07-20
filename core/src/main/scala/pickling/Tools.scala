@@ -364,7 +364,8 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat { self =>
 
   private var reflectivePrologueEmitted = false // TODO: come up with something better
   def reflectively(target: String, fir: FieldIR)(body: Tree => Tree): List[Tree] = reflectively(TermName(target), fir)(body)
-  def reflectively(target: TermName, fir: FieldIR)(body: Tree => Tree): List[Tree] = {
+  def reflectively(target: TermName, fir: FieldIR)(body: Tree => Tree): List[Tree] = reflectively(Ident(target), fir)(body)
+  def reflectively(target: Tree, fir: FieldIR)(body: Tree => Tree): List[Tree] = {
     val prologue = {
       if (!reflectivePrologueEmitted) {
         reflectivePrologueEmitted = true
@@ -392,6 +393,78 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat { self =>
         if ($firSymbol.isTerm) ${body(q"im.reflectField($firSymbol.asTerm)")}
       """
     prologue ++ wrappedBody.stats :+ wrappedBody.expr
+  }
+
+  val precomputedSizes = Map(
+    typeOf[Int] -> 4,
+    typeOf[Short] -> 2,
+    typeOf[Long] -> 8,
+    typeOf[Double] -> 8,
+    typeOf[Byte] -> 1,
+    typeOf[Char] -> 2,
+    typeOf[Float] -> 4,
+    typeOf[Double] -> 8,
+    typeOf[Boolean] -> 1,
+    typeOf[String] -> 8
+  )
+  val ArrayTpe = typeOf[Array[_]]
+  val IndexedSeqTpe = typeOf[IndexedSeq[_]]
+
+  // this exists so as to provide as much information as possible about the size of the object
+  // to-be-pickled to the picklers at runtime. In the case of the binary format for example,
+  // this allows us to remove array copying and allocation bottlenecks
+  def hintKnownSize(tpe: Type): Tree = {
+    def loop(tpe: Type, prefix: Option[Tree], depth: Int): Option[Tree] = {
+      if (precomputedSizes.contains(tpe)) Some(q"${precomputedSizes(tpe)}")
+      else if (depth >= 3) None // TODO: put something better here
+      else {
+        // returns a tree with the size and a list of trees that have to be checked for null
+        case class CheckedTree(tree: Tree, checks: List[Tree])
+        val checkedTree: Option[CheckedTree] = {
+          if (tpe <:< ArrayTpe || tpe <:< IndexedSeqTpe) {
+            val TypeRef(_, _, List(eltpe)) = tpe
+            for {
+              prefix <- prefix
+              elSize <- loop(eltpe, None, depth + 1)
+              payloadSize <- Some(q"$prefix.length * $elSize + 4")
+            } yield CheckedTree(payloadSize, List(prefix))
+          } else {
+            def fieldRef(prefix: Tree, fir: FieldIR): Tree = {
+              if (fir.isPublic) q"$prefix.${TermName(fir.name)}"
+              else reflectively(prefix, fir)(fm => q"$fm.get.asInstanceOf[${fir.tpe}]").head //TODO: don't think it's possible for this to return an empty list, so head should be OK
+            }
+            val firs = flattenedClassIR(tpe).fields
+            val firSizes = firs.map(fir => {
+              val firRef = prefix.map(fieldRef(_, fir))
+              val firSize = loop(fir.tpe, firRef, depth + 1)
+              firSize.map(firSize => CheckedTree(firSize, firRef.toList))
+            })
+            if (firSizes.exists(_.isEmpty)) None
+            else {
+              val aggregated = firSizes.flatMap(_.toList)
+              val aggSize = if (aggregated.nonEmpty) aggregated.map(_.tree).reduce((t1, t2) => q"$t1 + $t2") else q"0"
+              val aggChecks = aggregated.flatMap(_.checks)
+              Some(CheckedTree(aggSize, aggChecks))
+            }
+          }
+        }
+        checkedTree.map{
+          case CheckedTree(payloadSize, checks) =>
+            val typeNameSize = 4 + tpe.key.getBytes("UTF-8").length
+            val totalSize = q"$typeNameSize + $payloadSize"
+            // TODO: uncomment this and fix an NPE in erasure
+            // if (checks.nonEmpty) {
+            //   val aggCheck = checks.map(check => q"$check != null").reduce((t1, t2) => q"$t1 && $t2")
+            //   q"if ($aggCheck) $totalSize else -1"
+            // } else {
+              totalSize
+            // }
+        }
+      }
+    }
+    val result = loop(tpe, Some(q"picklee"), depth = 0)
+    // println(s"hintKnownSize($tpe) = $result")
+    result.map(result => q"builder.hintKnownSize($result)").getOrElse(EmptyTree)
   }
 }
 

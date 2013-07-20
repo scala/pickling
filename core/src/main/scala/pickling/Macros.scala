@@ -16,73 +16,11 @@ trait PicklerMacros extends Macro {
     val sym = tpe.typeSymbol.asClass
     import irs._
 
-    val primitiveSizes = Map(
-      typeOf[Int] -> 4,
-      typeOf[Short] -> 2,
-      typeOf[Long] -> 8,
-      typeOf[Double] -> 8,
-      typeOf[Byte] -> 1,
-      typeOf[Char] -> 2,
-      typeOf[Float] -> 4,
-      typeOf[Double] -> 8,
-      typeOf[Boolean] -> 1
-    )
-
-    def getField(fir: FieldIR): Tree =
-      if (fir.isPublic) q"picklee.${TermName(fir.name)}"
-      else reflectively("picklee", fir)(fm => q"$fm.get.asInstanceOf[${fir.tpe}]").head //TODO: don't think it's possible for this to return an empty list, so head should be OK
-
-    // this exists so as to provide as much information as possible about the size of the object
-    // to-be-pickled to the picklers at runtime. In the case of the binary format for example,
-    // this allows us to remove array copying and allocation bottlenecks
-    // Note: this takes a "flattened" ClassIR
-    // returns a tree with the size and a list of trees that have to be checked for null
-    def computeKnownSizeIfPossible(cir: ClassIR): (Option[Tree], List[Tree]) = {
-      if (cir.tpe <:< typeOf[Array[_]]) {
-        val TypeRef(_, _, List(elTpe)) = cir.tpe
-        val knownSize =
-          if (elTpe.isEffectivelyPrimitive) Some(q"picklee.length * ${primitiveSizes(elTpe)} + 4")
-          else None
-        knownSize -> Nil
-      } else {
-        val possibleSizes: List[(Option[Tree], Option[Tree])] = cir.fields map {
-          case fld if fld.tpe.isEffectivelyPrimitive =>
-            val isScalar = !(fld.tpe <:< typeOf[Array[_]])
-            if (isScalar) None -> Some(q"${primitiveSizes(fld.tpe)}")
-            else {
-              val TypeRef(_, _, List(elTpe)) = fld.tpe
-              Some(getField(fld)) -> Some(q"${getField(fld)}.length * ${primitiveSizes(elTpe)} + 4")
-            }
-          case _ =>
-            None -> None
-        }
-
-        val possibleSizes1 = possibleSizes.map(_._2)
-        val resOpt =
-          if (possibleSizes1.contains(None) || possibleSizes1.isEmpty) None
-          else Some(possibleSizes1.map(_.get).reduce((t1, t2) => q"$t1 + $t2"))
-        val resLst = possibleSizes.flatMap(p => if (p._1.isEmpty) List() else List(p._1.get))
-        (resOpt, resLst)
-      }
-    }
     def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
       val cir = flattenedClassIR(tpe)
-
-      val hintKnownSize = computeKnownSizeIfPossible(cir) match {
-        case (None, lst) => q""
-        case (Some(tree), lst) =>
-          val typeNameLen = tpe.key.getBytes("UTF-8").length
-          val noNullTree  = lst.foldLeft[Tree](Literal(Constant(true)))((acc, curr) => q"$acc && ($curr != null)")
-          q"""
-            if ($noNullTree) {
-              val size = $tree + $typeNameLen + 4
-              builder.hintKnownSize(size)
-            }
-          """
-      }
       val beginEntry = q"""
         builder.beginEntry(picklee)
-        $hintKnownSize
+        ${hintKnownSize(tpe)}
       """
       val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
       val putFields = (nonLoopyFields ++ loopyFields).flatMap(fir => {
