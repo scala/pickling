@@ -193,6 +193,7 @@ object MyBuild extends Build {
       libraryDependencies += "de.javakaffee" % "kryo-serializers" % "0.22",
       libraryDependencies += "com.esotericsoftware.kryo" % "kryo" % "2.20",
       InputKey[Unit]("travInt")        <<= benchTask("TraversableIntBench", 100000 to 1000000 by 100000),
+      InputKey[Unit]("travIntJava")    <<= benchTask("TraversableJavaIntBench", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntFreeMem") <<= benchTask("TraversableIntBenchFreeMem", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntSize")    <<= benchTask("TraversableIntBenchSize", 100000 to 1000000 by 100000),
       InputKey[Unit]("listInt")        <<= benchTask("ListIntBench", 100000 to 1000000 by 100000),
