@@ -187,8 +187,12 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
           while (i < arr.length) {
             builder putElement { b =>
               ${
-                if (!isPrimitive) q"""
+                if (!isPrimitive && !isFinal) q"""
                   b.hintTag(eltag)
+                  arr(i).pickleInto(b)
+                """.asInstanceOf[Tree] else if (!isPrimitive && isFinal) q"""
+                  b.hintTag(eltag)
+                  b.hintStaticallyElidedType()
                   arr(i).pickleInto(b)
                 """.asInstanceOf[Tree] else q"""
                   elpickler.pickle(arr(i), b)
