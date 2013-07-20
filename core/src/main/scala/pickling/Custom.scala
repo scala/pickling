@@ -143,6 +143,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
 
   def impl[T: c.WeakTypeTag](format: c.Tree): c.Tree = {
     import c.universe._
+    import definitions._
     val tpe = mkType(weakTypeOf[T])
     val eltpe = weakTypeOf[T]
     val isPrimitive = eltpe.isEffectivelyPrimitive
@@ -175,6 +176,10 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
 
         def pickle(picklee: $tpe, builder: PBuilder): Unit = {
           builder.hintTag(colltag)
+          ${
+            if (eltpe =:= IntTpe) q"builder.hintKnownSize(picklee.length * 4 + 100)".asInstanceOf[Tree]
+            else q"".asInstanceOf[Tree]
+          }
           builder.beginEntry(picklee)
           ${
             if (isPrimitive) q"builder.hintStaticallyElidedType(); builder.hintTag(eltag); builder.pinHints()".asInstanceOf[Tree]
