@@ -113,16 +113,16 @@ package object pickling {
     }
   }
 
-  private var picklees = scala.collection.mutable.Map[Any, Int]()
+  private var picklees = new ReactMap
   private var nextPicklee = 0
   def lookupPicklee(picklee: Any) = {
-    val result = if (picklees.contains(picklee)) picklees(picklee) else -1
+    val result = picklees.lookup(picklee.asInstanceOf[AnyRef])
     // println(s"lookupPicklee($picklee) = $result")
     result
   }
   def registerPicklee(picklee: Any) = {
     val index = nextPicklee
-    picklees(picklee) = index
+    picklees.insert(picklee.asInstanceOf[AnyRef], index)
     // println(s"registerPicklee($picklee, $index)")
     nextPicklee += 1
     index
