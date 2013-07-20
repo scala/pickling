@@ -28,7 +28,8 @@ trait PicklerMacros extends Macro {
       typeOf[Boolean] -> 1
     )
 
-    def getField(fir: FieldIR): Tree = if (fir.isPublic) q"picklee.${TermName(fir.name)}"
+    def getField(fir: FieldIR): Tree =
+      if (fir.isPublic) q"picklee.${TermName(fir.name)}"
       else reflectively("picklee", fir)(fm => q"$fm.get.asInstanceOf[${fir.tpe}]").head //TODO: don't think it's possible for this to return an empty list, so head should be OK
 
     // this exists so as to provide as much information as possible about the size of the object
@@ -37,8 +38,8 @@ trait PicklerMacros extends Macro {
     // Note: this takes a "flattened" ClassIR
     // returns a tree with the size and a list of trees that have to be checked for null
     def computeKnownSizeIfPossible(cir: ClassIR): (Option[Tree], List[Tree]) = {
-      if (tpe <:< typeOf[Array[_]]) {
-        val TypeRef(_, _, List(elTpe)) = tpe
+      if (cir.tpe <:< typeOf[Array[_]]) {
+        val TypeRef(_, _, List(elTpe)) = cir.tpe
         val knownSize =
           if (elTpe.isEffectivelyPrimitive) Some(q"picklee.length * ${primitiveSizes(elTpe)} + 4")
           else None
