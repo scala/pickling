@@ -17,7 +17,7 @@ package binary {
     override def toString = s"""BinaryPickle(${value.mkString("[", ",", "]")})"""
   }
 
-  class BinaryPickleBuilder(format: BinaryPickleFormat, out: EncodingOutput[Array[Byte]]) extends PBuilder with PickleTools {
+  final class BinaryPickleBuilder(format: BinaryPickleFormat, out: EncodingOutput[Array[Byte]]) extends PBuilder with PickleTools {
     import format._
 
     private var byteBuffer: EncodingOutput[Array[Byte]] =
@@ -30,7 +30,7 @@ package binary {
         byteBuffer = if (knownSize != -1) new ByteArray(knownSize) else new ByteArrayBuffer
       }
 
-    def beginEntry(picklee: Any): this.type = withHints { hints =>
+    @inline def beginEntry(picklee: Any): this.type = withHints { hints =>
       mkByteBuffer(hints.knownSize)
 
       if (picklee == null) {
@@ -107,35 +107,35 @@ package binary {
       this
     }
 
-    def putField(name: String, pickler: this.type => Unit): this.type = {
+    @inline def putField(name: String, pickler: this.type => Unit): this.type = {
       // can skip writing name if we pickle/unpickle in the same order
       pickler(this)
       this
     }
 
-    def endEntry(): Unit = { /* do nothing */ }
+    @inline def endEntry(): Unit = { /* do nothing */ }
 
     var beginCollPos = List[Int]()
 
-    def beginCollection(length: Int): this.type = {
+    @inline def beginCollection(length: Int): this.type = {
       beginCollPos = pos :: beginCollPos
       byteBuffer.encodeIntAtEnd(pos, 0)
       pos += 4
       this
     }
 
-    def putElement(pickler: this.type => Unit): this.type = {
+    @inline def putElement(pickler: this.type => Unit): this.type = {
       pickler(this)
       this
     }
 
-    def endCollection(length: Int): Unit = {
+    @inline def endCollection(length: Int): Unit = {
       val localBeginCollPos = beginCollPos.head
       beginCollPos = beginCollPos.tail
       byteBuffer.encodeIntTo(localBeginCollPos, length)
     }
 
-    def result() = {
+    @inline def result() = {
       BinaryPickle(byteBuffer.result())
     }
   }
