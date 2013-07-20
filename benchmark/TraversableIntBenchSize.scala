@@ -1,7 +1,7 @@
 import scala.pickling._
 import binary._
 
-object TraversableIntBenchSize extends scala.testing.PicklingBenchmark {
+object TraversableIntBenchSize extends scala.pickling.testing.PicklingBenchmark {
   override val enableOutput = false
 
   val coll = (1 to size).toVector

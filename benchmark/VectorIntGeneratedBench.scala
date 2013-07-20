@@ -1,7 +1,7 @@
 import scala.pickling._
 import binary._
 
-object VectorIntGeneratedBench extends scala.testing.PicklingBenchmark {
+object VectorIntGeneratedBench extends scala.pickling.testing.PicklingBenchmark {
   val vec = (1 to size).toVector
 
   override def run() {

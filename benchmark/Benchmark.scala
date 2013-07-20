@@ -6,7 +6,7 @@
 **                          |/                                          **
 \*                                                                      */
 
-package scala.testing
+package scala.pickling.testing
 
 import scala.compat.Platform
 
