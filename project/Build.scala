@@ -197,6 +197,7 @@ object MyBuild extends Build {
       InputKey[Unit]("travIntKryo")        <<= benchTask("TraversableKryoIntBench", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntFreeMem")     <<= benchTask("TraversableIntBenchFreeMem", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntJavaFreeMem") <<= benchTask("TraversableJavaIntBenchFreeMem", 100000 to 1000000 by 100000),
+      InputKey[Unit]("travIntKryoFreeMem") <<= benchTask("TraversableKryoIntBenchFreeMem", 100000 to 1000000 by 100000),
       InputKey[Unit]("travIntSize")        <<= benchTask("TraversableIntBenchSize", 100000 to 1000000 by 100000),
       InputKey[Unit]("listInt")            <<= benchTask("ListIntBench", 100000 to 1000000 by 100000),
       InputKey[Unit]("geoTrellis")         <<= benchTask("GeoTrellisBench", 100000 to 1000000 by 100000),
