@@ -154,7 +154,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
         import scala.pickling._
         import scala.pickling.`package`.PickleOps
 
-        val format = new ${format.tpe}()
+        val format = implicitly[${format.tpe}]
 
         implicit val elpickler: SPickler[$eltpe] = {
           val elpickler = "bam!"
