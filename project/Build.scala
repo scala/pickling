@@ -90,6 +90,7 @@ object MyBuild extends Build {
       InputKey[Unit]("travInt")        <<= InputKey[Unit]("travInt")        in Compile in benchmark,
       InputKey[Unit]("travIntFreeMem") <<= InputKey[Unit]("travIntFreeMem") in Compile in benchmark,
       InputKey[Unit]("travIntSize")    <<= InputKey[Unit]("travIntSize")    in Compile in benchmark,
+      InputKey[Unit]("listInt")        <<= InputKey[Unit]("listInt")        in Compile in benchmark,
       InputKey[Unit]("geoTrellis")     <<= InputKey[Unit]("geoTrellis")     in Compile in benchmark,
       InputKey[Unit]("evactor1")       <<= InputKey[Unit]("evactor1")       in Compile in benchmark,
       InputKey[Unit]("evactor2")       <<= InputKey[Unit]("evactor2")       in Compile in benchmark,

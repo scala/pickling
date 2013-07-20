@@ -19,7 +19,7 @@ trait LowPriorityPicklersUnpicklers {
 
     val format: PickleFormat = pf
     val elemTag  = implicitly[FastTypeTag[T]]
-    val isPrimitive = elemTag.tpe.isEffectivelyPrimitive
+    val isEffectivelyFinal = elemTag.tpe.isEffectivelyFinal
 
     def pickle(coll: Coll[T], builder: PBuilder): Unit = {
       builder.hintTag(collTag)
@@ -28,22 +28,16 @@ trait LowPriorityPicklersUnpicklers {
       if (coll.isInstanceOf[IndexedSeq[_]]) builder.beginCollection(coll.size)
       else builder.beginCollection(0)
 
-      if (isPrimitive) {
-        builder.hintStaticallyElidedType()
-        builder.hintTag(elemTag)
-        builder.pinHints()
-      }
-
       var i = 0
       coll.asInstanceOf[Traversable[T]].foreach { (elem: T) =>
-        builder putElement { b =>
-          if (!isPrimitive) b.hintTag(elemTag)
+        builder putElement (b => {
+          if (isEffectivelyFinal) builder.hintStaticallyElidedType()
+          builder.hintTag(elemTag)
           elemPickler.pickle(elem, b)
-        }
+        })
         i += 1
       }
 
-      if (isPrimitive) builder.unpinHints()
       builder.endCollection(i)
       builder.endEntry()
     }
@@ -51,16 +45,12 @@ trait LowPriorityPicklersUnpicklers {
     def unpickle(tpe: => FastTypeTag[_], preader: PReader): Any = {
       val reader = preader.beginCollection()
 
-      if (isPrimitive) {
-        reader.hintStaticallyElidedType()
-        reader.hintTag(elemTag)
-        reader.pinHints()
-      }
-
       val length = reader.readLength()
       val builder = cbf.apply() // builder with element type T
       var i = 0
       while (i < length) {
+        if (isEffectivelyFinal) reader.hintStaticallyElidedType()
+        reader.hintTag(elemTag)
         val r = reader.readElement()
         r.beginEntryNoTag()
         val elem = elemUnpickler.unpickle(elemTag, r)
@@ -69,7 +59,6 @@ trait LowPriorityPicklersUnpicklers {
         i = i + 1
       }
 
-      if (isPrimitive) reader.unpinHints()
       preader.endCollection()
       builder.result
     }
