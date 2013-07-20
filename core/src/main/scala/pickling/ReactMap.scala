@@ -46,6 +46,30 @@ class ReactMap {
     previousValue
   }
 
+  def insertIfNotThere(k: AnyRef, v: Int): Int = {
+    checkResize()
+
+    var pos = index(k)
+    val nil = null
+    var curr = keytable(pos)
+    assert(k != nil)
+
+    while (curr != nil && curr != k) {
+      pos = (pos + 1) % keytable.length
+      curr = keytable(pos)
+    }
+
+    if (curr == null) {
+      // not there
+      keytable(pos) = k
+      valtable(pos) = v
+      sz += 1
+      -1
+    } else {
+      valtable(pos)
+    }
+  }
+
   private def delete(k: AnyRef): Int = {
     var pos = index(k)
     val nil = null

@@ -75,7 +75,6 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
               val oid = scala.pickling.`package`.lookupPicklee(picklee)
               builder.hintOid(oid)
               if (oid == -1) {
-                scala.pickling.`package`.registerPicklee(picklee)
                 pickler.pickle(picklee, builder)
               } else {
                 builder.beginEntry(picklee)

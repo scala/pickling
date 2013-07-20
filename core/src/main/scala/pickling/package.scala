@@ -116,8 +116,11 @@ package object pickling {
   private var picklees = new ReactMap
   private var nextPicklee = 0
   def lookupPicklee(picklee: Any) = {
-    val result = picklees.lookup(picklee.asInstanceOf[AnyRef])
+    val index = nextPicklee
+    val result = picklees.insertIfNotThere(picklee.asInstanceOf[AnyRef], index)
     // println(s"lookupPicklee($picklee) = $result")
+    if (result == -1)
+      nextPicklee += 1
     result
   }
   def registerPicklee(picklee: Any) = {

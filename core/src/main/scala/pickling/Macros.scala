@@ -115,7 +115,6 @@ trait PicklerMacros extends Macro {
           import scala.reflect.runtime.universe._
           val oid = scala.pickling.`package`.lookupPicklee(picklee)
           builder.hintOid(oid)
-          if (oid == -1) scala.pickling.`package`.registerPicklee(picklee)
           $beginEntry
           if (oid == -1) { ..$putFields }
           $endEntry
