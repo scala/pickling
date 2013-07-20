@@ -121,7 +121,7 @@ object WikiGraph {
 object WikiGraphPicklingBench extends PicklingBenchmark {
   override def run(): Unit = {
     val pickle = WikiGraph.wikigraph.pickle
-    //val res = pickle.unpickle[Graph]
+    val res = pickle.unpickle[Graph]
   }
 }
 
@@ -132,9 +132,9 @@ object WikiGraphJavaBench extends PicklingBenchmark {
     out.writeObject(WikiGraph.wikigraph)
     val ba = bos.toByteArray()
     // println("Bytes: " + ba.length)
-    //val bis = new ByteArrayInputStream(ba)
-    //val in = new ObjectInputStream(bis)
-    //val res = in.readObject.asInstanceOf[List[Int]]
+    val bis = new ByteArrayInputStream(ba)
+    val in = new ObjectInputStream(bis)
+    val res = in.readObject.asInstanceOf[List[Int]]
   }
 }
 
@@ -152,6 +152,6 @@ object WikiGraphKryoBench extends scala.pickling.testing.Benchmark {
 
     val pickled = ser.toBytes(WikiGraph.wikigraph, arr)
     // println("Size: "+pickled.length)
-    //val res = ser.fromBytes[Vector[Int]](pickled)
+    val res = ser.fromBytes[Vector[Int]](pickled)
   }
 }

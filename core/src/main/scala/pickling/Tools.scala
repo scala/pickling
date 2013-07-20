@@ -202,7 +202,7 @@ abstract class ShareAnalyzer[U <: Universe](val u: U) {
           if (visited(currTpe)) {
             if (tpe <:< currTpe) true  // TODO: make sure this sanely works for polymorphic types
             else loop(rest, visited)
-          } else if (currTpe.isNotNullable || currTpe.isEffectivelyPrimitive || currSym == StringClass) loop(rest, visited)
+          } else if (currTpe.isNotNullable || currTpe.isEffectivelyPrimitive || currSym == StringClass || currSym.isModuleClass) loop(rest, visited)
           // TODO: extend the traversal logic to support sealed classes
           // when doing that don't forget:
           // 1) sealeds can themselves be extended, so we need to recur
@@ -263,17 +263,21 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat { self =>
   // FIXME: duplication wrt pickling.`package`, but I don't really fancy abstracting away this path-dependent madness
   implicit class RichTypeFIXME(tpe: Type) {
     def key: String = {
-      tpe.normalize match {
-        case ExistentialType(tparams, TypeRef(pre, sym, targs))
-        if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
-          TypeRef(pre, sym, Nil).key
-        case TypeRef(pre, sym, targs) if pre.typeSymbol.isModuleClass =>
-          sym.fullName +
-          (if (sym.isModuleClass) ".type" else "") +
-          (if (targs.isEmpty) "" else targs.map(_.key).mkString("[", ",", "]"))
-        case _ =>
-          tpe.toString
-      }
+      var result =
+        tpe.normalize match {
+          case ExistentialType(tparams, TypeRef(pre, sym, targs))
+          if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
+            TypeRef(pre, sym, Nil).key
+          case TypeRef(pre, sym, targs) if pre.typeSymbol.isModuleClass =>
+            sym.fullName +
+            (if (sym.isModuleClass) ".type" else "") +
+            (if (targs.isEmpty) "" else targs.map(_.key).mkString("[", ",", "]"))
+          case _ =>
+            tpe.toString
+        }
+      result = result.replace("scala.collection.immutable.$colon$colon", "::")
+      result = result.replace("scala.collection.immutable.Nil.type", "Nil")
+      result
     }
     def canCauseLoops: Boolean = shareAnalyzer.canCauseLoops(tpe)
     def isEffectivelyPrimitive: Boolean = tpe match {

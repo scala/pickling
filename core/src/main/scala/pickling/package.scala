@@ -53,7 +53,7 @@ package object pickling {
     if (typeFromStringCache.contains(stpe)) typeFromStringCache(stpe)
     else {
       val result = {
-        val (ssym, stargs) = {
+        val (ssym0, stargs) = {
           val Pattern = """^(.*?)(\[(.*?)\])?$""".r
           def fail() = throw new PicklingException(s"fatal: cannot unpickle $stpe")
           stpe match {
@@ -63,6 +63,10 @@ package object pickling {
             case _ => fail()
           }
         }
+
+        var ssym = ssym0
+        ssym = ssym.replace("::", "scala.collection.immutable.$colon$colon")
+        ssym = ssym.replace("Nil", "scala.collection.immutable.Nil.type")
 
         val sym = if (ssym.endsWith(".type")) mirror.staticModule(ssym.stripSuffix(".type")).moduleClass else mirror.staticClass(ssym)
         val tycon = sym.asType.toTypeConstructor
@@ -77,17 +81,21 @@ package object pickling {
   implicit class RichTypeFIXME(tpe: Type) {
     import definitions._
     def key: String = {
-      tpe.normalize match {
-        case ExistentialType(tparams, TypeRef(pre, sym, targs))
-        if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
-          TypeRef(pre, sym, Nil).key
-        case TypeRef(pre, sym, targs) if pre.typeSymbol.isModuleClass =>
-          sym.fullName +
-          (if (sym.isModuleClass) ".type" else "") +
-          (if (targs.isEmpty) "" else targs.map(_.key).mkString("[", ",", "]"))
-        case _ =>
-          tpe.toString
-      }
+      var result =
+        tpe.normalize match {
+          case ExistentialType(tparams, TypeRef(pre, sym, targs))
+          if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
+            TypeRef(pre, sym, Nil).key
+          case TypeRef(pre, sym, targs) if pre.typeSymbol.isModuleClass =>
+            sym.fullName +
+            (if (sym.isModuleClass) ".type" else "") +
+            (if (targs.isEmpty) "" else targs.map(_.key).mkString("[", ",", "]"))
+          case _ =>
+            tpe.toString
+        }
+      result = result.replace("scala.collection.immutable.$colon$colon", "::")
+      result = result.replace("scala.collection.immutable.Nil.type", "Nil")
+      result
     }
     def isEffectivelyPrimitive: Boolean = tpe match {
       case TypeRef(_, sym: ClassSymbol, _) if sym.isPrimitive => true
@@ -107,7 +115,11 @@ package object pickling {
 
   private var picklees = scala.collection.mutable.Map[Any, Int]()
   private var nextPicklee = 0
-  def lookupPicklee(picklee: Any) = if (picklees.contains(picklee)) picklees(picklee) else -1
+  def lookupPicklee(picklee: Any) = {
+    val result = if (picklees.contains(picklee)) picklees(picklee) else -1
+    // println(s"lookupPicklee($picklee) = $result")
+    result
+  }
   def registerPicklee(picklee: Any) = {
     val index = nextPicklee
     picklees(picklee) = index
@@ -120,7 +132,7 @@ package object pickling {
     nextPicklee = 0
   }
 
-  private var unpicklees = new Array[Any](1024)
+  private var unpicklees = new Array[Any](65536)
   private var nextUnpicklee = 0
   private var preregistered = List[Int]()
 
@@ -131,6 +143,7 @@ package object pickling {
     // println(s"lookupUnpicklee($index)")
     if (index >= nextUnpicklee) throw new Error(s"fatal error: invalid index $index in unpicklee cache of length $nextUnpicklee")
     val result = unpicklees(index)
+    // println(s"result is $result")
     if (result == null) throw new Error(s"fatal error: unpicklee cache is corrupted at $index")
     result
   }
