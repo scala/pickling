@@ -127,8 +127,8 @@ trait VectorPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
   lazy val VectorClass = c.mirror.staticClass("scala.collection.immutable.Vector")
   def mkType(eltpe: c.Type) = appliedType(VectorClass.toTypeConstructor, List(eltpe))
   def mkArray(picklee: c.Tree) = q"$picklee.toArray"
-  def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ListBuffer[$eltpe]()"
-  def mkResult(buffer: c.Tree) = q"$buffer.toVector"
+  def mkBuffer(eltpe: c.Type) = q"new scala.collection.immutable.VectorBuilder[$eltpe]()"
+  def mkResult(buffer: c.Tree) = q"$buffer.result"
 }
 
 trait CollectionPicklerUnpicklerMacro extends Macro {
@@ -182,8 +182,12 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
           var i = 0
           while (i < arr.length) {
             builder putElement { b =>
-              if (!$isPrimitive) b.hintTag(eltag)
-              arr(i).pickleInto(b)
+              if (!$isPrimitive) {
+                b.hintTag(eltag)
+                arr(i).pickleInto(b)
+              } else {
+                elpickler.pickle(arr(i), b)
+              }
             }
             i += 1
           }
@@ -192,7 +196,6 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
           builder.endEntry()
         }
         def unpickle(tag: => scala.pickling.FastTypeTag[_], reader: PReader): Any = {
-          var buffer = ${mkBuffer(eltpe)}
           val arrReader = reader.beginCollection()
           if ($isPrimitive) {
             arrReader.hintStaticallyElidedType()
@@ -200,11 +203,19 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
             arrReader.pinHints()
           }
           val length = arrReader.readLength()
+          var buffer = ${mkBuffer(eltpe)}
           var i = 0
           while (i < length) {
             val r = arrReader.readElement()
-            val elem = r.unpickle[$eltpe]
-            buffer += elem.asInstanceOf[$eltpe]
+            if ($isPrimitive) {
+              r.beginEntryNoTag()
+              val elem = elunpickler.unpickle(eltag, r).asInstanceOf[$eltpe]
+              r.endEntry()
+              buffer += elem
+            } else {
+              val elem = r.unpickle[$eltpe]
+              buffer += elem
+            }
             i += 1
           }
           if ($isPrimitive) arrReader.unpinHints()
