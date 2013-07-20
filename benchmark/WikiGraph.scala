@@ -156,6 +156,51 @@ object WikiGraphPicklingBench extends PicklingBenchmark {
     val unpicklerVertex = "boom!"
     implicitly[Unpickler[Vertex]]
   }
+  // NOTE: doesn't work well either
+  // implicit object PicklerUnpicklerColonColonVertex extends scala.pickling.SPickler[::[Vertex]] with scala.pickling.Unpickler[::[Vertex]] {
+  //   import scala.reflect.runtime.universe._
+  //   import scala.pickling._
+  //   import scala.pickling.`package`.PickleOps
+
+  //   val format = implicitly[BinaryPickleFormat]
+
+  //   def pickle(picklee: ::[Vertex], builder: PBuilder): Unit = {
+  //     builder.hintTag(ColonColonVertexTag)
+  //     builder.beginEntry(picklee)
+  //     val arr = picklee.toArray
+  //     val length = arr.length
+  //     builder.beginCollection(arr.length)
+  //     var i = 0
+  //     while (i < arr.length) {
+  //       builder putElement { b =>
+  //         b.hintTag(VertexTag)
+  //         b.hintStaticallyElidedType()
+  //         arr(i).pickleInto(b)
+  //       }
+  //       i += 1
+  //     }
+  //     builder.endCollection(i)
+  //     builder.endEntry()
+  //   }
+  //   def unpickle(tag: => scala.pickling.FastTypeTag[_], reader: PReader): Any = {
+  //     val arrReader = reader.beginCollection()
+  //     val length = arrReader.readLength()
+  //     if (length == 1) {
+  //       List(arrReader.readElement().unpickle[Vertex])
+  //     } else {
+  //       var buffer = scala.collection.mutable.ListBuffer[Vertex]()
+  //       var i = 0
+  //       while (i < length) {
+  //         val r = arrReader.readElement()
+  //         val elem = r.unpickle[Vertex]
+  //         buffer += elem
+  //         i += 1
+  //       }
+  //       arrReader.endCollection()
+  //       buffer.toList
+  //     }
+  //   }
+  // }
   implicit lazy val picklerUnpicklerColonColonVertex: SPickler[::[Vertex]] with Unpickler[::[Vertex]] = SPickler.genListPickler[Vertex]
   implicit lazy val picklerUnpicklerVectorVertex: SPickler[Vector[Vertex]] with Unpickler[Vector[Vertex]] = SPickler.genVectorPickler[Vertex]
   implicit val picklerGraph = implicitly[SPickler[Graph]]
