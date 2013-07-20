@@ -313,7 +313,6 @@ trait PickleMacros extends Macro {
       if (sym.isNotNullable) createPickler(tpe, builder)
       else q"if (picklee != null) ${createPickler(tpe, builder)} else ${createPickler(NullTpe, builder)}"
     }
-
     def nonFinalDispatch = {
       val nullDispatch = CaseDef(Literal(Constant(null)), EmptyTree, createPickler(NullTpe, builder))
       val compileTimeDispatch = compileTimeDispatchees(tpe) filter (_ != NullTpe) map (subtpe =>
@@ -327,7 +326,19 @@ trait PickleMacros extends Macro {
         ${Match(q"clazz", nullDispatch +: compileTimeDispatch :+ runtimeDispatch)}
       """
     }
-    if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
+    // NOTE: this has zero effect on performance...
+    // def listDispatch = {
+    //   val List(nullTpe, consTpe, nilTpe) = compileTimeDispatchees(tpe)
+    //   q"""
+    //     import scala.language.existentials
+    //     if (picklee eq Nil) ${createPickler(nilTpe, builder)}
+    //     else if (picklee eq null) ${createPickler(nullTpe, builder)}
+    //     else ${createPickler(consTpe, builder)}
+    //   """
+    // }
+    // if (sym == ListClass) listDispatch else
+    if (sym.isEffectivelyFinal) finalDispatch
+    else nonFinalDispatch
   }
 
   /** Used by the main `pickle` macro. Its purpose is to pickle the object that it's called on *into* the
