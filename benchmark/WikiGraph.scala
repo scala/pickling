@@ -148,10 +148,16 @@ object WikiGraphPicklingBench extends PicklingBenchmark {
   implicit val NilTag = FastTypeTag.materializeFastTypeTag[Nil.type]
   implicit val picklerNil = implicitly[SPickler[Nil.type]]
   implicit val unpicklerNil = implicitly[Unpickler[Nil.type]]
-  implicit val picklerColonColonVertex = implicitly[SPickler[::[Vertex]]]
-  implicit val unpicklerColonColonVertex = implicitly[Unpickler[::[Vertex]]]
-  implicit val elpickler = implicitly[SPickler[Vertex]]
-  implicit val elunpickler = implicitly[Unpickler[Vertex]]
+  implicit lazy val picklerVertex: SPickler[Vertex] = {
+    val picklerVertex = "boom!"
+    implicitly[SPickler[Vertex]]
+  }
+  implicit lazy val unpicklerVertex: Unpickler[Vertex] = {
+    val unpicklerVertex = "boom!"
+    implicitly[Unpickler[Vertex]]
+  }
+  implicit lazy val picklerUnpicklerColonColonVertex: SPickler[::[Vertex]] with Unpickler[::[Vertex]] = SPickler.genListPickler[Vertex]
+  implicit lazy val picklerUnpicklerVectorVertex: SPickler[Vector[Vertex]] with Unpickler[Vector[Vertex]] = SPickler.genVectorPickler[Vertex]
   implicit val picklerGraph = implicitly[SPickler[Graph]]
   implicit val unpicklerGraph = implicitly[Unpickler[Graph]]
 

@@ -156,19 +156,19 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
 
         val format = implicitly[${format.tpe}]
 
-        implicit val elpickler: SPickler[$eltpe] = {
+        val elpickler: SPickler[$eltpe] = {
           val elpickler = "bam!"
           implicitly[SPickler[$eltpe]]
         }
-        implicit val elunpickler: Unpickler[$eltpe] = {
+        val elunpickler: Unpickler[$eltpe] = {
           val elunpickler = "bam!"
           implicitly[Unpickler[$eltpe]]
         }
-        implicit val eltag: scala.pickling.FastTypeTag[$eltpe] = {
+        val eltag: scala.pickling.FastTypeTag[$eltpe] = {
           val eltag = "bam!"
           implicitly[scala.pickling.FastTypeTag[$eltpe]]
         }
-        implicit val colltag: scala.pickling.FastTypeTag[$tpe] = {
+        val colltag: scala.pickling.FastTypeTag[$tpe] = {
           val colltag = "bam!"
           implicitly[scala.pickling.FastTypeTag[$tpe]]
         }
