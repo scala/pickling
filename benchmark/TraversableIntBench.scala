@@ -45,6 +45,6 @@ object TraversableKryoIntBench extends scala.pickling.testing.PicklingBenchmark 
     ser = new KryoSerializer
 
     val pickled = ser.toBytes(coll, arr)
-    val unpickled = ser.fromBytes[List[Int]](pickled)
+    val unpickled = ser.fromBytes[Vector[Int]](pickled)
   }
 }
