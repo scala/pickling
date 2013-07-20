@@ -42,19 +42,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   implicit val floatPicklerUnpickler: SPickler[Float] with Unpickler[Float] = new PrimitivePicklerUnpickler[Float]
   implicit val doublePicklerUnpickler: SPickler[Double] with Unpickler[Double] = new PrimitivePicklerUnpickler[Double]
   implicit val nullPicklerUnpickler: SPickler[Null] with Unpickler[Null] = new PrimitivePicklerUnpickler[Null]
-
-  class StringPicklerUnpickler(shareConfig: refs.Share) extends SPickler[String] with Unpickler[String] {
-    val format = null // not used
-    def pickle(picklee: String, builder: PBuilder): Unit = {
-      builder.beginEntry(picklee)
-      builder.endEntry()
-    }
-    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
-      reader.readPrimitive().asInstanceOf[String]
-    }
-  }
-  implicit def stringPicklerUnpickler(implicit shareConfig: refs.Share): SPickler[String] with Unpickler[String] =
-    new StringPicklerUnpickler(shareConfig)
+  implicit val stringPicklerUnpickler: SPickler[String] with Unpickler[String] =  new PrimitivePicklerUnpickler[String]
 
   implicit def refPickler: SPickler[refs.Ref] = throw new Error("cannot pickle refs") // TODO: make this a macro
   implicit val refUnpickler: Unpickler[refs.Ref] = new PrimitivePicklerUnpickler[refs.Ref]
