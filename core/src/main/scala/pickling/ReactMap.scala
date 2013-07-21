@@ -133,7 +133,8 @@ class ReactMap {
   }
 
   private def index(k: AnyRef): Int = {
-    val hc = k.##
+    // val hc = k.##
+    val hc = System.identityHashCode(k)
     math.abs(scala.util.hashing.byteswap32(hc)) % keytable.length
   }
 
