@@ -39,6 +39,7 @@ package json {
     private var pendingIndent = false
     private var lastIsBrace = false
     private var lastIsBracket = false
+    @inline def hintKnownSize(knownSize: Int): Unit = { /* do nothing */ }
     private def append(s: String) = {
       val sindent = if (pendingIndent) "  " * nindent else ""
       buf.put(sindent + s)

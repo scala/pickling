@@ -470,7 +470,6 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat { self =>
 
 case class Hints(
   tag: FastTypeTag[_] = null,
-  knownSize: Int = -1,
   isStaticallyElidedType: Boolean = false,
   isDynamicallyElidedType: Boolean = false,
   oid: Int = -1) {
@@ -482,7 +481,6 @@ trait PickleTools {
   var areHintsPinned = false
 
   def hintTag(tag: FastTypeTag[_]): this.type = { hints = hints.copy(tag = tag); this }
-  def hintKnownSize(knownSize: Int): this.type = { hints = hints.copy(knownSize = knownSize); this }
   def hintStaticallyElidedType(): this.type = { hints = hints.copy(isStaticallyElidedType = true); this }
   def hintDynamicallyElidedType(): this.type = { hints = hints.copy(isDynamicallyElidedType = true); this }
   def hintOid(oid: Int): this.type = { hints = hints.copy(oid = oid); this }

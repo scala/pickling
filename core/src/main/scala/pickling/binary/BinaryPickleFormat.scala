@@ -25,14 +25,16 @@ package binary {
 
     private var pos = 0
 
+    @inline def hintKnownSize(knownSize: Int): Unit = {
+      byteBuffer = if (knownSize != -1) new ByteArray(knownSize) else new ByteArrayBuffer
+    }
+
     @inline private[this] def mkByteBuffer(knownSize: Int): Unit =
       if (byteBuffer == null) {
         byteBuffer = if (knownSize != -1) new ByteArray(knownSize) else new ByteArrayBuffer
       }
 
     @inline def beginEntry(picklee: Any): this.type = withHints { hints =>
-      mkByteBuffer(hints.knownSize)
-
       if (picklee == null) {
         pos = byteBuffer.encodeByteTo(pos, NULL_TAG)
       } else if (hints.oid != -1) {
