@@ -159,7 +159,11 @@ package object pickling {
     unpicklees(index) = unpicklee
   }
   def clearUnpicklees() = {
-    java.util.Arrays.fill(unpicklees.asInstanceOf[Array[AnyRef]], null)
+    var i = 0
+    while (i < nextUnpicklee) {
+      unpicklees(i) = null
+      i += 1
+    }
     nextUnpicklee = 0
   }
 }
