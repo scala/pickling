@@ -121,34 +121,3 @@ object KryoVectorBench extends testing.Benchmark {
     val res = ser.fromBytes[Vector[Int]](pickled)
   }
 }
-
-object KryoEvactorBench extends testing.Benchmark {
-  val size = System.getProperty("size").toInt
-  var ser: KryoSerializer = _
-
-  val time: Int = System.currentTimeMillis.toInt
-
-  override def tearDown() {
-    ser = null
-  }
-
-  override def run() {
-    // random events
-    val evts = for (i <- 1 to size) yield
-      DataEvent("event" + i, time + Random.nextInt(100), Random.nextString(5))
-
-    ser = new KryoSerializer
-    ser.kryo.register(evts(0).getClass)
-
-    val pickles = for (evt <- evts) yield {
-      val rnd: Int = Random.nextInt(10)
-      //val arr = Array.ofDim[Byte](32 * 2048 * 2048 + rnd)
-      val arr = Array.ofDim[Byte](32 * 2048 + rnd)
-      ser.toBytes(evt, arr)
-    }
-
-    val results = for (pickle <- pickles) yield {
-      ser.fromBytes[DataEvent](pickle)
-    }
-  }
-}
