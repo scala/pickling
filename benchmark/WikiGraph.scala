@@ -71,7 +71,7 @@ object GraphReader extends RegexParsers {
       case NoSuccess(msg, rest) => onError(msg); List()
     }
 
-  def readGraph(lines: Iterator[String], names: Map[String, String]): Graph = {
+  def readChunk(lines: Iterator[String], names: Map[String, String], size: Int): Graph = {
     val graph = new Graph
 
     for (line <- lines) {
@@ -98,6 +98,7 @@ object GraphReader extends RegexParsers {
       }
 
       firstVertex.neighbors = targetVertices
+      if (graph.vertices.length > size) return graph
     }
 
     graph
@@ -130,13 +131,22 @@ object WikiGraph {
 
   // println("Reading wikipedia graph from file... " + linksPath)
   val lines: Iterator[String] = Source.fromFile(linksPath).getLines()
-  val wikigraph: Graph        = GraphReader.readGraph(lines, names)
+  def readChunk(size: Int): Graph = GraphReader.readChunk(lines, names, size)
 
   //GraphReader.printGraph(wikigraph)
   // println("#vertices: " + wikigraph.vertices.size)
 }
 
-object WikiGraphPicklingBench extends PicklingBenchmark {
+trait WikiGraphBenchmark extends PicklingBenchmark {
+  val data = {
+    // println(size)
+    val result = WikiGraph.readChunk(size)
+    // println("#vertices: " + result.vertices.size)
+    result
+  }
+}
+
+object WikiGraphPicklingBench extends WikiGraphBenchmark {
   implicit val VertexTag = FastTypeTag.materializeFastTypeTag[Vertex]
   implicit val GraphTag = FastTypeTag.materializeFastTypeTag[Graph]
   implicit val StringTag = FastTypeTag.materializeFastTypeTag[String]
@@ -207,16 +217,16 @@ object WikiGraphPicklingBench extends PicklingBenchmark {
   implicit val unpicklerGraph = implicitly[Unpickler[Graph]]
 
   override def run(): Unit = {
-    val pickle = WikiGraph.wikigraph.pickle
+    val pickle = data.pickle
     val res = pickle.unpickle[Graph]
   }
 }
 
-object WikiGraphJavaBench extends PicklingBenchmark {
+object WikiGraphJavaBench extends WikiGraphBenchmark {
   override def run(): Unit = {
     val bos = new ByteArrayOutputStream()
     val out = new ObjectOutputStream(bos)
-    out.writeObject(WikiGraph.wikigraph)
+    out.writeObject(data)
     val ba = bos.toByteArray()
     // println("Bytes: " + ba.length)
     val bis = new ByteArrayInputStream(ba)
@@ -225,7 +235,7 @@ object WikiGraphJavaBench extends PicklingBenchmark {
   }
 }
 
-object WikiGraphKryoBench extends scala.pickling.testing.Benchmark {
+object WikiGraphKryoBench extends WikiGraphBenchmark {
   var ser: KryoSerializer = _
 
   override def tearDown() {
@@ -237,7 +247,7 @@ object WikiGraphKryoBench extends scala.pickling.testing.Benchmark {
     val arr = Array.ofDim[Byte](32 * 2048 * 2048 + rnd)
     ser = new KryoSerializer
 
-    val pickled = ser.toBytes(WikiGraph.wikigraph, arr)
+    val pickled = ser.toBytes(data, arr)
     // println("Size: "+pickled.length)
     // TODO: uncrash this
     // val res = ser.fromBytes[Graph](pickled)

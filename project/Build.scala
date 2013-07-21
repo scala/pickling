@@ -232,9 +232,9 @@ object MyBuild extends Build {
       InputKey[Unit]("sparklrpick")        <<= benchTask("SparkLRPicklingBench", 20000 to 40000 by 2000),
       InputKey[Unit]("sparklrjava")        <<= benchTask("SparkLRJavaBench", 20000 to 40000 by 2000),
       InputKey[Unit]("sparklrkryo")        <<= benchTask("SparkLRKryoBench", 20000 to 40000 by 2000),
-      InputKey[Unit]("graphpick")          <<= benchTask("WikiGraphPicklingBench", 20000 to 40000 by 20000),
-      InputKey[Unit]("graphjava")          <<= benchTask("WikiGraphJavaBench", 20000 to 40000 by 20000),
-      InputKey[Unit]("graphkryo")          <<= benchTask("WikiGraphKryoBench", 20000 to 40000 by 20000)
+      InputKey[Unit]("graphpick")          <<= benchTask("WikiGraphPicklingBench", 5000 to 14000 by 1000),
+      InputKey[Unit]("graphjava")          <<= benchTask("WikiGraphJavaBench", 5000 to 14000 by 1000),
+      InputKey[Unit]("graphkryo")          <<= benchTask("WikiGraphKryoBench", 5000 to 14000 by 1000)
     )
   ) dependsOn(core)
 }
