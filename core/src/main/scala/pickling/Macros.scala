@@ -221,6 +221,7 @@ trait PickleMacros extends Macro {
       import scala.pickling._
       val picklee: $tpe = $pickleeArg
       val builder = $format.createBuilder($output)
+      ${hintKnownSize(tpe)}
       picklee.pickleInto(builder)
       $endPickle
     """
@@ -234,6 +235,7 @@ trait PickleMacros extends Macro {
       import scala.pickling._
       val picklee: $tpe = $pickleeArg
       val builder = $format.createBuilder()
+      ${hintKnownSize(tpe)}
       picklee.pickleInto(builder)
       $endPickle
       builder.result()
@@ -285,14 +287,11 @@ trait PickleMacros extends Macro {
     val tpe = weakTypeOf[T].widen // TODO: I used widen to make module classes work, but I don't think it's okay to do that
     val sym = tpe.typeSymbol.asClass
     val q"${_}($pickleeArg)" = c.prefix.tree
-
     val dispatchLogic = genDispatchLogic(sym, tpe, builder)
-
     q"""
       import scala.pickling._
       val picklee = $pickleeArg
       val pickler = $dispatchLogic
-      ${hintKnownSize(tpe)}
       pickler.asInstanceOf[SPickler[$tpe]].pickle(picklee, $builder)
     """
   }
@@ -308,7 +307,6 @@ trait PickleMacros extends Macro {
       import scala.pickling._
       val picklee = $picklee
       val pickler = $dispatchLogic
-      ${hintKnownSize(tpe)}
       pickler.asInstanceOf[SPickler[$tpe]].pickle($picklee, $builder)
     """
   }
