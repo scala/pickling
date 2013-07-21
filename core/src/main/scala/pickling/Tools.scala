@@ -405,7 +405,7 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat { self =>
     typeOf[Float] -> 4,
     typeOf[Double] -> 8,
     typeOf[Boolean] -> 1,
-    typeOf[String] -> 8
+    typeOf[String] -> 24
   )
   val ArrayTpe = typeOf[Array[_]]
   val IndexedSeqTpe = typeOf[IndexedSeq[_]]

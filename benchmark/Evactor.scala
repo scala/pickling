@@ -3,6 +3,7 @@ import binary._
 
 import org.evactor.model.events.DataEvent
 import scala.util.Random
+import java.io._
 import scala.reflect.runtime.{universe => ru}
 
 object EvactorPicklingBench extends scala.pickling.testing.PicklingBenchmark {
@@ -79,6 +80,33 @@ object EvactorKryoBench extends scala.pickling.testing.PicklingBenchmark {
 
     val results = for (pickle <- pickles) yield {
       ser.fromBytes[DataEvent](pickle)
+    }
+  }
+}
+
+object EvactorJavaBench extends scala.pickling.testing.PicklingBenchmark {
+  //val lst = (1 to size).toList
+
+  val time: Int = System.currentTimeMillis.toInt
+
+  override def run() = {
+    val bos = new ByteArrayOutputStream()
+    val out = new ObjectOutputStream(bos)
+
+        // random events
+    val evts = for (i <- 1 to size) yield
+      DataEvent("event" + i, time + Random.nextInt(100), Random.nextString(5))
+
+    val pickles = for (evt <- evts) yield {
+      out.writeObject(evt) // pickle evt
+      bos.toByteArray()
+    }
+
+    val results = for (pickle <- pickles) yield {
+      //pickle.unpickle[DataEvent]
+      val bis = new ByteArrayInputStream(pickle)
+      val in = new ObjectInputStream(bis)
+      in.readObject.asInstanceOf[DataEvent]
     }
   }
 }
