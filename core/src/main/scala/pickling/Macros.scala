@@ -81,8 +81,8 @@ trait PicklerMacros extends Macro {
           """
       }
       val beginEntry = q"""
-        builder.beginEntry(picklee)
         $hintKnownSize
+        builder.beginEntry(picklee)
       """
       val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
       val putFields = (nonLoopyFields ++ loopyFields).flatMap(fir => {
