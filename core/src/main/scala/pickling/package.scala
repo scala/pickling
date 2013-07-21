@@ -250,6 +250,7 @@ package pickling {
 
   trait Hintable {
     def hintTag(tag: FastTypeTag[_]): this.type
+    def hintKnownSize(knownSize: Int): this.type
     def hintStaticallyElidedType(): this.type
     def hintDynamicallyElidedType(): this.type
     def hintOid(id: Int): this.type
@@ -265,7 +266,6 @@ package pickling {
     def putElement(pickler: this.type => Unit): this.type
     def endCollection(length: Int): Unit
     def result(): Pickle
-    def hintKnownSize(knownSize: Int): Unit
   }
 
   trait PReader extends Hintable {
