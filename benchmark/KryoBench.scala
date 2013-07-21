@@ -122,30 +122,6 @@ object KryoVectorBench extends testing.Benchmark {
   }
 }
 
-object KryoGeoTrellisBench extends testing.Benchmark {
-  val size = System.getProperty("size").toInt
-  var ser: KryoSerializer = _
-  println("alloc new arr of size " + size)
-  val coll = (1 to size).toArray.map(_ + (16 * 1048576))
-  val data = IntArrayRasterData(coll, 64, 64)
-
-  override def tearDown() {
-    ser = null
-  }
-
-  override def run() {
-    val rnd: Int = Random.nextInt(10)
-    //val arr = Array.ofDim[Byte](32 * 2048 * 2048 + rnd)
-    val arr = Array.ofDim[Byte](32 * 2048 + rnd)
-    ser = new KryoSerializer
-    ser.kryo.register(data.getClass)
-
-    val pickled = ser.toBytes(data, arr)
-    // println("Size: " + pickled.length)
-    val res = ser.fromBytes[IntArrayRasterData](pickled)
-  }
-}
-
 object KryoEvactorBench extends testing.Benchmark {
   val size = System.getProperty("size").toInt
   var ser: KryoSerializer = _
