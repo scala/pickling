@@ -2,7 +2,6 @@ package scala.pickling
 
 package binary {
   import collection.mutable.Buffer
-  import collection.mutable.Builder
   import UnsafeMemory._
 
   object Util {
@@ -139,33 +138,7 @@ package binary {
       buf(i+3) = frth
     }
 
-    def encodeIntTo(buf: Builder[Byte, _], i: Int, value: Int): Unit = {
-      val fst = (value >>> 24).asInstanceOf[Byte]
-      val snd = (value >>> 16 & 0xff).asInstanceOf[Byte]
-      val thrd = (value >>> 8 & 0xff).asInstanceOf[Byte]
-      val frth = (value & 0xff).asInstanceOf[Byte]
-      // buf(i) = fst
-      // buf(i+1) = snd
-      // buf(i+2) = thrd
-      // buf(i+3) = frth
-      buf += fst
-      buf += snd
-      buf += thrd
-      buf += frth
-    }
-
     def encodeIntTo(buf: Buffer[Byte], value: Int): Unit = {
-      val fst = (value >>> 24).asInstanceOf[Byte]
-      val snd = (value >>> 16 & 0xff).asInstanceOf[Byte]
-      val thrd = (value >>> 8 & 0xff).asInstanceOf[Byte]
-      val frth = (value & 0xff).asInstanceOf[Byte]
-      buf += fst
-      buf += snd
-      buf += thrd
-      buf += frth
-    }
-
-    def encodeIntTo(buf: Builder[Byte, _], value: Int): Unit = {
       val fst = (value >>> 24).asInstanceOf[Byte]
       val snd = (value >>> 16 & 0xff).asInstanceOf[Byte]
       val thrd = (value >>> 8 & 0xff).asInstanceOf[Byte]
