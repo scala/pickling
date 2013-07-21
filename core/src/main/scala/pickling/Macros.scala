@@ -19,7 +19,6 @@ trait PicklerMacros extends Macro {
     def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
       val cir = flattenedClassIR(tpe)
       val beginEntry = q"""
-        ${hintKnownSize(tpe)}
         builder.beginEntry(picklee)
       """
       val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
@@ -293,6 +292,7 @@ trait PickleMacros extends Macro {
       import scala.pickling._
       val picklee = $pickleeArg
       val pickler = $dispatchLogic
+      ${hintKnownSize(tpe)}
       pickler.asInstanceOf[SPickler[$tpe]].pickle(picklee, $builder)
     """
   }
@@ -308,6 +308,7 @@ trait PickleMacros extends Macro {
       import scala.pickling._
       val picklee = $picklee
       val pickler = $dispatchLogic
+      ${hintKnownSize(tpe)}
       pickler.asInstanceOf[SPickler[$tpe]].pickle($picklee, $builder)
     """
   }

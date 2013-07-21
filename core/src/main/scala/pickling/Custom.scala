@@ -176,7 +176,6 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
 
         def pickle(picklee: $tpe, builder: PBuilder): Unit = {
           builder.hintTag(colltag)
-          ${hintKnownSize(tpe)}
           builder.beginEntry(picklee)
           ${
             if (isPrimitive) q"builder.hintStaticallyElidedType(); builder.hintTag(eltag); builder.pinHints()".asInstanceOf[Tree]
