@@ -19,8 +19,8 @@ trait PicklerMacros extends Macro {
     def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
       val cir = flattenedClassIR(tpe)
       val beginEntry = q"""
-        builder.beginEntry(picklee)
         ${hintKnownSize(tpe)}
+        builder.beginEntry(picklee)
       """
       val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
       val putFields = (nonLoopyFields ++ loopyFields).flatMap(fir => {

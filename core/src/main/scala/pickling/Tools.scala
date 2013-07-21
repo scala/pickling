@@ -416,7 +416,7 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat { self =>
   def hintKnownSize(tpe: Type): Tree = {
     def loop(tpe: Type, prefix: Option[Tree], depth: Int): Option[Tree] = {
       if (precomputedSizes.contains(tpe)) Some(q"${precomputedSizes(tpe)}")
-      else if (depth >= 3) None // TODO: put something better here
+      else if (depth >= 4) None // TODO: put something better here
       else {
         // returns a tree with the size and a list of trees that have to be checked for null
         case class CheckedTree(tree: Tree, checks: List[Tree])
