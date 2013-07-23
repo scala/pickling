@@ -11,6 +11,8 @@ Basic usage:
     val pckl = List(1, 2, 3, 4).pickle
     val lst = pckl.unpickle[List[Int]]
 
+For more, flip through, or watch the [ScalaDays 2013 presentation!](http://www.parleys.com/play/51c3799fe4b0d38b54f4625a/chapter0/about)
+
 ## Quick Start
 
 - make sure `scala-pickling.jar` is on your classpath
