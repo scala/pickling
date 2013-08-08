@@ -30,7 +30,7 @@ package binary {
         byteBuffer = if (knownSize != -1) new ByteArray(knownSize) else new ByteArrayBuffer
       }
 
-    def beginEntry(picklee: Any): this.type = withHints { hints =>
+    def beginEntry(picklee: Any): PBuilder = withHints { hints =>
       mkByteBuffer(hints.knownSize)
 
       if (picklee == null) {
@@ -81,7 +81,7 @@ package binary {
       this
     }
 
-    def putField(name: String, pickler: this.type => Unit): this.type = {
+    def putField(name: String, pickler: PBuilder => Unit): PBuilder = {
       // can skip writing name if we pickle/unpickle in the same order
       pickler(this)
       this
@@ -91,14 +91,14 @@ package binary {
 
     var beginCollPos = 0
 
-    def beginCollection(length: Int): this.type = {
+    def beginCollection(length: Int): PBuilder = {
       beginCollPos = pos
       byteBuffer.encodeIntAtEnd(pos, 0)
       pos += 4
       this
     }
 
-    def putElement(pickler: this.type => Unit): this.type = {
+    def putElement(pickler: PBuilder => Unit): PBuilder = {
       pickler(this)
       this
     }
