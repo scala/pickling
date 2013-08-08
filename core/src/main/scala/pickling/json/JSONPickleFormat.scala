@@ -84,7 +84,7 @@ package json {
       FastTypeTag.JavaString.key -> ((picklee: Any) => append("\"" + JSONFormat.quoteString(picklee.toString) + "\"")),
       FastTypeTag.ArrayInt.key -> ((picklee: Any) => pickleArray(picklee.asInstanceOf[Array[Int]], FastTypeTag.Int))
     )
-    def beginEntry(picklee: Any): this.type = withHints { hints =>
+    def beginEntry(picklee: Any): PBuilder = withHints { hints =>
       indent()
       tags.push(hints.tag)
       if (primitives.contains(hints.tag.key)) {
@@ -107,7 +107,7 @@ package json {
       }
       this
     }
-    def putField(name: String, pickler: this.type => Unit): this.type = {
+    def putField(name: String, pickler: PBuilder => Unit): PBuilder = {
       // assert(!primitives.contains(tags.top.key), tags.top)
       if (!lastIsBrace) appendLine(",") // TODO: very inefficient, but here we don't care much about performance
       append("\"" + name + "\": ")
@@ -119,13 +119,13 @@ package json {
       if (primitives.contains(tags.pop().key)) () // do nothing
       else { appendLine(); append("}") }
     }
-    def beginCollection(length: Int): this.type = {
+    def beginCollection(length: Int): PBuilder = {
       putField("elems", b => ())
       appendLine("[")
       // indent()
       this
     }
-    def putElement(pickler: this.type => Unit): this.type = {
+    def putElement(pickler: PBuilder => Unit): PBuilder = {
       if (!lastIsBracket) appendLine(",") // TODO: very inefficient, but here we don't care much about performance
       pickler(this)
       this
