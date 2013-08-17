@@ -1,4 +1,4 @@
-scala-pickling
+scala/pickling
 ==============
 
 **Scala Pickling** is an automatic serialization framework made for Scala. It's fast, boilerplate-free, and allows users to easily swap in/out different serialization formats (such as binary, or JSON), or even to provide your own custom serialization format.
@@ -13,8 +13,8 @@ Basic usage:
 
 For more, flip through, or watch the [ScalaDays 2013 presentation!](http://www.parleys.com/play/51c3799fe4b0d38b54f4625a/chapter0/about)
 
-**Current version:** 0.8.0-SNAPSHOT
-<br>**Upcoming release:** Scala/pickling does not yet have a stable release. Our first stable release, 0.8.0, is scheduled for August 21st.
+**Current version:** 0.8.0-SNAPSHOT. Scala/pickling does not yet have a stable release.
+<br>**Upcoming release:** Our first stable release, 0.8.0, is scheduled for August 21st.
 
 ## Quick Start
 
