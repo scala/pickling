@@ -14,7 +14,7 @@ Basic usage:
 For more, flip through, or watch the [ScalaDays 2013 presentation!](http://www.parleys.com/play/51c3799fe4b0d38b54f4625a/chapter0/about)
 
 **Current version:** 0.8.0-SNAPSHOT
-**Upcoming release:** Scala/pickling does not yet have a stable release. Our first stable release, 0.8.0, is scheduled for August 21st.
+<br>**Upcoming release:** Scala/pickling does not yet have a stable release. Our first stable release, 0.8.0, is scheduled for August 21st.
 
 ## Quick Start
 
