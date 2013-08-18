@@ -120,7 +120,7 @@ package object pickling {
     nextPicklee = 0
   }
 
-  private var unpicklees = new Array[Any](1024)
+  private var unpicklees = new Array[Any](65536)
   private var nextUnpicklee = 0
   private var preregistered = List[Int]()
 

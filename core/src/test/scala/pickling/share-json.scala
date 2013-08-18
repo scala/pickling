@@ -77,13 +77,13 @@ class ShareJsonTest extends FunSuite {
       |  ],
       |  "c": {
       |    "name": "c3",
-      |    "desc": { "$ref": 2 },
+      |    "desc": "desc",
       |    "arr": [
       |      1
       |    ],
       |    "c": {
       |      "name": "c2",
-      |      "desc": { "$ref": 2 },
+      |      "desc": "desc",
       |      "arr": [
       |        1
       |      ],
