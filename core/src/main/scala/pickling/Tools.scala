@@ -202,7 +202,7 @@ abstract class ShareAnalyzer[U <: Universe](val u: U) {
           if (visited(currTpe)) {
             if (tpe <:< currTpe) true  // TODO: make sure this sanely works for polymorphic types
             else loop(rest, visited)
-          } else if (currTpe.isNotNullable || currTpe.isEffectivelyPrimitive || currSym == StringClass) loop(rest, visited)
+          } else if (currTpe.isNotNullable || currTpe.isEffectivelyPrimitive || currSym == StringClass || currSym.isModuleClass) loop(rest, visited)
           // TODO: extend the traversal logic to support sealed classes
           // when doing that don't forget:
           // 1) sealeds can themselves be extended, so we need to recur
