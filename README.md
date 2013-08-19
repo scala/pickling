@@ -11,7 +11,8 @@ Basic usage:
     val pckl = List(1, 2, 3, 4).pickle
     val lst = pckl.unpickle[List[Int]]
 
-For more, flip through, or watch the [ScalaDays 2013 presentation!](http://www.parleys.com/play/51c3799fe4b0d38b54f4625a/chapter0/about)
+For more, flip through, or watch the [ScalaDays 2013 presentation!](http://www.parleys.com/play/51c3799fe4b0d38b54f4625a/chapter0/about).
+<br> For deeper technical details, we've also written an OOPSLA 2013 paper on scala/pickling, [Instant Pickles: Generating Object-Oriented Pickler Combinators for Fast and Extensible Serialization, ](http://lampwww.epfl.ch/~hmiller/files/oopsla-pickling.pdf).
 
 **Current version:** 0.8.0-SNAPSHOT. Scala/pickling does not yet have a stable release.
 <br>**Upcoming release:** Our first stable release, 0.8.0, is scheduled for August 21st.
