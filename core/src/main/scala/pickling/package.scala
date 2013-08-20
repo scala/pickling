@@ -3,7 +3,9 @@ package scala
 import scala.language.experimental.macros
 import scala.language.reflectiveCalls
 
+import scala.reflect.macros.Context
 import scala.reflect.runtime.universe._
+import scala.reflect.runtime.{universe => ru}
 import scala.annotation.implicitNotFound
 
 package object pickling {
@@ -18,19 +20,30 @@ package object pickling {
     def pickleTo(output: Output[_])(implicit format: PickleFormat): Unit = macro Compat.PickleMacros_pickleTo[T]
   }
 
-  implicit class RichSymbol(sym: scala.reflect.api.Symbols#Symbol) {
+  implicit class RichSymbol(sym: scala.reflect.api.Universe#Symbol) {
     def isEffectivelyFinal = sym.asInstanceOf[scala.reflect.internal.Symbols#Symbol].isEffectivelyFinal
     def isEffectivelyPrimitive = throw new Exception("use Type.isEffectivelyPrimitive instead")
-    def isNotNull = sym.asType.toType.asInstanceOf[scala.reflect.internal.Types#Type].isNotNull
+    def isNotNullable = sym.isClass && (sym.asClass.isPrimitive || sym.asClass.isDerivedValueClass)
+    def isNullable = sym.isClass && !isNotNullable
   }
 
-  var currentMirror: reflect.runtime.universe.Mirror = null
+  implicit class RichType(tpe: scala.reflect.api.Universe#Type) {
+    def isEffectivelyFinal = tpe.typeSymbol.isEffectivelyFinal
+    // TODO: doesn't work...
+    // def isEffectivelyPrimitive: Boolean = {
+    //   tpe.typeSymbol.isPrimitive || {
+    //     val args = tpe.asInstanceOf[scala.reflect.internal.SymbolTable#Type].typeArguments
+    //     def isArrayOfSomething = tpe.toString.startsWith("scala.Array[") || tpe.toString.startsWith("Array[")
+    //     def isParameterizedByPrimitive = args.nonEmpty && args.head.isEffectivelyPrimitive
+    //     isArrayOfSomething && isParameterizedByPrimitive
+    //   }
+    // }
+    def isNotNullable = tpe.typeSymbol.isNotNullable
+    def isNullable = tpe.typeSymbol.isNullable
+  }
 
-  def mirror: reflect.runtime.universe.Mirror =
-    if (currentMirror == null) {
-      currentMirror = reflect.runtime.currentMirror
-      currentMirror
-    } else currentMirror
+  var cachedMirror: ru.Mirror = null
+  def currentMirror: ru.Mirror = macro Compat.CurrentMirrorMacro_impl
 
   def typeToString(tpe: Type): String = tpe.key
 
@@ -61,10 +74,10 @@ package object pickling {
   }
 
   // FIXME: duplication wrt Tools, but I don't really fancy abstracting away this path-dependent madness
-  implicit class RichType(tpe: Type) {
+  implicit class RichTypeFIXME(tpe: Type) {
     import definitions._
     def key: String = {
-      tpe match {
+      tpe.normalize match {
         case ExistentialType(tparams, TypeRef(pre, sym, targs))
         if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
           TypeRef(pre, sym, Nil).key
@@ -90,6 +103,59 @@ package object pickling {
       val jfield = fm.asInstanceOf[{ def jfield: jField }].jfield
       jfield.set(fm.receiver, value)
     }
+  }
+
+  private var picklees = new ReactMap
+  private var nextPicklee = 0
+  def lookupPicklee(picklee: Any) = {
+    val index = nextPicklee
+    val result = picklees.insertIfNotThere(picklee.asInstanceOf[AnyRef], index)
+    // println(s"lookupPicklee($picklee) = $result")
+    if (result == -1)
+      nextPicklee += 1
+    result
+  }
+  def registerPicklee(picklee: Any) = {
+    val index = nextPicklee
+    picklees.insert(picklee.asInstanceOf[AnyRef], index)
+    // println(s"registerPicklee($picklee, $index)")
+    nextPicklee += 1
+    index
+  }
+  def clearPicklees() = {
+    picklees.clear()
+    nextPicklee = 0
+  }
+
+  private var unpicklees = new Array[Any](65536)
+  private var nextUnpicklee = 0
+
+  def lookupUnpicklee(index: Int): Any = {
+    // println(s"lookupUnpicklee($index)")
+    if (index >= nextUnpicklee) throw new Error(s"fatal error: invalid index $index in unpicklee cache of length $nextUnpicklee")
+    val result = unpicklees(index)
+    if (result == null) throw new Error(s"fatal error: unpicklee cache is corrupted at $index")
+    result
+  }
+  def preregisterUnpicklee() = {
+    val index = nextUnpicklee
+    // TODO: dynamically resize the array!
+    unpicklees(index) = null
+    // println(s"preregisterUnpicklee() at $index")
+    nextUnpicklee += 1
+    index
+  }
+  def registerUnpicklee(unpicklee: Any, index: Int) = {
+    // println(s"registerUnpicklee($unpicklee, $index)")
+    unpicklees(index) = unpicklee
+  }
+  def clearUnpicklees() = {
+    var i = 0
+    while (i < nextUnpicklee) {
+      unpicklees(i) = null
+      i += 1
+    }
+    nextUnpicklee = 0
   }
 }
 
@@ -133,7 +199,7 @@ package pickling {
     implicit def genPickler[T](implicit format: PickleFormat): SPickler[T] = macro Compat.PicklerMacros_impl[T]
     // TODO: the primitive pickler hack employed here is funny, but I think we should fix this one
     // since people probably would also have to deal with the necessity to abstract over pickle formats
-    def genPickler(classLoader: ClassLoader, clazz: Class[_])(implicit format: PickleFormat): SPickler[_] = {
+    def genPickler(classLoader: ClassLoader, clazz: Class[_])(implicit format: PickleFormat, share: refs.Share): SPickler[_] = {
       // println(s"generating runtime pickler for $clazz") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
       //val runtime = new CompiledPicklerRuntime(classLoader, clazz)
       val runtime = new InterpretedPicklerRuntime(classLoader, clazz)
@@ -151,9 +217,9 @@ package pickling {
 
   trait GenUnpicklers {
     implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
-    def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit format: PickleFormat): Unpickler[_] = {
+    def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit format: PickleFormat, share: refs.Share): Unpickler[_] = {
       // println(s"generating runtime unpickler for ${tag.tpe}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
-      //val runtime = new CompiledUnpicklerRuntime(mirror, tag)
+      //val runtime = new CompiledUnpicklerRuntime(mirror, tag.tpe)
       val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
       runtime.genUnpickler
     }
@@ -182,6 +248,7 @@ package pickling {
     def hintKnownSize(knownSize: Int): this.type
     def hintStaticallyElidedType(): this.type
     def hintDynamicallyElidedType(): this.type
+    def hintOid(id: Int): this.type
     def pinHints(): this.type
     def unpinHints(): this.type
   }

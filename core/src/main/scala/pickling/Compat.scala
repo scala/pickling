@@ -46,7 +46,7 @@ object Compat {
   def UnpickleMacros_readerUnpickle[T: c.WeakTypeTag](c: Context): c.Expr[T] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with UnpickleMacros
-    c.Expr[T](bundle.readerUnpickle[T](false))
+    c.Expr[T](bundle.readerUnpickle[T])
   }
 
   def UnpickleMacros_readerUnpickleTopLevel[T: c.WeakTypeTag](c: Context): c.Expr[T] = {
@@ -61,6 +61,12 @@ object Compat {
     c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
   }
 
+  def VectorPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with VectorPicklerUnpicklerMacro
+    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
+  }
+
   def PicklerMacros_dpicklerImpl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[DPickler[T]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PicklerMacros
@@ -71,6 +77,30 @@ object Compat {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PickleMacros
     c.Expr[Unit](bundle.dpicklerPickle[T](picklee.tree, builder.tree))
+  }
+
+  def CurrentMirrorMacro_impl(c: Context): c.Expr[ru.Mirror] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with CurrentMirrorMacro
+    c.Expr[ru.Mirror](bundle.impl)
+  }
+
+  def FastTypeTagMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[FastTypeTag[T]] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with FastTypeTagMacros
+    c.Expr[FastTypeTag[T]](bundle.impl[T])
+  }
+
+  def FastTypeTagMacros_apply(c: Context)(key: c.Expr[String]): c.Expr[FastTypeTag[_]] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with FastTypeTagMacros
+    c.Expr[FastTypeTag[_]](bundle.apply(key.tree))
+  }
+
+  def ArrayBufferPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with ArrayBufferPicklerUnpicklerMacro
+    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
   }
 }
 

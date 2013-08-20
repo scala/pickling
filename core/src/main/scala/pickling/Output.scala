@@ -26,7 +26,14 @@ trait EncodingOutput[T] extends Output[T] {
   def encodeIntTo(pos: Int, value: Int): Int
   def encodeStringTo(pos: Int, value: String): Int
   def encodeBooleanTo(pos: Int, value: Boolean): Int
+  def encodeByteArrayTo(pos: Int, ia: Array[Byte]): Int
+  def encodeShortArrayTo(pos: Int, ia: Array[Short]): Int
+  def encodeCharArrayTo(pos: Int, ia: Array[Char]): Int
   def encodeIntArrayTo(pos: Int, ia: Array[Int]): Int
+  def encodeLongArrayTo(pos: Int, ia: Array[Long]): Int
+  def encodeBooleanArrayTo(pos: Int, ia: Array[Boolean]): Int
+  def encodeFloatArrayTo(pos: Int, ia: Array[Float]): Int
+  def encodeDoubleArrayTo(pos: Int, ia: Array[Double]): Int
   def copyTo(pos: Int, bytes: Array[Byte]): Int
 }
 

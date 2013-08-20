@@ -17,7 +17,7 @@ package binary {
     override def toString = s"""BinaryPickle(${value.mkString("[", ",", "]")})"""
   }
 
-  class BinaryPickleBuilder(format: BinaryPickleFormat, out: EncodingOutput[Array[Byte]]) extends PBuilder with PickleTools {
+  final class BinaryPickleBuilder(format: BinaryPickleFormat, out: EncodingOutput[Array[Byte]]) extends PBuilder with PickleTools {
     import format._
 
     private var byteBuffer: EncodingOutput[Array[Byte]] =
@@ -30,19 +30,27 @@ package binary {
         byteBuffer = if (knownSize != -1) new ByteArray(knownSize) else new ByteArrayBuffer
       }
 
-    def beginEntry(picklee: Any): PBuilder = withHints { hints =>
+    @inline def beginEntry(picklee: Any): PBuilder = withHints { hints =>
       mkByteBuffer(hints.knownSize)
 
       if (picklee == null) {
         pos = byteBuffer.encodeByteTo(pos, NULL_TAG)
+      } else if (hints.oid != -1) {
+        byteBuffer.encodeByteTo(pos, REF_TAG)
+        byteBuffer.encodeIntAtEnd(pos + 1, hints.oid)
+        pos = pos + 5
       } else {
         if (!hints.isElidedType) {
-          val tpe = hints.tag.tpe
-          val tpeBytes = typeToString(tpe).getBytes("UTF-8")
+          val tpeBytes = hints.tag.key.getBytes("UTF-8")
           byteBuffer.encodeIntAtEnd(pos, tpeBytes.length)
           pos += 4
           pos = byteBuffer.copyTo(pos, tpeBytes)
         }
+
+        // NOTE: it looks like we don't have to write object ids at all
+        // traversals employed by pickling and unpickling are exactly the same
+        // hence when unpickling it's enough to just increment the nextUnpicklee counter
+        // and everything will work out automatically!
 
         pos = hints.tag.key match { // PERF: should store typestring once in hints.
           case KEY_NULL =>
@@ -68,10 +76,28 @@ package binary {
             val intValue = java.lang.Float.floatToRawIntBits(picklee.asInstanceOf[Float])
             byteBuffer.encodeIntAtEnd(pos, intValue)
             pos + 4
+          case KEY_DOUBLE =>
+            val longValue = java.lang.Double.doubleToRawLongBits(picklee.asInstanceOf[Double])
+            byteBuffer.encodeLongAtEnd(pos, longValue)
+            pos + 8
           case KEY_SCALA_STRING | KEY_JAVA_STRING =>
             byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])
+          case KEY_ARRAY_BYTE =>
+            byteBuffer.encodeByteArrayTo(pos, picklee.asInstanceOf[Array[Byte]])
+          case KEY_ARRAY_CHAR =>
+            byteBuffer.encodeCharArrayTo(pos, picklee.asInstanceOf[Array[Char]])
+          case KEY_ARRAY_SHORT =>
+            byteBuffer.encodeShortArrayTo(pos, picklee.asInstanceOf[Array[Short]])
           case KEY_ARRAY_INT =>
             byteBuffer.encodeIntArrayTo(pos, picklee.asInstanceOf[Array[Int]])
+          case KEY_ARRAY_LONG =>
+            byteBuffer.encodeLongArrayTo(pos, picklee.asInstanceOf[Array[Long]])
+          case KEY_ARRAY_BOOLEAN =>
+            byteBuffer.encodeBooleanArrayTo(pos, picklee.asInstanceOf[Array[Boolean]])
+          case KEY_ARRAY_FLOAT =>
+            byteBuffer.encodeFloatArrayTo(pos, picklee.asInstanceOf[Array[Float]])
+          case KEY_ARRAY_DOUBLE =>
+            byteBuffer.encodeDoubleArrayTo(pos, picklee.asInstanceOf[Array[Double]])
           case _ =>
             if (hints.isElidedType) byteBuffer.encodeByteTo(pos, ELIDED_TAG)
             else pos
@@ -81,33 +107,35 @@ package binary {
       this
     }
 
-    def putField(name: String, pickler: PBuilder => Unit): PBuilder = {
+    @inline def putField(name: String, pickler: PBuilder => Unit): PBuilder = {
       // can skip writing name if we pickle/unpickle in the same order
       pickler(this)
       this
     }
 
-    def endEntry(): Unit = { /* do nothing */ }
+    @inline def endEntry(): Unit = { /* do nothing */ }
 
-    var beginCollPos = 0
+    var beginCollPos = List[Int]()
 
-    def beginCollection(length: Int): PBuilder = {
-      beginCollPos = pos
+    @inline def beginCollection(length: Int): PBuilder = {
+      beginCollPos = pos :: beginCollPos
       byteBuffer.encodeIntAtEnd(pos, 0)
       pos += 4
       this
     }
 
-    def putElement(pickler: PBuilder => Unit): PBuilder = {
+    @inline def putElement(pickler: PBuilder => Unit): PBuilder = {
       pickler(this)
       this
     }
 
-    def endCollection(length: Int): Unit = {
-      byteBuffer.encodeIntTo(beginCollPos, length)
+    @inline def endCollection(length: Int): Unit = {
+      val localBeginCollPos = beginCollPos.head
+      beginCollPos = beginCollPos.tail
+      byteBuffer.encodeIntTo(localBeginCollPos, length)
     }
 
-    def result() = {
+    @inline def result() = {
       BinaryPickle(byteBuffer.result())
     }
   }
@@ -132,22 +160,26 @@ package binary {
     def beginEntryNoTag(): String = {
       val res: Any = withHints { hints =>
         if (hints.isElidedType && nullablePrimitives.contains(hints.tag.key)) {
-          val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
+          val lookahead = byteBuffer.decodeByteFrom(pos)
           lookahead match {
-            case NULL_TAG => pos = newpos; FastTypeTag.Null
+            case NULL_TAG => pos += 1; FastTypeTag.Null
+            case REF_TAG  => pos += 1; FastTypeTag.Ref
             case _        => hints.tag
           }
         } else if (hints.isElidedType && primitives.contains(hints.tag.key)) {
           hints.tag
         } else {
-          val (lookahead, newpos) = byteBuffer.decodeByteFrom(pos)
+          val lookahead = byteBuffer.decodeByteFrom(pos)
           lookahead match {
             case NULL_TAG =>
-              pos = newpos
+              pos += 1
               FastTypeTag.Null
             case ELIDED_TAG =>
-              pos = newpos
+              pos += 1
               hints.tag
+            case REF_TAG =>
+              pos += 1
+              FastTypeTag.Ref
             case _ =>
               val (typeString, newpos) = byteBuffer.decodeStringFrom(pos)
               pos = newpos
@@ -173,22 +205,37 @@ package binary {
     def atPrimitive: Boolean = primitives.contains(lastTagRead.key)
 
     def readPrimitive(): Any = {
-      val (res, newpos) = {
-        lastTagRead.key match {
-          case KEY_NULL    => (null, pos)
-          case KEY_BYTE    => byteBuffer.decodeByteFrom(pos)
-          case KEY_SHORT   => byteBuffer.decodeShortFrom(pos)
-          case KEY_CHAR    => byteBuffer.decodeCharFrom(pos)
-          case KEY_INT     => byteBuffer.decodeIntFrom(pos)
-          case KEY_LONG    => byteBuffer.decodeLongFrom(pos)
-          case KEY_BOOLEAN => byteBuffer.decodeBooleanFrom(pos)
+      var newpos = pos
+      val res = lastTagRead.key match {
+          case KEY_NULL    => null
+          case KEY_REF     => newpos = pos+4 ; lookupUnpicklee(byteBuffer.decodeIntFrom(pos))
+          case KEY_BYTE    => newpos = pos+1 ; byteBuffer.decodeByteFrom(pos)
+          case KEY_SHORT   => newpos = pos+2 ; byteBuffer.decodeShortFrom(pos)
+          case KEY_CHAR    => newpos = pos+2 ; byteBuffer.decodeCharFrom(pos)
+          case KEY_INT     => newpos = pos+4 ; byteBuffer.decodeIntFrom(pos)
+          case KEY_LONG    => newpos = pos+8 ; byteBuffer.decodeLongFrom(pos)
+          case KEY_BOOLEAN => newpos = pos+1 ; byteBuffer.decodeBooleanFrom(pos)
           case KEY_FLOAT   =>
-            val (r, np) = byteBuffer.decodeIntFrom(pos)
-            (java.lang.Float.intBitsToFloat(r), np)
-          case KEY_SCALA_STRING | KEY_JAVA_STRING => byteBuffer.decodeStringFrom(pos)
-          case KEY_ARRAY_INT => byteBuffer.decodeIntArrayFrom(pos)
-        }
+            val r = byteBuffer.decodeIntFrom(pos)
+            newpos = pos+4
+            java.lang.Float.intBitsToFloat(r)
+          case KEY_DOUBLE  =>
+            val r = byteBuffer.decodeLongFrom(pos)
+            newpos = pos+8
+            java.lang.Double.longBitsToDouble(r)
+
+          case KEY_SCALA_STRING | KEY_JAVA_STRING => val r = byteBuffer.decodeStringFrom(pos); newpos = r._2 ; r._1
+
+          case KEY_ARRAY_BYTE => val r = byteBuffer.decodeByteArrayFrom(pos); newpos = r._2 ; r._1
+          case KEY_ARRAY_SHORT => val r = byteBuffer.decodeShortArrayFrom(pos); newpos = r._2 ; r._1
+          case KEY_ARRAY_CHAR => val r = byteBuffer.decodeCharArrayFrom(pos); newpos = r._2 ; r._1
+          case KEY_ARRAY_INT => val r = byteBuffer.decodeIntArrayFrom(pos); newpos = r._2 ; r._1
+          case KEY_ARRAY_LONG => val r = byteBuffer.decodeLongArrayFrom(pos); newpos = r._2 ; r._1
+          case KEY_ARRAY_BOOLEAN => val r = byteBuffer.decodeBooleanArrayFrom(pos); newpos = r._2 ; r._1
+          case KEY_ARRAY_FLOAT => val r = byteBuffer.decodeFloatArrayFrom(pos); newpos = r._2 ; r._1
+          case KEY_ARRAY_DOUBLE => val r = byteBuffer.decodeDoubleArrayFrom(pos); newpos = r._2 ; r._1
       }
+
       pos = newpos
       res
     }
@@ -203,8 +250,8 @@ package binary {
     def beginCollection(): PReader = this
 
     def readLength(): Int = {
-      val (length, newpos) = byteBuffer.decodeIntFrom(pos)
-      pos = newpos
+      val length = byteBuffer.decodeIntFrom(pos)
+      pos += 4
       length
     }
 
@@ -216,6 +263,7 @@ package binary {
   class BinaryPickleFormat extends PickleFormat {
     val ELIDED_TAG: Byte = -1
     val NULL_TAG: Byte = -2
+    val REF_TAG: Byte = -3
 
     val KEY_NULL    = FastTypeTag.Null.key
     val KEY_BYTE    = FastTypeTag.Byte.key
@@ -231,12 +279,19 @@ package binary {
     val KEY_SCALA_STRING = FastTypeTag.ScalaString.key
     val KEY_JAVA_STRING  = FastTypeTag.JavaString.key
 
-    val KEY_ARRAY_BYTE   = FastTypeTag.ArrayByte.key
-    val KEY_ARRAY_INT    = FastTypeTag.ArrayInt.key
-    val KEY_ARRAY_LONG   = FastTypeTag.ArrayLong.key
+    val KEY_ARRAY_BYTE    = FastTypeTag.ArrayByte.key
+    val KEY_ARRAY_SHORT   = FastTypeTag.ArrayShort.key
+    val KEY_ARRAY_CHAR    = FastTypeTag.ArrayChar.key
+    val KEY_ARRAY_INT     = FastTypeTag.ArrayInt.key
+    val KEY_ARRAY_LONG    = FastTypeTag.ArrayLong.key
+    val KEY_ARRAY_BOOLEAN = FastTypeTag.ArrayBoolean.key
+    val KEY_ARRAY_FLOAT   = FastTypeTag.ArrayFloat.key
+    val KEY_ARRAY_DOUBLE  = FastTypeTag.ArrayDouble.key
 
-    val primitives = Set(KEY_NULL, KEY_BYTE, KEY_SHORT, KEY_CHAR, KEY_INT, KEY_LONG, KEY_BOOLEAN, KEY_FLOAT, KEY_DOUBLE, KEY_UNIT, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_INT, KEY_ARRAY_LONG)
-    val nullablePrimitives = Set(KEY_NULL, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_INT, KEY_ARRAY_LONG)
+    val KEY_REF = FastTypeTag.Ref.key
+
+    val primitives = Set(KEY_NULL, KEY_REF, KEY_BYTE, KEY_SHORT, KEY_CHAR, KEY_INT, KEY_LONG, KEY_BOOLEAN, KEY_FLOAT, KEY_DOUBLE, KEY_UNIT, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_SHORT, KEY_ARRAY_CHAR, KEY_ARRAY_INT, KEY_ARRAY_LONG, KEY_ARRAY_BOOLEAN, KEY_ARRAY_FLOAT, KEY_ARRAY_DOUBLE)
+    val nullablePrimitives = Set(KEY_NULL, KEY_SCALA_STRING, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_SHORT, KEY_ARRAY_CHAR, KEY_ARRAY_INT, KEY_ARRAY_LONG, KEY_ARRAY_BOOLEAN, KEY_ARRAY_FLOAT, KEY_ARRAY_DOUBLE)
 
     type PickleType = BinaryPickle
     type OutputType = EncodingOutput[Array[Byte]]

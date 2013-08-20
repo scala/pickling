@@ -70,7 +70,7 @@ object MyBuild extends Build {
           Nil
       }
     } else {
-      println("Sonatype credentials cannot be loaded: -Dmaven.settings.file is not specified.")
+      // println("Sonatype credentials cannot be loaded: -Dmaven.settings.file is not specified.")
       Nil
     }
   }
@@ -87,12 +87,35 @@ object MyBuild extends Build {
       conflictWarning in ThisBuild := ConflictWarning.disable,
       parallelExecution in Test := false, // hello, reflection sync!!
       run <<= run in Compile in sandbox, // http://www.scala-sbt.org/release/docs/Detailed-Topics/Tasks
-      InputKey[Unit]("travInt") <<= InputKey[Unit]("travInt") in Compile in benchmark,
-      InputKey[Unit]("travIntFreeMem") <<= InputKey[Unit]("travIntFreeMem") in Compile in benchmark,
-      InputKey[Unit]("travIntSize") <<= InputKey[Unit]("travIntSize") in Compile in benchmark,
-      InputKey[Unit]("geoTrellis") <<= InputKey[Unit]("geoTrellis") in Compile in benchmark,
-      InputKey[Unit]("evactor1") <<= InputKey[Unit]("evactor1") in Compile in benchmark,
-      InputKey[Unit]("evactor2") <<= InputKey[Unit]("evactor2") in Compile in benchmark,
+      // MISC
+      InputKey[Unit]("listInt")            <<= InputKey[Unit]("listInt")            in Compile in benchmark,
+      InputKey[Unit]("vectorkryo")         <<= InputKey[Unit]("vectorkryo")         in Compile in benchmark,
+      InputKey[Unit]("arrayInt")           <<= InputKey[Unit]("arrayInt")           in Compile in benchmark,
+      // PAPER
+      InputKey[Unit]("travIntPick")        <<= InputKey[Unit]("travIntPick")        in Compile in benchmark,
+      InputKey[Unit]("travIntJava")        <<= InputKey[Unit]("travIntJava")        in Compile in benchmark,
+      InputKey[Unit]("travIntKryo")        <<= InputKey[Unit]("travIntKryo")        in Compile in benchmark,
+      InputKey[Unit]("travIntPickFreeMem") <<= InputKey[Unit]("travIntPickFreeMem") in Compile in benchmark,
+      InputKey[Unit]("travIntJavaFreeMem") <<= InputKey[Unit]("travIntJavaFreeMem") in Compile in benchmark,
+      InputKey[Unit]("travIntKryoFreeMem") <<= InputKey[Unit]("travIntKryoFreeMem") in Compile in benchmark,
+      InputKey[Unit]("travIntPickSize")    <<= InputKey[Unit]("travIntPickSize")    in Compile in benchmark,
+      InputKey[Unit]("travIntJavaSize")    <<= InputKey[Unit]("travIntJavaSize")    in Compile in benchmark,
+      InputKey[Unit]("travIntKryoSize")    <<= InputKey[Unit]("travIntKryoSize")    in Compile in benchmark,
+      InputKey[Unit]("geoTrellisPick")     <<= InputKey[Unit]("geoTrellisPick")     in Compile in benchmark,
+      InputKey[Unit]("geoTrellisJava")     <<= InputKey[Unit]("geoTrellisJava")     in Compile in benchmark,
+      InputKey[Unit]("geoTrellisKryo")     <<= InputKey[Unit]("geoTrellisKryo")     in Compile in benchmark,
+      InputKey[Unit]("evactor1pick")       <<= InputKey[Unit]("evactor1pick")       in Compile in benchmark,
+      InputKey[Unit]("evactor1java")       <<= InputKey[Unit]("evactor1java")       in Compile in benchmark,
+      InputKey[Unit]("evactor1kryo")       <<= InputKey[Unit]("evactor1kryo")       in Compile in benchmark,
+      InputKey[Unit]("evactor2pick")       <<= InputKey[Unit]("evactor2pick")       in Compile in benchmark,
+      InputKey[Unit]("evactor2java")       <<= InputKey[Unit]("evactor2java")       in Compile in benchmark,
+      InputKey[Unit]("evactor2kryo")       <<= InputKey[Unit]("evactor2kryo")       in Compile in benchmark,
+      InputKey[Unit]("sparklrpick")        <<= InputKey[Unit]("sparklrpick")        in Compile in benchmark,
+      InputKey[Unit]("sparklrjava")        <<= InputKey[Unit]("sparklrjava")        in Compile in benchmark,
+      InputKey[Unit]("sparklrkryo")        <<= InputKey[Unit]("sparklrkryo")        in Compile in benchmark,
+      InputKey[Unit]("graphpick")          <<= InputKey[Unit]("graphpick")          in Compile in benchmark,
+      InputKey[Unit]("graphjava")          <<= InputKey[Unit]("graphjava")          in Compile in benchmark,
+      InputKey[Unit]("graphkryo")          <<= InputKey[Unit]("graphkryo")          in Compile in benchmark,
       organization := "org.scala-lang",
       publishMavenStyle := true,
       publishArtifact in Test := false,
@@ -167,18 +190,10 @@ object MyBuild extends Build {
       sourceDirectory in Test <<= baseDirectory(root => root),
       libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1",
       parallelExecution in Test := false,
-      scalacOptions ++= Seq()
-      // scalacOptions ++= Seq("-Xprint:typer")
+      // scalacOptions ++= Seq()
+      // scalacOptions ++= Seq("-Xlog-implicits")
+      scalacOptions ++= Seq("-Xprint:typer")
     )
-  ) dependsOn(core)
-
-  lazy val runtime: Project = Project(
-    "runtime",
-    file("runtime"),
-    settings = buildSettings ++ (if (useLocalBuildOfParadise) Nil else Seq(
-      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _),
-      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-compiler" % _)
-    ))
   ) dependsOn(core)
 
   lazy val benchmark: Project = Project(
@@ -188,12 +203,38 @@ object MyBuild extends Build {
       sourceDirectory in Compile <<= baseDirectory(root => root),
       sourceDirectory in Test <<= baseDirectory(root => root),
       scalacOptions ++= Seq("-optimise"),
-      InputKey[Unit]("travInt") <<= benchTask("TraversableIntBench", 100000 to 1000000 by 100000),
-      InputKey[Unit]("travIntFreeMem") <<= benchTask("TraversableIntBenchFreeMem", 100000 to 1000000 by 100000),
-      InputKey[Unit]("travIntSize") <<= benchTask("TraversableIntBenchSize", 100000 to 1000000 by 100000),
-      InputKey[Unit]("geoTrellis") <<= benchTask("GeoTrellisBench", 100000 to 1000000 by 100000),
-      InputKey[Unit]("evactor1") <<= benchTask("EvactorBench", 1000 to 10000 by 1000),
-      InputKey[Unit]("evactor2") <<= benchTask("EvactorBench", 20000 to 40000 by 2000)
+      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-compiler" % _),
+      libraryDependencies += "de.javakaffee" % "kryo-serializers" % "0.22",
+      libraryDependencies += "com.esotericsoftware.kryo" % "kryo" % "2.20",
+      // MISC
+      InputKey[Unit]("listInt")            <<= benchTask("ListIntBench", 100000 to 1000000 by 100000),
+      InputKey[Unit]("vectorkryo")         <<= benchTask("KryoVectorBench", 100000 to 1000000 by 100000),
+      InputKey[Unit]("arrayInt")           <<= benchTask("ArrayIntBench", 500000 to 5000000 by 500000),
+      // PAPER
+      InputKey[Unit]("travIntPick")        <<= benchTask("TraversableIntBench", 100000 to 1000000 by 100000),
+      InputKey[Unit]("travIntJava")        <<= benchTask("TraversableJavaIntBench", 100000 to 1000000 by 100000),
+      InputKey[Unit]("travIntKryo")        <<= benchTask("TraversableKryoIntBench", 100000 to 1000000 by 100000),
+      InputKey[Unit]("travIntPickFreeMem") <<= benchTask("TraversableIntBenchFreeMem", 100000 to 1000000 by 100000),
+      InputKey[Unit]("travIntJavaFreeMem") <<= benchTask("TraversableJavaIntBenchFreeMem", 100000 to 1000000 by 100000),
+      InputKey[Unit]("travIntKryoFreeMem") <<= benchTask("TraversableKryoIntBenchFreeMem", 100000 to 1000000 by 100000),
+      InputKey[Unit]("travIntPickSize")    <<= benchTask("TraversableIntBenchSize", 100000 to 1000000 by 100000),
+      InputKey[Unit]("travIntJavaSize")    <<= benchTask("TraversableJavaIntBenchSize", 100000 to 1000000 by 100000),
+      InputKey[Unit]("travIntKryoSize")    <<= benchTask("TraversableKryoIntBenchSize", 100000 to 1000000 by 100000),
+      InputKey[Unit]("geoTrellisPick")     <<= benchTask("GeoTrellisPicklingBench", 5000000 to 50000000 by 5000000),
+      InputKey[Unit]("geoTrellisJava")     <<= benchTask("GeoTrellisJavaBench", 5000000 to 50000000 by 5000000),
+      InputKey[Unit]("geoTrellisKryo")     <<= benchTask("GeoTrellisKryoBench", 5000000 to 50000000 by 5000000),
+      InputKey[Unit]("evactor1pick")       <<= benchTask("EvactorPicklingBench", 1000 to 10000 by 1000),
+      InputKey[Unit]("evactor1java")       <<= benchTask("EvactorJavaBench", 1000 to 10000 by 1000),
+      InputKey[Unit]("evactor1kryo")       <<= benchTask("EvactorKryoBench", 1000 to 10000 by 1000),
+      InputKey[Unit]("evactor2pick")       <<= benchTask("EvactorPicklingBench", 20000 to 40000 by 2000),
+      InputKey[Unit]("evactor2java")       <<= benchTask("EvactorJavaBench", 20000 to 40000 by 2000),
+      InputKey[Unit]("evactor2kryo")       <<= benchTask("EvactorKryoBench", 20000 to 40000 by 2000),
+      InputKey[Unit]("sparklrpick")        <<= benchTask("SparkLRPicklingBench", 20000 to 40000 by 2000),
+      InputKey[Unit]("sparklrjava")        <<= benchTask("SparkLRJavaBench", 20000 to 40000 by 2000),
+      InputKey[Unit]("sparklrkryo")        <<= benchTask("SparkLRKryoBench", 20000 to 40000 by 2000),
+      InputKey[Unit]("graphpick")          <<= benchTask("WikiGraphPicklingBench", 5000 to 14000 by 1000),
+      InputKey[Unit]("graphjava")          <<= benchTask("WikiGraphJavaBench", 5000 to 14000 by 1000),
+      InputKey[Unit]("graphkryo")          <<= benchTask("WikiGraphKryoBench", 5000 to 14000 by 1000)
     )
-  ) dependsOn(core, runtime)
+  ) dependsOn(core)
 }
