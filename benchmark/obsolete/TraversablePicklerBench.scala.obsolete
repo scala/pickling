@@ -13,8 +13,6 @@ object TraversablePicklerBench extends testing.Benchmark {
               pf: PickleFormat, cbf: CanBuildFrom[Coll[_], T, Coll[T]]): Pickler[Coll[T]] with Unpickler[Coll[T]] =
     new Pickler[Coll[T]] with Unpickler[Coll[T]] {
 
-    import scala.reflect.runtime.currentMirror
-
     val format: PickleFormat = pf
 
     def pickle(picklee: Any, builder: PickleBuilder): Unit = {

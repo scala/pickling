@@ -5,9 +5,10 @@ import scala.language.existentials
 import scala.reflect.macros.Context
 import scala.reflect.api.Universe
 import scala.reflect.runtime.universe._
+import scala.reflect.runtime.{universe => ru}
 
 import scala.collection.mutable.{Map => MutableMap, ListBuffer => MutableList, WeakHashMap, Set => MutableSet}
-import scala.collection.mutable.{Stack => MutableStack}
+import scala.collection.mutable.{Stack => MutableStack, Queue => MutableQueue}
 
 import java.lang.ref.WeakReference
 
@@ -173,13 +174,80 @@ class Tools[C <: Context](val c: C) {
   }
 }
 
-abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
+abstract class ShareAnalyzer[U <: Universe](val u: U) {
+  import u._
+  import definitions._
+
+  val irs = new ir.IRs[u.type](u)
+  import irs._
+
+  // FIXME: duplication wrt pickling.`package`, but I don't really fancy abstracting away this path-dependent madness
+  implicit class RichTypeFIXME(tpe: Type) {
+    def isEffectivelyPrimitive: Boolean = tpe match {
+      case TypeRef(_, sym: ClassSymbol, _) if sym.isPrimitive => true
+      case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.isEffectivelyPrimitive => true
+      case _ => false
+    }
+  }
+
+  def shareEverything: Boolean
+  def shareNothing: Boolean
+
+  // TODO: cache this, because it's not cheap and it's going to be called a lot of times for the same types
+  def canCauseLoops(tpe: Type): Boolean = {
+    def loop(todo: List[Type], visited: Set[Type]): Boolean = {
+      todo match {
+        case currTpe :: rest =>
+          val currSym = currTpe.typeSymbol.asType
+          if (visited(currTpe)) {
+            if (tpe <:< currTpe) true  // TODO: make sure this sanely works for polymorphic types
+            else loop(rest, visited)
+          } else if (currTpe.isNotNullable || currTpe.isEffectivelyPrimitive || currSym == StringClass || currSym.isModuleClass) loop(rest, visited)
+          // TODO: extend the traversal logic to support sealed classes
+          // when doing that don't forget:
+          // 1) sealeds can themselves be extended, so we need to recur
+          // 2) the entire sealed hierarchy should be added to todo
+          else if (!currSym.isFinal) true // NOTE: returning true here is important for soundness!
+          else {
+            val more = flattenedClassIR(currTpe).fields.map(_.tpe)
+            loop(rest ++ more, visited + currTpe)
+          }
+        case _ => false
+      }
+    }
+    loop(List(tpe), Set())
+  }
+
+  def shouldBotherAboutSharing(tpe: Type): Boolean = {
+    if (shareNothing) false
+    else if (shareEverything) !tpe.isEffectivelyPrimitive || (tpe.typeSymbol.asType == StringClass)
+    else canCauseLoops(tpe)
+  }
+
+  def shouldBotherAboutLooping(tpe: Type): Boolean = {
+    if (shareNothing) false
+    else canCauseLoops(tpe)
+  }
+
+  def shouldBotherAboutCleaning(tpe: Type): Boolean = {
+    if (shareNothing) false
+    else true // TODO: need to be more precise here
+  }
+}
+
+abstract class Macro extends QuasiquoteCompat with Reflection211Compat { self =>
   val c: Context
   import c.universe._
   import definitions._
+  val RefTpe = weakTypeOf[refs.Ref]
 
   val tools = new Tools[c.type](c)
   import tools._
+
+  val shareAnalyzer = new ShareAnalyzer[c.universe.type](c.universe) {
+    def shareEverything = self.shareEverything
+    def shareNothing = self.shareNothing
+  }
 
   val irs = new ir.IRs[c.universe.type](c.universe)
   import irs._
@@ -197,9 +265,10 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
     }
   }
 
-  implicit class RichType(tpe: Type) {
+  // FIXME: duplication wrt pickling.`package`, but I don't really fancy abstracting away this path-dependent madness
+  implicit class RichTypeFIXME(tpe: Type) {
     def key: String = {
-      tpe match {
+      tpe.normalize match {
         case ExistentialType(tparams, TypeRef(pre, sym, targs))
         if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
           TypeRef(pre, sym, Nil).key
@@ -211,11 +280,30 @@ abstract class Macro extends QuasiquoteCompat with Reflection211Compat {
           tpe.toString
       }
     }
+    def canCauseLoops: Boolean = shareAnalyzer.canCauseLoops(tpe)
     def isEffectivelyPrimitive: Boolean = tpe match {
       case TypeRef(_, sym: ClassSymbol, _) if sym.isPrimitive => true
       case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.isEffectivelyPrimitive => true
       case _ => false
     }
+  }
+
+  def shouldBotherAboutCleaning(tpe: Type) = shareAnalyzer.shouldBotherAboutCleaning(tpe)
+  def shouldBotherAboutSharing(tpe: Type) = shareAnalyzer.shouldBotherAboutSharing(tpe)
+  def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
+
+  def shareEverything = {
+    val shareEverything = c.inferImplicitValue(typeOf[refs.ShareEverything]) != EmptyTree
+    val shareNothing = c.inferImplicitValue(typeOf[refs.ShareNothing]) != EmptyTree
+    if (shareEverything && shareNothing) c.abort(c.enclosingPosition, "inconsistent sharing configuration: both ShareEverything and ShareNothing are in scope")
+    shareEverything
+  }
+
+  def shareNothing = {
+    val shareEverything = c.inferImplicitValue(typeOf[refs.ShareEverything]) != EmptyTree
+    val shareNothing = c.inferImplicitValue(typeOf[refs.ShareNothing]) != EmptyTree
+    if (shareEverything && shareNothing) c.abort(c.enclosingPosition, "inconsistent sharing configuration: both ShareEverything and ShareNothing are in scope")
+    shareNothing
   }
 
   def pickleFormatType(pickle: Tree): Type = innerType(pickle, "PickleFormatType")
@@ -307,7 +395,8 @@ case class Hints(
   tag: FastTypeTag[_] = null,
   knownSize: Int = -1,
   isStaticallyElidedType: Boolean = false,
-  isDynamicallyElidedType: Boolean = false) {
+  isDynamicallyElidedType: Boolean = false,
+  oid: Int = -1) {
   def isElidedType = isStaticallyElidedType || isDynamicallyElidedType
 }
 
@@ -319,6 +408,7 @@ trait PickleTools {
   def hintKnownSize(knownSize: Int): this.type = { hints = hints.copy(knownSize = knownSize); this }
   def hintStaticallyElidedType(): this.type = { hints = hints.copy(isStaticallyElidedType = true); this }
   def hintDynamicallyElidedType(): this.type = { hints = hints.copy(isDynamicallyElidedType = true); this }
+  def hintOid(oid: Int): this.type = { hints = hints.copy(oid = oid); this }
   def pinHints(): this.type = { areHintsPinned = true; this }
   def unpinHints(): this.type = { areHintsPinned = false; hints = new Hints(); this }
 
@@ -326,5 +416,21 @@ trait PickleTools {
     val hints = this.hints
     if (!areHintsPinned) this.hints = new Hints
     body(hints)
+  }
+}
+
+trait CurrentMirrorMacro extends Macro {
+  def impl: c.Tree = {
+    import c.universe._
+    c.inferImplicitValue(typeOf[ru.Mirror], silent = true) orElse {
+      val cachedMirror = q"scala.pickling.`package`.cachedMirror"
+      q"""
+        if ($cachedMirror != null) $cachedMirror
+        else {
+          $cachedMirror = scala.reflect.runtime.currentMirror
+          $cachedMirror
+        }
+      """
+    }
   }
 }
