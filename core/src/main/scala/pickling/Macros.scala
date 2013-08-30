@@ -365,21 +365,6 @@ trait PickleMacros extends Macro {
       pickler.asInstanceOf[SPickler[$tpe]].pickle(picklee, $builder)
     """
   }
-
-  /* This macro first dispatches to the right SPickler, using the same dispatch logic
-   * as in `pickleInto`, and then simply invokes `pickle` on it.
-   */
-  def dpicklerPickle[T: c.WeakTypeTag](picklee: c.Tree, builder: c.Tree): c.Tree = {
-    val tpe = weakTypeOf[T].widen
-    val sym = tpe.typeSymbol.asClass
-    val dispatchLogic = genDispatchLogic(sym, tpe, builder)
-    q"""
-      import scala.pickling._
-      val picklee = $picklee
-      val pickler = $dispatchLogic
-      pickler.asInstanceOf[SPickler[$tpe]].pickle($picklee, $builder)
-    """
-  }
 }
 
 // purpose of this macro: implementation of unpickle method on type Pickle, which does
