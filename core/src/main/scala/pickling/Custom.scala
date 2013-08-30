@@ -115,6 +115,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   }
 
   implicit def genSeqDPickler[T](implicit format: PickleFormat): DPickler[Seq[T]] with Unpickler[Seq[T]] = macro Compat.SeqDPicklerUnpicklerMacro_impl[T]
+  implicit def genArrayDPickler[T >: Null](implicit format: PickleFormat): DPickler[Array[T]] with Unpickler[Array[T]] = macro Compat.ArrayDPicklerUnpicklerMacro_impl[T]
   implicit val nullDPicklerUnpickler: DPickler[Null] = new PrimitiveDPicklerUnpickler[Null]
 }
 
@@ -271,6 +272,16 @@ trait SeqDPicklerUnpicklerMacro extends CollectionDPicklerUnpicklerMacro {
   def mkArray(picklee: c.Tree) = q"$picklee.toArray"
   def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ListBuffer[$eltpe]()"
   def mkResult(buffer: c.Tree) = q"$buffer.toList"
+}
+
+trait ArrayDPicklerUnpicklerMacro extends CollectionDPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val TheClass = c.mirror.staticClass("scala.Array")
+  def mkType(eltpe: c.Type) = appliedType(TheClass.toTypeConstructor, List(eltpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ArrayBuffer[$eltpe]()"
+  def mkResult(buffer: c.Tree) = q"$buffer.toArray"
 }
 
 trait CollectionDPicklerUnpicklerMacro extends Macro {
