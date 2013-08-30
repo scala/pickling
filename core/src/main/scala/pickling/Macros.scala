@@ -356,7 +356,11 @@ trait PickleMacros extends Macro {
     val sym = tpe.typeSymbol.asClass
     val q"${_}($pickleeArg)" = c.prefix.tree
 
-    val dispatchLogic = genDispatchLogic(sym, tpe, builder)
+    val dispatchLogic =
+      if (c.inferImplicitValue(weakTypeOf[DPickler[T]]) != EmptyTree)
+        finalDispatch(sym, tpe, createDPickler)
+      else
+        genDispatchLogic(sym, tpe, builder)
 
     q"""
       import scala.pickling._
@@ -430,7 +434,12 @@ trait UnpickleMacros extends Macro {
     }
 
     val staticHint = if (sym.isEffectivelyFinal && !isTopLevel) (q"reader.hintStaticallyElidedType()": Tree) else q"";
-    val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
+    val dispatchLogic = {
+      val dptree = c.inferImplicitValue(weakTypeOf[DPickler[T]])
+      if (dptree != EmptyTree) q"$dptree.asInstanceOf[Unpickler[$tpe]]"
+      else if (sym.isEffectivelyFinal) finalDispatch
+      else nonFinalDispatch
+    }
     val unpickleeCleanup = if (isTopLevel && shouldBotherAboutCleaning(tpe)) q"clearUnpicklees()" else q""
 
     q"""

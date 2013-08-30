@@ -186,13 +186,9 @@ package pickling {
    *  type `DPickler[T]` pickles any object of type `T`.
    */
   @implicitNotFound(msg = "Cannot generate a DPickler for ${T}. Recompile with -Xlog-implicits for details")
-  trait DPickler[T] {
+  trait DPickler[T] extends SPickler[T] {
     val format: PickleFormat
     def pickle(picklee: T, builder: PBuilder): Unit
-  }
-
-  object DPickler {
-    implicit def genDPickler[T](implicit format: PickleFormat): DPickler[T] = macro Compat.PicklerMacros_dpicklerImpl[T]
   }
 
   trait GenPicklers {
