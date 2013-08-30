@@ -304,20 +304,26 @@ trait PickleMacros extends Macro {
     """
   }
 
-  def createPickler(tpe: c.Type, builder: c.Tree): c.Tree = q"""
-    $builder.hintTag(implicitly[scala.pickling.FastTypeTag[$tpe]])
+  def createSPickler(tpe: c.Type): c.Tree = q"""
+    builder.hintTag(implicitly[scala.pickling.FastTypeTag[$tpe]])
     implicitly[SPickler[$tpe]]
   """
 
+  def createDPickler(tpe: c.Type): c.Tree = q"""
+    builder.hintTag(implicitly[scala.pickling.FastTypeTag[$tpe]])
+    implicitly[DPickler[$tpe]]
+  """
+
+  def finalDispatch(sym: c.Symbol, tpe: c.Type, creator: c.Type => c.Tree): c.Tree = {
+    if (sym.isNotNullable) creator(tpe)
+    else q"if (picklee != null) ${creator(tpe)} else ${creator(NullTpe)}"
+  }
+
   def genDispatchLogic(sym: c.Symbol, tpe: c.Type, builder: c.Tree): c.Tree = {
-    def finalDispatch = {
-      if (sym.isNotNullable) createPickler(tpe, builder)
-      else q"if (picklee != null) ${createPickler(tpe, builder)} else ${createPickler(NullTpe, builder)}"
-    }
     def nonFinalDispatch = {
-      val nullDispatch = CaseDef(Literal(Constant(null)), EmptyTree, createPickler(NullTpe, builder))
+      val nullDispatch = CaseDef(Literal(Constant(null)), EmptyTree, createSPickler(NullTpe))
       val compileTimeDispatch = compileTimeDispatchees(tpe) filter (_ != NullTpe) map (subtpe =>
-        CaseDef(Bind(TermName("clazz"), Ident(nme.WILDCARD)), q"clazz == classOf[$subtpe]", createPickler(subtpe, builder))
+        CaseDef(Bind(TermName("clazz"), Ident(nme.WILDCARD)), q"clazz == classOf[$subtpe]", createSPickler(subtpe))
       )
       //TODO OPTIMIZE: do getClass.getClassLoader only once
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"SPickler.genPickler(this.getClass.getClassLoader, clazz)")
@@ -338,7 +344,7 @@ trait PickleMacros extends Macro {
     //   """
     // }
     // if (sym == ListClass) listDispatch else
-    if (sym.isEffectivelyFinal) finalDispatch
+    if (sym.isEffectivelyFinal) finalDispatch(sym, tpe, createSPickler)
     else nonFinalDispatch
   }
 
