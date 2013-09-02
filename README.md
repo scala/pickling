@@ -15,7 +15,7 @@ For more, flip through, or watch the [ScalaDays 2013 presentation!](http://www.p
 <br> For deeper technical details, we've also written an OOPSLA 2013 paper on scala/pickling, [Instant Pickles: Generating Object-Oriented Pickler Combinators for Fast and Extensible Serialization, ](http://lampwww.epfl.ch/~hmiller/files/oopsla-pickling.pdf).
 
 **Current version:** 0.8.0-SNAPSHOT. Scala/pickling does not yet have a stable release.
-<br>**Upcoming release:** Our first stable release, 0.8.0, is scheduled for August 21st.
+<br>**Upcoming release:** Our first stable release, 0.8.0, is scheduled for September 11th.
 
 ## Quick Start
 
