@@ -10,17 +10,13 @@ import scala.collection.generic.CanBuildFrom
 import scala.collection.IndexedSeq
 import scala.collection.mutable.ArrayBuffer
 
-trait LowPriorityPicklersUnpicklers {
-
-  implicit def traversablePickler[T: FastTypeTag, Coll[_] <: Traversable[_]]
-    (implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T],
-              pf: PickleFormat, cbf: CanBuildFrom[Coll[_], T, Coll[T]],
-              collTag: FastTypeTag[Coll[T]]): SPickler[Coll[T]] with Unpickler[Coll[T]] = {
-    throw new Exception(s"Collections of type ${collTag.tpe} are not supported")
-  }
+class PicklerUnpicklerNotFound[T] extends SPickler[T] with Unpickler[T] {
+  val format = null // not used
+  def pickle(picklee: T, builder: PBuilder): Unit = ???
+  def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = ???
 }
 
-trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
+trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
   class PrimitivePicklerUnpickler[T] extends SPickler[T] with Unpickler[T] {
     val format = null // not used
     def pickle(picklee: T, builder: PBuilder): Unit = {
@@ -47,6 +43,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   implicit def refPickler: SPickler[refs.Ref] = throw new Error("cannot pickle refs") // TODO: make this a macro
   implicit val refUnpickler: Unpickler[refs.Ref] = new PrimitivePicklerUnpickler[refs.Ref]
 
+  implicit def genSeqPickler[T](implicit format: PickleFormat): SPickler[Seq[T]] with Unpickler[Seq[T]] = macro Compat.SeqPicklerUnpicklerMacro_impl[T]
   implicit def genListPickler[T](implicit format: PickleFormat): SPickler[::[T]] with Unpickler[::[T]] = macro Compat.ListPicklerUnpicklerMacro_impl[T]
   implicit def genVectorPickler[T](implicit format: PickleFormat): SPickler[Vector[T]] with Unpickler[Vector[T]] = macro Compat.VectorPicklerUnpicklerMacro_impl[T]
   // TODO: figure out why the macro-based version for ArrayBuffers is slower
@@ -103,6 +100,16 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
       }
     }
   }
+}
+
+trait SeqPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val ConsClass = c.mirror.staticClass("scala.collection.Seq")
+  def mkType(eltpe: c.Type) = appliedType(ConsClass.toTypeConstructor, List(eltpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ListBuffer[$eltpe]()"
+  def mkResult(buffer: c.Tree) = q"$buffer.toSeq"
 }
 
 trait ListPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {

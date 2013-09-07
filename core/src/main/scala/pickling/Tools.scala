@@ -54,6 +54,7 @@ class Tools[C <: Context](val c: C) {
   }
 
   def compileTimeDispatchees(tpe: Type, mirror: Mirror): List[Type] = {
+    // TODO: why do we need nullTpe?
     val nullTpe = if (tpe.baseClasses.contains(ObjectClass)) List(NullTpe) else Nil
     val subtypes = allStaticallyKnownConcreteSubclasses(tpe, mirror).filter(subtpe => subtpe.typeSymbol != tpe.typeSymbol)
     val selfTpe = if (isRelevantSubclass(tpe.typeSymbol, tpe.typeSymbol)) List(tpe) else Nil
