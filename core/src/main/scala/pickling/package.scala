@@ -207,6 +207,10 @@ package pickling {
     }
   }
 
+  // marker trait to indicate a generated pickler
+  // this is important for the dispatch between custom and generated picklers
+  trait Generated
+
   object SPickler extends CorePicklersUnpicklers
 
   @implicitNotFound(msg = "Cannot generate an unpickler for ${T}. Recompile with -Xlog-implicits for details")
