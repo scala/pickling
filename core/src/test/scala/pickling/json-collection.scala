@@ -50,6 +50,13 @@ class JSONCollectionTest extends FunSuite {
     assert(up === m)
   }
 
+  test("immutable.SortedMap") {
+    val m = immutable.SortedMap(2 -> "b", 1 -> "a", 3 -> "c")
+    val p = m.pickle
+    val up = p.unpickle[immutable.SortedMap[Int, String]]
+    assert(up === m)
+  }
+
   test("mutable.Set[String]") {
     val m = mutable.Set("a", "b", "c")
     val p = m.pickle

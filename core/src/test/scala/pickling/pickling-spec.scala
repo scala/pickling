@@ -1,4 +1,4 @@
-package scala.pickling.test
+package scala.pickling.spec
 
 import scala.pickling._
 
