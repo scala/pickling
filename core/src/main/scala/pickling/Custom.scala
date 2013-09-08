@@ -55,6 +55,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
   implicit def genMutSortedSetPickler[T](implicit format: PickleFormat): SPickler[mutable.SortedSet[T]] with Unpickler[mutable.SortedSet[T]] = macro Compat.MutSortedSetPicklerUnpicklerMacro_impl[T]
 
   implicit def genImmMapPickler[K, V](implicit format: PickleFormat): SPickler[Map[K, V]] with Unpickler[Map[K, V]] = macro Compat.ImmMapPicklerUnpicklerMacro_impl[K, V]
+  implicit def genImmSortedMapPickler[K, V](implicit format: PickleFormat): SPickler[immutable.SortedMap[K, V]] with Unpickler[immutable.SortedMap[K, V]] = macro Compat.ImmSortedMapPicklerUnpicklerMacro_impl[K, V]
   implicit def genMutMapPickler[K, V](implicit format: PickleFormat): SPickler[mutable.Map[K, V]] with Unpickler[mutable.Map[K, V]] = macro Compat.MutMapPicklerUnpicklerMacro_impl[K, V]
 
   // TODO: figure out why the macro-based version for ArrayBuffers is slower
@@ -211,6 +212,16 @@ trait ImmMapPicklerUnpicklerMacro extends MapPicklerUnpicklerMacro {
   def mkArray(picklee: c.Tree) = q"$picklee.toArray"
   def mkBuffer(keytpe: c.Type, valtpe: c.Type) = q"new scala.collection.mutable.ListBuffer[($keytpe, $valtpe)]()"
   def mkResult(buffer: c.Tree) = q"$buffer.toMap"
+}
+
+trait ImmSortedMapPicklerUnpicklerMacro extends MapPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val CollClass = c.mirror.staticClass("scala.collection.immutable.SortedMap")
+  def mkType(keytpe: c.Type, valtpe: c.Type) = appliedType(CollClass.toTypeConstructor, List(keytpe, valtpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(keytpe: c.Type, valtpe: c.Type) = q"new scala.collection.mutable.MapBuilder[$keytpe, $valtpe, scala.collection.immutable.SortedMap[$keytpe, $valtpe]](scala.collection.immutable.SortedMap.empty[$keytpe, $valtpe])"
+  def mkResult(buffer: c.Tree) = q"$buffer.result"
 }
 
 trait MutMapPicklerUnpicklerMacro extends MapPicklerUnpicklerMacro {

@@ -6,6 +6,7 @@ import scala.reflect.runtime.{universe => ru}
 import language.experimental.macros
 
 import scala.collection.mutable
+import scala.collection.immutable
 
 // this is only necessary because 2.10.x doesn't support macro bundles
 object Compat {
@@ -109,6 +110,12 @@ object Compat {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with ImmMapPicklerUnpicklerMacro
     c.Expr[SPickler[Map[K, V]] with Unpickler[Map[K, V]]](bundle.impl[K, V](format.tree))
+  }
+
+  def ImmSortedMapPicklerUnpicklerMacro_impl[K: c.WeakTypeTag, V: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[immutable.SortedMap[K, V]] with Unpickler[immutable.SortedMap[K, V]]] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with ImmSortedMapPicklerUnpicklerMacro
+    c.Expr[SPickler[immutable.SortedMap[K, V]] with Unpickler[immutable.SortedMap[K, V]]](bundle.impl[K, V](format.tree))
   }
 
   def MutMapPicklerUnpicklerMacro_impl[K: c.WeakTypeTag, V: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[mutable.Map[K, V]] with Unpickler[mutable.Map[K, V]]] = {
