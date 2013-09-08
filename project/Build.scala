@@ -130,10 +130,6 @@ object MyBuild extends Build {
       pomExtra := (
         <url>https://github.com/scala/pickling</url>
         <inceptionYear>2013</inceptionYear>
-        <organization>
-          <name>LAMP/EPFL</name>
-          <url>http://lamp.epfl.ch/</url>
-        </organization>
         <licenses>
           <license>
             <name>BSD-like</name>
