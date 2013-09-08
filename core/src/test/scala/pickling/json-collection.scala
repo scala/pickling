@@ -1,7 +1,7 @@
-package scala.pickling.test.binary.collection
+package scala.pickling.test.json.collection
 
 import scala.pickling._
-import binary._
+import json._
 import org.scalatest.FunSuite
 
 import scala.collection.mutable
@@ -9,7 +9,7 @@ import scala.collection.immutable
 
 case class Person(x: Int)
 
-class BinaryCollectionTest extends FunSuite {
+class JSONCollectionTest extends FunSuite {
   test("Seq") {
     val p = Seq(1, 2, 3).pickle
     val up = p.unpickle[Seq[Int]]
