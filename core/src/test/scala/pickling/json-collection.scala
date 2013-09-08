@@ -16,6 +16,13 @@ class JSONCollectionTest extends FunSuite {
     assert(up === Seq(1, 2, 3))
   }
 
+  test("Iterable[Person]") {
+    val i: Iterable[Person] = Seq(Person(1), Person(2), Person(3))
+    val p = i.pickle
+    val up = p.unpickle[Iterable[Person]]
+    assert(up === i)
+  }
+
   test("Array") {
     val p = Array(Person(1), Person(2), Person(3)).pickle
     val up = p.unpickle[Array[Person]]
