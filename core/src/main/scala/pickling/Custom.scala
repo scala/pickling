@@ -9,18 +9,16 @@ import scala.collection.immutable.::
 import scala.collection.generic.CanBuildFrom
 import scala.collection.IndexedSeq
 import scala.collection.mutable.ArrayBuffer
+import scala.collection.mutable
+import scala.collection.immutable
 
-trait LowPriorityPicklersUnpicklers {
-
-  implicit def traversablePickler[T: FastTypeTag, Coll[_] <: Traversable[_]]
-    (implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T],
-              pf: PickleFormat, cbf: CanBuildFrom[Coll[_], T, Coll[T]],
-              collTag: FastTypeTag[Coll[T]]): SPickler[Coll[T]] with Unpickler[Coll[T]] = {
-    throw new Exception(s"Collections of type ${collTag.tpe} are not supported")
-  }
+class PicklerUnpicklerNotFound[T] extends SPickler[T] with Unpickler[T] {
+  val format = null // not used
+  def pickle(picklee: T, builder: PBuilder): Unit = ???
+  def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = ???
 }
 
-trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
+trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
   class PrimitivePicklerUnpickler[T] extends SPickler[T] with Unpickler[T] {
     val format = null // not used
     def pickle(picklee: T, builder: PBuilder): Unit = {
@@ -47,8 +45,18 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   implicit def refPickler: SPickler[refs.Ref] = throw new Error("cannot pickle refs") // TODO: make this a macro
   implicit val refUnpickler: Unpickler[refs.Ref] = new PrimitivePicklerUnpickler[refs.Ref]
 
+  implicit def genArrayPickler[T >: Null](implicit format: PickleFormat): SPickler[Array[T]] with Unpickler[Array[T]] = macro Compat.ArrayPicklerUnpicklerMacro_impl[T]
+  implicit def genSeqPickler[T](implicit format: PickleFormat): SPickler[Seq[T]] with Unpickler[Seq[T]] = macro Compat.SeqPicklerUnpicklerMacro_impl[T]
   implicit def genListPickler[T](implicit format: PickleFormat): SPickler[::[T]] with Unpickler[::[T]] = macro Compat.ListPicklerUnpicklerMacro_impl[T]
   implicit def genVectorPickler[T](implicit format: PickleFormat): SPickler[Vector[T]] with Unpickler[Vector[T]] = macro Compat.VectorPicklerUnpicklerMacro_impl[T]
+  implicit def genImmSetPickler[T](implicit format: PickleFormat): SPickler[Set[T]] with Unpickler[Set[T]] = macro Compat.ImmSetPicklerUnpicklerMacro_impl[T]
+  implicit def genImmSortedSetPickler[T](implicit format: PickleFormat): SPickler[immutable.SortedSet[T]] with Unpickler[immutable.SortedSet[T]] = macro Compat.ImmSortedSetPicklerUnpicklerMacro_impl[T]
+  implicit def genMutSetPickler[T](implicit format: PickleFormat): SPickler[mutable.Set[T]] with Unpickler[mutable.Set[T]] = macro Compat.MutSetPicklerUnpicklerMacro_impl[T]
+  implicit def genMutSortedSetPickler[T](implicit format: PickleFormat): SPickler[mutable.SortedSet[T]] with Unpickler[mutable.SortedSet[T]] = macro Compat.MutSortedSetPicklerUnpicklerMacro_impl[T]
+
+  implicit def genImmMapPickler[K, V](implicit format: PickleFormat): SPickler[Map[K, V]] with Unpickler[Map[K, V]] = macro Compat.ImmMapPicklerUnpicklerMacro_impl[K, V]
+  implicit def genMutMapPickler[K, V](implicit format: PickleFormat): SPickler[mutable.Map[K, V]] with Unpickler[mutable.Map[K, V]] = macro Compat.MutMapPicklerUnpicklerMacro_impl[K, V]
+
   // TODO: figure out why the macro-based version for ArrayBuffers is slower
   // implicit def genArrayBufferPickler[T](implicit format: PickleFormat): SPickler[ArrayBuffer[T]] with Unpickler[ArrayBuffer[T]] = macro Compat.ArrayBufferPicklerUnpicklerMacro_impl[T]
   implicit def genArrayBufferPickler[T: FastTypeTag](implicit
@@ -105,6 +113,26 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   }
 }
 
+trait ArrayPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val ConsClass = c.mirror.staticClass("scala.Array")
+  def mkType(eltpe: c.Type) = appliedType(ConsClass.toTypeConstructor, List(eltpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ArrayBuffer[$eltpe]()"
+  def mkResult(buffer: c.Tree) = q"$buffer.toArray"
+}
+
+trait SeqPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val ConsClass = c.mirror.staticClass("scala.collection.Seq")
+  def mkType(eltpe: c.Type) = appliedType(ConsClass.toTypeConstructor, List(eltpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ListBuffer[$eltpe]()"
+  def mkResult(buffer: c.Tree) = q"$buffer.toSeq"
+}
+
 trait ListPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
   import c.universe._
   import definitions._
@@ -125,6 +153,46 @@ trait VectorPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
   def mkResult(buffer: c.Tree) = q"$buffer.result"
 }
 
+trait ImmSetPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val CollClass = c.mirror.staticClass("scala.collection.immutable.Set")
+  def mkType(eltpe: c.Type) = appliedType(CollClass.toTypeConstructor, List(eltpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(eltpe: c.Type) = q"new scala.collection.mutable.SetBuilder[$eltpe, scala.collection.immutable.Set[$eltpe]](scala.collection.immutable.Set.empty[$eltpe])"
+  def mkResult(buffer: c.Tree) = q"$buffer.result"
+}
+
+trait ImmSortedSetPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val CollClass = c.mirror.staticClass("scala.collection.immutable.SortedSet")
+  def mkType(eltpe: c.Type) = appliedType(CollClass.toTypeConstructor, List(eltpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(eltpe: c.Type) = q"new scala.collection.mutable.SetBuilder[$eltpe, scala.collection.immutable.SortedSet[$eltpe]](scala.collection.immutable.SortedSet.empty[$eltpe])"
+  def mkResult(buffer: c.Tree) = q"$buffer.result"
+}
+
+trait MutSetPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val CollClass = c.mirror.staticClass("scala.collection.mutable.Set")
+  def mkType(eltpe: c.Type) = appliedType(CollClass.toTypeConstructor, List(eltpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(eltpe: c.Type) = q"new scala.collection.mutable.SetBuilder[$eltpe, scala.collection.mutable.Set[$eltpe]](scala.collection.mutable.Set.empty[$eltpe])"
+  def mkResult(buffer: c.Tree) = q"$buffer.result"
+}
+
+trait MutSortedSetPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val CollClass = c.mirror.staticClass("scala.collection.mutable.SortedSet")
+  def mkType(eltpe: c.Type) = appliedType(CollClass.toTypeConstructor, List(eltpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(eltpe: c.Type) = q"new scala.collection.mutable.SetBuilder[$eltpe, scala.collection.mutable.SortedSet[$eltpe]](scala.collection.mutable.SortedSet.empty[$eltpe])"
+  def mkResult(buffer: c.Tree) = q"$buffer.result"
+}
+
 trait ArrayBufferPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
   import c.universe._
   import definitions._
@@ -133,6 +201,146 @@ trait ArrayBufferPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
   def mkArray(picklee: c.Tree) = q"$picklee.toArray"
   def mkBuffer(eltpe: c.Type) = q"new scala.collection.mutable.ArrayBuffer[$eltpe]()"
   def mkResult(buffer: c.Tree) = q"$buffer"
+}
+
+trait ImmMapPicklerUnpicklerMacro extends MapPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val CollClass = c.mirror.staticClass("scala.collection.immutable.Map")
+  def mkType(keytpe: c.Type, valtpe: c.Type) = appliedType(CollClass.toTypeConstructor, List(keytpe, valtpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(keytpe: c.Type, valtpe: c.Type) = q"new scala.collection.mutable.ListBuffer[($keytpe, $valtpe)]()"
+  def mkResult(buffer: c.Tree) = q"$buffer.toMap"
+}
+
+trait MutMapPicklerUnpicklerMacro extends MapPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val CollClass = c.mirror.staticClass("scala.collection.mutable.Map")
+  def mkType(keytpe: c.Type, valtpe: c.Type) = appliedType(CollClass.toTypeConstructor, List(keytpe, valtpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(keytpe: c.Type, valtpe: c.Type) = q"new scala.collection.mutable.MapBuilder[$keytpe, $valtpe, scala.collection.mutable.Map[$keytpe, $valtpe]](scala.collection.mutable.Map.empty[$keytpe, $valtpe])"
+  def mkResult(buffer: c.Tree) = q"$buffer.result"
+}
+
+trait MapPicklerUnpicklerMacro extends Macro {
+  def mkType(keytpe: c.Type, valtpe: c.Type): c.Type
+  def mkArray(picklee: c.Tree): c.Tree
+  def mkBuffer(keytpe: c.Type, valtpe: c.Type): c.Tree
+  def mkResult(buffer: c.Tree): c.Tree
+
+  def impl[K: c.WeakTypeTag, V: c.WeakTypeTag](format: c.Tree): c.Tree = {
+    import c.universe._
+    import definitions._
+
+    val keytpe = weakTypeOf[K]
+    val valtpe = weakTypeOf[V]
+    val tpe = mkType(keytpe, valtpe)
+    val eltpe = weakTypeOf[(K, V)]
+    val isPrimitive = eltpe.isEffectivelyPrimitive
+    val isFinal = eltpe.isEffectivelyFinal
+
+    val picklerUnpicklerName = c.fresh(syntheticPicklerUnpicklerName(tpe).toTermName)
+
+    q"""
+      implicit object $picklerUnpicklerName extends scala.pickling.SPickler[$tpe] with scala.pickling.Unpickler[$tpe] {
+        import scala.reflect.runtime.universe._
+        import scala.pickling._
+        import scala.pickling.`package`.PickleOps
+
+        val format = implicitly[${format.tpe}]
+
+        val elpickler: SPickler[$eltpe] = {
+          val elpickler = "bam!"
+          implicitly[SPickler[$eltpe]]
+        }
+        val elunpickler: Unpickler[$eltpe] = {
+          val elunpickler = "bam!"
+          implicitly[Unpickler[$eltpe]]
+        }
+        val eltag: scala.pickling.FastTypeTag[$eltpe] = {
+          val eltag = "bam!"
+          implicitly[scala.pickling.FastTypeTag[$eltpe]]
+        }
+        val colltag: scala.pickling.FastTypeTag[$tpe] = {
+          val colltag = "bam!"
+          implicitly[scala.pickling.FastTypeTag[$tpe]]
+        }
+
+        def pickle(picklee: $tpe, builder: PBuilder): Unit = {
+          builder.hintTag(colltag)
+          ${
+            if (eltpe =:= IntTpe) q"builder.hintKnownSize(picklee.length * 4 + 100)".asInstanceOf[Tree]
+            else q"".asInstanceOf[Tree]
+          }
+          builder.beginEntry(picklee)
+          ${
+            if (isPrimitive) q"builder.hintStaticallyElidedType(); builder.hintTag(eltag); builder.pinHints()".asInstanceOf[Tree]
+            else q"".asInstanceOf[Tree]
+          }
+          val arr = ${mkArray(q"picklee")}
+          val length = arr.length
+          builder.beginCollection(arr.length)
+          var i = 0
+          while (i < arr.length) {
+            builder putElement { b =>
+              ${
+                if (!isPrimitive && !isFinal) q"""
+                  b.hintTag(eltag)
+                  arr(i).pickleInto(b)
+                """.asInstanceOf[Tree] else if (!isPrimitive && isFinal) q"""
+                  b.hintTag(eltag)
+                  b.hintStaticallyElidedType()
+                  arr(i).pickleInto(b)
+                """.asInstanceOf[Tree] else q"""
+                  elpickler.pickle(arr(i), b)
+                """.asInstanceOf[Tree]
+              }
+            }
+            i += 1
+          }
+          ${
+            if (isPrimitive) q"builder.unpinHints()".asInstanceOf[Tree]
+            else q"".asInstanceOf[Tree]
+          }
+          builder.endCollection(i)
+          builder.endEntry()
+        }
+        def unpickle(tag: => scala.pickling.FastTypeTag[_], reader: PReader): Any = {
+          val arrReader = reader.beginCollection()
+          ${
+            if (isPrimitive) q"arrReader.hintStaticallyElidedType(); arrReader.hintTag(eltag); arrReader.pinHints()".asInstanceOf[Tree]
+            else q"".asInstanceOf[Tree]
+          }
+          val length = arrReader.readLength()
+          var buffer = ${mkBuffer(keytpe, valtpe)}
+          var i = 0
+          while (i < length) {
+            val r = arrReader.readElement()
+            ${
+              if (isPrimitive) q"""
+                r.beginEntryNoTag()
+                val elem = elunpickler.unpickle(eltag, r).asInstanceOf[$eltpe]
+                r.endEntry()
+                buffer += elem
+              """.asInstanceOf[Tree] else q"""
+                val elem = r.unpickle[$eltpe]
+                buffer += elem
+              """.asInstanceOf[Tree]
+            }
+            i += 1
+          }
+          ${
+            if (isPrimitive) q"arrReader.unpinHints()".asInstanceOf[Tree]
+            else q"".asInstanceOf[Tree]
+          }
+          arrReader.endCollection()
+          ${mkResult(q"buffer")}
+        }
+      }
+      $picklerUnpicklerName
+    """
+  }
 }
 
 trait CollectionPicklerUnpicklerMacro extends Macro {
