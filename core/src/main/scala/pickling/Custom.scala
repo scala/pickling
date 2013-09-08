@@ -47,6 +47,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers {
 
   implicit def genArrayPickler[T >: Null](implicit format: PickleFormat): SPickler[Array[T]] with Unpickler[Array[T]] = macro Compat.ArrayPicklerUnpicklerMacro_impl[T]
   implicit def genSeqPickler[T](implicit format: PickleFormat): SPickler[Seq[T]] with Unpickler[Seq[T]] = macro Compat.SeqPicklerUnpicklerMacro_impl[T]
+  implicit def genIterablePickler[T](implicit format: PickleFormat): SPickler[Iterable[T]] with Unpickler[Iterable[T]] = macro Compat.IterablePicklerUnpicklerMacro_impl[T]
   implicit def genListPickler[T](implicit format: PickleFormat): SPickler[::[T]] with Unpickler[::[T]] = macro Compat.ListPicklerUnpicklerMacro_impl[T]
   implicit def genVectorPickler[T](implicit format: PickleFormat): SPickler[Vector[T]] with Unpickler[Vector[T]] = macro Compat.VectorPicklerUnpicklerMacro_impl[T]
   implicit def genImmSetPickler[T](implicit format: PickleFormat): SPickler[Set[T]] with Unpickler[Set[T]] = macro Compat.ImmSetPicklerUnpicklerMacro_impl[T]
@@ -129,6 +130,16 @@ trait SeqPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
   import definitions._
   lazy val ConsClass = c.mirror.staticClass("scala.collection.Seq")
   def mkType(eltpe: c.Type) = appliedType(ConsClass.toTypeConstructor, List(eltpe))
+  def mkArray(picklee: c.Tree) = q"$picklee.toArray"
+  def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ListBuffer[$eltpe]()"
+  def mkResult(buffer: c.Tree) = q"$buffer.toSeq"
+}
+
+trait IterablePicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
+  import c.universe._
+  import definitions._
+  lazy val CollClass = c.mirror.staticClass("scala.Iterable")
+  def mkType(eltpe: c.Type) = appliedType(CollClass.toTypeConstructor, List(eltpe))
   def mkArray(picklee: c.Tree) = q"$picklee.toArray"
   def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ListBuffer[$eltpe]()"
   def mkResult(buffer: c.Tree) = q"$buffer.toSeq"
