@@ -134,9 +134,22 @@ trait PicklerMacros extends Macro {
       case NothingTpe => c.abort(c.enclosingPosition, "cannot pickle Nothing") // TODO: report the serialization path that brought us here
       case _ => unifiedPickle
     }
+
+    //println("trying to generate pickler for type " + tpe.toString)
+
+    if (tpe.typeSymbol.isClass) {
+      // if class is abstract return instance of `PicklerUnpicklerNotFound`.
+      // this triggers the generation of a dispatch based on the runtime class of the picklee.
+      val classSym = tpe.typeSymbol.asClass
+      if (classSym.isAbstractClass) {
+        //println("abstract class, returning PicklerUnpicklerNotFound")
+        return q"new PicklerUnpicklerNotFound[$tpe]"
+      }
+    }
+
     val picklerName = c.fresh(syntheticPicklerName(tpe).toTermName)
     q"""
-      implicit object $picklerName extends scala.pickling.SPickler[$tpe] {
+      implicit object $picklerName extends scala.pickling.SPickler[$tpe] with Generated {
         import scala.pickling._
         import scala.pickling.`package`.PickleOps
         val format = implicitly[${format.tpe}]
@@ -256,9 +269,17 @@ trait UnpicklerMacros extends Macro {
       case _ if tpe.isEffectivelyPrimitive || sym == StringClass => q"$unpicklePrimitive"
       case _ => q"$unpickleObject"
     }
+
+    if (tpe.typeSymbol.isClass) {
+      // if class is abstract return instance of `PicklerUnpicklerNotFound`.
+      // this triggers the generation of a dispatch based on the runtime class of the picklee.
+      val classSym = tpe.typeSymbol.asClass
+      if (classSym.isAbstractClass) return q"new PicklerUnpicklerNotFound[$tpe]"
+    }
+
     val unpicklerName = c.fresh(syntheticUnpicklerName(tpe).toTermName)
     q"""
-      implicit object $unpicklerName extends scala.pickling.Unpickler[$tpe] {
+      implicit object $unpicklerName extends scala.pickling.Unpickler[$tpe] with Generated {
         import scala.pickling._
         import scala.pickling.ir._
         import scala.reflect.runtime.universe._
@@ -323,8 +344,18 @@ trait PickleMacros extends Macro {
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"SPickler.genPickler(this.getClass.getClassLoader, clazz)")
       // TODO: do we still want to use something like HasPicklerDispatch?
       q"""
-        val clazz = if (picklee != null) picklee.getClass else null
-        ${Match(q"clazz", nullDispatch +: compileTimeDispatch :+ runtimeDispatch)}
+        val customPickler = implicitly[SPickler[$tpe]]
+        if (customPickler.isInstanceOf[PicklerUnpicklerNotFound[_]] || customPickler.isInstanceOf[Generated]) {
+          val clazz = if (picklee != null) picklee.getClass else null
+          ${Match(q"clazz", nullDispatch +: compileTimeDispatch :+ runtimeDispatch)}
+        } else {
+          // without Generated we would arrive here in two cases:
+          // 1. we have found a custom pickler that can handle the abstract type tpe
+          // 2. we have generated a pickler for a concrete superclass!
+          // in the 2nd case we still have to do the dispatch!
+          $builder.hintTag(implicitly[scala.pickling.FastTypeTag[$tpe]])
+          customPickler
+        }
       """
     }
     // NOTE: this has zero effect on performance...
@@ -353,6 +384,7 @@ trait PickleMacros extends Macro {
     val dispatchLogic = genDispatchLogic(sym, tpe, builder)
 
     q"""
+      import scala.language.existentials
       import scala.pickling._
       val picklee = $pickleeArg
       val pickler = $dispatchLogic
@@ -390,6 +422,7 @@ trait UnpickleMacros extends Macro {
     if (tpe.typeSymbol.asType.isAbstractType) c.abort(c.enclosingPosition, "unpickle needs an explicitly provided type argument")
     val pickleArg = c.prefix.tree
     q"""
+      import scala.language.existentials
       import scala.pickling._
       val pickle = $pickleArg
       val format = implicitly[${pickleFormatType(pickleArg)}]
@@ -435,7 +468,17 @@ trait UnpickleMacros extends Macro {
         val tag = scala.pickling.FastTypeTag(typeString)
         Unpickler.genUnpickler(reader.mirror, tag)
       """)
-      Match(q"typeString", compileTimeDispatch :+ refDispatch :+ runtimeDispatch)
+
+      val customDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"customUnpickler")
+
+      q"""
+        val customUnpickler = implicitly[Unpickler[$tpe]]
+        if (customUnpickler.isInstanceOf[PicklerUnpicklerNotFound[_]] || customUnpickler.isInstanceOf[Generated]) {
+          ${Match(q"typeString", compileTimeDispatch :+ refDispatch :+ runtimeDispatch)}
+        } else {
+          ${Match(q"typeString", List(refDispatch) :+ customDispatch)}
+        }
+      """
     }
 
     val staticHint = if (sym.isEffectivelyFinal && !isTopLevel) (q"reader.hintStaticallyElidedType()": Tree) else q"";
