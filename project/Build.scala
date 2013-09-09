@@ -117,6 +117,8 @@ object MyBuild extends Build {
       InputKey[Unit]("graphjava")          <<= InputKey[Unit]("graphjava")          in Compile in benchmark,
       InputKey[Unit]("graphkryo")          <<= InputKey[Unit]("graphkryo")          in Compile in benchmark,
       organization := "org.scala-lang",
+      organizationName := "LAMP/EPFL",
+      organizationHomepage := "http://lamp.epfl.ch",
       publishMavenStyle := true,
       publishArtifact in Test := false,
       publishTo <<= version { v: String =>
