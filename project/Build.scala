@@ -3,6 +3,7 @@ import Keys._
 import scala.util.Properties
 import scala.xml.{Node => XmlNode, NodeSeq => XmlNodeSeq, _}
 import scala.xml.transform._
+import java.net.URL
 
 object BuildSettings {
   val buildVersion = "0.8.0-SNAPSHOT"
@@ -118,7 +119,7 @@ object MyBuild extends Build {
       InputKey[Unit]("graphkryo")          <<= InputKey[Unit]("graphkryo")          in Compile in benchmark,
       organization := "org.scala-lang",
       organizationName := "LAMP/EPFL",
-      organizationHomepage := "http://lamp.epfl.ch",
+      organizationHomepage := Some(new URL("http://lamp.epfl.ch")),
       publishMavenStyle := true,
       publishArtifact in Test := false,
       publishTo <<= version { v: String =>
