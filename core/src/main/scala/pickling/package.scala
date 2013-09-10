@@ -1,6 +1,7 @@
 package scala
 
 import scala.language.experimental.macros
+import scala.language.reflectiveCalls
 
 import scala.reflect.runtime.{universe => ru}
 import ru._
