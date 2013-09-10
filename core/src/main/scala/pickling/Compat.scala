@@ -1,12 +1,15 @@
 package scala.pickling
 
+import language.experimental.macros
+import scala.language.higherKinds
+
 import scala.reflect.macros.Context
 import scala.reflect.api.{Universe => ApiUniverse}
 import scala.reflect.runtime.{universe => ru}
-import language.experimental.macros
 
 import scala.collection.mutable
 import scala.collection.immutable
+import scala.collection.generic.CanBuildFrom
 
 // this is only necessary because 2.10.x doesn't support macro bundles
 object Compat {
@@ -64,10 +67,10 @@ object Compat {
     c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
   }
 
-  def SeqPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
+  def SeqPicklerUnpicklerMacro_impl[T: c.WeakTypeTag, Coll[_] <: Seq[_]](c: Context)(format: c.Expr[PickleFormat], cbf: c.Expr[CanBuildFrom[Coll[T], T, Coll[T]]]): c.Expr[SPickler[Coll[T]] with Unpickler[Coll[T]]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with SeqPicklerUnpicklerMacro
-    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
+    c.Expr[SPickler[Coll[T]] with Unpickler[Coll[T]]](bundle.impl[T, Coll](format.tree, cbf.tree))
   }
 
   def IterablePicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
@@ -79,12 +82,6 @@ object Compat {
   def ListPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with ListPicklerUnpicklerMacro
-    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
-  }
-
-  def VectorPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with VectorPicklerUnpicklerMacro
     c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
   }
 
@@ -158,12 +155,6 @@ object Compat {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with FastTypeTagMacros
     c.Expr[FastTypeTag[_]](bundle.apply(key.tree))
-  }
-
-  def ArrayBufferPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with ArrayBufferPicklerUnpicklerMacro
-    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
   }
 }
 
