@@ -6,6 +6,8 @@ import org.scalatest.FunSuite
 
 import scala.collection.mutable
 import scala.collection.immutable
+import scala.collection.IndexedSeq
+import scala.collection.LinearSeq
 
 case class Person(x: Int)
 
@@ -14,6 +16,18 @@ class JSONCollectionTest extends FunSuite {
     val p = Seq(1, 2, 3).pickle
     val up = p.unpickle[Seq[Int]]
     assert(up === Seq(1, 2, 3))
+  }
+
+  test("IndexedSeq") {
+    val p = IndexedSeq(1, 2, 3).pickle
+    val up = p.unpickle[IndexedSeq[Int]]
+    assert(up === IndexedSeq(1, 2, 3))
+  }
+
+  test("LinearSeq") {
+    val p = LinearSeq(1, 2, 3).pickle
+    val up = p.unpickle[LinearSeq[Int]]
+    assert(up === LinearSeq(1, 2, 3))
   }
 
   test("Iterable[Person]") {
