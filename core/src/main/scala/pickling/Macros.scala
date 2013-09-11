@@ -427,7 +427,6 @@ trait UnpickleMacros extends Macro {
   def pickleUnpickle[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
     val tpe = weakTypeOf[T]
-    if (tpe.typeSymbol.asType.isAbstractType) c.abort(c.enclosingPosition, "unpickle needs an explicitly provided type argument")
     val pickleArg = c.prefix.tree
     q"""
       import scala.language.existentials
@@ -451,8 +450,7 @@ trait UnpickleMacros extends Macro {
     import c.universe._
     import definitions._
     val tpe = weakTypeOf[T]
-    if (tpe.typeSymbol.asType.isAbstractType) c.abort(c.enclosingPosition, "unpickle needs an explicitly provided type argument")
-    val sym = tpe.typeSymbol.asClass
+    val sym = tpe.typeSymbol
     val readerArg = c.prefix.tree
 
     def createUnpickler(tpe: Type) = q"implicitly[Unpickler[$tpe]]"
@@ -466,18 +464,18 @@ trait UnpickleMacros extends Macro {
       """
     }
 
+    val customDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"customUnpickler")
+    val refDispatch = CaseDef(Literal(Constant(FastTypeTag.Ref.key)), EmptyTree, createUnpickler(typeOf[refs.Ref]))
+
     def nonFinalDispatch = {
       val compileTimeDispatch = compileTimeDispatchees(tpe) map (subtpe => {
         // TODO: do we still want to use something like HasPicklerDispatch (for unpicklers it would be routed throw tpe's companion)?
         CaseDef(Literal(Constant(subtpe.key)), EmptyTree, createUnpickler(subtpe))
       })
-      val refDispatch = CaseDef(Literal(Constant(FastTypeTag.Ref.key)), EmptyTree, createUnpickler(typeOf[refs.Ref]))
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""
         val tag = scala.pickling.FastTypeTag(typeString)
         Unpickler.genUnpickler(reader.mirror, tag)
       """)
-
-      val customDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"customUnpickler")
 
       q"""
         val customUnpickler = implicitly[Unpickler[$tpe]]
@@ -489,8 +487,17 @@ trait UnpickleMacros extends Macro {
       """
     }
 
+    def abstractTypeDispatch =
+      q"""
+        val customUnpickler = implicitly[Unpickler[$tpe]]
+        ${Match(q"typeString", List(refDispatch) :+ customDispatch)}
+      """
+
     val staticHint = if (sym.isEffectivelyFinal && !isTopLevel) (q"reader.hintStaticallyElidedType()": Tree) else q"";
-    val dispatchLogic = if (sym.isEffectivelyFinal) finalDispatch else nonFinalDispatch
+    val dispatchLogic =
+      if (sym.asType.isAbstractType) abstractTypeDispatch
+      else if (sym.isEffectivelyFinal) finalDispatch
+      else nonFinalDispatch
     val unpickleeCleanup = if (isTopLevel && shouldBotherAboutCleaning(tpe)) q"clearUnpicklees()" else q""
 
     q"""
