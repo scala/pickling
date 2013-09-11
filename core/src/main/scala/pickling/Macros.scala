@@ -330,7 +330,14 @@ trait PickleMacros extends Macro {
     implicitly[SPickler[$tpe]]
   """
 
-  def genDispatchLogic(sym: c.Symbol, tpe: c.Type, builder: c.Tree): c.Tree = {
+  def genDispatchLogic(tpe: c.Type, builder: c.Tree): c.Tree = {
+    val sym = tpe.typeSymbol
+    def abstractTypeDispatch =
+      q"""
+        val customPickler = implicitly[SPickler[$tpe]]
+        $builder.hintTag(implicitly[scala.pickling.FastTypeTag[$tpe]])
+        customPickler
+      """
     def finalDispatch = {
       if (sym.isNotNullable) createPickler(tpe, builder)
       else q"if (picklee != null) ${createPickler(tpe, builder)} else ${createPickler(NullTpe, builder)}"
@@ -369,7 +376,8 @@ trait PickleMacros extends Macro {
     //   """
     // }
     // if (sym == ListClass) listDispatch else
-    if (sym.isEffectivelyFinal) finalDispatch
+    if (sym.asType.isAbstractType) abstractTypeDispatch
+    else if (sym.isEffectivelyFinal) finalDispatch
     else nonFinalDispatch
   }
 
@@ -378,10 +386,10 @@ trait PickleMacros extends Macro {
    */
   def pickleInto[T: c.WeakTypeTag](builder: c.Tree): c.Tree = {
     val tpe = weakTypeOf[T].widen // TODO: I used widen to make module classes work, but I don't think it's okay to do that
-    val sym = tpe.typeSymbol.asClass
+    // val sym = tpe.typeSymbol.asClass // if this is called on an abstract type, an exception will be thrown (an abstract class will still fail, but it'll fail later)
     val q"${_}($pickleeArg)" = c.prefix.tree
 
-    val dispatchLogic = genDispatchLogic(sym, tpe, builder)
+    val dispatchLogic = genDispatchLogic(tpe, builder)
 
     q"""
       import scala.language.existentials
@@ -398,7 +406,7 @@ trait PickleMacros extends Macro {
   def dpicklerPickle[T: c.WeakTypeTag](picklee: c.Tree, builder: c.Tree): c.Tree = {
     val tpe = weakTypeOf[T].widen
     val sym = tpe.typeSymbol.asClass
-    val dispatchLogic = genDispatchLogic(sym, tpe, builder)
+    val dispatchLogic = genDispatchLogic(tpe, builder)
     q"""
       import scala.pickling._
       val picklee = $picklee
