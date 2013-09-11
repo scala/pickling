@@ -19,12 +19,16 @@ class CustomPersonXPickler(implicit val format: PickleFormat) extends SPickler[P
 }
 
 class GenericSpickler extends FunSuite {
-  test("stack-overflow") {
+  test("stack-overflow-pickle-unpickle") {
     def bar[T: SPickler: FastTypeTag](t: T) = t.pickle
+    def unbar[T: Unpickler: FastTypeTag](s: String) = JSONPickle(s).unpickle[T]
 
     val p = PersonY("Philipp", 32)
     assert(bar(p).value == p.pickle.value)
     assert(bar(42).unpickle[Int] == 42)
+
+    val unbarred = unbar[PersonY](bar(p).value)
+    assert(unbarred == p)
   }
 
   test("issue-4") {
