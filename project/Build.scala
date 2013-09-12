@@ -147,8 +147,22 @@ object MyBuild extends Build {
         </scm>
         <developers>
           <developer>
-            <id>lamp</id>
-            <name>EPFL LAMP</name>
+            <id>phaller</id>
+            <name>Philipp Haller</name>
+            <timezone>+1</timezone>
+            <url>http://github.com/phaller</url>
+          </developer>
+          <developer>
+            <id>xeno-by</id>
+            <name>Eugene Burmako</name>
+            <timezone>+1</timezone>
+            <url>http://github.com/xeno-by</url>
+          </developer>
+          <developer>
+            <id>heathermiller</id>
+            <name>Heather Miller</name>
+            <timezone>+1</timezone>
+            <url>http://github.com/heathermiller</url>
           </developer>
         </developers>
       ),
