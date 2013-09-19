@@ -235,7 +235,7 @@ abstract class ShareAnalyzer[U <: Universe](val u: U) {
   }
 }
 
-abstract class Macro extends QuasiquoteCompat with Reflection211Compat { self =>
+abstract class Macro extends Reflection211Compat { self =>
   val c: Context
   import c.universe._
   import definitions._
