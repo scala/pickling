@@ -7,21 +7,12 @@ import java.net.URL
 
 object BuildSettings {
   val buildVersion = "0.8.0-SNAPSHOT"
-  val buildScalaVersion = "2.10.3-SNAPSHOT"
-  val buildScalaOrganization = "org.scala-lang.macro-paradise"
-
-  val useLocalBuildOfParadise = false
-  // path to a build of https://github.com/scalamacros/kepler/tree/paradise/macros219
-  val localBuildOfParadise210 = Properties.envOrElse("MACRO_PARADISE210", "/Users/xeno_by/Projects/Paradise210/build/pack")
+  val buildScalaVersion = "2.10.3-RC2"
 
   val buildSettings = Defaults.defaultSettings ++ Seq(
     version := buildVersion,
     scalaVersion := buildScalaVersion,
-    scalaOrganization := buildScalaOrganization
-  ) ++ (if (useLocalBuildOfParadise) Seq(
-    scalaHome := Some(file(localBuildOfParadise210)),
-    unmanagedBase := file(localBuildOfParadise210 + "/lib")
-  ) else Nil) ++ Seq(
+    addCompilerPlugin("org.scala-lang.plugins" % "macro-paradise" % "2.0.0-SNAPSHOT" cross CrossVersion.full),
     resolvers += Resolver.sonatypeRepo("snapshots"),
     resolvers += Resolver.sonatypeRepo("releases"),
     scalacOptions ++= Seq("-feature")
@@ -79,10 +70,9 @@ object MyBuild extends Build {
   lazy val core: Project = Project(
     "scala-pickling",
     file("core"),
-    settings = buildSettings ++ (if (useLocalBuildOfParadise) Nil else Seq(
-      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-reflect" % _)
-    )) ++ Seq(
+    settings = buildSettings ++ Seq(
       scalacOptions ++= Seq("-optimise"),
+      libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
       libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test",
       libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
       conflictWarning in ThisBuild := ConflictWarning.disable,
@@ -216,7 +206,7 @@ object MyBuild extends Build {
       sourceDirectory in Compile <<= baseDirectory(root => root),
       sourceDirectory in Test <<= baseDirectory(root => root),
       scalacOptions ++= Seq("-optimise"),
-      libraryDependencies <+= (scalaVersion)(buildScalaOrganization % "scala-compiler" % _),
+      libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _),
       libraryDependencies += "de.javakaffee" % "kryo-serializers" % "0.22",
       libraryDependencies += "com.esotericsoftware.kryo" % "kryo" % "2.20",
       // MISC
