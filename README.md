@@ -30,6 +30,10 @@ You can use Scala Pickling in your SBT project by simply adding the following de
 
     libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.8.0-SNAPSHOT"
 
+You also need to add the Sonatype "snapshots" repository resolver to your build file:
+
+    resolvers += Resolver.sonatypeRepo("snapshots")
+
 For a more illustrative example, see a [sample SBT project which uses Scala Pickling](https://github.com/xeno-by/sbt-example-pickling).
 
 Or you can just [directly download the jar](https://oss.sonatype.org/service/local/artifact/maven/redirect?r=snapshots&g=org.scala-lang&a=scala-pickling_2.10&v=0.8.0-SNAPSHOT&e=jar).
@@ -61,3 +65,4 @@ Known limitations:
   3. Picklers are generated directly at call sites, since we cannot have introduceTopLevel in 2.10.x.
   4. No runtime compilation, since it's not obvious how to package it without inducing a dependency on `scala-compiler.jar`.
  -->
+ 
