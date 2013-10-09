@@ -61,70 +61,10 @@ object Compat {
     c.Expr[T](bundle.readerUnpickleTopLevel[T])
   }
 
-  def ArrayPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with ArrayPicklerUnpicklerMacro
-    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
-  }
-
-  def SeqPicklerUnpicklerMacro_impl[T: c.WeakTypeTag, Coll[_] <: Seq[_]](c: Context)(format: c.Expr[PickleFormat], cbf: c.Expr[CanBuildFrom[Coll[T], T, Coll[T]]]): c.Expr[SPickler[Coll[T]] with Unpickler[Coll[T]]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with SeqPicklerUnpicklerMacro
-    c.Expr[SPickler[Coll[T]] with Unpickler[Coll[T]]](bundle.impl[T, Coll](format.tree, cbf.tree))
-  }
-
-  def IterablePicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with IterablePicklerUnpicklerMacro
-    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
-  }
-
   def ListPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with ListPicklerUnpicklerMacro
     c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
-  }
-
-  def ImmSetPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with ImmSetPicklerUnpicklerMacro
-    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
-  }
-
-  def ImmSortedSetPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with ImmSortedSetPicklerUnpicklerMacro
-    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
-  }
-
-  def MutSetPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with MutSetPicklerUnpicklerMacro
-    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
-  }
-
-  def MutSortedSetPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with MutSortedSetPicklerUnpicklerMacro
-    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
-  }
-
-  def ImmMapPicklerUnpicklerMacro_impl[K: c.WeakTypeTag, V: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[Map[K, V]] with Unpickler[Map[K, V]]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with ImmMapPicklerUnpicklerMacro
-    c.Expr[SPickler[Map[K, V]] with Unpickler[Map[K, V]]](bundle.impl[K, V](format.tree))
-  }
-
-  def ImmSortedMapPicklerUnpicklerMacro_impl[K: c.WeakTypeTag, V: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[immutable.SortedMap[K, V]] with Unpickler[immutable.SortedMap[K, V]]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with ImmSortedMapPicklerUnpicklerMacro
-    c.Expr[SPickler[immutable.SortedMap[K, V]] with Unpickler[immutable.SortedMap[K, V]]](bundle.impl[K, V](format.tree))
-  }
-
-  def MutMapPicklerUnpicklerMacro_impl[K: c.WeakTypeTag, V: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[mutable.Map[K, V]] with Unpickler[mutable.Map[K, V]]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with MutMapPicklerUnpicklerMacro
-    c.Expr[SPickler[mutable.Map[K, V]] with Unpickler[mutable.Map[K, V]]](bundle.impl[K, V](format.tree))
   }
 
   def PicklerMacros_dpicklerImpl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[DPickler[T]] = {
