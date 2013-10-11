@@ -1,5 +1,6 @@
 package scala.pickling
 
+import scala.pickling.internal._
 import scala.language.implicitConversions
 
 package object json {
