@@ -45,7 +45,7 @@ package object pickling {
 
   def typeToString(tpe: Type): String = tpe.key
 
-  private val typeFromStringCache = scala.collection.mutable.Map[String, Type]()
+  private val typeFromStringCache = scala.collection.concurrent.TrieMap[String, Type]()
   def typeFromString(mirror: Mirror, stpe: String): Type = {
     // TODO: find out why typeFromString is called repeatedly for scala.Predef.String (at least in the evactor1 bench)
     if (typeFromStringCache.contains(stpe)) typeFromStringCache(stpe)
@@ -103,32 +103,65 @@ package object pickling {
     }
   }
 
-  private var picklees = new ReactMap
-  private var nextPicklee = 0
+  // private var picklees = new ReactMap
+  // private var nextPicklee = 0
+  val pickleesTL = new ThreadLocal[ReactMap] {
+    override def initialValue() = new ReactMap
+  }
+  val nextPickleeTL = new ThreadLocal[Int] {
+    override def initialValue() = 0
+  }
+
   def lookupPicklee(picklee: Any) = {
+    var nextPicklee = nextPickleeTL.get()
+    val picklees = pickleesTL.get()
+
     val index = nextPicklee
     val result = picklees.insertIfNotThere(picklee.asInstanceOf[AnyRef], index)
     // println(s"lookupPicklee($picklee) = $result")
-    if (result == -1)
+    if (result == -1) {
       nextPicklee += 1
+      nextPickleeTL.set(nextPicklee)
+    }
+    pickleesTL.set(picklees)
     result
   }
   def registerPicklee(picklee: Any) = {
+    var nextPicklee = nextPickleeTL.get()
+    val picklees = pickleesTL.get()
+
     val index = nextPicklee
     picklees.insert(picklee.asInstanceOf[AnyRef], index)
     // println(s"registerPicklee($picklee, $index)")
     nextPicklee += 1
+    nextPickleeTL.set(nextPicklee)
+    pickleesTL.set(picklees)
     index
   }
   def clearPicklees() = {
+    var nextPicklee = nextPickleeTL.get()
+    val picklees = pickleesTL.get()
+
     picklees.clear()
     nextPicklee = 0
+
+    nextPickleeTL.set(nextPicklee)
+    pickleesTL.set(picklees)
   }
 
-  private var unpicklees = new Array[Any](65536)
-  private var nextUnpicklee = 0
+  // private var unpicklees = new Array[Any](65536)
+  // private var nextUnpicklee = 0
+  val unpickleesTL = new ThreadLocal[Array[Any]] {
+    override def initialValue() = new Array[Any](65536)
+  }
+  val nextUnpickleeTL = new ThreadLocal[Int] {
+    override def initialValue() = 0
+  }
 
   def lookupUnpicklee(index: Int): Any = {
+    val nextUnpicklee = nextUnpickleeTL.get()
+    val unpicklees = unpickleesTL.get()
+
     // println(s"lookupUnpicklee($index)")
     if (index >= nextUnpicklee) throw new Error(s"fatal error: invalid index $index in unpicklee cache of length $nextUnpicklee")
     val result = unpicklees(index)
@@ -136,23 +169,36 @@ package object pickling {
     result
   }
   def preregisterUnpicklee() = {
+    var nextUnpicklee = nextUnpickleeTL.get()
+    val unpicklees = unpickleesTL.get()
+
     val index = nextUnpicklee
     // TODO: dynamically resize the array!
     unpicklees(index) = null
     // println(s"preregisterUnpicklee() at $index")
     nextUnpicklee += 1
+    nextUnpickleeTL.set(nextUnpicklee)
+    unpickleesTL.set(unpicklees)
     index
   }
   def registerUnpicklee(unpicklee: Any, index: Int) = {
+    val unpicklees = unpickleesTL.get()
+
     // println(s"registerUnpicklee($unpicklee, $index)")
     unpicklees(index) = unpicklee
+    unpickleesTL.set(unpicklees)
   }
   def clearUnpicklees() = {
+    var nextUnpicklee = nextUnpickleeTL.get()
+    val unpicklees = unpickleesTL.get()
+
     var i = 0
     while (i < nextUnpicklee) {
       unpicklees(i) = null
       i += 1
     }
     nextUnpicklee = 0
+    nextUnpickleeTL.set(nextUnpicklee)
+    unpickleesTL.set(unpicklees)
   }
 }
