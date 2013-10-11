@@ -9,8 +9,8 @@ import ru._
 package object pickling {
 
   // TOGGLE DEBUGGING
-  var debugEnabled: Boolean = System.getProperty("pickling.debug", "false").toBoolean
-  def debug(output: => String) = if (debugEnabled) println(output)
+  private val debugEnabled: Boolean = System.getProperty("pickling.debug", "false").toBoolean
+  private[pickling] def debug(output: => String) = if (debugEnabled) println(output)
 
   implicit class PickleOps[T](picklee: T) {
     def pickle(implicit format: PickleFormat): format.PickleType = macro Compat.PickleMacros_pickle[T]
@@ -18,14 +18,14 @@ package object pickling {
     def pickleTo(output: Output[_])(implicit format: PickleFormat): Unit = macro Compat.PickleMacros_pickleTo[T]
   }
 
-  implicit class RichSymbol(sym: scala.reflect.api.Universe#Symbol) {
+  private[pickling] implicit class RichSymbol(sym: scala.reflect.api.Universe#Symbol) {
     def isEffectivelyFinal = sym.asInstanceOf[scala.reflect.internal.Symbols#Symbol].isEffectivelyFinal
     def isEffectivelyPrimitive = throw new Exception("use Type.isEffectivelyPrimitive instead")
     def isNotNullable = sym.isClass && (sym.asClass.isPrimitive || sym.asClass.isDerivedValueClass)
     def isNullable = sym.isClass && !isNotNullable
   }
 
-  implicit class RichType(tpe: scala.reflect.api.Universe#Type) {
+  private[pickling] implicit class RichType(tpe: scala.reflect.api.Universe#Type) {
     def isEffectivelyFinal = tpe.typeSymbol.isEffectivelyFinal
     // TODO: doesn't work...
     // def isEffectivelyPrimitive: Boolean = {
@@ -40,13 +40,15 @@ package object pickling {
     def isNullable = tpe.typeSymbol.isNullable
   }
 
+  // Unfortunately these have to be left public because we generate calls to these
+  // and they need to be accessible from anywhere
   var cachedMirror: ru.Mirror = null
   def currentMirror: ru.Mirror = macro Compat.CurrentMirrorMacro_impl
 
-  def typeToString(tpe: Type): String = tpe.key
+  private[pickling] def typeToString(tpe: Type): String = tpe.key
 
   private val typeFromStringCache = scala.collection.concurrent.TrieMap[String, Type]()
-  def typeFromString(mirror: Mirror, stpe: String): Type = {
+  private[pickling] def typeFromString(mirror: Mirror, stpe: String): Type = {
     // TODO: find out why typeFromString is called repeatedly for scala.Predef.String (at least in the evactor1 bench)
     if (typeFromStringCache.contains(stpe)) typeFromStringCache(stpe)
     else {
@@ -72,7 +74,7 @@ package object pickling {
   }
 
   // FIXME: duplication wrt Tools, but I don't really fancy abstracting away this path-dependent madness
-  implicit class RichTypeFIXME(tpe: Type) {
+  private[pickling] implicit class RichTypeFIXME(tpe: Type) {
     import definitions._
     def key: String = {
       tpe.normalize match {
@@ -94,7 +96,7 @@ package object pickling {
     }
   }
 
-  implicit class RichFieldMirror(fm: FieldMirror) {
+  private[pickling] implicit class RichFieldMirror(fm: FieldMirror) {
     // workaround for SI-7464
     def forcefulSet(value: Any): Unit = {
       import java.lang.reflect.{Field => jField}
@@ -103,12 +105,10 @@ package object pickling {
     }
   }
 
-  // private var picklees = new ReactMap
-  // private var nextPicklee = 0
-  val pickleesTL = new ThreadLocal[ReactMap] {
+  private val pickleesTL = new ThreadLocal[ReactMap] {
     override def initialValue() = new ReactMap
   }
-  val nextPickleeTL = new ThreadLocal[Int] {
+  private val nextPickleeTL = new ThreadLocal[Int] {
     override def initialValue() = 0
   }
 
@@ -149,12 +149,10 @@ package object pickling {
     pickleesTL.set(picklees)
   }
 
-  // private var unpicklees = new Array[Any](65536)
-  // private var nextUnpicklee = 0
-  val unpickleesTL = new ThreadLocal[Array[Any]] {
+  private val unpickleesTL = new ThreadLocal[Array[Any]] {
     override def initialValue() = new Array[Any](65536)
   }
-  val nextUnpickleeTL = new ThreadLocal[Int] {
+  private val nextUnpickleeTL = new ThreadLocal[Int] {
     override def initialValue() = 0
   }
 
