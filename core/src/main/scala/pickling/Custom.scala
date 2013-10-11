@@ -272,6 +272,34 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
 }
 
 trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
+  import java.math.BigDecimal
+
+  implicit object BigDecimalPicklerUnpickler extends SPickler[BigDecimal] with Unpickler[BigDecimal] {
+    val format = null // not used
+    def pickle(picklee: BigDecimal, builder: PBuilder): Unit = {
+      builder.beginEntry(picklee)
+
+      builder.putField("value", b => {
+        b.hintTag(implicitly[FastTypeTag[String]])
+        b.hintStaticallyElidedType()
+        stringPicklerUnpickler.pickle(picklee.toString, b)
+      })
+
+      builder.endEntry()
+    }
+    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+      val reader1 = reader.readField("value")
+      reader1.hintTag(implicitly[FastTypeTag[String]])
+      reader1.hintStaticallyElidedType()
+
+      val tag = reader1.beginEntry()
+      val result = stringPicklerUnpickler.unpickle(tag, reader1)
+      reader1.endEntry()
+
+      new BigDecimal(result.asInstanceOf[String])
+    }
+  }
+
   class PrimitivePicklerUnpickler[T] extends SPickler[T] with Unpickler[T] {
     val format = null // not used
     def pickle(picklee: T, builder: PBuilder): Unit = {
