@@ -1,5 +1,6 @@
 package scala.pickling
 
+import scala.pickling.internal._
 import scala.reflect.runtime.{universe => ru}
 import ir._
 
@@ -115,7 +116,7 @@ trait PicklerMacros extends Macro {
       if (shouldBotherAboutSharing(tpe)) {
         q"""
           import scala.reflect.runtime.universe._
-          val oid = scala.pickling.`package`.lookupPicklee(picklee)
+          val oid = scala.pickling.internal.`package`.lookupPicklee(picklee)
           builder.hintOid(oid)
           $beginEntry
           if (oid == -1) { ..$putFields }
@@ -151,6 +152,7 @@ trait PicklerMacros extends Macro {
     q"""
       implicit object $picklerName extends scala.pickling.SPickler[$tpe] with Generated {
         import scala.pickling._
+        import scala.pickling.internal._
         import scala.pickling.`package`.PickleOps
         val format = implicitly[${format.tpe}]
         def pickle(picklee: $tpe, builder: PBuilder): Unit = $pickleLogic
@@ -165,6 +167,7 @@ trait PicklerMacros extends Macro {
     q"""
       implicit object $picklerName extends scala.pickling.DPickler[$tpe] {
         import scala.pickling._
+        import scala.pickling.internal._
         import scala.pickling.`package`.PickleOps
         val format = implicitly[${format.tpe}]
       }
@@ -247,9 +250,9 @@ trait UnpicklerMacros extends Macro {
 
           if (shouldBotherAboutSharing(tpe)) {
             q"""
-              val oid = scala.pickling.`package`.preregisterUnpicklee()
+              val oid = scala.pickling.internal.`package`.preregisterUnpicklee()
               val $instance = $instantiationLogic
-              scala.pickling.`package`.registerUnpicklee($instance, oid)
+              scala.pickling.internal.`package`.registerUnpicklee($instance, oid)
               ..$initPendingFields
               $instance
             """
@@ -282,6 +285,7 @@ trait UnpicklerMacros extends Macro {
       implicit object $unpicklerName extends scala.pickling.Unpickler[$tpe] with Generated {
         import scala.pickling._
         import scala.pickling.ir._
+        import scala.pickling.internal._
         import scala.reflect.runtime.universe._
         val format = implicitly[${format.tpe}]
         def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = $unpickleLogic
@@ -304,6 +308,7 @@ trait PickleMacros extends Macro {
     val endPickle = if (shouldBotherAboutCleaning(tpe)) q"clearPicklees()" else q"";
     q"""
       import scala.pickling._
+      import scala.pickling.internal._
       val picklee: $tpe = $pickleeArg
       val builder = $format.createBuilder($output)
       picklee.pickleInto(builder)
@@ -317,6 +322,7 @@ trait PickleMacros extends Macro {
     val endPickle = if (shouldBotherAboutCleaning(tpe)) q"clearPicklees()" else q"";
     q"""
       import scala.pickling._
+      import scala.pickling.internal._
       val picklee: $tpe = $pickleeArg
       val builder = $format.createBuilder()
       picklee.pickleInto(builder)
@@ -394,6 +400,7 @@ trait PickleMacros extends Macro {
     q"""
       import scala.language.existentials
       import scala.pickling._
+      import scala.pickling.internal._
       val picklee = $pickleeArg
       val pickler = $dispatchLogic
       pickler.asInstanceOf[SPickler[$tpe]].pickle(picklee, $builder)
@@ -409,6 +416,7 @@ trait PickleMacros extends Macro {
     val dispatchLogic = genDispatchLogic(tpe, builder)
     q"""
       import scala.pickling._
+      import scala.pickling.internal._
       val picklee = $picklee
       val pickler = $dispatchLogic
       pickler.asInstanceOf[SPickler[$tpe]].pickle($picklee, $builder)
@@ -431,9 +439,10 @@ trait UnpickleMacros extends Macro {
     q"""
       import scala.language.existentials
       import scala.pickling._
+      import scala.pickling.internal._
       val pickle = $pickleArg
       val format = implicitly[${pickleFormatType(pickleArg)}]
-      val reader = format.createReader(pickle, scala.pickling.`package`.currentMirror)
+      val reader = format.createReader(pickle, scala.pickling.internal.`package`.currentMirror)
       reader.unpickleTopLevel[$tpe]
     """
   }
