@@ -7,6 +7,8 @@ import org.scalacheck.Prop.forAll
 import Gen._
 import Arbitrary.arbitrary
 
+import java.math.BigDecimal
+
 object PicklingSpec {
   sealed abstract class Base
   final class C(s: String) extends Base { override def toString = "C" }
@@ -233,6 +235,13 @@ object PicklingJsonSpec extends Properties("pickling-json") {
     val readArr = pickle.unpickle[Array[Double]]
     readArr.sameElements(ia)
   })
+
+  property("BigDecimal") = Prop forAll { (x: Double) =>
+    val bd = new BigDecimal(x)
+    val pickle: JSONPickle = bd.pickle
+    val x1 = pickle.unpickle[BigDecimal]
+    x1 == bd
+  }
 }
 
 
@@ -437,4 +446,11 @@ object PicklingBinarySpec extends Properties("pickling-binary") {
     val readArr = pickle.unpickle[Array[Double]]
     readArr.sameElements(ia)
   })
+
+  property("BigDecimal") = Prop forAll { (x: Double) =>
+    val bd = new BigDecimal(x)
+    val pickle: BinaryPickle = bd.pickle
+    val x1 = pickle.unpickle[BigDecimal]
+    x1 == bd
+  }
 }
