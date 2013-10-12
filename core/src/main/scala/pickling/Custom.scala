@@ -1,5 +1,7 @@
 package scala.pickling
 
+import scala.pickling.internal._
+
 import scala.language.experimental.macros
 import scala.language.higherKinds
 
@@ -174,6 +176,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
       implicit object $picklerUnpicklerName extends scala.pickling.SPickler[$tpe] with scala.pickling.Unpickler[$tpe] {
         import scala.reflect.runtime.universe._
         import scala.pickling._
+        import scala.pickling.internal._
         import scala.pickling.`package`.PickleOps
 
         val format = implicitly[${format.tpe}]

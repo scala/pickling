@@ -1,5 +1,7 @@
 package scala.pickling
 
+import scala.pickling.internal._
+
 import scala.reflect.runtime.universe._
 import definitions._
 import scala.reflect.runtime.{universe => ru}
@@ -72,7 +74,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
           picklee match {
             case null => pickler.asInstanceOf[SPickler[Null]].pickle(null, builder)
             case _ =>
-              val oid = scala.pickling.`package`.lookupPicklee(picklee)
+              val oid = scala.pickling.internal.lookupPicklee(picklee)
               builder.hintOid(oid)
               if (oid == -1) {
                 pickler.pickle(picklee, builder)
