@@ -1,7 +1,7 @@
 package scala.pickling
 
+import scala.pickling.internal._
 import scala.language.implicitConversions
-
 import scala.reflect.runtime.universe.Mirror
 
 package object binary {

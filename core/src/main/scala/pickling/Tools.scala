@@ -1,5 +1,7 @@
 package scala.pickling
 
+import scala.pickling.internal._
+
 import scala.language.existentials
 
 import scala.reflect.macros.Context
@@ -424,7 +426,7 @@ trait CurrentMirrorMacro extends Macro {
   def impl: c.Tree = {
     import c.universe._
     c.inferImplicitValue(typeOf[ru.Mirror], silent = true) orElse {
-      val cachedMirror = q"scala.pickling.`package`.cachedMirror"
+      val cachedMirror = q"scala.pickling.internal.`package`.cachedMirror"
       q"""
         if ($cachedMirror != null) $cachedMirror
         else {
