@@ -212,7 +212,7 @@ object WikiGraphPicklingBench extends WikiGraphBenchmark {
   //   }
   // }
   implicit lazy val picklerUnpicklerColonColonVertex: SPickler[::[Vertex]] with Unpickler[::[Vertex]] = SPickler.genListPickler[Vertex]
-  implicit lazy val picklerUnpicklerVectorVertex: SPickler[Vector[Vertex]] with Unpickler[Vector[Vertex]] = SPickler.genVectorPickler[Vertex]
+  implicit lazy val picklerUnpicklerVectorVertex: SPickler[Vector[Vertex]] with Unpickler[Vector[Vertex]] = SPickler.vectorPickler[Vertex]
   implicit val picklerGraph = implicitly[SPickler[Graph]]
   implicit val unpicklerGraph = implicitly[Unpickler[Graph]]
 
