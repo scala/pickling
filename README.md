@@ -5,22 +5,24 @@ scala/pickling
 
 Basic usage:
 
-    import scala.pickling._
-    import json._
+```scala
+import scala.pickling._
+import json._
 
-    val pckl = List(1, 2, 3, 4).pickle
-    val lst = pckl.unpickle[List[Int]]
+val pckl = List(1, 2, 3, 4).pickle
+val lst = pckl.unpickle[List[Int]]
+```
 
 For more, flip through, or watch the [ScalaDays 2013 presentation!](http://www.parleys.com/play/51c3799fe4b0d38b54f4625a/chapter0/about).
 <br> For deeper technical details, we've also written an OOPSLA 2013 paper on scala/pickling, [Instant Pickles: Generating Object-Oriented Pickler Combinators for Fast and Extensible Serialization](http://lampwww.epfl.ch/~hmiller/files/oopsla-pickling.pdf).
 
 **Current version:** 0.8.0-SNAPSHOT. Scala/pickling does not yet have a stable release.
-<br>**Upcoming release:** Our first stable release, 0.8.0, is scheduled for September 11th.
+<br>**Upcoming release:** Our first stable release will be 0.8.0.
 
 ## Quick Start
 
 - make sure `scala-pickling.jar` is on your classpath
-- use Scala 2.10.2
+- use Scala 2.10.3
 
 ## Get Scala Pickling
 
@@ -28,11 +30,15 @@ Scala Pickling for Scala 2.10.2 is available on Sonatype! You can find Scala Pic
 
 You can use Scala Pickling in your SBT project by simply adding the following dependency to your build file:
 
-    libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.8.0-SNAPSHOT"
+```scala
+libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.8.0-SNAPSHOT"
+```
 
 You also need to add the Sonatype "snapshots" repository resolver to your build file:
 
-    resolvers += Resolver.sonatypeRepo("snapshots")
+```scala
+resolvers += Resolver.sonatypeRepo("snapshots")
+```
 
 For a more illustrative example, see a [sample SBT project which uses Scala Pickling](https://github.com/xeno-by/sbt-example-pickling).
 
