@@ -244,8 +244,8 @@ trait UnpicklerMacros extends Macro {
 
           val initPendingFields = pendingFields.flatMap(fir => {
             val readFir = readField(fir.name, fir.tpe)
-            if (fir.isPublic && fir.hasSetter) List(q"$instance.${TermName(fir.name)} = $readFir")
-            else reflectively(instance, fir)(fm => q"$fm.set($readFir)")
+            if (fir.isPublic && fir.hasSetter) List(q"$instance.${TermName(fir.name)} = $readFir".asInstanceOf[Tree])
+            else reflectively(instance, fir)(fm => q"$fm.set($readFir)".asInstanceOf[Tree])
           })
 
           if (shouldBotherAboutSharing(tpe)) {
