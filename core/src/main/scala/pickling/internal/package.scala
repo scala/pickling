@@ -90,15 +90,6 @@ package object internal {
     }
   }
 
-  private[pickling] implicit class RichFieldMirror(fm: FieldMirror) {
-    // workaround for SI-7464
-    def forcefulSet(value: Any): Unit = {
-      import java.lang.reflect.{Field => jField}
-      val jfield = fm.asInstanceOf[{ def jfield: jField }].jfield
-      jfield.set(fm.receiver, value)
-    }
-  }
-
 
   // ----- utilities for managing object identity -----
   private val pickleesTL = new ThreadLocal[ReactMap] {
