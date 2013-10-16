@@ -371,7 +371,7 @@ abstract class Macro extends Reflection211Compat { self =>
           import scala.reflect.runtime.universe._
           val mirror = runtimeMirror(this.getClass.getClassLoader)
           val im = mirror.reflect($target)
-        """
+        """.asInstanceOf[Block]
         initMirror.stats :+ initMirror.expr
       } else {
         Nil
@@ -389,7 +389,7 @@ abstract class Macro extends Reflection211Compat { self =>
         val $ownerSymbol = implicitly[scala.pickling.FastTypeTag[${field.owner.asClass.toType.erasure}]].tpe
         val $firSymbol = $ownerSymbol.member(newTermName(${field.name.toString}))
         if ($firSymbol.isTerm) ${body(q"im.reflectField($firSymbol.asTerm)")}
-      """
+      """.asInstanceOf[Block]
     prologue ++ wrappedBody.stats :+ wrappedBody.expr
   }
 }
