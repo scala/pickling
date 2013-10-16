@@ -7,7 +7,7 @@ import java.net.URL
 
 object BuildSettings {
   val buildVersion = "0.8.0-SNAPSHOT"
-  val buildScalaVersion = "2.10.2"
+  val buildScalaVersion = "2.10.3"
 
   val buildSettings = Defaults.defaultSettings ++ Seq(
     version := buildVersion,
