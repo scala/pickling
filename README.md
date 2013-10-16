@@ -12,7 +12,7 @@ Basic usage:
     val lst = pckl.unpickle[List[Int]]
 
 For more, flip through, or watch the [ScalaDays 2013 presentation!](http://www.parleys.com/play/51c3799fe4b0d38b54f4625a/chapter0/about).
-<br> For deeper technical details, we've also written an OOPSLA 2013 paper on scala/pickling, [Instant Pickles: Generating Object-Oriented Pickler Combinators for Fast and Extensible Serialization](http://lampwww.epfl.ch/~hmiller/files/oopsla-pickling.pdf).
+<br> For deeper technical details, we've also written an OOPSLA 2013 paper on scala/pickling, [Instant Pickles: Generating Object-Oriented Pickler Combinators for Fast and Extensible Serialization](http://infoscience.epfl.ch/record/187787/files/oopsla-pickling_1.pdf).
 
 **Current version:** 0.8.0-SNAPSHOT. Scala/pickling does not yet have a stable release.
 <br>**Upcoming release:** Our first stable release, 0.8.0, is scheduled for September 11th.
@@ -65,4 +65,3 @@ Known limitations:
   3. Picklers are generated directly at call sites, since we cannot have introduceTopLevel in 2.10.x.
   4. No runtime compilation, since it's not obvious how to package it without inducing a dependency on `scala-compiler.jar`.
  -->
- 
