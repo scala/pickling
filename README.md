@@ -26,7 +26,7 @@ For more, flip through, or watch the [ScalaDays 2013 presentation!](http://www.p
 
 ## Get Scala Pickling
 
-Scala Pickling for Scala 2.10.2 is available on Sonatype! You can find Scala Pickling under groupID: `org.scala-lang` and artifactID: `scala-pickling_2.10`. The current version is 0.8.0-SNAPSHOT.
+Scala Pickling for Scala 2.10.3 is available on Sonatype! You can find Scala Pickling under groupID: `org.scala-lang` and artifactID: `scala-pickling_2.10`. The current version is 0.8.0-SNAPSHOT.
 
 You can use Scala Pickling in your SBT project by simply adding the following dependency to your build file:
 
@@ -58,11 +58,11 @@ Scala Pickling...
 <!-- This project aims to turn [a custom build of macro paradise](https://github.com/heathermiller/scala-pickling/tree/topic/scala-pickling) that we used in
 [Object-Oriented Pickler Combinators and an Extensible Generation Framework](http://lampwww.epfl.ch/~hmiller/files/pickling.pdf)
 into a standalone library that targets 2.10.x
-(The library requires 2.10.2+).
+(The library requires 2.10.3+).
 
 Since we are making extensive use of quasiquotes, which cannot be added to 2.10.x due to binary and source compatibility
 restrictions, building (but not using!) scala-pickling requires [a custom build of scalac](http://docs.scala-lang.org/overviews/macros/paradise.html#macro_paradise_for_210x).
-Please note that scala-pickling can be used without any problems with vanilla scalac 2.10.2 -
+Please note that scala-pickling can be used without any problems with vanilla scalac 2.10.3 -
 custom scalac is only necessary to _build_ this library, not to compile against it or to link to it at runtime.
 
 Known limitations:
