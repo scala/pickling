@@ -7,7 +7,7 @@ import org.scalacheck.Prop.forAll
 import Gen._
 import Arbitrary.arbitrary
 
-import java.math.BigDecimal
+import java.math.{BigDecimal, BigInteger}
 
 object PicklingSpec {
   sealed abstract class Base
@@ -452,5 +452,12 @@ object PicklingBinarySpec extends Properties("pickling-binary") {
     val pickle: BinaryPickle = bd.pickle
     val x1 = pickle.unpickle[BigDecimal]
     x1 == bd
+  }
+
+  property("BigInteger") = Prop forAll { (x: Long) =>
+    val bi = BigInteger.valueOf(x)
+    val pickle: BinaryPickle = bi.pickle
+    val x1 = pickle.unpickle[BigInteger]
+    x1 == bi
   }
 }
