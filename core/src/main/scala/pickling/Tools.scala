@@ -363,6 +363,10 @@ abstract class Macro extends Reflection211Compat { self =>
 
   private var reflectivePrologueEmitted = false // TODO: come up with something better
   def reflectively(target: String, fir: FieldIR)(body: Tree => Tree): List[Tree] = reflectively(TermName(target), fir)(body)
+
+  /**
+   *  requires: !fir.accessor.isEmpty
+   */
   def reflectively(target: TermName, fir: FieldIR)(body: Tree => Tree): List[Tree] = {
     val prologue = {
       if (!reflectivePrologueEmitted) {
