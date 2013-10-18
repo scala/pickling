@@ -242,6 +242,13 @@ object PicklingJsonSpec extends Properties("pickling-json") {
     val x1 = pickle.unpickle[BigDecimal]
     x1 == bd
   }
+
+  property("BigInteger") = Prop forAll { (x: Long) =>
+    val bi = BigInteger.valueOf(x)
+    val pickle: JSONPickle = bi.pickle
+    val x1 = pickle.unpickle[BigInteger]
+    x1 == bi
+  }
 }
 
 
