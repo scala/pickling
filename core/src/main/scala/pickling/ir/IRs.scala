@@ -39,15 +39,18 @@ class IRs[U <: Universe with Singleton](val uni: U) {
     val ctorParams = if (ctor != NoSymbol) ctor.asMethod.paramss.flatten.map(_.asTerm) else Nil
     val allAccessors = tp.declarations.collect{ case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
     val (paramAccessors, otherAccessors) = allAccessors.partition(_.isParamAccessor)
+
     def mkFieldIR(sym: TermSymbol, param: Option[TermSymbol], accessor: Option[MethodSymbol]) = {
       val (quantified, rawTp) = tp match { case ExistentialType(quantified, tpe) => (quantified, tpe); case tpe => (Nil, tpe) }
       val rawSymTp = accessor.getOrElse(sym).typeSignatureIn(rawTp) match { case NullaryMethodType(tpe) => tpe; case tpe => tpe }
       val symTp = existentialAbstraction(quantified, rawSymTp)
       FieldIR(sym.name.toString.trim, symTp, param, accessor)
     }
+
     val paramFields = ctorParams.map(sym => mkFieldIR(sym, Some(sym), paramAccessors.find(_.name == sym.name)))
     val varGetters = otherAccessors.collect{ case meth if meth.isGetter && meth.accessed != NoSymbol && meth.accessed.asTerm.isVar => meth }
     val varFields = varGetters.map(sym => mkFieldIR(sym, None, Some(sym)))
+
     paramFields ++ varFields
   }
 

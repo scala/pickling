@@ -245,6 +245,7 @@ trait UnpicklerMacros extends Macro {
           val initPendingFields = pendingFields.flatMap(fir => {
             val readFir = readField(fir.name, fir.tpe)
             if (fir.isPublic && fir.hasSetter) List(q"$instance.${TermName(fir.name)} = $readFir".asInstanceOf[Tree])
+            else if (fir.accessor.isEmpty) List()
             else reflectively(instance, fir)(fm => q"$fm.set($readFir)".asInstanceOf[Tree])
           })
 
