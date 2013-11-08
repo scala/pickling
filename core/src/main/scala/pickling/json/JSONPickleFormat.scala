@@ -145,7 +145,7 @@ package json {
       pickler(this)
       this
     }
-    def endCollection(l: Int): Unit = {
+    def endCollection(): Unit = {
       appendLine()
       append("]")
       // unindent()
