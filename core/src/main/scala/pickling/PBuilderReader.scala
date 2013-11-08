@@ -20,7 +20,7 @@ trait PBuilder extends Hintable {
   def endEntry(): Unit
   def beginCollection(length: Int): PBuilder
   def putElement(pickler: PBuilder => Unit): PBuilder
-  def endCollection(length: Int): Unit
+  def endCollection(): Unit
   def result(): Pickle
 }
 
