@@ -8,6 +8,7 @@ import Gen._
 import Arbitrary.arbitrary
 
 import java.math.{BigDecimal, BigInteger}
+import java.util.{Calendar, Date, GregorianCalendar}
 
 object PicklingSpec {
   sealed abstract class Base
@@ -32,6 +33,22 @@ object PicklingSpec {
     Arbitrary[WithIntArray](arbitrary[Array[Int]].map(WithIntArray(_)))
 
   case class Person(name: String, age: Int)
+
+  lazy val randomDates = for (n <- Gen.choose(Integer.MIN_VALUE + 1, Integer.MAX_VALUE)) yield {
+    def randBetween(start: Int, end: Int): Int = {
+      start + (Math.round(Math.random() * (end - start)).toInt)
+    }
+
+    val gc = new GregorianCalendar()
+    gc.set(Calendar.YEAR, randBetween(1900, 3000))
+    gc.set(Calendar.MONTH, randBetween(1,12))
+    gc.set(Calendar.DAY_OF_YEAR, randBetween(1, gc.getActualMaximum(Calendar.DAY_OF_YEAR)))
+    gc.set(Calendar.HOUR_OF_DAY, randBetween(0, 24))
+    gc.set(Calendar.MINUTE, randBetween(0, 59))
+    gc.set(Calendar.SECOND, randBetween(0, 99))
+    gc.set(Calendar.MILLISECOND, randBetween(0, 999))
+    gc.getTime()
+  }
 }
 
 /* ~~~~~~~~~~~~~~~~~~~~~
@@ -248,6 +265,12 @@ object PicklingJsonSpec extends Properties("pickling-json") {
     val pickle: JSONPickle = bi.pickle
     val x1 = pickle.unpickle[BigInteger]
     x1 == bi
+  }
+
+  property("Date") = forAll (randomDates) { (date) =>
+    val pickle: JSONPickle = date.pickle
+    val x1 = pickle.unpickle[Date]
+    x1.compareTo(date) == 0
   }
 }
 
@@ -466,5 +489,11 @@ object PicklingBinarySpec extends Properties("pickling-binary") {
     val pickle: BinaryPickle = bi.pickle
     val x1 = pickle.unpickle[BigInteger]
     x1 == bi
+  }
+
+  property("Date") = forAll (randomDates) { (date) =>
+    val pickle: BinaryPickle = date.pickle
+    val x1 = pickle.unpickle[Date]
+    x1.compareTo(date) == 0
   }
 }
