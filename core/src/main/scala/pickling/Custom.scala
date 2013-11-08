@@ -331,9 +331,6 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
     }
   }
 
-  import java.util.{Date, TimeZone}
-  import java.text.SimpleDateFormat
-
   implicit object DatePicklerUnpickler extends SPickler[Date] with Unpickler[Date] {
     val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") //use ISO_8601 format
     dateFormat.setLenient(false)
