@@ -236,7 +236,7 @@ final class ByteArray(arr: Array[Byte]) extends ByteBuffer {
 
   def decodeCharArrayFrom(pos: Int): (Array[Char], Int) = {
     val len = decodeIntFrom(pos)
-    val nextPos = pos+2
+    val nextPos = pos+4
     val ia = Array.ofDim[Char](len)
     val srcOffset = UnsafeMemory.charArrayOffset
     val destOffset = UnsafeMemory.intArrayOffset
