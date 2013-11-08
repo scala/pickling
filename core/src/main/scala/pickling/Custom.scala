@@ -276,6 +276,8 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
 
 trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
   import java.math.{BigDecimal, BigInteger}
+  import java.util.{Date, TimeZone}
+  import java.text.SimpleDateFormat
 
   implicit object BigDecimalPicklerUnpickler extends SPickler[BigDecimal] with Unpickler[BigDecimal] {
     val format = null // not used
@@ -326,6 +328,39 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
       reader1.endEntry()
 
       new BigInteger(result.asInstanceOf[String])
+    }
+  }
+
+  import java.util.{Date, TimeZone}
+  import java.text.SimpleDateFormat
+
+  implicit object DatePicklerUnpickler extends SPickler[Date] with Unpickler[Date] {
+    val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") //use ISO_8601 format
+    dateFormat.setLenient(false)
+    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"))
+
+    val format = null // not used
+    def pickle(picklee: Date, builder: PBuilder): Unit = {
+      builder.beginEntry(picklee)
+
+      builder.putField("value", b => {
+        b.hintTag(implicitly[FastTypeTag[String]])
+        b.hintStaticallyElidedType()
+        stringPicklerUnpickler.pickle(dateFormat.format(picklee), b)
+      })
+
+      builder.endEntry()
+    }
+    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+      val reader1 = reader.readField("value")
+      reader1.hintTag(implicitly[FastTypeTag[String]])
+      reader1.hintStaticallyElidedType()
+
+      val tag = reader1.beginEntry()
+      val result = stringPicklerUnpickler.unpickle(tag, reader1)
+      reader1.endEntry()
+
+      dateFormat.parse(result.asInstanceOf[String])
     }
   }
 
