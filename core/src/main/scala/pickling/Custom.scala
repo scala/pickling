@@ -332,9 +332,12 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   }
 
   implicit object DatePicklerUnpickler extends SPickler[Date] with Unpickler[Date] {
-    val dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") //use ISO_8601 format
-    dateFormat.setLenient(false)
-    dateFormat.setTimeZone(TimeZone.getTimeZone("UTC"))
+    private def dateFormat = {
+      val format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") //use ISO_8601 format
+      format.setLenient(false)
+      format.setTimeZone(TimeZone.getTimeZone("UTC"))
+      format
+    }
 
     val format = null // not used
     def pickle(picklee: Date, builder: PBuilder): Unit = {
