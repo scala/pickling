@@ -551,7 +551,7 @@ final class ByteArrayBuffer extends ByteBuffer {
     val nextPos = pos+4
     val ia = Array.ofDim[Byte](len)
     val srcOffset = UnsafeMemory.byteArrayOffset
-    val destOffset = UnsafeMemory.intArrayOffset
+    val destOffset = UnsafeMemory.byteArrayOffset
     val newbuf = buf.slice(nextPos, nextPos + len * 1)
     val ba: Array[Byte] = newbuf.toArray
     UnsafeMemory.unsafe.copyMemory(ba, srcOffset, ia, destOffset, len * 1)
@@ -563,7 +563,7 @@ final class ByteArrayBuffer extends ByteBuffer {
     val nextPos = pos+4
     val ia = Array.ofDim[Short](len)
     val srcOffset = UnsafeMemory.byteArrayOffset
-    val destOffset = UnsafeMemory.intArrayOffset
+    val destOffset = UnsafeMemory.shortArrayOffset
     val newbuf = buf.slice(nextPos, nextPos + len * 2)
     val ba: Array[Byte] = newbuf.toArray
     UnsafeMemory.unsafe.copyMemory(ba, srcOffset, ia, destOffset, len * 2)
@@ -575,7 +575,7 @@ final class ByteArrayBuffer extends ByteBuffer {
     val nextPos = pos+4
     val ia = Array.ofDim[Char](len)
     val srcOffset = UnsafeMemory.byteArrayOffset
-    val destOffset = UnsafeMemory.intArrayOffset
+    val destOffset = UnsafeMemory.charArrayOffset
     val newbuf = buf.slice(nextPos, nextPos + len * 4)
     val ba: Array[Byte] = newbuf.toArray
     UnsafeMemory.unsafe.copyMemory(ba, srcOffset, ia, destOffset, len * 4)
@@ -607,7 +607,7 @@ final class ByteArrayBuffer extends ByteBuffer {
     val nextPos = pos+4
     val ia = Array.ofDim[Long](len)
     val srcOffset = UnsafeMemory.byteArrayOffset
-    val destOffset = UnsafeMemory.intArrayOffset
+    val destOffset = UnsafeMemory.longArrayOffset
     val newbuf = buf.slice(nextPos, nextPos + len * 8)
     val ba: Array[Byte] = newbuf.toArray
     UnsafeMemory.unsafe.copyMemory(ba, srcOffset, ia, destOffset, len * 8)
@@ -619,7 +619,7 @@ final class ByteArrayBuffer extends ByteBuffer {
     val nextPos = pos+4
     val ia = Array.ofDim[Boolean](len)
     val srcOffset = UnsafeMemory.byteArrayOffset
-    val destOffset = UnsafeMemory.intArrayOffset
+    val destOffset = UnsafeMemory.booleanArrayOffset
     val newbuf = buf.slice(nextPos, nextPos + len * 1)
     val ba: Array[Byte] = newbuf.toArray
     UnsafeMemory.unsafe.copyMemory(ba, srcOffset, ia, destOffset, len * 1)
@@ -631,7 +631,7 @@ final class ByteArrayBuffer extends ByteBuffer {
     val nextPos = pos+4
     val ia = Array.ofDim[Float](len)
     val srcOffset = UnsafeMemory.byteArrayOffset
-    val destOffset = UnsafeMemory.intArrayOffset
+    val destOffset = UnsafeMemory.floatArrayOffset
     val newbuf = buf.slice(nextPos, nextPos + len * 4)
     val ba: Array[Byte] = newbuf.toArray
     UnsafeMemory.unsafe.copyMemory(ba, srcOffset, ia, destOffset, len * 4)
@@ -643,7 +643,7 @@ final class ByteArrayBuffer extends ByteBuffer {
     val nextPos = pos+4
     val ia = Array.ofDim[Double](len)
     val srcOffset = UnsafeMemory.byteArrayOffset
-    val destOffset = UnsafeMemory.intArrayOffset
+    val destOffset = UnsafeMemory.doubleArrayOffset
     val newbuf = buf.slice(nextPos, nextPos + len * 8)
     val ba: Array[Byte] = newbuf.toArray
     UnsafeMemory.unsafe.copyMemory(ba, srcOffset, ia, destOffset, len * 8)
