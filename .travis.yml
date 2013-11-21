@@ -4,8 +4,9 @@ script:
 scala:
   - 2.10.3
 jdk:
-  - oraclejdk6
+  - openjdk6
   - openjdk7
+  - oraclejdk7
 notifications:
   email:
     - heather.miller@epfl.ch
