@@ -95,8 +95,7 @@ trait LowPriorityPicklersUnpicklers {
       if (elemTag == FastTypeTag.Int) builder.hintKnownSize(coll.size * 4 + 100)
       builder.beginEntry(coll)
 
-      if (coll.isInstanceOf[IndexedSeq[_]]) builder.beginCollection(coll.size)
-      else builder.beginCollection(0)
+      builder.beginCollection(coll.size)
 
       if (isPrimitive) {
         builder.hintStaticallyElidedType()
@@ -104,17 +103,15 @@ trait LowPriorityPicklersUnpicklers {
         builder.pinHints()
       }
 
-      var i = 0
       (coll: Traversable[_]).asInstanceOf[Traversable[T]].foreach { (elem: T) =>
         builder putElement { b =>
           if (!isPrimitive) b.hintTag(elemTag)
           elemPickler.pickle(elem, b)
         }
-        i += 1
       }
 
       if (isPrimitive) builder.unpinHints()
-      builder.endCollection(i)
+      builder.endCollection()
       builder.endEntry()
     }
 
@@ -234,7 +231,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
             if (isPrimitive) q"builder.unpinHints()".asInstanceOf[Tree]
             else q"".asInstanceOf[Tree]
           }
-          builder.endCollection(i)
+          builder.endCollection()
           builder.endEntry()
         }
         def unpickle(tag: => scala.pickling.FastTypeTag[_], reader: PReader): Any = {

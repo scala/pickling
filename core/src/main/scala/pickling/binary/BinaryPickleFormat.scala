@@ -115,11 +115,8 @@ package binary {
 
     @inline def endEntry(): Unit = { /* do nothing */ }
 
-    var beginCollPos = List[Int]()
-
     @inline def beginCollection(length: Int): PBuilder = {
-      beginCollPos = pos :: beginCollPos
-      byteBuffer.encodeIntAtEnd(pos, 0)
+      byteBuffer.encodeIntAtEnd(pos, length)
       pos += 4
       this
     }
@@ -129,10 +126,7 @@ package binary {
       this
     }
 
-    @inline def endCollection(length: Int): Unit = {
-      val localBeginCollPos = beginCollPos.head
-      beginCollPos = beginCollPos.tail
-      byteBuffer.encodeIntTo(localBeginCollPos, length)
+    @inline def endCollection(): Unit = {
     }
 
     @inline def result() = {

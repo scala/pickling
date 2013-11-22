@@ -30,7 +30,7 @@ class BinaryListIntCustomTest extends FunSuite {
         }
 
         builder.unpinHints()
-        builder.endCollection(i)
+        builder.endCollection()
         builder.endEntry()
       }
       def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
