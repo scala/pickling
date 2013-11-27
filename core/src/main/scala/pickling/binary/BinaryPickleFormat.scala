@@ -34,17 +34,19 @@ package binary {
       mkByteBuffer(hints.knownSize)
 
       if (picklee == null) {
-        pos = byteBuffer.encodeByteTo(pos, NULL_TAG)
+        byteBuffer.encodeByteTo(pos, NULL_TAG)
+        pos = pos + 1
       } else if (hints.oid != -1) {
         byteBuffer.encodeByteTo(pos, REF_TAG)
-        byteBuffer.encodeIntAtEnd(pos + 1, hints.oid)
+        byteBuffer.encodeIntTo(pos + 1, hints.oid)
         pos = pos + 5
       } else {
         if (!hints.isElidedType) {
           val tpeBytes = hints.tag.key.getBytes("UTF-8")
-          byteBuffer.encodeIntAtEnd(pos, tpeBytes.length)
-          pos += 4
-          pos = byteBuffer.copyTo(pos, tpeBytes)
+          byteBuffer.encodeIntTo(pos, tpeBytes.length)
+          pos = pos + 4
+          byteBuffer.copyTo(pos, tpeBytes)
+          pos = pos + tpeBytes.length
         }
 
         // NOTE: it looks like we don't have to write object ids at all
@@ -55,30 +57,32 @@ package binary {
         pos = hints.tag.key match { // PERF: should store typestring once in hints.
           case KEY_NULL =>
             byteBuffer.encodeByteTo(pos, NULL_TAG)
+            pos + 1
           case KEY_BYTE =>
-            byteBuffer.encodeByteAtEnd(pos, picklee.asInstanceOf[Byte])
+            byteBuffer.encodeByteTo(pos, picklee.asInstanceOf[Byte])
             pos + 1
           case KEY_SHORT =>
-            byteBuffer.encodeShortAtEnd(pos, picklee.asInstanceOf[Short])
+            byteBuffer.encodeShortTo(pos, picklee.asInstanceOf[Short])
             pos + 2
           case KEY_CHAR =>
-            byteBuffer.encodeCharAtEnd(pos, picklee.asInstanceOf[Char])
+            byteBuffer.encodeCharTo(pos, picklee.asInstanceOf[Char])
             pos + 2
           case KEY_INT =>
-            byteBuffer.encodeIntAtEnd(pos, picklee.asInstanceOf[Int])
+            byteBuffer.encodeIntTo(pos, picklee.asInstanceOf[Int])
             pos + 4
           case KEY_LONG =>
-            byteBuffer.encodeLongAtEnd(pos, picklee.asInstanceOf[Long])
+            byteBuffer.encodeLongTo(pos, picklee.asInstanceOf[Long])
             pos + 8
           case KEY_BOOLEAN =>
             byteBuffer.encodeBooleanTo(pos, picklee.asInstanceOf[Boolean])
+            pos + 1
           case KEY_FLOAT =>
             val intValue = java.lang.Float.floatToRawIntBits(picklee.asInstanceOf[Float])
-            byteBuffer.encodeIntAtEnd(pos, intValue)
+            byteBuffer.encodeIntTo(pos, intValue)
             pos + 4
           case KEY_DOUBLE =>
             val longValue = java.lang.Double.doubleToRawLongBits(picklee.asInstanceOf[Double])
-            byteBuffer.encodeLongAtEnd(pos, longValue)
+            byteBuffer.encodeLongTo(pos, longValue)
             pos + 8
           case KEY_SCALA_STRING | KEY_JAVA_STRING =>
             byteBuffer.encodeStringTo(pos, picklee.asInstanceOf[String])
@@ -99,8 +103,10 @@ package binary {
           case KEY_ARRAY_DOUBLE =>
             byteBuffer.encodeDoubleArrayTo(pos, picklee.asInstanceOf[Array[Double]])
           case _ =>
-            if (hints.isElidedType) byteBuffer.encodeByteTo(pos, ELIDED_TAG)
-            else pos
+            if (hints.isElidedType){
+              byteBuffer.encodeByteTo(pos, ELIDED_TAG)
+              pos + 1
+            } else pos
         }
       }
 
@@ -116,7 +122,7 @@ package binary {
     @inline def endEntry(): Unit = { /* do nothing */ }
 
     @inline def beginCollection(length: Int): PBuilder = {
-      byteBuffer.encodeIntAtEnd(pos, length)
+      byteBuffer.encodeIntTo(pos, length)
       pos += 4
       this
     }

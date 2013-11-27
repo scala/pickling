@@ -14,18 +14,15 @@ trait Output[T] {
 
 // encoded primitives: Byte, Short, Char, Int, Long, Boolean, String
 // encoded primitive arrays: Array[Byte], Array[Int]
-// Q: why do the "AtEnd" methods also take a "pos"? Isn't it always ignored?
 
 trait EncodingOutput[T] extends Output[T] {
-  def encodeByteTo(pos: Int, value: Byte): Int
-  def encodeByteAtEnd(pos: Int, value: Byte): Unit
-  def encodeShortAtEnd(pos: Int, value: Short): Unit
-  def encodeCharAtEnd(pos: Int, value: Char): Unit
-  def encodeIntAtEnd(pos: Int, value: Int): Unit
-  def encodeLongAtEnd(pos: Int, value: Long): Unit
-  def encodeIntTo(pos: Int, value: Int): Int
+  def encodeByteTo(pos: Int, value: Byte): Unit
+  def encodeShortTo(pos: Int, value: Short): Unit
+  def encodeCharTo(pos: Int, value: Char): Unit
+  def encodeIntTo(pos: Int, value: Int): Unit
+  def encodeLongTo(pos: Int, value: Long): Unit
+  def encodeBooleanTo(pos: Int, value: Boolean): Unit
   def encodeStringTo(pos: Int, value: String): Int
-  def encodeBooleanTo(pos: Int, value: Boolean): Int
   def encodeByteArrayTo(pos: Int, ia: Array[Byte]): Int
   def encodeShortArrayTo(pos: Int, ia: Array[Short]): Int
   def encodeCharArrayTo(pos: Int, ia: Array[Char]): Int
@@ -34,7 +31,7 @@ trait EncodingOutput[T] extends Output[T] {
   def encodeBooleanArrayTo(pos: Int, ia: Array[Boolean]): Int
   def encodeFloatArrayTo(pos: Int, ia: Array[Float]): Int
   def encodeDoubleArrayTo(pos: Int, ia: Array[Double]): Int
-  def copyTo(pos: Int, bytes: Array[Byte]): Int
+  def copyTo(pos: Int, bytes: Array[Byte]): Unit
 }
 
 

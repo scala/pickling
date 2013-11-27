@@ -6,9 +6,9 @@ package binary {
 
   object Util {
 
-    def copy(target: Array[Byte], pos: Int, arr: Array[Byte]): Unit = {
+    def copy(target: Array[Byte], i: Int, arr: Array[Byte]): Unit = {
       // def copy(src: Object, srcPos: Int, dest: Object, destPos: Int, length: Int)
-      Array.copy(arr, 0, target, pos, arr.length)
+      Array.copy(arr, 0, target, i, arr.length)
     }
 
     /** Returns decoded Short plus next "readable" position in target array.
@@ -195,10 +195,10 @@ package binary {
     def encodeStringTo(arr: Array[Byte], i: Int, value: String): Int = {
       val bytes = value.getBytes("UTF-8")
       // encode length
-      val next = encodeIntTo(arr, i, bytes.length)
+      encodeIntTo(arr, i, bytes.length)
       // encode bytes of string at `next` position
-      Util.copy(arr, next, bytes)
-      next + bytes.length
+      Util.copy(arr, i+4, bytes)
+      i + 4 + bytes.length
     }
 
     def fastencodeStringTo(arr: Array[Byte], i: Int, value: String): Int = {
@@ -218,7 +218,152 @@ package binary {
       buf ++= bytes
       i + 4 + bytes.length
     }
+    
+    def encodeByteArrayTo(arr: Array[Byte], i: Int, value: Array[Byte]): Int = {
+      encodeIntTo(arr, i, value.length)
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.byteArrayOffset
+      UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i + 4, value.length * 1)
+      i + 4 + value.length * 1
+    }
+    
+    def encodeShortArrayTo(arr: Array[Byte], i: Int, value: Array[Short]): Int = {
+      encodeIntTo(arr, i, value.length)
+      val srcOffset = UnsafeMemory.shortArrayOffset
+      val destOffset = UnsafeMemory.byteArrayOffset
+      UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i + 4, value.length * 2)
+      i + 4 + value.length * 2
+    }
+    
+    def encodeCharArrayTo(arr: Array[Byte], i: Int, value: Array[Char]): Int = {
+      encodeIntTo(arr, i, value.length)
+      val srcOffset = UnsafeMemory.charArrayOffset
+      val destOffset = UnsafeMemory.byteArrayOffset
+      UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i + 4, value.length * 2)
+      i + 4 + value.length * 2
+    }
+    
+    def encodeIntArrayTo(arr: Array[Byte], i: Int, value: Array[Int]): Int = {
+      encodeIntTo(arr, i, value.length)
+      val srcOffset = UnsafeMemory.intArrayOffset
+      val destOffset = UnsafeMemory.byteArrayOffset
+      UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i + 4, value.length * 4)
+      i + 4 + value.length * 4
+    }
+    
+    def encodeLongArrayTo(arr: Array[Byte], i: Int, value: Array[Long]): Int = {
+      encodeIntTo(arr, i, value.length)
+      val srcOffset = UnsafeMemory.longArrayOffset
+      val destOffset = UnsafeMemory.byteArrayOffset
+      UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i + 4, value.length * 8)
+      i + 4 + value.length * 8
+    }
+    
+    def encodeBooleanArrayTo(arr: Array[Byte], i: Int, value: Array[Boolean]): Int = {
+      encodeIntTo(arr, i, value.length)
+      val srcOffset = UnsafeMemory.booleanArrayOffset
+      val destOffset = UnsafeMemory.byteArrayOffset
+      UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i + 4, value.length * 1)
+      i + 4 + value.length * 1
+    }
+    
+    def encodeFloatArrayTo(arr: Array[Byte], i: Int, value: Array[Float]): Int = {
+      encodeIntTo(arr, i, value.length)
+      val srcOffset = UnsafeMemory.floatArrayOffset
+      val destOffset = UnsafeMemory.byteArrayOffset
+      UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i + 4, value.length * 4)
+      i + 4 + value.length * 4
+    }
+    
+    def encodeDoubleArrayTo(arr: Array[Byte], i: Int, value: Array[Double]): Int = {
+      encodeIntTo(arr, i, value.length)
+      val srcOffset = UnsafeMemory.doubleArrayOffset
+      val destOffset = UnsafeMemory.byteArrayOffset
+      UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i + 4, value.length * 8)
+      i + 4 + value.length * 8
+    }
+    
+    def decodeByteArrayFrom(arr: Array[Byte], i: Int): (Array[Byte], Int) = {
+      val len = decodeIntFrom(arr, i)
+      val nextPos = i+4
+      val ia = Array.ofDim[Byte](len)
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.intArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 1)
+      (ia, nextPos + len * 1)
+    }
+    
+    def decodeShortArrayFrom(arr: Array[Byte], i: Int): (Array[Short], Int) = {
+      val len = decodeIntFrom(arr, i)
+      val nextPos = i+4
+      val ia = Array.ofDim[Short](len)
+      val srcOffset = UnsafeMemory.shortArrayOffset
+      val destOffset = UnsafeMemory.intArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 2)
+      (ia, nextPos + len * 2)
+    }
 
+    def decodeCharArrayFrom(arr: Array[Byte], i: Int): (Array[Char], Int) = {
+      val len = decodeIntFrom(arr, i)
+      val nextPos = i+4
+      val ia = Array.ofDim[Char](len)
+      val srcOffset = UnsafeMemory.charArrayOffset
+      val destOffset = UnsafeMemory.intArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 2)
+      (ia, nextPos + len * 2)
+    }
+
+    def decodeIntArrayFrom(arr: Array[Byte], i: Int): (Array[Int], Int) = {
+
+      val len = decodeIntFrom(arr, i)
+      val nextPos = i+4
+      val ia = Array.ofDim[Int](len)
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.intArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 4)
+
+      (ia, nextPos + len * 4)
+    }
+
+    def decodeLongArrayFrom(arr: Array[Byte], i: Int): (Array[Long], Int) = {
+      val len = decodeIntFrom(arr, i)
+      val nextPos = i+4
+      val ia = Array.ofDim[Long](len)
+      val srcOffset = UnsafeMemory.longArrayOffset
+      val destOffset = UnsafeMemory.intArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 8)
+      (ia, nextPos + len * 8)
+    }
+
+    def decodeBooleanArrayFrom(arr: Array[Byte], i: Int): (Array[Boolean], Int) = {
+      val len = decodeIntFrom(arr, i)
+      val nextPos = i+4
+      val ia = Array.ofDim[Boolean](len)
+      val srcOffset = UnsafeMemory.booleanArrayOffset
+      val destOffset = UnsafeMemory.intArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 1)
+      (ia, nextPos + len * 1)
+    }
+
+    def decodeFloatArrayFrom(arr: Array[Byte], i: Int): (Array[Float], Int) = {
+      val len = decodeIntFrom(arr, i)
+      val nextPos = i+4
+      val ia = Array.ofDim[Float](len)
+      val srcOffset = UnsafeMemory.floatArrayOffset
+      val destOffset = UnsafeMemory.intArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 4)
+      (ia, nextPos + len * 4)
+    }
+
+    def decodeDoubleArrayFrom(arr: Array[Byte], i: Int): (Array[Double], Int) = {
+      val len = decodeIntFrom(arr, i)
+      val nextPos = i+4
+      val ia = Array.ofDim[Double](len)
+      val srcOffset = UnsafeMemory.doubleArrayOffset
+      val destOffset = UnsafeMemory.intArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 8)
+      (ia, nextPos + len * 8)
+    }
   }
 
   object UnsafeMemory {
@@ -236,12 +381,12 @@ package binary {
     private[binary] val floatArrayOffset: Long = unsafe.arrayBaseOffset(classOf[Array[Float]])
     private[binary] val doubleArrayOffset: Long = unsafe.arrayBaseOffset(classOf[Array[Double]])
 
-    def putInt(buffer: Array[Byte], pos: Int, value: Int): Unit = {
-      unsafe.putInt(buffer, byteArrayOffset + pos, value)
+    def putInt(buffer: Array[Byte], i: Int, value: Int): Unit = {
+      unsafe.putInt(buffer, byteArrayOffset + i, value)
     }
 
-    def getInt(buffer: Array[Byte], pos: Int): Int = {
-      unsafe.getInt(buffer, byteArrayOffset + pos)
+    def getInt(buffer: Array[Byte], i: Int): Int = {
+      unsafe.getInt(buffer, byteArrayOffset + i)
     }
   }
 
