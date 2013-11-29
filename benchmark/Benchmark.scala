@@ -56,16 +56,16 @@ trait Benchmark {
   def runBenchmark(noTimes: Int): List[Long] =
     for (i <- List.range(1, noTimes + 1)) yield {
       setUp
-      val startTime = Platform.currentTime
+      val startTime = System.nanoTime
       var i = 0; while (i < multiplier) {
         run()
         i += 1
       }
-      val stopTime = Platform.currentTime
+      val stopTime = System.nanoTime
       tearDown
       Platform.collectGarbage
 
-      stopTime - startTime
+      (stopTime - startTime) / 1000000
     }
 
   /** Prepare any data needed by the benchmark, but whose execution time
