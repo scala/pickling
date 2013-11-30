@@ -47,6 +47,9 @@ package binary {
           pos = pos + 4
           byteBuffer.copyTo(pos, tpeBytes)
           pos = pos + tpeBytes.length
+        } else {
+          byteBuffer.encodeByteTo(pos, ELIDED_TAG)
+          pos = pos + 1
         }
 
         // NOTE: it looks like we don't have to write object ids at all
