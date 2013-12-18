@@ -288,7 +288,7 @@ package binary {
       val nextPos = i+4
       val ia = Array.ofDim[Byte](len)
       val srcOffset = UnsafeMemory.byteArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
+      val destOffset = UnsafeMemory.byteArrayOffset
       UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 1)
       (ia, nextPos + len * 1)
     }
@@ -297,8 +297,8 @@ package binary {
       val len = decodeIntFrom(arr, i)
       val nextPos = i+4
       val ia = Array.ofDim[Short](len)
-      val srcOffset = UnsafeMemory.shortArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.shortArrayOffset
       UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 2)
       (ia, nextPos + len * 2)
     }
@@ -307,8 +307,8 @@ package binary {
       val len = decodeIntFrom(arr, i)
       val nextPos = i+4
       val ia = Array.ofDim[Char](len)
-      val srcOffset = UnsafeMemory.charArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.charArrayOffset
       UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 2)
       (ia, nextPos + len * 2)
     }
@@ -329,8 +329,8 @@ package binary {
       val len = decodeIntFrom(arr, i)
       val nextPos = i+4
       val ia = Array.ofDim[Long](len)
-      val srcOffset = UnsafeMemory.longArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.longArrayOffset
       UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 8)
       (ia, nextPos + len * 8)
     }
@@ -339,8 +339,8 @@ package binary {
       val len = decodeIntFrom(arr, i)
       val nextPos = i+4
       val ia = Array.ofDim[Boolean](len)
-      val srcOffset = UnsafeMemory.booleanArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.booleanArrayOffset
       UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 1)
       (ia, nextPos + len * 1)
     }
@@ -349,8 +349,8 @@ package binary {
       val len = decodeIntFrom(arr, i)
       val nextPos = i+4
       val ia = Array.ofDim[Float](len)
-      val srcOffset = UnsafeMemory.floatArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.floatArrayOffset
       UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 4)
       (ia, nextPos + len * 4)
     }
@@ -359,8 +359,8 @@ package binary {
       val len = decodeIntFrom(arr, i)
       val nextPos = i+4
       val ia = Array.ofDim[Double](len)
-      val srcOffset = UnsafeMemory.doubleArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.doubleArrayOffset
       UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * 8)
       (ia, nextPos + len * 8)
     }
