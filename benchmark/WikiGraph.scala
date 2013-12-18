@@ -13,6 +13,10 @@ import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream,
 import scala.pickling._
 import binary._
 
+// for invalid characters in source files
+import java.nio.charset.CodingErrorAction
+import scala.io.Codec
+
 final class Vertex(val label: String, var neighbors: List[Vertex]) extends Serializable {
 
   //var graph: Graph = null
@@ -119,12 +123,17 @@ object WikiGraph {
   val titlesPath = "benchmark/data/titles-sorted.txt"
   val linksPath  = "benchmark/data/links-sorted.txt"
 
+  implicit val codec = Codec("UTF-8")
+  codec.onMalformedInput(CodingErrorAction.REPLACE)
+  codec.onUnmappableCharacter(CodingErrorAction.REPLACE)
+  
   val names: Map[String, String] = new HashMap[String, String] {
     override def default(label: String) = {
       "no_title[" + label + "]"
     }
   }
   // println("Building page title map...")
+
   val titles = Source.fromFile(titlesPath).getLines()
   for ((title, i) <- titles.zipWithIndex)
     names.put("" + i, title)
