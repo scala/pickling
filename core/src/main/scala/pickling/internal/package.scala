@@ -46,22 +46,17 @@ package object internal {
     // TODO: find out why typeFromString is called repeatedly for scala.Predef.String (at least in the evactor1 bench)
     if (typeFromStringCache.contains(stpe)) typeFromStringCache(stpe)
     else {
-      val result = {
-        val (ssym, stargs) = {
-          val Pattern = """^(.*?)(\[(.*?)\])?$""".r
-          def fail() = throw new PicklingException(s"fatal: cannot unpickle $stpe")
-          stpe match {
-            case Pattern("", _, _) => fail()
-            case Pattern(sym, _, null) => (sym, Nil)
-            case Pattern(sym, _, stargs) => (sym, stargs.split(",").map(_.trim).toList)
-            case _ => fail()
-          }
+      val result =
+        AppliedType.parse(stpe) match {
+          case (AppliedType(typename, appliedTypeArgs), _) =>
+            val sym =
+              if (typename.endsWith(".type")) mirror.staticModule(typename.stripSuffix(".type")).moduleClass
+              else mirror.staticClass(typename)
+            val tycon = sym.asType.toTypeConstructor
+            appliedType(tycon, appliedTypeArgs.map(starg => typeFromString(mirror, starg.toString)))
+          case _ =>
+            sys.error(s"fatal: cannot unpickle $stpe")
         }
-
-        val sym = if (ssym.endsWith(".type")) mirror.staticModule(ssym.stripSuffix(".type")).moduleClass else mirror.staticClass(ssym)
-        val tycon = sym.asType.toTypeConstructor
-        appliedType(tycon, stargs.map(starg => typeFromString(mirror, starg)))
-      }
       typeFromStringCache(stpe) = result
       result
     }
