@@ -11,29 +11,64 @@ trait Output[T] {
 // and then demand Output[Nothing] in the abstract PickleFormat
 // in JSON we can demand Output[String], since Output[Nothing] <: Output[String]
 
-
-// encoded primitives: Byte, Short, Char, Int, Long, Boolean, String
-// encoded primitive arrays: Array[Byte], Array[Int]
-
-trait EncodingOutput[T] extends Output[T] {
-  def encodeByteTo(pos: Int, value: Byte): Unit
-  def encodeShortTo(pos: Int, value: Short): Unit
-  def encodeCharTo(pos: Int, value: Char): Unit
-  def encodeIntTo(pos: Int, value: Int): Unit
-  def encodeLongTo(pos: Int, value: Long): Unit
-  def encodeBooleanTo(pos: Int, value: Boolean): Unit
-  def encodeStringTo(pos: Int, value: String): Int
-  def encodeByteArrayTo(pos: Int, ia: Array[Byte]): Int
-  def encodeShortArrayTo(pos: Int, ia: Array[Short]): Int
-  def encodeCharArrayTo(pos: Int, ia: Array[Char]): Int
-  def encodeIntArrayTo(pos: Int, ia: Array[Int]): Int
-  def encodeLongArrayTo(pos: Int, ia: Array[Long]): Int
-  def encodeBooleanArrayTo(pos: Int, ia: Array[Boolean]): Int
-  def encodeFloatArrayTo(pos: Int, ia: Array[Float]): Int
-  def encodeDoubleArrayTo(pos: Int, ia: Array[Double]): Int
-  def copyTo(pos: Int, bytes: Array[Byte]): Unit
+import scala.reflect.ClassTag
+// Array output with a few more methods for performance
+abstract class ArrayOutput[T: ClassTag] extends Output[Array[T]] {
+  // Put a single T
+  def +=(obj: T): Unit
+  // Allocate a new array.
+  def target(len: Int): (Array[T], Int) =
+    (Array.ofDim[T](len), 0)
+  // Flush the allocated array by target().
+  def flush(arr: Array[T]): Unit =
+    this.put(arr)
 }
 
+import scala.collection.mutable.ArrayBuffer
+
+class ByteArrayBufferOutput extends ArrayOutput[Byte] {
+
+  private val buf =
+    ArrayBuffer[Byte]()
+    
+  def result(): Array[Byte] =
+    buf.toArray
+  
+  def +=(obj: Byte) =
+    buf += obj
+  
+  def put(obj: Array[Byte]): this.type = {
+    buf ++= obj
+    this
+  }
+}
+
+class ByteArrayOutput(len: Int) extends ArrayOutput[Byte]  {
+
+  private var pos = 0
+  private val arr = Array.ofDim[Byte](len)
+  
+  def result(): Array[Byte] =
+    arr
+  
+  def +=(obj: Byte) = {
+    arr(pos) = obj
+    pos = pos + 1
+  }
+  
+  def put(obj: Array[Byte]): this.type = {
+	// target() should be used to avoid double copy
+    throw new java.lang.IllegalStateException
+  }
+  
+  override def target(len: Int) = {
+    val oldpos = pos
+    pos = pos + len
+    (arr, oldpos)
+	}
+  
+  override def flush(arr: Array[Byte]) = { /*noop*/ }
+}
 
 class StringOutput extends Output[String] {
 
