@@ -105,7 +105,7 @@ package json {
           if (hints.isElidedType) primitives(hints.tag.key)(picklee)
           else {
             appendLine("{")
-            appendLine("\"tpe\": \"" + typeToString(hints.tag.tpe) + "\",")
+            appendLine("\"$type\": \"" + typeToString(hints.tag.tpe) + "\",")
             append("\"value\": ")
             indent()
             primitives(hints.tag.key)(picklee)
@@ -117,7 +117,7 @@ package json {
           }
         } else {
           appendLine("{")
-          if (!hints.isElidedType) append("\"tpe\": \"" + typeToString(hints.tag.tpe) + "\"")
+          if (!hints.isElidedType) append("\"$type\": \"" + typeToString(hints.tag.tpe) + "\"")
         }
       }
       this
@@ -201,7 +201,7 @@ package json {
         } else {
           datum match {
             case JSONObject(fields) if fields.contains("$ref") => FastTypeTag.Ref
-            case JSONObject(fields) if fields.contains("tpe") => FastTypeTag(mirror, fields("tpe").asInstanceOf[String])
+            case JSONObject(fields) if fields.contains("$type") => FastTypeTag(mirror, fields("$type").asInstanceOf[String])
             case JSONObject(fields) => hints.tag
           }
         }
