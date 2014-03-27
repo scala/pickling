@@ -73,8 +73,8 @@ object MyBuild extends Build {
     settings = buildSettings ++ Seq(
       scalacOptions ++= Seq("-optimise"),
       libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
-      libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1" % "test",
-      libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.10.1" % "test",
+      libraryDependencies += "org.scalatest" %% "scalatest" % "2.1.2" % "test",
+      libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.11.3" % "test",
       conflictWarning in ThisBuild := ConflictWarning.disable,
       parallelExecution in Test := false, // hello, reflection sync!!
       run <<= run in Compile in sandbox, // http://www.scala-sbt.org/release/docs/Detailed-Topics/Tasks
@@ -191,7 +191,7 @@ object MyBuild extends Build {
     settings = buildSettings ++ Seq(
       sourceDirectory in Compile <<= baseDirectory(root => root),
       sourceDirectory in Test <<= baseDirectory(root => root),
-      libraryDependencies += "org.scalatest" %% "scalatest" % "1.9.1",
+      libraryDependencies += "org.scalatest" %% "scalatest" % "2.1.2",
       parallelExecution in Test := false,
       // scalacOptions ++= Seq()
       // scalacOptions ++= Seq("-Xlog-implicits")
