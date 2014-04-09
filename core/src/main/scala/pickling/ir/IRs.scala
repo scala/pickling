@@ -3,8 +3,11 @@ package ir
 
 import scala.reflect.api.Universe
 
+import HasCompat._
+
 class IRs[U <: Universe with Singleton](val uni: U) {
   import uni._
+  import compat._
   import definitions._
 
   sealed abstract class PickleIR
