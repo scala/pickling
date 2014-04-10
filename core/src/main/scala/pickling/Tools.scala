@@ -6,13 +6,13 @@ import scala.language.existentials
 
 import scala.reflect.macros.Context
 import scala.reflect.api.Universe
-import scala.reflect.runtime.universe._
-import scala.reflect.runtime.{universe => ru}
 
 import scala.collection.mutable.{Map => MutableMap, ListBuffer => MutableList, WeakHashMap, Set => MutableSet}
 import scala.collection.mutable.{Stack => MutableStack, Queue => MutableQueue}
 
 import java.lang.ref.WeakReference
+
+import HasCompat._
 
 object Tools {
   private val subclassCaches = new WeakHashMap[AnyRef, WeakReference[AnyRef]]()
@@ -44,6 +44,7 @@ object Tools {
 class Tools[C <: Context](val c: C) {
   val u: c.universe.type = c.universe
   import u._
+  import compat._
   import definitions._
 
   def blackList(sym: Symbol) = sym == AnyClass || sym == AnyRefClass || sym == AnyValClass || sym == ObjectClass
@@ -238,9 +239,10 @@ abstract class ShareAnalyzer[U <: Universe](val u: U) {
   }
 }
 
-abstract class Macro extends Reflection211Compat { self =>
+abstract class Macro { self =>
   val c: Context
   import c.universe._
+  import compat._
   import definitions._
   val RefTpe = weakTypeOf[refs.Ref]
 
@@ -258,7 +260,7 @@ abstract class Macro extends Reflection211Compat { self =>
   private def innerType(target: Tree, name: String): Type = {
     def fail(msg: String) = c.abort(c.enclosingPosition, s"$msg for ${target} of type ${target.tpe}")
     // val carrier = c.typeCheck(tq"${target.tpe}#${TypeName(name)}", mode = c.TYPEmode, silent = true)
-    val carrier = c.typeCheck(q"{ val x: ${target.tpe}#${TypeName(name)} = ??? }", silent = true)
+    val carrier = c.typeCheck(q"{ val x: ${target.tpe}#${newTypeName(name)} = ??? }", silent = true)
     carrier match {
       case EmptyTree => fail(s"Couldn't resolve $name")
       case Block(ValDef(_, _, tpt, _) :: _, _) => tpt.tpe.normalize match {
@@ -316,10 +318,10 @@ abstract class Macro extends Reflection211Compat { self =>
   def syntheticPackageName: String = "scala.pickling.synthetic"
   def syntheticBaseName(tpe: Type): TypeName = {
     val raw = tpe.key.split('.').map(_.capitalize).mkString("")
-    val encoded = TypeName(raw).encoded
-    TypeName(encoded)
+    val encoded = newTypeName(raw).encoded
+    newTypeName(encoded)
   }
-  def syntheticBaseQualifiedName(tpe: Type): TypeName = TypeName(syntheticPackageName + "." + syntheticBaseName(tpe).toString)
+  def syntheticBaseQualifiedName(tpe: Type): TypeName = newTypeName(syntheticPackageName + "." + syntheticBaseName(tpe).toString)
 
   def syntheticPicklerName(tpe: Type): TypeName = syntheticBaseName(tpe) + syntheticPicklerSuffix()
   def syntheticPicklerQualifiedName(tpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticPicklerSuffix()
@@ -334,35 +336,44 @@ abstract class Macro extends Reflection211Compat { self =>
   def syntheticPicklerUnpicklerSuffix(): String = "PicklerUnpickler"
 
   def preferringAlternativeImplicits(body: => Tree): Tree = {
+    import Compat._
+
+    val candidates = c.enclosingImplicits
+    val ourPt      = candidates.head.pt
+
     def debug(msg: Any) = {
-      val padding = "  " * (c.enclosingImplicits.length - 1)
+      val padding = "  " * (candidates.length - 1)
       // Console.err.println(padding + msg)
     }
-    debug("can we enter " + c.enclosingImplicits.head._1 + "?")
-    debug(c.enclosingImplicits)
-    c.enclosingImplicits match {
-      case (ourPt, _) :: (theirPt, _) :: _ if ourPt =:= theirPt =>
-        debug(s"no, because: ourPt = $ourPt, theirPt = $theirPt")
-        // c.diverge()
-        c.abort(c.enclosingPosition, "stepping aside: repeating itself")
-      case _ =>
-        debug(s"not sure, need to explore alternatives")
-        c.inferImplicitValue(c.enclosingImplicits.head._1, silent = true) match {
-          case success if success != EmptyTree =>
-            debug(s"no, because there's $success")
-            c.abort(c.enclosingPosition, "stepping aside: there are other candidates")
-            // c.diverge()
-          case _ =>
-            debug("yes, there are no obstacles. entering " + c.enclosingImplicits.head._1)
-            val result = body
-            debug("result: " + result)
-            result
-        }
+
+    debug("can we enter " + ourPt + "?")
+    debug(candidates)
+
+    if ((candidates.size >= 2) && {
+      val theirPt = candidates.tail.head.pt
+      ourPt =:= theirPt
+    }) {
+      debug(s"no, because: ourPt = $ourPt, theirPt = ${candidates.tail.head.pt}")
+      // c.diverge()
+      c.abort(c.enclosingPosition, "stepping aside: repeating itself")
+    } else {
+      debug(s"not sure, need to explore alternatives")
+      c.inferImplicitValue(ourPt, silent = true) match {
+        case success if success != EmptyTree =>
+          debug(s"no, because there's $success")
+          c.abort(c.enclosingPosition, "stepping aside: there are other candidates")
+          // c.diverge()
+        case _ =>
+          debug("yes, there are no obstacles. entering " + ourPt)
+          val result = body
+          debug("result: " + result)
+          result
+      }
     }
   }
 
   private var reflectivePrologueEmitted = false // TODO: come up with something better
-  def reflectively(target: String, fir: FieldIR)(body: Tree => Tree): List[Tree] = reflectively(TermName(target), fir)(body)
+  def reflectively(target: String, fir: FieldIR)(body: Tree => Tree): List[Tree] = reflectively(newTermName(target), fir)(body)
 
   /**
    *  requires: !fir.accessor.isEmpty
@@ -382,8 +393,8 @@ abstract class Macro extends Reflection211Compat { self =>
       }
     }
     val field = fir.field.get
-    val ownerSymbol = TermName(fir.name + "Owner")
-    val firSymbol = TermName(fir.name + "Symbol")
+    val ownerSymbol = newTermName(fir.name + "Owner")
+    val firSymbol = newTermName(fir.name + "Symbol")
     // TODO: make sure this works for:
     // 1) private[this] fields
     // 2) inherited private[this] fields
@@ -427,6 +438,8 @@ trait PickleTools {
 }
 
 trait CurrentMirrorMacro extends Macro {
+  import scala.reflect.runtime.{universe => ru}
+
   def impl: c.Tree = {
     import c.universe._
     c.inferImplicitValue(typeOf[ru.Mirror], silent = true) orElse {

@@ -2,9 +2,7 @@ package scala.pickling
 
 import scala.pickling.internal._
 
-import scala.reflect.runtime.universe._
-import definitions._
-import scala.reflect.runtime.{universe => ru}
+import scala.reflect.runtime.universe.Mirror
 import ir._
 
 object Runtime {
@@ -22,7 +20,18 @@ object Runtime {
   )
 }
 
+// provides a source compatibility stub
+// in Scala 2.10.x, it will make `import compat._` compile just fine,
+// even though `c.universe` doesn't have `compat`
+// in Scala 2.11.0, it will be ignored, becase `import c.universe._`
+// brings its own `compat` in scope and that one takes precedence
+private object HasCompat { val compat = ??? }; import HasCompat._
+
 abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_], share: refs.Share) {
+  import scala.reflect.runtime.universe._
+  import definitions._
+  import scala.reflect.runtime.{universe => ru}
+  import compat._
 
   val clazz = if (preclazz != null) Runtime.toUnboxed.getOrElse(preclazz, preclazz) else null
   val mirror = runtimeMirror(classLoader)
@@ -60,6 +69,7 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_], shar
 }
 
 class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(implicit share: refs.Share) extends PicklerRuntime(classLoader, preclazz, share) {
+  import scala.reflect.runtime.universe._
 
   debug("InterpretedPicklerRuntime: preclazz = " + preclazz)
   debug("InterpretedPicklerRuntime: clazz    = " + clazz)
@@ -143,6 +153,10 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
 // TODO: currently this works with an assumption that sharing settings for unpickling are the same as for pickling
 // of course this might not be the case, so we should be able to read `share` from the pickle itself
 class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit share: refs.Share) {
+  import scala.reflect.runtime.universe._
+  import definitions._
+  import scala.reflect.runtime.{universe => ru}
+
   val tpe = tag.tpe
   val sym = tpe.typeSymbol.asType
   debug("UnpicklerRuntime: tpe = " + tpe)

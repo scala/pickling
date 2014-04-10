@@ -13,6 +13,11 @@ import scala.collection.generic.CanBuildFrom
 
 // this is only necessary because 2.10.x doesn't support macro bundles
 object Compat {
+  // provides a source compatibility stub
+  implicit class HasPt[A, B](t: (A, B)) {
+    def pt: A = t._1
+  }
+
   def PicklerMacros_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PicklerMacros
@@ -91,24 +96,9 @@ object Compat {
     c.Expr[FastTypeTag[T]](bundle.impl[T])
   }
 
-  def FastTypeTagMacros_apply(c: Context)(key: c.Expr[String]): c.Expr[FastTypeTag[_]] = {
+  def FastTypeTagMacros_apply(c: Context)(key: c.Expr[String]): c.Expr[FastTypeTag[t]] forSome { type t } = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with FastTypeTagMacros
-    c.Expr[FastTypeTag[_]](bundle.apply(key.tree))
-  }
-}
-
-trait Reflection211Compat { self: Macro =>
-  val c: Context
-  import c.universe._
-
-  object TermName {
-    def apply(s: String) = newTermName(s)
-    def unapply(name: TermName): Option[String] = Some(name.toString)
-  }
-
-  object TypeName {
-    def apply(s: String) = newTypeName(s)
-    def unapply(name: TypeName): Option[String] = Some(name.toString)
+    c.Expr(bundle.apply(key.tree))
   }
 }
