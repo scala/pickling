@@ -3,10 +3,13 @@ package scala.pickling
 import scala.language.experimental.macros
 import scala.language.reflectiveCalls
 
-import scala.reflect.runtime.{universe => ru}
-import ru._
+import HasCompat._
 
 package object internal {
+
+  import scala.reflect.runtime.{universe => ru}
+  import ru._
+  import compat._
 
   // TOGGLE DEBUGGING
   private val debugEnabled: Boolean = System.getProperty("pickling.debug", "false").toBoolean
