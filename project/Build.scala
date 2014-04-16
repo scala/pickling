@@ -168,31 +168,6 @@ object MyBuild extends Build {
           </developer>
         </developers>
       ),
-      pomPostProcess := { (node: XmlNode) =>
-        val hardcodeDeps = new RewriteRule {
-          override def transform(n: XmlNode): XmlNodeSeq = n match {
-            case e: Elem if e != null && e.label == "dependencies" =>
-              // NOTE: this is necessary to unbind from paradise 210
-              // we need to be compiled with paradise 210, because it's the only way to get quasiquotes in 210
-              // however we don't need to be run with paradise 210, because all quasiquotes expand at compile-time
-              // http://docs.scala-lang.org/overviews/macros/paradise.html#macro_paradise_for_210x
-              <dependencies>
-                <dependency>
-                    <groupId>org.scala-lang</groupId>
-                    <artifactId>scala-library</artifactId>
-                    <version>2.10.2</version>
-                </dependency>
-                <dependency>
-                    <groupId>org.scala-lang</groupId>
-                    <artifactId>scala-reflect</artifactId>
-                    <version>2.10.2</version>
-                </dependency>
-              </dependencies>
-            case _ => n
-          }
-        }
-        new RuleTransformer(hardcodeDeps).transform(node).head
-      },
       credentials ++= loadCredentials()
     )
   )
