@@ -70,33 +70,63 @@ package binary {
       (ia, nextPos + len * SizeOfByte)
     }
 
+    def decodeShortArray(arr: Array[Byte], offset: Int, len: Int): Array[Short] = {
+      val newArr = Array.ofDim[Short](len)
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.shortArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + offset, newArr, destOffset, len * SizeOfShort)
+      newArr
+    }
+
     def decodeShortArrayFrom(arr: Array[Byte], i: Int): (Array[Short], Int) = {
       val len = decodeIntFrom(arr, i)
       val nextPos = i + SizeOfInt
-      val ia = Array.ofDim[Short](len)
-      val srcOffset = UnsafeMemory.shortArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
-      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * SizeOfShort)
+      val ia = decodeShortArray(arr, nextPos, len)
       (ia, nextPos + len * SizeOfShort)
+    }
+
+    def decodeCharArray(arr: Array[Byte], offset: Int, len: Int): Array[Char] = {
+      val newArr = Array.ofDim[Char](len)
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.charArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + offset, newArr, destOffset, len * SizeOfChar)
+      newArr
+    }
+
+    def decodeCharArrayFrom(arr: Array[Byte], i: Int): (Array[Char], Int) = {
+      val len = decodeIntFrom(arr, i)
+      val nextPos = i + SizeOfInt
+      val ia = decodeCharArray(arr, nextPos, len)
+      (ia, nextPos + len * SizeOfChar)
+    }
+
+    def decodeIntArray(arr: Array[Byte], offset: Int, len: Int): Array[Int] = {
+      val newArr = Array.ofDim[Int](len)
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.intArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + offset, newArr, destOffset, len * SizeOfInt)
+      newArr
     }
 
     def decodeIntArrayFrom(arr: Array[Byte], i: Int): (Array[Int], Int) = {
       val len = decodeIntFrom(arr, i)
       val nextPos = i + SizeOfInt
-      val ia = Array.ofDim[Int](len)
-      val srcOffset = UnsafeMemory.byteArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
-      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * SizeOfInt)
+      val ia = decodeIntArray(arr, nextPos, len)
       (ia, nextPos + len * SizeOfInt)
+    }
+
+    def decodeLongArray(arr: Array[Byte], offset: Int, len: Int): Array[Long] = {
+      val newArr = Array.ofDim[Long](len)
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.longArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + offset, newArr, destOffset, len * SizeOfLong)
+      newArr
     }
 
     def decodeLongArrayFrom(arr: Array[Byte], i: Int): (Array[Long], Int) = {
       val len = decodeIntFrom(arr, i)
       val nextPos = i + SizeOfInt
-      val ia = Array.ofDim[Long](len)
-      val srcOffset = UnsafeMemory.longArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
-      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * SizeOfLong)
+      val ia = decodeLongArray(arr, nextPos, len)
       (ia, nextPos + len * SizeOfLong)
     }
 
@@ -118,16 +148,6 @@ package binary {
       val destOffset = UnsafeMemory.intArrayOffset
       UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * SizeOfDouble)
       (ia, nextPos + len * SizeOfDouble)
-    }
-
-    def decodeCharArrayFrom(arr: Array[Byte], i: Int): (Array[Char], Int) = {
-      val len = decodeIntFrom(arr, i)
-      val nextPos = i + SizeOfInt
-      val ia = Array.ofDim[Char](len)
-      val srcOffset = UnsafeMemory.charArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
-      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * SizeOfChar)
-      (ia, nextPos + len * SizeOfChar)
     }
 
     def decodeBooleanArrayFrom(arr: Array[Byte], i: Int): (Array[Boolean], Int) = {

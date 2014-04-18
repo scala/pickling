@@ -4,6 +4,9 @@ import scala.pickling.internal._
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.Mirror
 
+import java.io.{InputStream, ByteArrayInputStream}
+import scala.collection.mutable.ArrayBuilder
+
 package object binary {
   implicit val pickleFormat = new BinaryPickleFormat
   implicit def toBinaryPickle(value: Array[Byte]): BinaryPickle = BinaryPickle(value)
@@ -11,10 +14,42 @@ package object binary {
 
 package binary {
 
-  case class BinaryPickle(value: Array[Byte]) extends Pickle {
-    type ValueType = Array[Byte]
+  abstract class BinaryPickle extends Pickle {
     type PickleFormatType = BinaryPickleFormat
+    type ValueType = Array[Byte]
+
+    def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader
+  }
+
+  case class BinaryPickleArray(data: Array[Byte]) extends BinaryPickle {
+    val value: Array[Byte] = data
+
+    def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader =
+      new BinaryPickleReader(data, mirror, format)
+
     override def toString = s"""BinaryPickle(${value.mkString("[", ",", "]")})"""
+  }
+
+  case class BinaryPickleStream(input: InputStream) extends BinaryPickle {
+    val value: Array[Byte] = Array.ofDim[Byte](0)
+
+    def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader =
+      new BinaryInputStreamReader(input, mirror, format)
+
+    /* Do not override def toString to avoid traversing the input stream. */
+  }
+
+  object BinaryPickle {
+    def apply(a: Array[Byte]): BinaryPickle =
+      new BinaryPickleStream(new ByteArrayInputStream(a)) {
+        override val value: Array[Byte] = a
+        override def toString = s"""BinaryPickle(${a.mkString("[", ",", "]")})"""
+      }
+  }
+
+  case class BinaryInputStreamPickle(value: InputStream) extends Pickle {
+    type ValueType = InputStream
+    type PickleFormatType = BinaryPickleFormat
   }
 
   final class BinaryPickleBuilder(format: BinaryPickleFormat, out: ArrayOutput[Byte]) extends PBuilder with PickleTools {
@@ -116,14 +151,11 @@ package binary {
     }
   }
 
-  class BinaryPickleReader(arr: Array[Byte], val mirror: Mirror, format: BinaryPickleFormat) extends PReader with PickleTools {
-    import format._
+  abstract class AbstractBinaryReader(val mirror: Mirror) {
+    protected var _lastTagRead: FastTypeTag[_] = null
+    protected var _lastTypeStringRead: String  = null
 
-    private var pos                          = 0
-    private var _lastTagRead: FastTypeTag[_] = null
-    private var _lastTypeStringRead: String  = null
-
-    private def lastTagRead: FastTypeTag[_] =
+    protected def lastTagRead: FastTypeTag[_] =
       if (_lastTagRead != null)
         _lastTagRead
       else {
@@ -131,6 +163,354 @@ package binary {
         _lastTagRead = FastTypeTag(mirror, _lastTypeStringRead)
         _lastTagRead
       }
+  }
+
+  class BinaryInputStreamReader(in: InputStream, mirror: Mirror, format: BinaryPickleFormat) extends AbstractBinaryReader(mirror) with PReader with PickleTools {
+    import format._
+
+    def nextByte(): Byte = {
+      val res = in.read().asInstanceOf[Byte]
+      //println("read " + res)
+      res
+    }
+
+    def decodeStringWithLookahead(la: Byte): String = {
+      //println("enter decodeStringWithLookahead")
+      // read 3 more bytes
+      val buf = Array[Byte](la, nextByte(), nextByte(), nextByte())
+      val len = Util.decodeIntFrom(buf, 0)
+      val bytes = Array.ofDim[Byte](len)
+      val num = in.read(bytes)
+      if (num < len) throw new Exception("Could not read enough bytes from input stream")
+      val res = new String(bytes, "UTF-8")
+      //println("res: " + res)
+      res
+    }
+
+    var gla: Option[Byte] = None
+
+    def beginEntryNoTag(): String = {
+      //println("enter beginEntryNoTag")
+      val res: Any = withHints { hints =>
+        if (hints.isElidedType && nullablePrimitives.contains(hints.tag.key)) {
+          val lookahead = nextByte()
+          lookahead match {
+            case NULL_TAG => gla = Some(lookahead); FastTypeTag.Null
+            case REF_TAG  => FastTypeTag.Ref
+            case _        => gla = Some(lookahead); hints.tag
+          }
+        } else if (hints.isElidedType && primitives.contains(hints.tag.key)) {
+          hints.tag
+        } else {
+          val lookahead = nextByte()
+          lookahead match {
+            case NULL_TAG =>
+              FastTypeTag.Null
+            case ELIDED_TAG =>
+              hints.tag
+            case REF_TAG =>
+              FastTypeTag.Ref
+            case _ =>
+              // do not consume lookahead byte
+              decodeStringWithLookahead(lookahead)
+          }
+        }
+      }
+      if (res.isInstanceOf[String]) {
+        _lastTagRead = null
+        _lastTypeStringRead = res.asInstanceOf[String]
+        _lastTypeStringRead
+      } else {
+        _lastTagRead = res.asInstanceOf[FastTypeTag[_]]
+        _lastTagRead.key
+      }
+    }
+
+    def beginEntry(): FastTypeTag[_] = {
+      beginEntryNoTag()
+      lastTagRead
+    }
+
+    def atPrimitive: Boolean = primitives.contains(lastTagRead.key)
+
+    def decodeInt(): Int = {
+      val buf = Array[Byte](nextByte(), nextByte(), nextByte(), nextByte())
+      //println(s"decodeInt buf = ${buf.mkString(",")}")
+      val res = Util.decodeIntFrom(buf, 0)
+      //println(s"decodeInt: $res")
+      res
+    }
+
+    def decodeIntReversed(): Int = {
+      val buf = Array[Byte](nextByte(), nextByte(), nextByte(), nextByte()).reverse
+      //println(s"decodeIntReversed buf = ${buf.mkString(",")}")
+      val res = Util.decodeIntFrom(buf, 0)
+      //println(s"decodeIntReversed: $res")
+      res
+    }
+
+    def decodeShort(): Short = {
+      val buf = Array[Byte](nextByte(), nextByte())
+      val fst = ((buf(0) << 8) & 0xFFFF).toShort
+      val snd = (buf(1)        & 0x00FF).toShort
+      (fst | snd).toShort
+    }
+
+    def decodeShortReversed(): Short = {
+      val buf = Array[Byte](nextByte(), nextByte())
+      val fst = ((buf(1) << 8) & 0xFFFF).toShort
+      val snd = (buf(0)        & 0x00FF).toShort
+      (fst | snd).toShort
+    }
+
+    def decodeChar(): Char = {
+      val buf = Array[Byte](nextByte(), nextByte())
+      val fst = ((buf(0) << 8) & 0xFFFF).toChar
+      val snd = (buf(1)        & 0x00FF).toChar
+      (fst | snd).toChar
+    }
+
+    def decodeCharReversed(): Char = {
+      val buf = Array[Byte](nextByte(), nextByte())
+      val fst = ((buf(1) << 8) & 0xFFFF).toChar
+      val snd = (buf(0)        & 0x00FF).toChar
+      (fst | snd).toChar
+    }
+
+    def decodeLong(): Long = {
+      val buf = Array[Byte](nextByte(), nextByte(), nextByte(), nextByte(),
+                            nextByte(), nextByte(), nextByte(), nextByte())
+      val elem1 = ((buf(0).toLong << 56) & 0xFFFFFFFFFFFFFFFFL).toLong
+      val elem2 = ((buf(1).toLong << 48) & 0x00FFFFFFFFFFFFFFL).toLong
+      val elem3 = ((buf(2).toLong << 40) & 0x0000FFFFFFFFFFFFL).toLong
+      val elem4 = ((buf(3).toLong << 32) & 0x000000FFFFFFFFFFL).toLong
+      val elem5 = ((buf(4).toLong << 24) & 0x00000000FFFFFFFFL).toLong
+      val elem6 = ((buf(5).toLong << 16) & 0x0000000000FFFFFFL).toLong
+      val elem7 = ((buf(6).toLong << 8)  & 0x000000000000FFFFL).toLong
+      val elem8 = (buf(7).toLong         & 0x00000000000000FFL).toLong
+      elem1 | elem2 | elem3 | elem4 | elem5 | elem6 | elem7 | elem8
+    }
+
+    def decodeLongReversed(): Long = {
+      val buf = Array[Byte](nextByte(), nextByte(), nextByte(), nextByte(),
+                            nextByte(), nextByte(), nextByte(), nextByte())
+      val elem1 = ((buf(7).toLong << 56) & 0xFFFFFFFFFFFFFFFFL).toLong
+      val elem2 = ((buf(6).toLong << 48) & 0x00FFFFFFFFFFFFFFL).toLong
+      val elem3 = ((buf(5).toLong << 40) & 0x0000FFFFFFFFFFFFL).toLong
+      val elem4 = ((buf(4).toLong << 32) & 0x000000FFFFFFFFFFL).toLong
+      val elem5 = ((buf(3).toLong << 24) & 0x00000000FFFFFFFFL).toLong
+      val elem6 = ((buf(2).toLong << 16) & 0x0000000000FFFFFFL).toLong
+      val elem7 = ((buf(1).toLong << 8)  & 0x000000000000FFFFL).toLong
+      val elem8 = (buf(0).toLong         & 0x00000000000000FFL).toLong
+      elem1 | elem2 | elem3 | elem4 | elem5 | elem6 | elem7 | elem8
+    }
+
+    def decodeBoolean(): Boolean = {
+      nextByte() != 0
+    }
+
+    def decodeString(): String = {
+      val buf = gla match {
+        case Some(fstByte) =>
+          gla = None // clear global lookahead
+          Array[Byte](fstByte, nextByte(), nextByte(), nextByte())
+        case None =>
+          Array[Byte](nextByte(), nextByte(), nextByte(), nextByte())
+      }
+      val len = Util.decodeIntFrom(buf, 0)
+      //println("decoding string of len: " + len)
+      val bytes = Array.ofDim[Byte](len)
+      if (len > 0) {
+        val num = in.read(bytes)
+        //println(s"read $num bytes")
+        if (num < len) throw new Exception("Could not read enough bytes from input stream")
+      }
+      new String(bytes, "UTF-8")
+    }
+
+    def decodeIntArray(): Array[Int] = {
+      val len = gla match {
+        case Some(fstByte) =>
+          gla = None
+          val buf = Array[Byte](fstByte, nextByte(), nextByte(), nextByte())
+          Util.decodeIntFrom(buf, 0)
+        case None =>
+          decodeInt()
+      }
+      val arr = Array.ofDim[Byte](len * 4)
+      in.read(arr)
+      Util.decodeIntArray(arr, 0, len)
+    }
+
+    // TODO: fast memory copy
+    def decodeByteArray(): Array[Byte] = {
+      val len = decodeInt()
+      val ia = Array.ofDim[Byte](len)
+      var i = 0
+      while (i < len) {
+        ia(i) = nextByte()
+        i += 1
+      }
+      ia
+    }
+
+    // TODO: fast memory copy
+    def decodeShortArray(): Array[Short] = {
+      val len = decodeInt()
+      val ia = Array.ofDim[Short](len)
+      var i = 0
+      while (i < len) {
+        ia(i) = decodeShortReversed()
+        i += 1
+      }
+      ia
+    }
+
+    // TODO: fast memory copy
+    def decodeCharArray(): Array[Char] = {
+      val len = decodeInt()
+      val ia = Array.ofDim[Char](len)
+      var i = 0
+      while (i < len) {
+        ia(i) = decodeCharReversed()
+        i += 1
+      }
+      ia
+    }
+
+    // TODO: fast memory copy
+    def decodeLongArray(): Array[Long] = {
+      val len = gla match {
+        case Some(fstByte) =>
+          gla = None
+          val buf = Array[Byte](fstByte, nextByte(), nextByte(), nextByte())
+          Util.decodeIntFrom(buf, 0)
+        case None =>
+          decodeInt()
+      }
+      val ia = Array.ofDim[Long](len)
+      var i = 0
+      while (i < len) {
+        ia(i) = decodeLongReversed()
+        i += 1
+      }
+      ia
+    }
+
+    // TODO: fast memory copy
+    def decodeBooleanArray(): Array[Boolean] = {
+      val len = gla match {
+        case Some(fstByte) =>
+          gla = None
+          val buf = Array[Byte](fstByte, nextByte(), nextByte(), nextByte())
+          Util.decodeIntFrom(buf, 0)
+        case None =>
+          decodeInt()
+      }
+      val ia = Array.ofDim[Boolean](len)
+      var i = 0
+      while (i < len) {
+        ia(i) = decodeBoolean()
+        i += 1
+      }
+      ia
+    }
+
+    // TODO: fast memory copy
+    def decodeFloatArray(): Array[Float] = {
+      val len = gla match {
+        case Some(fstByte) =>
+          gla = None
+          val buf = Array[Byte](fstByte, nextByte(), nextByte(), nextByte())
+          Util.decodeIntFrom(buf, 0)
+        case None =>
+          decodeInt()
+      }
+      val ia = Array.ofDim[Float](len)
+      var i = 0
+      while (i < len) {
+        val r = decodeIntReversed()
+        ia(i) = java.lang.Float.intBitsToFloat(r)
+        i += 1
+      }
+      ia
+    }
+
+    // TODO: fast memory copy
+    def decodeDoubleArray(): Array[Double] = {
+      val len = gla match {
+        case Some(fstByte) =>
+          gla = None
+          val buf = Array[Byte](fstByte, nextByte(), nextByte(), nextByte())
+          Util.decodeIntFrom(buf, 0)
+        case None =>
+          decodeInt()
+      }
+      val ia = Array.ofDim[Double](len)
+      var i = 0
+      while (i < len) {
+        val r = decodeLongReversed()
+        ia(i) = java.lang.Double.longBitsToDouble(r)
+        i += 1
+      }
+      ia
+    }
+
+    def readPrimitive(): Any = {
+      //println("enter readPrimitive")
+      val res = lastTagRead.key match {
+        case KEY_NULL    => null
+        case KEY_REF     => lookupUnpicklee(decodeInt())
+        case KEY_BYTE    => nextByte()
+        case KEY_SHORT   => decodeShort()
+        case KEY_CHAR    => decodeChar()
+        case KEY_INT     => decodeInt()
+        case KEY_LONG    => decodeLong()
+        case KEY_BOOLEAN => decodeBoolean()
+        case KEY_FLOAT   =>
+          val r = decodeInt()
+          java.lang.Float.intBitsToFloat(r)
+        case KEY_DOUBLE  =>
+          val r = decodeLong()
+          java.lang.Double.longBitsToDouble(r)
+
+        case KEY_SCALA_STRING | KEY_JAVA_STRING => decodeString()
+
+        case KEY_ARRAY_BYTE    => decodeByteArray()
+        case KEY_ARRAY_SHORT   => decodeShortArray()
+        case KEY_ARRAY_CHAR    => decodeCharArray()
+        case KEY_ARRAY_INT     => decodeIntArray()
+        case KEY_ARRAY_LONG    => decodeLongArray()
+        case KEY_ARRAY_BOOLEAN => decodeBooleanArray()
+        case KEY_ARRAY_FLOAT   => decodeFloatArray()
+        case KEY_ARRAY_DOUBLE  => decodeDoubleArray()
+      }
+      //println("res: " + res)
+      res
+    }
+
+    def atObject: Boolean = !atPrimitive
+
+    def readField(name: String): BinaryInputStreamReader =
+      this
+
+    def endEntry(): Unit = { /* do nothing */ }
+
+    def beginCollection(): PReader = this
+
+    def readLength(): Int = {
+      decodeInt()
+    }
+
+    def readElement(): PReader = this
+
+    def endCollection(): Unit = { /* do nothing */ }
+  }
+
+  class BinaryPickleReader(arr: Array[Byte], mirror: Mirror, format: BinaryPickleFormat) extends AbstractBinaryReader(mirror) with PReader with PickleTools {
+    import format._
+
+    private var pos = 0
 
     def beginEntryNoTag(): String = {
       val res: Any = withHints { hints =>
@@ -272,6 +652,6 @@ package binary {
     type OutputType = ArrayOutput[Byte]
     def createBuilder() = new BinaryPickleBuilder(this, null)
     def createBuilder(out: ArrayOutput[Byte]): PBuilder = new BinaryPickleBuilder(this, out)
-    def createReader(pickle: PickleType, mirror: Mirror) = new BinaryPickleReader(pickle.value, mirror, this)
+    def createReader(pickle: PickleType, mirror: Mirror) = pickle.createReader(mirror, this)
   }
 }
