@@ -6,7 +6,7 @@ import scala.xml.transform._
 import java.net.URL
 
 object BuildSettings {
-  val buildVersion = "0.8.0"
+  val buildVersion = "0.8.1-SNAPSHOT"
   val buildScalaVersion = "2.10.4"
 
   val buildSettings = Defaults.defaultSettings ++ Seq(

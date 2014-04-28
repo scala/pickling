@@ -19,27 +19,29 @@ val lst = pckl.unpickle[List[Int]]
 For more, flip through, or watch the [ScalaDays 2013 presentation!](http://www.parleys.com/play/51c3799fe4b0d38b54f4625a/chapter0/about)
 <br> For deeper technical details, we've also written an OOPSLA 2013 paper on scala/pickling, [Instant Pickles: Generating Object-Oriented Pickler Combinators for Fast and Extensible Serialization](http://infoscience.epfl.ch/record/187787/files/oopsla-pickling_1.pdf).
 
-**Current version:** 0.8.0, though *Scala/pickling is in the early development stages, and any user feedback is highly appreciated!*
-<br>**Upcoming release:** 0.9.0.
+**Current version:** 0.8.0. *Scala/pickling is in the early development stages, and any user feedback is highly appreciated!*
+<br/>**Upcoming version:** 0.9.0, developmental version: 0.9.0-SNAPSHOT.
 
 ## Quick Start
 
 - make sure `scala-pickling.jar` is on your classpath
-- use Scala 2.10.4
+- use Scala 2.10.4 or 2.11.0 (scala/pickling cross-compiles on both)
 
 ## Get Scala Pickling
 
-Scala Pickling for Scala 2.10.4 is available on Sonatype! You can find Scala Pickling under groupID: `org.scala-lang` and artifactID: `scala-pickling_2.10`. The current version is 0.8.0.
+Scala Pickling for Scala 2.10.4/2.11.0 is available on Sonatype! You can find Scala Pickling under groupID: `org.scala-lang` and artifactID: `scala-pickling_2.10`. The current version is 0.8.0.
 
 You can use Scala Pickling in your SBT project by simply adding the following dependency to your build file:
 
 ```scala
 libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.8.0"
 ```
-
-You also need to add the Sonatype "snapshots" repository resolver to your build file:
+If you would like to run the latest development version of scala/pickling (0.9.0-SNAPHSHOT),
+you also need to add the Sonatype "snapshots" repository resolver to your build file:
 
 ```scala
+libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.9.0-SNAPSHOT"
+
 resolvers += Resolver.sonatypeRepo("snapshots")
 ```
 
