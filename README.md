@@ -16,25 +16,25 @@ val pckl = List(1, 2, 3, 4).pickle
 val lst = pckl.unpickle[List[Int]]
 ```
 
-For more, flip through, or watch the [ScalaDays 2013 presentation!](http://www.parleys.com/play/51c3799fe4b0d38b54f4625a/chapter0/about).
+For more, flip through, or watch the [ScalaDays 2013 presentation!](http://www.parleys.com/play/51c3799fe4b0d38b54f4625a/chapter0/about)
 <br> For deeper technical details, we've also written an OOPSLA 2013 paper on scala/pickling, [Instant Pickles: Generating Object-Oriented Pickler Combinators for Fast and Extensible Serialization](http://infoscience.epfl.ch/record/187787/files/oopsla-pickling_1.pdf).
 
-**Current version:** 0.8.0-SNAPSHOT. Scala/pickling does not yet have a stable release. *Scala/pickling is in the early development stages, and any user feedback is highly appreciated!*
-<br>**Upcoming release:** Our first stable release will be 0.8.0.
+**Current version:** 0.8.0, though *Scala/pickling is in the early development stages, and any user feedback is highly appreciated!*
+<br>**Upcoming release:** 0.9.0.
 
 ## Quick Start
 
 - make sure `scala-pickling.jar` is on your classpath
-- use Scala 2.10.3
+- use Scala 2.10.4
 
 ## Get Scala Pickling
 
-Scala Pickling for Scala 2.10.3 is available on Sonatype! You can find Scala Pickling under groupID: `org.scala-lang` and artifactID: `scala-pickling_2.10`. The current version is 0.8.0-SNAPSHOT.
+Scala Pickling for Scala 2.10.4 is available on Sonatype! You can find Scala Pickling under groupID: `org.scala-lang` and artifactID: `scala-pickling_2.10`. The current version is 0.8.0.
 
 You can use Scala Pickling in your SBT project by simply adding the following dependency to your build file:
 
 ```scala
-libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.8.0-SNAPSHOT"
+libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.8.0"
 ```
 
 You also need to add the Sonatype "snapshots" repository resolver to your build file:
@@ -45,7 +45,7 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 
 For a more illustrative example, see a [sample SBT project which uses Scala Pickling](https://github.com/xeno-by/sbt-example-pickling).
 
-Or you can just [directly download the jar](https://oss.sonatype.org/service/local/artifact/maven/redirect?r=snapshots&g=org.scala-lang&a=scala-pickling_2.10&v=0.8.0-SNAPSHOT&e=jar).
+Or you can just [directly download the jar](https://oss.sonatype.org/service/local/artifact/maven/redirect?r=snapshots&g=org.scala-lang&a=scala-pickling_2.10&v=0.8.0&e=jar).
 
 ## What makes it different?
 
