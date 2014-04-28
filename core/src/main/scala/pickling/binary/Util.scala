@@ -299,56 +299,56 @@ package binary {
       arr.flush(buf)
     }
 
-    @inline def encodeByteArrayTo(arr: Array[Byte], i: Int, value: Array[Byte]): Int = {
+    def encodeByteArrayTo(arr: Array[Byte], i: Int, value: Array[Byte]): Int = {
       val srcOffset = UnsafeMemory.byteArrayOffset
       val destOffset = UnsafeMemory.byteArrayOffset
       UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i, value.length * SizeOfByte)
       i + value.length * SizeOfByte
     }
 
-    @inline def encodeShortArrayTo(arr: Array[Byte], i: Int, value: Array[Short]): Int = {
+    def encodeShortArrayTo(arr: Array[Byte], i: Int, value: Array[Short]): Int = {
       val srcOffset = UnsafeMemory.shortArrayOffset
       val destOffset = UnsafeMemory.byteArrayOffset
       UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i, value.length * SizeOfShort)
       i + value.length * SizeOfShort
     }
 
-    @inline def encodeIntArrayTo(arr: Array[Byte], i: Int, value: Array[Int]): Int = {
+    def encodeIntArrayTo(arr: Array[Byte], i: Int, value: Array[Int]): Int = {
       val srcOffset = UnsafeMemory.intArrayOffset
       val destOffset = UnsafeMemory.byteArrayOffset
       UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i, value.length * SizeOfInt)
       i + value.length * SizeOfInt
     }
 
-    @inline def encodeLongArrayTo(arr: Array[Byte], i: Int, value: Array[Long]): Int = {
+    def encodeLongArrayTo(arr: Array[Byte], i: Int, value: Array[Long]): Int = {
       val srcOffset = UnsafeMemory.longArrayOffset
       val destOffset = UnsafeMemory.byteArrayOffset
       UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i, value.length * SizeOfLong)
       i + value.length * SizeOfLong
     }
 
-    @inline def encodeFloatArrayTo(arr: Array[Byte], i: Int, value: Array[Float]): Int = {
+    def encodeFloatArrayTo(arr: Array[Byte], i: Int, value: Array[Float]): Int = {
       val srcOffset = UnsafeMemory.floatArrayOffset
       val destOffset = UnsafeMemory.byteArrayOffset
       UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i, value.length * SizeOfFloat)
       i + value.length * SizeOfFloat
     }
 
-    @inline def encodeDoubleArrayTo(arr: Array[Byte], i: Int, value: Array[Double]): Int = {
+    def encodeDoubleArrayTo(arr: Array[Byte], i: Int, value: Array[Double]): Int = {
       val srcOffset = UnsafeMemory.doubleArrayOffset
       val destOffset = UnsafeMemory.byteArrayOffset
       UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i, value.length * SizeOfDouble)
       i + value.length * SizeOfDouble
     }
 
-    @inline def encodeCharArrayTo(arr: Array[Byte], i: Int, value: Array[Char]): Int = {
+    def encodeCharArrayTo(arr: Array[Byte], i: Int, value: Array[Char]): Int = {
       val srcOffset = UnsafeMemory.charArrayOffset
       val destOffset = UnsafeMemory.byteArrayOffset
       UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i, value.length * SizeOfChar)
       i + value.length * SizeOfChar
     }
 
-    @inline def encodeBooleanArrayTo(arr: Array[Byte], i: Int, value: Array[Boolean]): Int = {
+    def encodeBooleanArrayTo(arr: Array[Byte], i: Int, value: Array[Boolean]): Int = {
       val srcOffset = UnsafeMemory.booleanArrayOffset
       val destOffset = UnsafeMemory.byteArrayOffset
       UnsafeMemory.unsafe.copyMemory(value, srcOffset, arr, destOffset + i, value.length * SizeOfBoolean)
