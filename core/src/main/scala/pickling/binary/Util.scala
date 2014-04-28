@@ -60,13 +60,18 @@ package binary {
       arr(i) != 0
     }
 
+    def decodeByteArray(arr: Array[Byte], offset: Int, len: Int): Array[Byte] = {
+      val newArr = Array.ofDim[Byte](len)
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.byteArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + offset, newArr, destOffset, len * SizeOfByte)
+      newArr
+    }
+
     def decodeByteArrayFrom(arr: Array[Byte], i: Int): (Array[Byte], Int) = {
       val len = decodeIntFrom(arr, i)
       val nextPos = i + SizeOfInt
-      val ia = Array.ofDim[Byte](len)
-      val srcOffset = UnsafeMemory.byteArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
-      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * SizeOfByte)
+      val ia = decodeByteArray(arr, nextPos, len)
       (ia, nextPos + len * SizeOfByte)
     }
 
@@ -130,33 +135,48 @@ package binary {
       (ia, nextPos + len * SizeOfLong)
     }
 
+    def decodeFloatArray(arr: Array[Byte], offset: Int, len: Int): Array[Float] = {
+      val newArr = Array.ofDim[Float](len)
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.floatArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + offset, newArr, destOffset, len * SizeOfFloat)
+      newArr
+    }
+
     def decodeFloatArrayFrom(arr: Array[Byte], i: Int): (Array[Float], Int) = {
       val len = decodeIntFrom(arr, i)
       val nextPos = i + SizeOfInt
-      val ia = Array.ofDim[Float](len)
-      val srcOffset = UnsafeMemory.floatArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
-      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * SizeOfFloat)
+      val ia = decodeFloatArray(arr, nextPos, len)
       (ia, nextPos + len * SizeOfFloat)
+    }
+
+    def decodeDoubleArray(arr: Array[Byte], offset: Int, len: Int): Array[Double] = {
+      val newArr = Array.ofDim[Double](len)
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.doubleArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + offset, newArr, destOffset, len * SizeOfDouble)
+      newArr
     }
 
     def decodeDoubleArrayFrom(arr: Array[Byte], i: Int): (Array[Double], Int) = {
       val len = decodeIntFrom(arr, i)
       val nextPos = i + SizeOfInt
-      val ia = Array.ofDim[Double](len)
-      val srcOffset = UnsafeMemory.doubleArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
-      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * SizeOfDouble)
+      val ia = decodeDoubleArray(arr, nextPos, len)
       (ia, nextPos + len * SizeOfDouble)
+    }
+
+    def decodeBooleanArray(arr: Array[Byte], offset: Int, len: Int): Array[Boolean] = {
+      val newArr = Array.ofDim[Boolean](len)
+      val srcOffset = UnsafeMemory.byteArrayOffset
+      val destOffset = UnsafeMemory.booleanArrayOffset
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + offset, newArr, destOffset, len * SizeOfBoolean)
+      newArr
     }
 
     def decodeBooleanArrayFrom(arr: Array[Byte], i: Int): (Array[Boolean], Int) = {
       val len = decodeIntFrom(arr, i)
       val nextPos = i + SizeOfInt
-      val ia = Array.ofDim[Boolean](len)
-      val srcOffset = UnsafeMemory.booleanArrayOffset
-      val destOffset = UnsafeMemory.intArrayOffset
-      UnsafeMemory.unsafe.copyMemory(arr, srcOffset + nextPos, ia, destOffset, len * SizeOfBoolean)
+      val ia = decodeBooleanArray(arr, nextPos, len)
       (ia, nextPos + len * SizeOfBoolean)
     }
 
