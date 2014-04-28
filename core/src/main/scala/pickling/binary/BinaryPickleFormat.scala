@@ -4,10 +4,7 @@ import scala.pickling.internal._
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.Mirror
 
-import java.io.{InputStream, ByteArrayInputStream}
-import scala.collection.mutable.ArrayBuilder
-
-import java.util.concurrent.atomic.AtomicInteger
+import java.io.InputStream
 
 package object binary {
   implicit val pickleFormat = new BinaryPickleFormat
