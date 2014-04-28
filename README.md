@@ -37,9 +37,11 @@ You can use Scala Pickling in your SBT project by simply adding the following de
 libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.8.0"
 ```
 
-You also need to add the Sonatype "snapshots" repository resolver to your build file:
+If you would like to run the latest development version of scala/pickling (0.9.0-SNAPHSHOT), you also need to add the Sonatype "snapshots" repository resolver to your build file:
 
 ```scala
+libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.9.0-SNAPSHOT"
+
 resolvers += Resolver.sonatypeRepo("snapshots")
 ```
 
