@@ -9,5 +9,4 @@ jdk:
 notifications:
   email:
     - heather.miller@epfl.ch
-    - eugene.burmako@epfl.ch
     - philipp.haller@typesafe.com
