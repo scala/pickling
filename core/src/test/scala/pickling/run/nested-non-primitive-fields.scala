@@ -13,7 +13,7 @@ class NestedNonPrimitiveFieldsTest extends FunSuite {
     val pckl = Philipp(gudrun).pickle
     assert(pckl.value.toString === """
       |{
-      |  "tpe": "scala.pickling.nested.non.primitive.fields.Philipp",
+      |  "$type": "scala.pickling.nested.non.primitive.fields.Philipp",
       |  "mother": {
       |    "name": "gudrun",
       |    "age": 62,

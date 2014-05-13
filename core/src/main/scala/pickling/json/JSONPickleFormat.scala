@@ -110,7 +110,7 @@ package json {
           if (hints.isElidedType) primitives(hints.tag.key)(picklee)
           else {
             appendLine("{")
-            appendLine("\"tpe\": \"" + hints.tag.key + "\",")
+            appendLine("\"$type\": \"" + hints.tag.key + "\",")
             append("\"value\": ")
             indent()
             primitives(hints.tag.key)(picklee)
@@ -127,7 +127,7 @@ package json {
             val ts =
               if (hints.tag.key.contains("anonfun$")) picklee.getClass.getName
               else hints.tag.key
-            append("\"tpe\": \"" + ts + "\"")
+            append("\"$type\": \"" + ts + "\"")
           }
         }
       }
@@ -211,7 +211,7 @@ package json {
         } else {
           datum match {
             case JSONObject(fields) if fields.contains("$ref") => FastTypeTag.Ref.key
-            case JSONObject(fields) if fields.contains("tpe") => fields("tpe").asInstanceOf[String]
+            case JSONObject(fields) if fields.contains("$type") => fields("$type").asInstanceOf[String]
             case JSONObject(fields) => hints.tag.key
           }
         }

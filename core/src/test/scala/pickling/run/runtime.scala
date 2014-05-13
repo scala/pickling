@@ -17,7 +17,7 @@ class RuntimeTest extends FunSuite {
 
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.pickling.runtime.Person",
+      |  "$type": "scala.pickling.runtime.Person",
       |  "name": "joe",
       |  "age": 23
       |}
@@ -31,7 +31,7 @@ class RuntimeArrayTests extends FunSuite {
     val pickle = p.pickle
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.Array[scala.Double]",
+      |  "$type": "scala.Array[scala.Double]",
       |  "value": [
       |    1.0,
       |    2.0,
@@ -49,7 +49,7 @@ class RuntimeArrayTests extends FunSuite {
     val pickle = p.pickle
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.Array[scala.Int]",
+      |  "$type": "scala.Array[scala.Int]",
       |  "value": [
       |    1,
       |    2,
@@ -67,7 +67,7 @@ class RuntimeArrayTests extends FunSuite {
     val pickle = p.pickle
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.Array[scala.Long]",
+      |  "$type": "scala.Array[scala.Long]",
       |  "value": [
       |    "1",
       |    "2",
@@ -85,7 +85,7 @@ class RuntimeArrayTests extends FunSuite {
     val pickle = p.pickle
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.Array[scala.Boolean]",
+      |  "$type": "scala.Array[scala.Boolean]",
       |  "value": [
       |    true,
       |    false,
@@ -106,7 +106,7 @@ class RuntimeArrayTests extends FunSuite {
     val pickle = p.pickle
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.Array[scala.Short]",
+      |  "$type": "scala.Array[scala.Short]",
       |  "value": [
       |    1,
       |    2,
@@ -124,7 +124,7 @@ class RuntimeArrayTests extends FunSuite {
     val pickle = p.pickle
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.Array[scala.Char]",
+      |  "$type": "scala.Array[scala.Char]",
       |  "value": [
       |    "A",
       |    "B",
@@ -145,7 +145,7 @@ class RuntimeArrayTests extends FunSuite {
     val pickle = p.pickle
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.Array[scala.Byte]",
+      |  "$type": "scala.Array[scala.Byte]",
       |  "value": [
       |    1,
       |    2,
@@ -163,7 +163,7 @@ class RuntimeArrayTests extends FunSuite {
     val pickle = p.pickle
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.Array[scala.Float]",
+      |  "$type": "scala.Array[scala.Float]",
       |  "value": [
       |    1.0,
       |    2.0,
@@ -181,18 +181,18 @@ class RuntimeArrayTests extends FunSuite {
     val pickle = p.pickle
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.Array[java.lang.String]",
+      |  "$type": "scala.Array[java.lang.String]",
       |  "elems": [
       |    {
-      |    "tpe": "java.lang.String",
+      |    "$type": "java.lang.String",
       |    "value": "one"
       |  },
       |    {
-      |    "tpe": "java.lang.String",
+      |    "$type": "java.lang.String",
       |    "value": "two"
       |  },
       |    {
-      |    "tpe": "java.lang.String",
+      |    "$type": "java.lang.String",
       |    "value": "three"
       |  }
       |  ]

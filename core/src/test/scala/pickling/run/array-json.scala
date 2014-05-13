@@ -12,7 +12,7 @@ class ArrayJsonTest extends FunSuite {
   test("main") {
     val expectedPickle = """
     |JSONPickle({
-    |  "tpe": "scala.pickling.array.json.C",
+    |  "$type": "scala.pickling.array.json.C",
     |  "arr": [
     |    1,
     |    2,
