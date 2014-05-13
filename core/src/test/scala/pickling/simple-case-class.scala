@@ -10,7 +10,7 @@ class SimpleCaseClassTest extends FunSuite {
   test("main") {
     val expectedPickle = """
     |{
-    |  "tpe": "scala.pickling.simple.case.class.Person",
+    |  "$type": "scala.pickling.simple.case.class.Person",
     |  "name": "Bob",
     |  "age": 83
     |}

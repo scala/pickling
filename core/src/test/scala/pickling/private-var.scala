@@ -14,7 +14,7 @@ class PrivateVarTest extends FunSuite {
     val pickle = p.pickle
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.pickling.private.var.Person",
+      |  "$type": "scala.pickling.private.var.Person",
       |  "name": "Bob",
       |  "age": 42,
       |  "ssn": 0

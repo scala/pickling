@@ -13,7 +13,7 @@ class SingletonSimpleTest extends FunSuite {
     val pickle = D.pickle
     assert(pickle.toString === """
       |JSONPickle({
-      |  "tpe": "scala.pickling.singleton.simple.D.type"
+      |  "$type": "scala.pickling.singleton.simple.D.type"
       |})
     """.stripMargin.trim)
     assert((pickle.unpickle[D.type] eq D) === true)

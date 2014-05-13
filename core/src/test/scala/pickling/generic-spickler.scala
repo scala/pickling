@@ -37,9 +37,9 @@ class GenericSpickler extends FunSuite {
 
     val p = PersonX("Philipp", 32, 99999999)
     val jsn = """JSONPickle({
-      |  "tpe": "scala.pickling.test.generic.spickler.PersonX",
+      |  "$type": "scala.pickling.test.generic.spickler.PersonX",
       |  "name": {
-      |    "tpe": "java.lang.String",
+      |    "$type": "java.lang.String",
       |    "value": "Philipp"
       |  }
       |})""".stripMargin.trim

@@ -18,7 +18,7 @@ class RuntimeTest extends FunSuite {
 
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.pickling.runtime.Person",
+      |  "$type": "scala.pickling.runtime.Person",
       |  "name": "joe",
       |  "age": 23
       |}
