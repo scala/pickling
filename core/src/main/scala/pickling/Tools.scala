@@ -258,14 +258,41 @@ abstract class ShareAnalyzer[U <: Universe](val u: U) extends RichTypes {
           if (visited(currTpe)) {
             if (tpe <:< currTpe) true  // TODO: make sure this sanely works for polymorphic types
             else loop(rest, visited)
-          } else if (currTpe.isNotNullable || currTpe.isEffectivelyPrimitive || currSym == StringClass || currSym.isModuleClass) loop(rest, visited)
-          // TODO: extend the traversal logic to support sealed classes
-          // when doing that don't forget:
-          // 1) sealeds can themselves be extended, so we need to recur
-          // 2) the entire sealed hierarchy should be added to todo
-          else if (!currSym.isFinal) true // NOTE: returning true here is important for soundness!
-          else {
-            val more = newClassIR(currTpe).fields.map(_.tpe)
+          } else if (currTpe.isNotNullable || currTpe.isEffectivelyPrimitive || currSym == StringClass || currSym.isModuleClass) {
+            loop(rest, visited)
+          } else if (currSym.isClass && currSym.asClass.isSealed) {
+            val currTargs: List[Type] =
+              currTpe.asInstanceOf[scala.reflect.internal.SymbolTable#Type]
+                     .dealias
+                     .typeArgs
+                     .map(_.asInstanceOf[Type])
+
+            // field types have to be OK
+            val more = flattenedClassIR(currTpe).fields.map(_.tpe)
+
+            // all known subclasses have to be OK, too
+            val ksc = currSym.asClass.knownDirectSubclasses
+            val subclasses = ksc.map(sym => sym.asClass.toTypeIn(currTpe))
+
+            // collect field types of all subclasses
+            val fieldTypes = subclasses.flatMap { subclassTpe =>
+              flattenedClassIR(subclassTpe).fields.map(_.tpe)
+            }
+
+            // for field types that are type parameters,
+            // use type arguments of currTpe (currTargs) instead
+            val fieldTypesToCheck = fieldTypes.flatMap { tp =>
+              if (tp.typeSymbol.isParameter) currTargs
+              else List(tp)
+            }
+
+            val allTodo = rest ++ more ++ fieldTypesToCheck
+            loop(allTodo, visited + currTpe)
+          }
+          else if (!currSym.isFinal) {
+            true // NOTE: returning true here is important for soundness!
+          } else {
+            val more = flattenedClassIR(currTpe).fields.map(_.tpe)
             loop(rest ++ more, visited + currTpe)
           }
         case _ => false
