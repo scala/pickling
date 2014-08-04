@@ -32,7 +32,7 @@ trait SPickler[T] {
 @implicitNotFound(msg = "Cannot generate a DPickler for ${T}. Recompile with -Xlog-implicits for details")
 trait DPickler[T] {
   val format: PickleFormat
-  def pickle(picklee: T, builder: PBuilder): Unit = macro Compat.PickleMacros_dpicklerPickle[T]
+  def pickle(picklee: T, builder: PBuilder): Unit
 }
 
 object DPickler {
