@@ -346,6 +346,21 @@ trait PickleMacros extends Macro {
     implicitly[SPickler[$tpe]]
   """
 
+  def isCaseClass(tpe: c.Type): Boolean = {
+    val sym = tpe.typeSymbol
+    sym.isClass && sym.asClass.isCaseClass
+  }
+
+  def isClosed(tpe: c.Type): Boolean = {
+    val sym = tpe.typeSymbol
+    sym.isEffectivelyFinal || isCaseClass(tpe) || {
+      sym.isClass && {
+        val classSym = sym.asClass
+        classSym.isSealed && classSym.knownDirectSubclasses.forall(cl => isClosed(cl.asType.toType))
+      }
+    }
+  }
+
   def genDispatchLogic(tpe: c.Type, builder: c.Tree): c.Tree = {
     val sym = tpe.typeSymbol
     def abstractTypeDispatch =
@@ -392,6 +407,12 @@ trait PickleMacros extends Macro {
     //   """
     // }
     // if (sym == ListClass) listDispatch else
+
+    if (c.inferImplicitValue(typeOf[IsStaticOnly]) != EmptyTree) {
+      if (!isClosed(tpe))
+        c.abort(c.enclosingPosition, "cannot generate fully static pickler")
+    }
+
     if (sym.asType.isAbstractType) abstractTypeDispatch
     else if (sym.isEffectivelyFinal) finalDispatch
     else nonFinalDispatch
