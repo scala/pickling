@@ -1,5 +1,7 @@
 package scala.pickling
 
+import java.io.OutputStream
+
 trait Output[T] {
 
   def result(): T
@@ -12,6 +14,20 @@ trait Output[T] {
 // in JSON we can demand Output[String], since Output[Nothing] <: Output[String]
 
 import scala.reflect.ClassTag
+
+class OutputStreamOutput(out: OutputStream) extends ArrayOutput[Byte] {
+   def result(): Array[Byte] =
+     null
+
+   def +=(obj: Byte) =
+     out.write(obj.asInstanceOf[Int])
+
+   def put(obj: Array[Byte]): this.type = {
+     out.write(obj)
+     this
+   }
+ }
+
 // Array output with a few more methods for performance
 abstract class ArrayOutput[T: ClassTag] extends Output[Array[T]] {
   // Put a single T
@@ -30,13 +46,13 @@ class ByteArrayBufferOutput extends ArrayOutput[Byte] {
 
   private val buf =
     ArrayBuffer[Byte]()
-    
+
   def result(): Array[Byte] =
     buf.toArray
-  
+
   def +=(obj: Byte) =
     buf += obj
-  
+
   def put(obj: Array[Byte]): this.type = {
     buf ++= obj
     this
@@ -47,26 +63,26 @@ class ByteArrayOutput(len: Int) extends ArrayOutput[Byte]  {
 
   private var pos = 0
   private val arr = Array.ofDim[Byte](len)
-  
+
   def result(): Array[Byte] =
     arr
-  
+
   def +=(obj: Byte) = {
     arr(pos) = obj
     pos = pos + 1
   }
-  
+
   def put(obj: Array[Byte]): this.type = {
 	// target() should be used to avoid double copy
     throw new java.lang.IllegalStateException
   }
-  
+
   override def target(len: Int) = {
     val oldpos = pos
     pos = pos + len
     (arr, oldpos)
 	}
-  
+
   override def flush(arr: Array[Byte]) = { /*noop*/ }
 }
 
