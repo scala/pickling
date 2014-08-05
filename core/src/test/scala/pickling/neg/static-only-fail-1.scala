@@ -3,11 +3,9 @@ package scala.pickling.staticonlyfail1
 import scala.pickling._
 import NegativeCompilation._
 import org.scalatest.FunSuite
-import org.junit.Test
 
-class StaticOnlyFail1Test {
-  @Test
-  def `Any is never statically serializable`() {
+class StaticOnlyFail1Test extends FunSuite {
+  test("main") {
     expectError("cannot generate fully static pickler") {
       """
         | import _root_.scala.pickling._
