@@ -64,8 +64,13 @@ package binary {
         Util.encodeByte(output, REF_TAG)
         Util.encodeInt(output, hints.oid)
       } else {
-        if (!hints.isElidedType)
-          Util.encodeString(output, hints.tag.key)
+        if (!hints.isElidedType) {
+          // quickly decide whether we should use picklee.getClass instead
+          val ts =
+            if (hints.tag.key.contains("anonfun$")) picklee.getClass.getName
+            else hints.tag.key
+          Util.encodeString(output, ts)
+        }
 
         // NOTE: it looks like we don't have to write object ids at all
         // traversals employed by pickling and unpickling are exactly the same

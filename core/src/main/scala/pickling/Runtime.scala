@@ -52,11 +52,11 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_], shar
     }
   }
   val tag = FastTypeTag(mirror, tpe, tpe.key)
-  debug("PicklerRuntime: tpe = " + tpe)
+  //debug(s"PicklerRuntime: tpe = $tpe, tag = ${tag.toString}")
   val irs = new IRs[ru.type](ru)
   import irs._
   val cir = flattenedClassIR(tpe)
-  debug("PicklerRuntime: cir = " + cir)
+  //debug(s"PicklerRuntime: cir = $cir")
 
   val shareAnalyzer = new ShareAnalyzer[ru.type](ru) {
     def shareEverything = share.isInstanceOf[refs.ShareEverything]
@@ -182,8 +182,14 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
           if (shouldBotherAboutSharing(tpe)) registerUnpicklee(result, preregisterUnpicklee())
           result
         } else {
-          val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
-          val pendingFields = (nonLoopyFields ++ loopyFields).filter(fir => fir.isNonParam || fir.isReifiedParam)
+          val pendingFields =
+            if (tag.key.contains("anonfun$")) {
+              List[FieldIR]()
+            } else {
+              val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
+              (nonLoopyFields ++ loopyFields).filter(fir => fir.isNonParam || fir.isReifiedParam)
+            }
+
           def fieldVals = pendingFields.map(fir => {
             val freader = reader.readField(fir.name)
             val fstaticTag = FastTypeTag(mirror, fir.tpe, fir.tpe.key)
