@@ -3,23 +3,10 @@ package scala.pickling.test.binary
 import org.scalatest.FunSuite
 
 import java.io.{OutputStream, ByteArrayOutputStream, ByteArrayInputStream}
+import scala.pickling.OutputStreamOutput
 
 import scala.pickling._
 import binary._
-
-class OutputStreamOutput(out: OutputStream) extends ArrayOutput[Byte] {
-
-  def result(): Array[Byte] =
-    null
-
-  def +=(obj: Byte) =
-    out.write(obj.asInstanceOf[Int])
-
-  def put(obj: Array[Byte]): this.type = {
-    out.write(obj)
-    this
-  }
-}
 
 class BinaryOutputStreamTest extends FunSuite {
   test("pickle to OutputStream") {

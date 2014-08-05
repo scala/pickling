@@ -16,16 +16,16 @@ trait Output[T] {
 import scala.reflect.ClassTag
 
 class OutputStreamOutput(out: OutputStream) extends ArrayOutput[Byte] {
-   def result(): Array[Byte] =
-     null
+  def result(): Array[Byte] =
+   null
 
-   def +=(obj: Byte) =
-     out.write(obj.asInstanceOf[Int])
+  def +=(obj: Byte) =
+   out.write(obj.asInstanceOf[Int])
 
-   def put(obj: Array[Byte]): this.type = {
-     out.write(obj)
-     this
-   }
+  def put(obj: Array[Byte]): this.type = {
+   out.write(obj)
+   this
+  }
  }
 
 // Array output with a few more methods for performance
