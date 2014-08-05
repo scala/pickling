@@ -1,11 +1,11 @@
 package scala.pickling
 
-import scala.reflect.{classTag,ClassTag}
+import scala.reflect.{classTag, ClassTag}
 import scala.tools.reflect.{ToolBox, ToolBoxError}
 
 object NegativeCompilation {
 
-// utilities for adding failed tests to scalatest
+  // utilities for adding failed tests to scalatest
   implicit class objectops(obj: Any) {
     def mustBe(other: Any) = assert(obj == other, obj + " is not " + other)
 

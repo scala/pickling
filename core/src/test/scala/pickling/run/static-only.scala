@@ -5,7 +5,6 @@ import scala.pickling._
 import json._
 import static.StaticOnly
 
-//final class C(val fld: Int)
 sealed abstract class C { val fld: Int }
 
 final class D extends C { val fld = 1 }
