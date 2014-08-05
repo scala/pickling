@@ -13,7 +13,7 @@ class NonPrimitiveFieldTest extends FunSuite {
     val pckl = Philipp(gudrun).pickle
     assert(pckl.value === """
       |{
-      |  "tpe": "scala.pickling.non.primitive.field.Philipp",
+      |  "$type": "scala.pickling.non.primitive.field.Philipp",
       |  "mother": {
       |    "name": "Gudrun",
       |    "age": 62

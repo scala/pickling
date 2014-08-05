@@ -14,7 +14,7 @@ class JSONNonPrimitiveFieldTest extends FunSuite {
     val pckl = p.pickle
 
     assert(pckl.value === """{
-  "tpe": "scala.pickling.json.non.primitive.field.Philipp",
+  "$type": "scala.pickling.json.non.primitive.field.Philipp",
   "mother": {
     "name": "Gudrun",
     "age": 62

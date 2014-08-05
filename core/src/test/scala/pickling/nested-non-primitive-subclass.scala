@@ -14,33 +14,33 @@ class NestedNonPrimitiveSubclassTest extends FunSuite {
     val pckl = treeStructure.pickle
     assert(pckl.value.toString === """
       |{
-      |  "tpe": "scala.pickling.nested.non.primitive.subclass.Fork",
+      |  "$type": "scala.pickling.nested.non.primitive.subclass.Fork",
       |  "left": {
-      |    "tpe": "scala.pickling.nested.non.primitive.subclass.Fork",
+      |    "$type": "scala.pickling.nested.non.primitive.subclass.Fork",
       |    "left": {
-      |      "tpe": "scala.pickling.nested.non.primitive.subclass.Fork",
+      |      "$type": "scala.pickling.nested.non.primitive.subclass.Fork",
       |      "left": {
-      |        "tpe": "scala.pickling.nested.non.primitive.subclass.Node",
+      |        "$type": "scala.pickling.nested.non.primitive.subclass.Node",
       |        "value": 1
       |      },
       |      "right": {
-      |        "tpe": "scala.pickling.nested.non.primitive.subclass.Node",
+      |        "$type": "scala.pickling.nested.non.primitive.subclass.Node",
       |        "value": 2
       |      }
       |    },
       |    "right": {
-      |      "tpe": "scala.pickling.nested.non.primitive.subclass.Node",
+      |      "$type": "scala.pickling.nested.non.primitive.subclass.Node",
       |      "value": 3
       |    }
       |  },
       |  "right": {
-      |    "tpe": "scala.pickling.nested.non.primitive.subclass.Fork",
+      |    "$type": "scala.pickling.nested.non.primitive.subclass.Fork",
       |    "left": {
-      |      "tpe": "scala.pickling.nested.non.primitive.subclass.Node",
+      |      "$type": "scala.pickling.nested.non.primitive.subclass.Node",
       |      "value": 4
       |    },
       |    "right": {
-      |      "tpe": "scala.pickling.nested.non.primitive.subclass.Node",
+      |      "$type": "scala.pickling.nested.non.primitive.subclass.Node",
       |      "value": 5
       |    }
       |  }

@@ -9,7 +9,7 @@ class JsonListTNewTest extends FunSuite {
     val pickle = List(1, 2, 3).pickle
     assert(pickle.toString === """
       |JSONPickle({
-      |  "tpe": "scala.collection.immutable.$colon$colon[scala.Int]",
+      |  "$type": "scala.collection.immutable.$colon$colon[scala.Int]",
       |  "elems": [
       |    1,
       |    2,

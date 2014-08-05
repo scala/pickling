@@ -30,7 +30,7 @@ class OpenSum1Test extends FunSuite {
     val pickle = f.pickle
     assert(pickle.value.toString === """
       |{
-      |  "tpe": "scala.pickling.open.sum1.outer.Firefighter",
+      |  "$type": "scala.pickling.open.sum1.outer.Firefighter",
       |  "name": "Jeff",
       |  "age": 45,
       |  "since": 1990

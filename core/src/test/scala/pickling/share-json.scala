@@ -16,7 +16,7 @@ class ShareJsonTest extends FunSuite {
     val pickle = c1.pickle
     assert(pickle.toString === """
       |JSONPickle({
-      |  "tpe": "scala.pickling.share.json.C",
+      |  "$type": "scala.pickling.share.json.C",
       |  "name": "c1",
       |  "desc": "desc",
       |  "arr": [
@@ -69,7 +69,7 @@ class ShareJsonTest extends FunSuite {
     val pickle = c1.pickle
     assert(pickle.toString === """
       |JSONPickle({
-      |  "tpe": "scala.pickling.share.json.C",
+      |  "$type": "scala.pickling.share.json.C",
       |  "name": "c1",
       |  "desc": "desc",
       |  "arr": [
@@ -114,7 +114,7 @@ class ShareJsonTest extends FunSuite {
     val pickle = c3.pickle
     assert(pickle.toString === """
       |JSONPickle({
-      |  "tpe": "scala.pickling.share.json.C",
+      |  "$type": "scala.pickling.share.json.C",
       |  "name": "c3",
       |  "desc": "desc",
       |  "c": {

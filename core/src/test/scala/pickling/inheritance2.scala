@@ -23,7 +23,7 @@ class Inheritance2Test extends FunSuite {
     val pickleF = (f: Firefighter).pickle
     assert(pickleF.value === """
       |{
-      |  "tpe": "scala.pickling.inheritance2.Firefighter",
+      |  "$type": "scala.pickling.inheritance2.Firefighter",
       |  "name": "Josephine",
       |  "age": 48,
       |  "salary": 40000,
@@ -36,7 +36,7 @@ class Inheritance2Test extends FunSuite {
     val pickleP = (f: Person).pickle
     assert(pickleP.value === """
       |{
-      |  "tpe": "scala.pickling.inheritance2.Firefighter",
+      |  "$type": "scala.pickling.inheritance2.Firefighter",
       |  "name": "Josephine",
       |  "age": 48,
       |  "salary": 40000,
@@ -49,7 +49,7 @@ class Inheritance2Test extends FunSuite {
     val pickleC = (f: Creature).pickle
     assert(pickleC.value === """
       |{
-      |  "tpe": "scala.pickling.inheritance2.Firefighter",
+      |  "$type": "scala.pickling.inheritance2.Firefighter",
       |  "name": "Josephine",
       |  "age": 48,
       |  "salary": 40000,
