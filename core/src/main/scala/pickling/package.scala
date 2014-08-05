@@ -12,4 +12,5 @@ package object pickling {
     def pickleInto(builder: PBuilder): Unit = macro Compat.PickleMacros_pickleInto[T]
     def pickleTo(output: Output[_])(implicit format: PickleFormat): Unit = macro Compat.PickleMacros_pickleTo[T]
   }
+
 }
