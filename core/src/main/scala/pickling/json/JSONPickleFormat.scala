@@ -117,7 +117,13 @@ package json {
           }
         } else {
           appendLine("{")
-          if (!hints.isElidedType) append("\"tpe\": \"" + typeToString(hints.tag.tpe) + "\"")
+          if (!hints.isElidedType) {
+            // quickly decide whether we should use picklee.getClass instead
+            val ts =
+              if (hints.tag.key.contains("anonfun$")) picklee.getClass.getName
+              else typeToString(hints.tag.tpe)
+            append("\"tpe\": \"" + ts + "\"")
+          }
         }
       }
       this
