@@ -164,12 +164,18 @@ trait PicklerMacros extends Macro {
   def dpicklerImpl[T: c.WeakTypeTag](format: c.Tree): c.Tree = {
     val tpe = weakTypeOf[T]
     val picklerName = c.fresh((syntheticBaseName(tpe) + "DPickler"): TermName)
+
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with PickleMacros
+    val dpicklerPickleImpl = bundle.dpicklerPickle[T](q"builder")
+
     q"""
       implicit object $picklerName extends scala.pickling.DPickler[$tpe] {
         import scala.pickling._
         import scala.pickling.internal._
         import scala.pickling.`package`.PickleOps
         val format = implicitly[${format.tpe}]
+        def pickle(picklee: $tpe, builder: PBuilder): Unit = $dpicklerPickleImpl
       }
       $picklerName
     """
@@ -435,16 +441,15 @@ trait PickleMacros extends Macro {
   /* This macro first dispatches to the right SPickler, using the same dispatch logic
    * as in `pickleInto`, and then simply invokes `pickle` on it.
    */
-  def dpicklerPickle[T: c.WeakTypeTag](picklee: c.Tree, builder: c.Tree): c.Tree = {
+  def dpicklerPickle[T: c.WeakTypeTag](builder: c.Tree): c.Tree = {
     val tpe = weakTypeOf[T].widen
     val sym = tpe.typeSymbol.asClass
     val dispatchLogic = genDispatchLogic(tpe, builder)
     q"""
       import scala.pickling._
       import scala.pickling.internal._
-      val picklee = $picklee
       val pickler = $dispatchLogic
-      pickler.asInstanceOf[SPickler[$tpe]].pickle($picklee, $builder)
+      pickler.asInstanceOf[SPickler[$tpe]].pickle(picklee, $builder)
     """
   }
 }
