@@ -72,6 +72,9 @@ object MyBuild extends Build {
     settings = buildSettings ++ Seq(
       scalacOptions ++= Seq("-optimise"),
       libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
+      libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _), // for ToolBox
+      libraryDependencies += "junit" % "junit-dep" % "4.10" % "test",
+      libraryDependencies += "com.novocode" % "junit-interface" % "0.10" % "test",
       libraryDependencies += "org.scalatest" %% "scalatest" % "2.1.3" % "test",
       libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.11.3" % "test",
       libraryDependencies := {
