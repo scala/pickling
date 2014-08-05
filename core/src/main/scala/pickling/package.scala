@@ -2,8 +2,6 @@ package scala
 
 import scala.language.experimental.macros
 
-import scala.reflect.{classTag,ClassTag}
-import scala.tools.reflect.{ToolBox, ToolBoxError}
 import scala.reflect.runtime.{universe => ru}
 import ru._
 
