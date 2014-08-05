@@ -7,7 +7,7 @@ import java.net.URL
 
 object BuildSettings {
   val buildVersion = "0.9.0-SNAPSHOT"
-  val buildScalaVersion = System.getProperty("scala.version", "2.11.0")
+  val buildScalaVersion = System.getProperty("scala.version", "2.11.2")
 
   val buildSettings = Defaults.defaultSettings ++ Seq(
     version := buildVersion,
