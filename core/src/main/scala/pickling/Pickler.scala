@@ -46,8 +46,22 @@ trait GenPicklers {
   def genPickler(classLoader: ClassLoader, clazz: Class[_])(implicit format: PickleFormat, share: refs.Share): SPickler[_] = {
     // println(s"generating runtime pickler for $clazz") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
     //val runtime = new CompiledPicklerRuntime(classLoader, clazz)
-    val runtime = new InterpretedPicklerRuntime(classLoader, clazz)
-    runtime.genPickler
+    if (clazz == null) {
+      // TODO: make null case more efficient
+      val runtime = new InterpretedPicklerRuntime(classLoader, clazz)
+      runtime.genPickler
+    } else {
+      val className = clazz.getName
+      GlobalRegistry.picklerMap.get(className) match {
+        case None =>
+          val runtime = new InterpretedPicklerRuntime(classLoader, clazz)
+          val pickler = runtime.genPickler
+          GlobalRegistry.picklerMap += (className -> pickler)
+          pickler
+        case Some(existingPickler) =>
+          existingPickler
+      }
+    }
   }
 }
 
