@@ -45,22 +45,15 @@ trait GenPicklers {
   // since people probably would also have to deal with the necessity to abstract over pickle formats
   def genPickler(classLoader: ClassLoader, clazz: Class[_])(implicit format: PickleFormat, share: refs.Share): SPickler[_] = {
     // println(s"generating runtime pickler for $clazz") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
-    //val runtime = new CompiledPicklerRuntime(classLoader, clazz)
-    if (clazz == null) {
-      // TODO: make null case more efficient
-      val runtime = new InterpretedPicklerRuntime(classLoader, clazz)
-      runtime.genPickler
-    } else {
-      val className = clazz.getName
-      GlobalRegistry.picklerMap.get(className) match {
-        case None =>
-          val runtime = new InterpretedPicklerRuntime(classLoader, clazz)
-          val pickler = runtime.genPickler
-          GlobalRegistry.picklerMap += (className -> pickler)
-          pickler
-        case Some(existingPickler) =>
-          existingPickler
-      }
+    val className = if (clazz == null) "null" else clazz.getName
+    GlobalRegistry.picklerMap.get(className) match {
+      case None =>
+        val runtime = new InterpretedPicklerRuntime(classLoader, clazz)
+        val pickler = runtime.genPickler
+        GlobalRegistry.picklerMap += (className -> pickler)
+        pickler
+      case Some(existingPickler) =>
+        existingPickler
     }
   }
 }
@@ -81,9 +74,16 @@ trait GenUnpicklers {
   implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
   def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit format: PickleFormat, share: refs.Share): Unpickler[_] = {
     // println(s"generating runtime unpickler for ${tag.key}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
-    //val runtime = new CompiledUnpicklerRuntime(mirror, tag.tpe)
-    val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
-    runtime.genUnpickler
+    val className = tag.key
+    GlobalRegistry.unpicklerMap.get(className) match {
+      case None =>
+        val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
+        val unpickler = runtime.genUnpickler
+        GlobalRegistry.unpicklerMap += (className -> unpickler)
+        unpickler
+      case Some(existingUnpickler) =>
+        existingUnpickler
+    }
   }
 }
 
