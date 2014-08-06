@@ -65,8 +65,12 @@ object NegativeCompilation {
     f.getAbsolutePath
   }
 
+  def quasiquotesJar: String =
+    if (scalaBinaryVersion == "2.10") ":quasiquotes_2.10-2.0.0.jar"
+    else ""
+
   def expectError(errorSnippet: String, compileOptions: String = "",
-                  baseCompileOptions: String = s"-cp ${toolboxClasspath}")(code: String) {
+                  baseCompileOptions: String = s"-cp ${toolboxClasspath}${quasiquotesJar}")(code: String) {
     intercept[ToolBoxError] {
       eval(code, compileOptions + " " + baseCompileOptions)
     }.getMessage mustContain errorSnippet
