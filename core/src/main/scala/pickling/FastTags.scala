@@ -80,7 +80,8 @@ object FastTypeTag {
     classOf[java.lang.Long] -> FastTypeTag.Long,
     classOf[java.lang.Boolean] -> FastTypeTag.Boolean,
     classOf[java.lang.Float] -> FastTypeTag.Float,
-    classOf[java.lang.Double] -> FastTypeTag.Double
+    classOf[java.lang.Double] -> FastTypeTag.Double,
+    classOf[Array[Int]] -> FastTypeTag.ArrayInt
   )
 
   def mkRaw(clazz: Class[_], mirror: ru.Mirror): FastTypeTag[_] =
