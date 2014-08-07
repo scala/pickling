@@ -362,11 +362,11 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
     }
   }
 
-  abstract class CorePickler[T](name: String) extends SPickler[T] with Unpickler[T] {
+  abstract class AutoRegister[T](name: String) extends SPickler[T] with Unpickler[T] {
     GlobalRegistry.picklerMap += (name -> this)
   }
 
-  class PrimitivePicklerUnpickler[T](name: String) extends CorePickler[T](name) {
+  class PrimitivePicklerUnpickler[T](name: String) extends AutoRegister[T](name) {
     val format = null // not used
     def pickle(picklee: T, builder: PBuilder): Unit = {
       builder.beginEntry(picklee)
@@ -391,6 +391,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   implicit val doublePicklerUnpickler: SPickler[Double] with Unpickler[Double] = mkPrimitivePicklerUnpickler[Double]
   implicit val nullPicklerUnpickler: SPickler[Null] with Unpickler[Null] = mkPrimitivePicklerUnpickler[Null]
   implicit val stringPicklerUnpickler: SPickler[String] with Unpickler[String] = mkPrimitivePicklerUnpickler[String]
+  implicit val unitPicklerUnpickler: SPickler[Unit] with Unpickler[Unit] = mkPrimitivePicklerUnpickler[Unit]
 
   implicit def refPickler: SPickler[refs.Ref] = throw new Error("cannot pickle refs") // TODO: make this a macro
   implicit val refUnpickler: Unpickler[refs.Ref] = mkPrimitivePicklerUnpickler[refs.Ref]

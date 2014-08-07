@@ -78,6 +78,8 @@ package binary {
         // and everything will work out automatically!
 
         hints.tag.key match { // PERF: should store typestring once in hints.
+          case KEY_UNIT =>
+            Util.encodeByte(output, UNIT_TAG)
           case KEY_NULL =>
             Util.encodeByte(output, NULL_TAG)
           case KEY_BYTE =>
@@ -397,6 +399,7 @@ package binary {
         if (hints.isElidedType && nullablePrimitives.contains(hints.tag.key)) {
           val lookahead = arr(pos)
           lookahead match {
+            case UNIT_TAG => pos += 1; FastTypeTag.Unit
             case NULL_TAG => pos += 1; FastTypeTag.Null
             case REF_TAG  => pos += 1; FastTypeTag.Ref
             case _        => hints.tag
@@ -442,6 +445,7 @@ package binary {
     def readPrimitive(): Any = {
       var newpos = pos
       val res = lastTagRead.key match {
+          case KEY_UNIT    => ()
           case KEY_NULL    => null
           case KEY_REF     => newpos = pos+4 ; lookupUnpicklee(Util.decodeIntFrom(arr, pos))
           case KEY_BYTE    => newpos = pos+1 ; arr(pos)
@@ -499,6 +503,7 @@ package binary {
     val ELIDED_TAG: Byte = -1
     val NULL_TAG: Byte = -2
     val REF_TAG: Byte = -3
+    val UNIT_TAG: Byte = -4
 
     val KEY_NULL    = FastTypeTag.Null.key
     val KEY_BYTE    = FastTypeTag.Byte.key
