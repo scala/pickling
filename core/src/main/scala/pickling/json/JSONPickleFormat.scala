@@ -105,7 +105,7 @@ package json {
           if (hints.isElidedType) primitives(hints.tag.key)(picklee)
           else {
             appendLine("{")
-            appendLine("\"tpe\": \"" + typeToString(hints.tag.tpe) + "\",")
+            appendLine("\"tpe\": \"" + hints.tag.key + "\",")
             append("\"value\": ")
             indent()
             primitives(hints.tag.key)(picklee)
@@ -121,7 +121,7 @@ package json {
             // quickly decide whether we should use picklee.getClass instead
             val ts =
               if (hints.tag.key.contains("anonfun$")) picklee.getClass.getName
-              else typeToString(hints.tag.tpe)
+              else hints.tag.key
             append("\"tpe\": \"" + ts + "\"")
           }
         }

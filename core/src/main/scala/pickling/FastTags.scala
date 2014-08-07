@@ -85,9 +85,8 @@ object FastTypeTag {
   )
 
   def mkRaw(clazz: Class[_], mirror: ru.Mirror): FastTypeTag[_] =
-    raw.getOrElse(clazz, {
-      apply(mirror, clazz.getName())
-    })
+    if (clazz == null) FastTypeTag.Null
+    else raw.getOrElse(clazz, { apply(mirror, clazz.getName()) })
 }
 
 trait FastTypeTagMacros extends Macro {
