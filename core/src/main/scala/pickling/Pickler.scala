@@ -48,8 +48,8 @@ trait GenPicklers {
     val className = if (clazz == null) "null" else clazz.getName
     GlobalRegistry.picklerMap.get(className) match {
       case None =>
-        val runtime = new InterpretedPicklerRuntime(classLoader, clazz)
-        val pickler = runtime.genPickler
+        val runtime = new /*InterpretedPicklerRuntime*/RuntimePickler(classLoader, clazz)
+        val pickler = runtime.mkPickler
         GlobalRegistry.picklerMap += (className -> pickler)
         pickler
       case Some(existingPickler) =>
