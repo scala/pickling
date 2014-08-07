@@ -24,7 +24,6 @@ object RuntimeJsonSpec extends Properties("runtime-json") {
   // resolved to be Any will always trigger runtime pickling
   def roundTrip(obj: Any): Boolean = {
     val p = obj.pickle
-    println(p.value)
     val up = p.unpickle[Any]
     obj == up
   }
@@ -35,7 +34,6 @@ object RuntimeJsonSpec extends Properties("runtime-json") {
   // resolved to be Any will always trigger runtime pickling
   def roundTripG(obj: Any): Boolean = {
     val p = obj.pickle
-    println(p.value)
     val up = p.unpickle[Any]
     obj.asInstanceOf[G].a.mkString(",") == up.asInstanceOf[G].a.mkString(",")
   }
