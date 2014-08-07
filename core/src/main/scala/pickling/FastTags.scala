@@ -56,6 +56,37 @@ object FastTypeTag {
 
   def apply(mirror: ru.Mirror, key: String): FastTypeTag[_] = apply(mirror, typeFromString(mirror, key), key)
   def apply(key: String): FastTypeTag[_] = macro Compat.FastTypeTagMacros_apply
+
+  def valueTypeName(tag: FastTypeTag[_]): String = {
+    val clazz: Class[_] = tag match {
+      case FastTypeTag.Byte => classOf[java.lang.Byte]
+      case FastTypeTag.Short => classOf[java.lang.Short]
+      case FastTypeTag.Char => classOf[java.lang.Character]
+      case FastTypeTag.Int => classOf[java.lang.Integer]
+      case FastTypeTag.Long => classOf[java.lang.Long]
+      case FastTypeTag.Boolean => classOf[java.lang.Boolean]
+      case FastTypeTag.Float => classOf[java.lang.Float]
+      case FastTypeTag.Double => classOf[java.lang.Double]
+      case _ => null
+    }
+    if (clazz == null) tag.key else clazz.getName
+  }
+
+  val raw = Map[Class[_], FastTypeTag[_]](
+    classOf[java.lang.Byte] -> FastTypeTag.Byte,
+    classOf[java.lang.Short] -> FastTypeTag.Short,
+    classOf[java.lang.Character] -> FastTypeTag.Char,
+    classOf[java.lang.Integer] -> FastTypeTag.Int,
+    classOf[java.lang.Long] -> FastTypeTag.Long,
+    classOf[java.lang.Boolean] -> FastTypeTag.Boolean,
+    classOf[java.lang.Float] -> FastTypeTag.Float,
+    classOf[java.lang.Double] -> FastTypeTag.Double
+  )
+
+  def mkRaw(clazz: Class[_], mirror: ru.Mirror): FastTypeTag[_] =
+    raw.getOrElse(clazz, {
+      apply(mirror, clazz.getName())
+    })
 }
 
 trait FastTypeTagMacros extends Macro {

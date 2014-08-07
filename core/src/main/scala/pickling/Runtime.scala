@@ -51,8 +51,8 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_], shar
       existentialAbstraction(tparams, tpeWithMaybeTparams)
     }
   }
-  val tag = FastTypeTag(mirror, tpe, tpe.key)
-  //debug(s"PicklerRuntime: tpe = $tpe, tag = ${tag.toString}")
+  val tag = FastTypeTag(mirror, tpe, if (tpe.key == "Tuple2") "scala.Tuple2" else tpe.key/*clazz.getName*/)
+  debug(s"PicklerRuntime: tpe = $tpe, tag = ${tag.toString}, key = ${tag.key}")
   val irs = new IRs[ru.type](ru)
   import irs._
   val cir = flattenedClassIR(tpe)
