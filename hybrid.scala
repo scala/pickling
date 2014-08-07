@@ -59,11 +59,23 @@ object hybrid extends App {
     assert(obj == up)
   }
 
+  def roundTripG(obj: Any): Unit = {
+    val p = obj.pickle
+    println(p.value)
+    val up = p.unpickle[Any]
+    assert(obj.asInstanceOf[G].a.mkString(",") == up.asInstanceOf[G].a.mkString(","))
+  }
+
   roundTrip(C(5))
   roundTrip(D(5, 6.2d))
   roundTrip(E(5, "hello"))
   roundTrip(F(6, C(5)))
-  roundTrip(G(Array(1, 2, 3)))
+
+  roundTripG(G(Array(1, 2, 3)))
+  // array pickler should be reused
+  roundTripG(G(Array(1, 2, 3)))
+
+  roundTrip((5 -> "hello"))
 
 /*
   val t: Any = ('c', "hello")
