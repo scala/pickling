@@ -1,5 +1,7 @@
 package scala.pickling.binary.dpickler
 
+import scala.language.existentials
+
 import org.scalatest.FunSuite
 import scala.pickling._
 import binary._
