@@ -73,6 +73,7 @@ package json {
       indent()
     }
     private val primitives = Map[String, Any => Unit](
+      FastTypeTag.Unit.key -> ((picklee: Any) => append("\"()\"")),
       FastTypeTag.Null.key -> ((picklee: Any) => append("null")),
       FastTypeTag.Ref.key -> ((picklee: Any) => throw new Error("fatal error: shouldn't be invoked explicitly")),
       FastTypeTag.Int.key -> ((picklee: Any) => append(picklee.toString)),
@@ -105,7 +106,7 @@ package json {
           if (hints.isElidedType) primitives(hints.tag.key)(picklee)
           else {
             appendLine("{")
-            appendLine("\"tpe\": \"" + typeToString(hints.tag.tpe) + "\",")
+            appendLine("\"tpe\": \"" + hints.tag.key + "\",")
             append("\"value\": ")
             indent()
             primitives(hints.tag.key)(picklee)
@@ -121,7 +122,7 @@ package json {
             // quickly decide whether we should use picklee.getClass instead
             val ts =
               if (hints.tag.key.contains("anonfun$")) picklee.getClass.getName
-              else typeToString(hints.tag.tpe)
+              else hints.tag.key
             append("\"tpe\": \"" + ts + "\"")
           }
         }
@@ -165,6 +166,7 @@ package json {
   class JSONPickleReader(var datum: Any, val mirror: Mirror, format: JSONPickleFormat) extends PReader with PickleTools {
     private var lastReadTag: FastTypeTag[_] = null
     private val primitives = Map[String, () => Any](
+      FastTypeTag.Unit.key -> (() => ()),
       FastTypeTag.Null.key -> (() => null),
       FastTypeTag.Ref.key -> (() => lookupUnpicklee(datum.asInstanceOf[JSONObject].obj("$ref").asInstanceOf[Double].toInt)),
       FastTypeTag.Int.key -> (() => datum.asInstanceOf[Double].toInt),

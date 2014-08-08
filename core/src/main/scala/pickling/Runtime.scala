@@ -79,6 +79,9 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
     new SPickler[Any] with PickleTools {
       val format: PickleFormat = pf
 
+      val fields: List[(irs.FieldIR, Boolean)] =
+        cir.fields.filter(_.hasGetter).map(fir => (fir, fir.tpe.typeSymbol.isEffectivelyFinal))
+
       def pickleInto(fieldTpe: Type, picklee: Any, builder: PBuilder, pickler: SPickler[Any]): Unit = {
         if (shouldBotherAboutSharing(fieldTpe))
           picklee match {
@@ -99,11 +102,10 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
 
       def pickle(picklee: Any, builder: PBuilder): Unit = {
         if (picklee != null) {
-          def putFields() = {
+           def putFields() = {
             // TODO: need to support modules and other special guys here
             lazy val im = mirror.reflect(picklee)
-            val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
-            (nonLoopyFields ++ loopyFields).filter(_.hasGetter).foreach(fir => {
+            fields.foreach { case (fir, isEffFinal) =>
               val fldMirror = im.reflectField(fir.field.get)
               val fldValue: Any = fldMirror.get
               debug("pickling field value: " + fldValue)
@@ -111,11 +113,11 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
               val fldClass = if (fldValue != null) fldValue.getClass else null
               // by using only the class we convert Int to Integer
               // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
-              val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
-              val fldPickler = fldRuntime.genPickler.asInstanceOf[SPickler[Any]]
+              //val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
+              val fldPickler = /*fldRuntime.genPickler*/SPickler.genPickler(classLoader, fldClass).asInstanceOf[SPickler[Any]]
 
               builder.putField(fir.name, b => {
-                if (fir.tpe.typeSymbol.isEffectivelyFinal) {
+                if (isEffFinal) {
                   b.hintStaticallyElidedType()
                   pickleInto(fir.tpe, fldValue, b, fldPickler)
                 } else  {
@@ -133,7 +135,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
                 fldPickler.pickle(fldValue, b)
               })
 */
-            })
+            }
           }
 
           builder.hintTag(tag)
