@@ -98,7 +98,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
       val fields: List[Logic] =
         cir.fields.filter(_.hasGetter).map { fir =>
           if (fir.tpe.typeSymbol.isEffectivelyFinal) new EffectivelyFinalLogic(fir)
-          else if (fir.tpe.typeSymbol.isAbstract) new AbstractLogic(fir)
+          else if (fir.tpe.typeSymbol.asType.isAbstractType) new AbstractLogic(fir)
           else new DefaultLogic(fir)
         }
 
