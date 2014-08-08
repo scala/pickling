@@ -29,8 +29,7 @@ class RuntimeTypeInfo(classLoader: ClassLoader, clazz: Class[_]) {
   val irs = new IRs[ru.type](ru)
   val cir = irs.flattenedClassIR(tpe)
 
-  // this might not create the right tag if tpe is computed incorrectly
-  val tag = FastTypeTag(mirror, tpe, tpe.key/*clazz.getName*/)
+  val tag = FastTypeTag(mirror, tpe, tpe.key)
 }
 
 // TODO: sharing
@@ -64,11 +63,10 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
   }
 
   final class DefaultLogic(fir: irs.FieldIR) extends Logic(fir, false) {
+    val staticClass = mirror.runtimeClass(fir.tpe.erasure)
     def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: SPickler[Any]): Unit = {
-      val subPicklee = fldValue
-      // the condition below looks expensive!
-      if (subPicklee == null || subPicklee.getClass == mirror.runtimeClass(fir.tpe.erasure)) b.hintDynamicallyElidedType()
-      pickleInto(fldClass, subPicklee, b, fldPickler)
+      if (fldValue == null || fldValue.getClass == staticClass) b.hintDynamicallyElidedType()
+      pickleInto(fldClass, fldValue, b, fldPickler)
     }
   }
 
