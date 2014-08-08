@@ -346,6 +346,12 @@ trait PickleMacros extends Macro {
     implicitly[SPickler[$tpe]]
   """
 
+  def createRuntimePickler(builder: c.Tree): c.Tree = q"""
+    val classLoader = this.getClass.getClassLoader
+    $builder.hintTag(scala.pickling.FastTypeTag.mkRaw(clazz, scala.reflect.runtime.universe.runtimeMirror(classLoader)))
+    SPickler.genPickler(classLoader, clazz)
+  """
+
   def isCaseClass(tpe: c.Type): Boolean = {
     val sym = tpe.typeSymbol
     sym.isClass && sym.asClass.isCaseClass
@@ -379,7 +385,7 @@ trait PickleMacros extends Macro {
         CaseDef(Bind(newTermName("clazz"), Ident(nme.WILDCARD)), q"clazz == classOf[$subtpe]", createPickler(subtpe, builder))
       )
       //TODO OPTIMIZE: do getClass.getClassLoader only once
-      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"SPickler.genPickler(this.getClass.getClassLoader, clazz)")
+      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, createRuntimePickler(builder))
       // TODO: do we still want to use something like HasPicklerDispatch?
       q"""
         val customPickler = implicitly[SPickler[$tpe]]
