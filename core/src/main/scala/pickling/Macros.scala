@@ -205,7 +205,17 @@ trait UnpicklerMacros extends Macro {
       // NOTE: step 1) this creates an instance and initializes its fields reified from constructor arguments
       val cir = flattenedClassIR(tpe)
       val isPreciseType = targs.length == sym.typeParams.length && targs.forall(_.typeSymbol.isClass)
-      val canCallCtor = !cir.fields.exists(_.isErasedParam) && isPreciseType
+
+      val ctors = tpe.members.collect {
+        case m: MethodSymbol if m.isConstructor => m
+      }
+      println(s"ctors: ${ctors.mkString(",")}")
+
+      val someConstructorIsPrivate = ctors.exists(_.isPrivate)
+      println(s"someConstructorIsPrivate: $someConstructorIsPrivate")
+      val canCallCtor = !someConstructorIsPrivate && !cir.fields.exists(_.isErasedParam) && isPreciseType
+      println(s"canCallCtor: $canCallCtor")
+
       // TODO: for ultimate loop safety, pendingFields should be hoisted to the outermost unpickling scope
       // For example, in the snippet below, when unpickling C, we'll need to move the b.c assignment not
       // just outside the constructor of B, but outside the enclosing constructor of C!
@@ -228,18 +238,19 @@ trait UnpicklerMacros extends Macro {
           q"${sym.module}"
         } else if (canCallCtor) {
           val ctorFirs = cir.fields.filter(_.param.isDefined)
-          val ctorSig = ctorFirs.map(fir => (fir.param.get: Symbol, fir.tpe)).toMap
-          val ctorArgs = {
-            if (ctorSig.isEmpty) List(List())
-            else {
-              val ctorSym = ctorSig.head._1.owner.asMethod
-              ctorSym.paramss.map(_.map(f => {
-                val delayInitialization = pendingFields.exists(_.param.map(_ == f).getOrElse(false))
-                if (delayInitialization) q"null" else readField(f.name.toString, ctorSig(f))
-              }))
-            }
+          val ctorSig: Map[Symbol, Type] = ctorFirs.map(fir => (fir.param.get: Symbol, fir.tpe)).toMap
+
+          if (ctorSig.isEmpty) {
+            q"new $tpe"
+          } else {
+            val ctorSym = ctorSig.head._1.owner.asMethod
+            val ctorArgs = ctorSym.paramss.map(_.map(f => {
+              val delayInitialization = pendingFields.exists(_.param.map(_ == f).getOrElse(false))
+              if (delayInitialization) q"null" else readField(f.name.toString, ctorSig(f))
+            }))
+            q"new $tpe(...$ctorArgs)"
           }
-          q"new $tpe(...$ctorArgs)"
+
         } else {
           q"scala.concurrent.util.Unsafe.instance.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]"
         }
