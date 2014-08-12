@@ -2,7 +2,6 @@ package scala.pickling.externalizable
 
 import org.scalatest.FunSuite
 import scala.pickling._
-import json._
 import java.io.{Externalizable, IOException, ObjectInput, ObjectOutput}
 import java.nio.ByteBuffer
 
@@ -111,11 +110,63 @@ object StorageLevel {
   }
 }
 
+class StorageLevel2 (
+    private var useDisk_ : Boolean,
+    private var useMemory_ : Boolean,
+    private var deserialized_ : Boolean,
+    private var replication_ : Int)
+  extends Externalizable {
+
+  def toInt: Int = {
+    var ret = 0
+    if (useDisk_) {
+      ret |= 4
+    }
+    if (useMemory_) {
+      ret |= 2
+    }
+    if (deserialized_) {
+      ret |= 1
+    }
+    ret
+  }
+
+  override def writeExternal(out: ObjectOutput) {
+    out.writeByte(toInt)
+    out.writeByte(replication_)
+  }
+
+  override def readExternal(in: ObjectInput) {
+    val flags = in.readByte()
+    useDisk_ = (flags & 4) != 0
+    useMemory_ = (flags & 2) != 0
+    deserialized_ = (flags & 1) != 0
+    replication_ = in.readByte()
+  }
+
+  override def equals(other: Any): Boolean =
+    other.isInstanceOf[StorageLevel2] && {
+      val o = other.asInstanceOf[StorageLevel2]
+      o.useDisk_ == useDisk_ && o.useMemory_ == useMemory_ && o.deserialized_ == deserialized_ && o.replication_ == replication_
+    }
+}
+
 class ExternalizableTest extends FunSuite {
   test("main") {
+    import json._
+
     val sl = StorageLevel.MEMORY_ONLY_SER
     val pickle: JSONPickle = sl.pickle
     val up = pickle.unpickle[StorageLevel]
     assert(sl == up)
+  }
+
+  test("Externalizable pickler must not use knownSize") {
+    import binary._
+
+    val obj = new StorageLevel2(false, true, false, 1)
+    val p = obj.pickle
+    val up = p.unpickle[StorageLevel2]
+    assert(up == obj)
   }
 }

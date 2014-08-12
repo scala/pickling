@@ -33,6 +33,12 @@ trait PicklerMacros extends Macro {
       if (fir.isPublic) q"picklee.${newTermName(fir.name)}"
       else reflectively("picklee", fir)(fm => q"$fm.get.asInstanceOf[${fir.tpe}]").head //TODO: don't think it's possible for this to return an empty list, so head should be OK
 
+    def computeKnownSizeOfObjectOutput(cir: ClassIR): (Option[Tree], List[Tree]) = {
+      // for now we cannot compute a fixed size for ObjectOutputs
+      // in the future this will be a possible optimization (faster Externalizables)
+      None -> List()
+    }
+
     // this exists so as to provide as much information as possible about the size of the object
     // to-be-pickled to the picklers at runtime. In the case of the binary format for example,
     // this allows us to remove array copying and allocation bottlenecks
@@ -45,6 +51,11 @@ trait PicklerMacros extends Macro {
           if (elTpe.isEffectivelyPrimitive) Some(q"picklee.length * ${primitiveSizes(elTpe)} + 4")
           else None
         knownSize -> Nil
+      } else if (tpe <:< typeOf[java.io.Externalizable]) {
+        computeKnownSizeOfObjectOutput(cir) match {
+          case (None, lst) => None -> List()
+          case _ => c.abort(c.enclosingPosition, "not implemented")
+        }
       } else {
         val possibleSizes: List[(Option[Tree], Option[Tree])] = cir.fields map {
           case fld if fld.tpe.isEffectivelyPrimitive =>
