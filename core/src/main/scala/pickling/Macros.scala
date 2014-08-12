@@ -86,7 +86,17 @@ trait PicklerMacros extends Macro {
         builder.beginEntry(picklee)
       """
       val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
-      val putFields = (nonLoopyFields ++ loopyFields).flatMap(fir => {
+      val putFields =
+        if (tpe <:< typeOf[java.io.Externalizable]) {
+          val fieldName = """$ext"""
+          List(q"""
+            val out = new scala.pickling.util.GenObjectOutput
+            picklee.writeExternal(out)
+            builder.putField($fieldName, b =>
+              out.pickleInto(b)
+            )
+          """)
+        } else (nonLoopyFields ++ loopyFields).flatMap(fir => {
         if (sym.isModuleClass) {
           Nil
         } else if (fir.hasGetter) {
@@ -201,11 +211,31 @@ trait UnpicklerMacros extends Macro {
     def unpickleObject = {
       def readField(name: String, tpe: Type) = q"reader.readField($name).unpickle[$tpe]"
 
+      if (tpe <:< typeOf[java.io.Externalizable]) {
+        val fieldName = """$ext"""
+        q"""
+          val inst = scala.concurrent.util.Unsafe.instance.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]
+          val out = reader.readField($fieldName).unpickle[scala.pickling.util.GenObjectOutput]
+          val in = out.toInput
+          inst.readExternal(in)
+          inst
+        """
+      } else {
       // TODO: validate that the tpe argument of unpickle and weakTypeOf[T] work together
       // NOTE: step 1) this creates an instance and initializes its fields reified from constructor arguments
       val cir = flattenedClassIR(tpe)
       val isPreciseType = targs.length == sym.typeParams.length && targs.forall(_.typeSymbol.isClass)
-      val canCallCtor = !cir.fields.exists(_.isErasedParam) && isPreciseType
+
+      val ctors = tpe.members.collect {
+        case m: MethodSymbol if m.isConstructor => m
+      }
+      // println(s"ctors: ${ctors.mkString(",")}")
+
+      val someConstructorIsPrivate = ctors.exists(_.isPrivate)
+      // println(s"someConstructorIsPrivate: $someConstructorIsPrivate")
+      val canCallCtor = !someConstructorIsPrivate && !cir.fields.exists(_.isErasedParam) && isPreciseType
+      // println(s"canCallCtor: $canCallCtor")
+
       // TODO: for ultimate loop safety, pendingFields should be hoisted to the outermost unpickling scope
       // For example, in the snippet below, when unpickling C, we'll need to move the b.c assignment not
       // just outside the constructor of B, but outside the enclosing constructor of C!
@@ -228,18 +258,19 @@ trait UnpicklerMacros extends Macro {
           q"${sym.module}"
         } else if (canCallCtor) {
           val ctorFirs = cir.fields.filter(_.param.isDefined)
-          val ctorSig = ctorFirs.map(fir => (fir.param.get: Symbol, fir.tpe)).toMap
-          val ctorArgs = {
-            if (ctorSig.isEmpty) List(List())
-            else {
-              val ctorSym = ctorSig.head._1.owner.asMethod
-              ctorSym.paramss.map(_.map(f => {
-                val delayInitialization = pendingFields.exists(_.param.map(_ == f).getOrElse(false))
-                if (delayInitialization) q"null" else readField(f.name.toString, ctorSig(f))
-              }))
-            }
+          val ctorSig: Map[Symbol, Type] = ctorFirs.map(fir => (fir.param.get: Symbol, fir.tpe)).toMap
+
+          if (ctorSig.isEmpty) {
+            q"new $tpe"
+          } else {
+            val ctorSym = ctorSig.head._1.owner.asMethod
+            val ctorArgs = ctorSym.paramss.map(_.map(f => {
+              val delayInitialization = pendingFields.exists(_.param.map(_ == f).getOrElse(false))
+              if (delayInitialization) q"null" else readField(f.name.toString, ctorSig(f))
+            }))
+            q"new $tpe(...$ctorArgs)"
           }
-          q"new $tpe(...$ctorArgs)"
+
         } else {
           q"scala.concurrent.util.Unsafe.instance.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]"
         }
@@ -275,6 +306,7 @@ trait UnpicklerMacros extends Macro {
           }         }
       }
       q"$initializationLogic"
+      }
     }
     def unpickleLogic = tpe match {
       case NullTpe => q"null"
