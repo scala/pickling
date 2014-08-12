@@ -86,7 +86,17 @@ trait PicklerMacros extends Macro {
         builder.beginEntry(picklee)
       """
       val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
-      val putFields = (nonLoopyFields ++ loopyFields).flatMap(fir => {
+      val putFields =
+        if (tpe <:< typeOf[java.io.Externalizable]) {
+          val fieldName = """$ext"""
+          List(q"""
+            val out = new scala.pickling.util.GenObjectOutput
+            picklee.writeExternal(out)
+            builder.putField($fieldName, b =>
+              out.pickleInto(b)
+            )
+          """)
+        } else (nonLoopyFields ++ loopyFields).flatMap(fir => {
         if (sym.isModuleClass) {
           Nil
         } else if (fir.hasGetter) {
@@ -201,6 +211,16 @@ trait UnpicklerMacros extends Macro {
     def unpickleObject = {
       def readField(name: String, tpe: Type) = q"reader.readField($name).unpickle[$tpe]"
 
+      if (tpe <:< typeOf[java.io.Externalizable]) {
+        val fieldName = """$ext"""
+        q"""
+          val inst = scala.concurrent.util.Unsafe.instance.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]
+          val out = reader.readField($fieldName).unpickle[scala.pickling.util.GenObjectOutput]
+          val in = out.toInput
+          inst.readExternal(in)
+          inst
+        """
+      } else {
       // TODO: validate that the tpe argument of unpickle and weakTypeOf[T] work together
       // NOTE: step 1) this creates an instance and initializes its fields reified from constructor arguments
       val cir = flattenedClassIR(tpe)
@@ -209,12 +229,12 @@ trait UnpicklerMacros extends Macro {
       val ctors = tpe.members.collect {
         case m: MethodSymbol if m.isConstructor => m
       }
-      println(s"ctors: ${ctors.mkString(",")}")
+      // println(s"ctors: ${ctors.mkString(",")}")
 
       val someConstructorIsPrivate = ctors.exists(_.isPrivate)
-      println(s"someConstructorIsPrivate: $someConstructorIsPrivate")
+      // println(s"someConstructorIsPrivate: $someConstructorIsPrivate")
       val canCallCtor = !someConstructorIsPrivate && !cir.fields.exists(_.isErasedParam) && isPreciseType
-      println(s"canCallCtor: $canCallCtor")
+      // println(s"canCallCtor: $canCallCtor")
 
       // TODO: for ultimate loop safety, pendingFields should be hoisted to the outermost unpickling scope
       // For example, in the snippet below, when unpickling C, we'll need to move the b.c assignment not
@@ -286,6 +306,7 @@ trait UnpicklerMacros extends Macro {
           }         }
       }
       q"$initializationLogic"
+      }
     }
     def unpickleLogic = tpe match {
       case NullTpe => q"null"
