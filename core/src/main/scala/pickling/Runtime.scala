@@ -189,7 +189,11 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
               List[FieldIR]()
             } else {
               val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
-              (nonLoopyFields ++ loopyFields).filter(fir => fir.isNonParam || fir.isReifiedParam)
+              (nonLoopyFields ++ loopyFields).filter(fir =>
+                fir.hasGetter || {
+                  // exists as Java field
+                  scala.util.Try(clazz.getDeclaredField(fir.name)).isSuccess
+                })
             }
 
           def fieldVals = pendingFields.map(fir => {
@@ -223,10 +227,19 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
           if (shouldBotherAboutSharing(tpe)) registerUnpicklee(inst, preregisterUnpicklee())
           val im = mirror.reflect(inst)
 
+          //debug(s"pendingFields: ${pendingFields.size}")
+          //debug(s"fieldVals: ${fieldVals.size}")
+
           pendingFields.zip(fieldVals) foreach {
             case (fir, fval) =>
-              val fmX = im.reflectField(fir.field.get)
-              fmX.set(fval)
+              if (fir.hasGetter) {
+                val fmX = im.reflectField(fir.field.get)
+                fmX.set(fval)
+              } else {
+                val javaField = clazz.getDeclaredField(fir.name)
+                javaField.setAccessible(true)
+                javaField.set(inst, fval)
+              }
           }
 
           inst
