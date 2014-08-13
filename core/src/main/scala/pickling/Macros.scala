@@ -108,29 +108,37 @@ trait PicklerMacros extends Macro {
             )
           """)
         } else (nonLoopyFields ++ loopyFields).flatMap(fir => {
+        // for each field, compute a tree for pickling it
+        // (or empty list, if impossible)
+
+        def putField(getterLogic: Tree) = {
+          def wrap(pickleLogic: Tree) = q"builder.putField(${fir.name}, b => $pickleLogic)"
+          wrap {
+            if (fir.tpe.typeSymbol.isEffectivelyFinal) q"""
+              b.hintStaticallyElidedType()
+              $getterLogic.pickleInto(b)
+            """ else q"""
+              val subPicklee: ${fir.tpe} = $getterLogic
+              if (subPicklee == null || subPicklee.getClass == classOf[${fir.tpe}]) b.hintDynamicallyElidedType() else ()
+              subPicklee.pickleInto(b)
+            """
+          }
+        }
+
         if (sym.isModuleClass) {
           Nil
         } else if (fir.hasGetter) {
-          def putField(getterLogic: Tree) = {
-            def wrap(pickleLogic: Tree) = q"builder.putField(${fir.name}, b => $pickleLogic)"
-            wrap {
-              if (fir.tpe.typeSymbol.isEffectivelyFinal) q"""
-                b.hintStaticallyElidedType()
-                $getterLogic.pickleInto(b)
-              """ else q"""
-                val subPicklee: ${fir.tpe} = $getterLogic
-                if (subPicklee == null || subPicklee.getClass == classOf[${fir.tpe}]) b.hintDynamicallyElidedType() else ()
-                subPicklee.pickleInto(b)
-              """
-            }
-          }
+
           if (fir.isPublic) List(putField(q"picklee.${newTermName(fir.name)}"))
           else reflectively("picklee", fir)(fm => putField(q"$fm.get.asInstanceOf[${fir.tpe}]"))
         } else {
-          // NOTE: this means that we've encountered a primary constructor parameter elided in the "constructors" phase
-          // we can do nothing about that, so we don't serialize this field right now leaving everything to the unpickler
-          // when deserializing we'll have to use the Unsafe.allocateInstance strategy
-          Nil
+          //val clazz = universe.mirror.runtimeClass(tpe.erasure)
+          //if (Try(clazz.getDeclaredField(fir.name)).isSuccess) {
+            // pickle field using reflection
+            reflectivelyWithoutGetter("picklee", fir)(fvalue => putField(q"$fvalue.asInstanceOf[${fir.tpe}]"))
+          /*} else {
+            Nil
+          }*/
         }
       })
       val endEntry = q"builder.endEntry()"
