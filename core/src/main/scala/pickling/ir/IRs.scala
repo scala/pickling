@@ -35,17 +35,9 @@ class IRs[U <: Universe with Singleton](val uni: U) {
   // TODO: minimal versus verbose PickleFormat. i.e. someone might want all concrete inherited fields in their pickle
 
   def notMarkedTransient(sym: TermSymbol): Boolean = {
-    //println(s"checking annots of ${sym.toString}...")
     val tr = scala.util.Try {
-      if (sym.accessed != NoSymbol) {
-        val overall = sym.accessed.annotations.forall { a =>
-          val res = (a.tpe =:= typeOf[scala.transient])
-          !res
-        }
-        overall
-      } else true // if there is no backing field, then it cannot be marked transient
-    }
-    if (tr.isFailure) {
+      (sym.accessed == NoSymbol) || // if there is no backing field, then it cannot be marked transient
+      !sym.accessed.annotations.exists(_.tpe =:= typeOf[scala.transient])
     }
     tr.isFailure || tr.get
   }
