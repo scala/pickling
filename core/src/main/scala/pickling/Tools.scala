@@ -375,6 +375,18 @@ abstract class Macro { self =>
   private var reflectivePrologueEmitted = false // TODO: come up with something better
   def reflectively(target: String, fir: FieldIR)(body: Tree => Tree): List[Tree] = reflectively(newTermName(target), fir)(body)
 
+  def reflectivelyWithoutGetter(target: String, fir: FieldIR)(body: Tree => Tree): List[Tree] = {
+    val pickleeName = newTermName(target)
+    val getFieldValue = q"""
+      val clazz = $pickleeName.getClass
+      scala.util.Try(clazz.getDeclaredField(${fir.name})).map { javaField =>
+        javaField.setAccessible(true)
+        javaField.get($pickleeName)
+      }
+    """
+    List(body(getFieldValue))
+  }
+
   /**
    *  requires: !fir.accessor.isEmpty
    */

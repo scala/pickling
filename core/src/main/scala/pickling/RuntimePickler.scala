@@ -1,5 +1,7 @@
 package scala.pickling
 
+import java.lang.reflect.Field
+
 import scala.reflect.runtime.{universe => ru}
 import ir._
 
@@ -37,7 +39,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
   import ru._
 
   sealed abstract class Logic(fir: irs.FieldIR, isEffFinal: Boolean) {
-    def run(builder: PBuilder, im: ru.InstanceMirror): Unit = {
+    def run(builder: PBuilder, picklee: Any, im: ru.InstanceMirror): Unit = {
       val fldMirror = im.reflectField(fir.field.get)
       val fldValue: Any = fldMirror.get
       val fldClass = if (fldValue != null) fldValue.getClass else null
@@ -83,6 +85,41 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
     }
   }
 
+  sealed class PrivateJavaFieldLogic(fir: irs.FieldIR, field: Field) extends Logic(fir, false) {
+    override def run(builder: PBuilder, picklee: Any, im: ru.InstanceMirror): Unit = {
+      field.setAccessible(true)
+      val fldValue = field.get(picklee)
+      val fldClass = if (fldValue != null) fldValue.getClass else null
+
+      //debug(s"pickling field of type: ${fir.tpe.toString}")
+      //debug(s"isEffFinal: $isEffFinal")
+      //debug(s"field value: $fldValue")
+      //debug(s"field class: ${fldClass.getName}")
+
+      // idea: picklers for all fields could be created and cached once and for all.
+      // however, it depends on whether the type of the field is effectively final or not.
+      // essentially, we have to emulate the behavior of generated picklers, which make
+      // the same decision.
+      val fldPickler = SPickler.genPickler(classLoader, fldClass).asInstanceOf[SPickler[Any]]
+      //debug(s"looked up field pickler: $fldPickler")
+
+      builder.putField(field.getName, b => {
+        pickleLogic(fldClass, fldValue, b, fldPickler)
+      })
+    }
+
+    def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: SPickler[Any]): Unit = {
+      pickleInto(fldClass, fldValue, b, fldPickler)
+    }
+  }
+
+  final class PrivateEffectivelyFinalJavaFieldLogic(fir: irs.FieldIR, field: Field) extends PrivateJavaFieldLogic(fir, field) {
+    override def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: SPickler[Any]): Unit = {
+      b.hintStaticallyElidedType()
+      pickleInto(fldClass, fldValue, b, fldPickler)
+    }
+  }
+
   // difference to old runtime pickler: create tag based on fieldClass instead of fir.tpe
   def pickleInto(fieldClass: Class[_], fieldValue: Any, builder: PBuilder, pickler: SPickler[Any]): Unit = {
     val fieldTag = FastTypeTag.mkRaw(fieldClass, mirror)
@@ -95,16 +132,28 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
     new SPickler[Any] {
       val format: PickleFormat = pf
 
-      val fields: List[Logic] =
-        cir.fields.filter(_.hasGetter).map { fir =>
-          if (fir.tpe.typeSymbol.isEffectivelyFinal) new EffectivelyFinalLogic(fir)
-          else if (fir.tpe.typeSymbol.asType.isAbstractType) new AbstractLogic(fir)
-          else new DefaultLogic(fir)
-        }
+      val fields: List[Logic] = cir.fields.flatMap { fir =>
+        if (fir.hasGetter)
+          List(
+            if (fir.tpe.typeSymbol.isEffectivelyFinal) new EffectivelyFinalLogic(fir)
+            else if (fir.tpe.typeSymbol.asType.isAbstractType) new AbstractLogic(fir)
+            else new DefaultLogic(fir)
+          )
+        else
+          try {
+            val javaField = clazz.getDeclaredField(fir.name)
+            List(
+              if (fir.tpe.typeSymbol.isEffectivelyFinal) new PrivateEffectivelyFinalJavaFieldLogic(fir, javaField)
+              else new PrivateJavaFieldLogic(fir, javaField)
+            )
+          } catch {
+            case e: java.lang.NoSuchFieldException => List()
+          }
+      }
 
       def putFields(picklee: Any, builder: PBuilder): Unit = {
         val im = mirror.reflect(picklee)
-        fields.foreach(_.run(builder, im))
+        fields.foreach(_.run(builder, picklee, im))
       }
 
       def pickle(picklee: Any, builder: PBuilder): Unit = {
