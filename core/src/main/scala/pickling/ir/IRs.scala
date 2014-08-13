@@ -33,14 +33,43 @@ class IRs[U <: Universe with Singleton](val uni: U) {
   private type C = ClassIR
 
   // TODO: minimal versus verbose PickleFormat. i.e. someone might want all concrete inherited fields in their pickle
+
+  def notMarkedTransient(sym: TermSymbol): Boolean = {
+    //println(s"checking annots of ${sym.toString}...")
+    val tr = scala.util.Try {
+      if (sym.accessed != NoSymbol) {
+        val overall = sym.accessed.annotations.forall { a =>
+          val res = (a.tpe =:= typeOf[scala.transient])
+          !res
+        }
+        overall
+      } else true // if there is no backing field, then it cannot be marked transient
+    }
+    if (tr.isFailure) {
+    }
+    tr.isFailure || tr.get
+  }
+
+  /** Creates FieldIRs for the given type, tp.
+  */
   private def fields(tp: Type): Q = {
     val ctor = tp.declaration(nme.CONSTRUCTOR) match {
       case overloaded: TermSymbol => overloaded.alternatives.head.asMethod // NOTE: primary ctor is always the first in the list
       case primaryCtor: MethodSymbol => primaryCtor
       case NoSymbol => NoSymbol
     }
-    val ctorParams = if (ctor != NoSymbol) ctor.asMethod.paramss.flatten.map(_.asTerm) else Nil
-    val allAccessors = tp.declarations.collect{ case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
+
+    val allAccessors = tp.declarations.collect { case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
+
+    val (filteredAccessors, transientAccessors) = allAccessors.partition(notMarkedTransient)
+
+    val ctorParams = if (ctor != NoSymbol) ctor.asMethod.paramss.flatten.flatMap { sym =>
+      if (transientAccessors.exists(acc => acc.name.toString == sym.name.toString)) {
+        //println(s"found a BAD accessor: $sym")
+        List()
+      } else List(sym.asTerm)
+    } else Nil
+
     val (paramAccessors, otherAccessors) = allAccessors.partition(_.isParamAccessor)
 
     def mkFieldIR(sym: TermSymbol, param: Option[TermSymbol], accessor: Option[MethodSymbol]) = {
@@ -54,7 +83,8 @@ class IRs[U <: Universe with Singleton](val uni: U) {
     val varGetters = otherAccessors.collect{ case meth if meth.isGetter && meth.accessed != NoSymbol && meth.accessed.asTerm.isVar => meth }
     val varFields = varGetters.map(sym => mkFieldIR(sym, None, Some(sym)))
 
-    paramFields ++ varFields
+    val res = paramFields ++ varFields
+    res
   }
 
   private def composition(f1: (Q, Q) => Q, f2: (C, C) => C, f3: C => List[C]) =
@@ -62,7 +92,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
 
   private val f1 = (q1: Q, q2: Q) => q1 ++ q2
 
-  private val f2 = (c1: C, c2: C) => ClassIR(c2.tpe, c1, fields(c2.tpe))
+  private val f2 = (c1: C, c2: C) => ClassIR(c2.tpe, c1, /*fields(c2.tpe)*/c2.fields) // here: fields is called a 2nd time.
 
   private val f3 = (c: C) =>
     c.tpe.baseClasses
