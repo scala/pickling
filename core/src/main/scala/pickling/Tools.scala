@@ -379,9 +379,10 @@ abstract class Macro { self =>
     val pickleeName = newTermName(target)
     val getFieldValue = q"""
       val clazz = $pickleeName.getClass
-      val javaField: java.lang.reflect.Field = clazz.getDeclaredField(${fir.name})
-      javaField.setAccessible(true)
-      javaField.get($pickleeName)
+      scala.util.Try(clazz.getDeclaredField(${fir.name})).map { javaField =>
+        javaField.setAccessible(true)
+        javaField.get($pickleeName)
+      }
     """
     List(body(getFieldValue))
   }

@@ -133,14 +133,13 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
       val format: PickleFormat = pf
 
       val fields: List[Logic] = cir.fields.flatMap { fir =>
-        if (fir.hasGetter) {
-          //debug(s"pickling field of type ${fir.tpe.key}")
+        if (fir.hasGetter)
           List(
             if (fir.tpe.typeSymbol.isEffectivelyFinal) new EffectivelyFinalLogic(fir)
             else if (fir.tpe.typeSymbol.asType.isAbstractType) new AbstractLogic(fir)
             else new DefaultLogic(fir)
           )
-        } else
+        else
           try {
             val javaField = clazz.getDeclaredField(fir.name)
             List(
@@ -151,32 +150,14 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
             case e: java.lang.NoSuchFieldException => List()
           }
       }
-/*
-      {
-        debug(s"cir.fields: ${cir.fields.mkString(",")}")
 
-        val regularFields = cir.fields.filter(_.hasGetter)
-        debug(s"regular fields with getters: ${regularFields.mkString(",")}")
-
-        val ctorParamsWithoutGetter =
-          clazz.getDeclaredFields().filter(df => regularFields.forall(_.name != df.getName))
-        debug(s"ctor params without getters: ${ctorParamsWithoutGetter.mkString(",")}")
-
-        ctorParamsWithoutGetter.map(cp => new CtorParamLogic(cp)).toList ++ regularFields.map { fir =>
-          debug(s"pickling field of type ${fir.tpe.key}")
-          if (fir.tpe.typeSymbol.isEffectivelyFinal) new EffectivelyFinalLogic(fir)
-          else if (fir.tpe.typeSymbol.asType.isAbstractType) new AbstractLogic(fir)
-          else new DefaultLogic(fir)
-        }
-      }
-*/
       def putFields(picklee: Any, builder: PBuilder): Unit = {
         val im = mirror.reflect(picklee)
         fields.foreach(_.run(builder, picklee, im))
       }
 
       def pickle(picklee: Any, builder: PBuilder): Unit = {
-        debug(s"pickling object of type: ${tag.key}")
+        //debug(s"pickling object of type: ${tag.key}")
         builder.beginEntry(picklee)
         putFields(picklee, builder)
         builder.endEntry()

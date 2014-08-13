@@ -111,34 +111,40 @@ trait PicklerMacros extends Macro {
         // for each field, compute a tree for pickling it
         // (or empty list, if impossible)
 
-        def putField(getterLogic: Tree) = {
-          def wrap(pickleLogic: Tree) = q"builder.putField(${fir.name}, b => $pickleLogic)"
-          wrap {
-            if (fir.tpe.typeSymbol.isEffectivelyFinal) q"""
-              b.hintStaticallyElidedType()
-              $getterLogic.pickleInto(b)
-            """ else q"""
-              val subPicklee: ${fir.tpe} = $getterLogic
-              if (subPicklee == null || subPicklee.getClass == classOf[${fir.tpe}]) b.hintDynamicallyElidedType() else ()
-              subPicklee.pickleInto(b)
-            """
-          }
+        def pickleLogic(fieldValue: Tree): Tree =
+          if (fir.tpe.typeSymbol.isEffectivelyFinal) q"""
+            b.hintStaticallyElidedType()
+            $fieldValue.pickleInto(b)
+          """ else q"""
+            val subPicklee: ${fir.tpe} = $fieldValue
+            if (subPicklee == null || subPicklee.getClass == classOf[${fir.tpe}]) b.hintDynamicallyElidedType()
+            subPicklee.pickleInto(b)
+          """
+
+        def putField(getterLogic: Tree) =
+          q"builder.putField(${fir.name}, b => ${pickleLogic(getterLogic)})"
+
+        // we assume getterLogic is a tree of type Try[${fir.tpe}]
+        def tryPutField(getterLogic: Tree) = {
+          val tryName = c.fresh(newTermName("tr"))
+          val valName = c.fresh(newTermName("value"))
+          q"""
+            val $tryName = $getterLogic
+            if ($tryName.isSuccess) {
+              val $valName = $tryName.get
+              builder.putField(${fir.name}, b => ${pickleLogic(Ident(valName))})
+            }
+          """
         }
 
         if (sym.isModuleClass) {
           Nil
         } else if (fir.hasGetter) {
-
           if (fir.isPublic) List(putField(q"picklee.${newTermName(fir.name)}"))
           else reflectively("picklee", fir)(fm => putField(q"$fm.get.asInstanceOf[${fir.tpe}]"))
         } else {
-          //val clazz = universe.mirror.runtimeClass(tpe.erasure)
-          //if (Try(clazz.getDeclaredField(fir.name)).isSuccess) {
-            // pickle field using reflection
-            reflectivelyWithoutGetter("picklee", fir)(fvalue => putField(q"$fvalue.asInstanceOf[${fir.tpe}]"))
-          /*} else {
-            Nil
-          }*/
+          reflectivelyWithoutGetter("picklee", fir)(fvalue =>
+            tryPutField(q"$fvalue.asInstanceOf[scala.util.Try[${fir.tpe}]]"))
         }
       })
       val endEntry = q"builder.endEntry()"
@@ -267,11 +273,12 @@ trait UnpicklerMacros extends Macro {
       // nevertheless don't despair and try to prove whether this is or is not the fact
       // i was super scared that string sharing is going to fail due to the same reason, but it did not :)
       // in the worst case we can do the same as the interpreted runtime does - just go for allocateInstance
-      val pendingFields = cir.fields.filter(fir =>
-        fir.isNonParam ||
-        (!canCallCtor && fir.isReifiedParam) ||
-        shouldBotherAboutLooping(fir.tpe)
+
+      // pending fields are fields that are restored after instantiation (e.g., through field assignments)
+      val pendingFields = if (!canCallCtor) cir.fields else cir.fields.filter(fir =>
+        fir.isNonParam || shouldBotherAboutLooping(fir.tpe)
       )
+
       val instantiationLogic = {
         if (sym.isModuleClass) {
           q"${sym.module}"
@@ -304,7 +311,15 @@ trait UnpicklerMacros extends Macro {
           val initPendingFields = pendingFields.flatMap(fir => {
             val readFir = readField(fir.name, fir.tpe)
             if (fir.isPublic && fir.hasSetter) List(q"$instance.${newTermName(fir.name)} = $readFir".asInstanceOf[Tree])
-            else if (fir.accessor.isEmpty) List()
+            else if (fir.accessor.isEmpty) List(q"""
+              try {
+                val javaField = $instance.getClass.getDeclaredField(${fir.name})
+                javaField.setAccessible(true)
+                javaField.set($instance, $readFir)
+              } catch {
+                case e: java.lang.NoSuchFieldException => /* do nothing */
+              }
+            """)
             else reflectively(instance, fir)(fm => q"$fm.set($readFir)".asInstanceOf[Tree])
           })
 

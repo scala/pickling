@@ -227,9 +227,9 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
           if (shouldBotherAboutSharing(tpe)) registerUnpicklee(inst, preregisterUnpicklee())
           val im = mirror.reflect(inst)
 
-          debug(s"pendingFields: ${pendingFields.size}")
-          debug(s"fieldVals: ${fieldVals.size}")
-          
+          //debug(s"pendingFields: ${pendingFields.size}")
+          //debug(s"fieldVals: ${fieldVals.size}")
+
           pendingFields.zip(fieldVals) foreach {
             case (fir, fval) =>
               if (fir.hasGetter) {
