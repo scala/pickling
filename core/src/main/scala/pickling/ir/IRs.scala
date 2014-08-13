@@ -24,7 +24,6 @@ class IRs[U <: Universe with Singleton](val uni: U) {
     // this part is interesting to unpicklers
     def hasSetter = setter.isDefined
     def isErasedParam = isParam && accessor.isEmpty // TODO: this should somehow communicate with the constructors phase!
-    def isReifiedParam = isParam && accessor.nonEmpty
     def isNonParam = !isParam
   }
   case class ClassIR(tpe: Type, parent: ClassIR, fields: List[FieldIR]) extends PickleIR
@@ -33,14 +32,33 @@ class IRs[U <: Universe with Singleton](val uni: U) {
   private type C = ClassIR
 
   // TODO: minimal versus verbose PickleFormat. i.e. someone might want all concrete inherited fields in their pickle
+
+  def notMarkedTransient(sym: TermSymbol): Boolean = {
+    val tr = scala.util.Try {
+      (sym.accessed == NoSymbol) || // if there is no backing field, then it cannot be marked transient
+      !sym.accessed.annotations.exists(_.tpe =:= typeOf[scala.transient])
+    }
+    tr.isFailure || tr.get
+  }
+
+  /** Creates FieldIRs for the given type, tp.
+  */
   private def fields(tp: Type): Q = {
     val ctor = tp.declaration(nme.CONSTRUCTOR) match {
       case overloaded: TermSymbol => overloaded.alternatives.head.asMethod // NOTE: primary ctor is always the first in the list
       case primaryCtor: MethodSymbol => primaryCtor
       case NoSymbol => NoSymbol
     }
-    val ctorParams = if (ctor != NoSymbol) ctor.asMethod.paramss.flatten.map(_.asTerm) else Nil
-    val allAccessors = tp.declarations.collect{ case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
+
+    val allAccessors = tp.declarations.collect { case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
+
+    val (filteredAccessors, transientAccessors) = allAccessors.partition(notMarkedTransient)
+
+    val ctorParams = if (ctor != NoSymbol) ctor.asMethod.paramss.flatten.flatMap { sym =>
+      if (transientAccessors.exists(acc => acc.name.toString == sym.name.toString)) List()
+      else List(sym.asTerm)
+    } else Nil
+
     val (paramAccessors, otherAccessors) = allAccessors.partition(_.isParamAccessor)
 
     def mkFieldIR(sym: TermSymbol, param: Option[TermSymbol], accessor: Option[MethodSymbol]) = {
@@ -62,7 +80,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
 
   private val f1 = (q1: Q, q2: Q) => q1 ++ q2
 
-  private val f2 = (c1: C, c2: C) => ClassIR(c2.tpe, c1, fields(c2.tpe))
+  private val f2 = (c1: C, c2: C) => ClassIR(c2.tpe, c1, c2.fields)
 
   private val f3 = (c: C) =>
     c.tpe.baseClasses

@@ -5,6 +5,7 @@ import scala.reflect.macros.Context
 import scala.reflect.api.{Universe => ApiUniverse}
 import scala.reflect.runtime.{universe => ru}
 import language.experimental.macros
+import scala.reflect.ClassTag
 
 trait FastTypeTag[T] extends Equals {
   def mirror: ru.Mirror
@@ -18,6 +19,8 @@ trait FastTypeTag[T] extends Equals {
 
 object FastTypeTag {
   implicit def materializeFastTypeTag[T]: FastTypeTag[T] = macro Compat.FastTypeTagMacros_impl[T]
+
+  implicit def materializeFastTypeTagOfClassTag[T]: FastTypeTag[ClassTag[T]] = macro Compat.FastTypeTagMacros_implClassTag[T]
 
   private def stdTag[T: ru.TypeTag]: FastTypeTag[T] = apply(scala.reflect.runtime.currentMirror, ru.typeOf[T], ru.typeOf[T].key).asInstanceOf[FastTypeTag[T]]
   implicit val Null    = stdTag[Null]
@@ -105,6 +108,17 @@ trait FastTypeTagMacros extends Macro {
         def mirror = scala.pickling.internal.`package`.currentMirror
         lazy val tpe = scala.reflect.runtime.universe.typeTag[$T].tpe.normalize
         def key = ${T.key}
+      }
+    """
+  }
+  def implClassTag[T: c.WeakTypeTag]: c.Tree = {
+    import c.universe._
+    val T = weakTypeOf[T]
+    q"""
+      new FastTypeTag[ClassTag[$T]] {
+        def mirror = scala.pickling.internal.`package`.currentMirror
+        lazy val tpe = scala.reflect.runtime.universe.weakTypeOf[ClassTag[$T]]
+        def key = "ClassTag[" + ${T.key} + "]"
       }
     """
   }
