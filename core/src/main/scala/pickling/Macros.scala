@@ -258,8 +258,26 @@ trait UnpicklerMacros extends Macro {
 
       val someConstructorIsPrivate = ctors.exists(_.isPrivate)
       // println(s"someConstructorIsPrivate: $someConstructorIsPrivate")
-      val canCallCtor = !someConstructorIsPrivate && !cir.fields.exists(_.isErasedParam) && isPreciseType
-      // println(s"canCallCtor: $canCallCtor")
+      val canCallCtor = !someConstructorIsPrivate && !cir.fields.exists(_.isErasedParam) && isPreciseType && {
+        // there must not be a transient ctor param
+        // STEP 1: we need to figure out if there is a transient ctor param
+        val primaryCtor = tpe.declaration(nme.CONSTRUCTOR) match {
+          case overloaded: TermSymbol => overloaded.alternatives.head.asMethod // NOTE: primary ctor is always the first in the list
+          case primaryCtor: MethodSymbol => primaryCtor
+          case NoSymbol => NoSymbol
+        }
+
+        val allAccessors = tpe.declarations.collect { case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
+
+        val (filteredAccessors, transientAccessors) = allAccessors.partition(irs.notMarkedTransient) // shoulsai iaobjsobj aaaobjsecta insteeyd  m d daybe
+
+        val hasTransientParam = (primaryCtor != NoSymbol) && primaryCtor.asMethod.paramss.flatten.exists { sym =>
+          transientAccessors.exists(acc => acc.name.toString == sym.name.toString)
+        }
+
+        !hasTransientParam
+      }
+      // STEP 2: remove transient fields from the "pending fields", the fields that need to be restored.
 
       // TODO: for ultimate loop safety, pendingFields should be hoisted to the outermost unpickling scope
       // For example, in the snippet below, when unpickling C, we'll need to move the b.c assignment not
