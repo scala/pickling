@@ -389,6 +389,8 @@ abstract class Macro { self =>
 
   /**
    *  requires: !fir.accessor.isEmpty
+   *
+   *  needs field owner, field name
    */
   def reflectively(target: TermName, fir: FieldIR)(body: Tree => Tree): List[Tree] = {
     val prologue = {

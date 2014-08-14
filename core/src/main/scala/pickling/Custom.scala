@@ -44,8 +44,8 @@ trait LowPriorityPicklersUnpicklers {
     mkSeqSetPickler[T, Vector]
 
   // TODO: use this instead of the genListPickler
-  // implicit def listPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[::[T]], format: PickleFormat, cbf: CanBuildFrom[::[T], T, ::[T]]): SPickler[::[T]] with Unpickler[::[T]] =
-  //   mkSeqSetPickler[T, ::]
+  //implicit def listPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[List[T]], format: PickleFormat, cbf: CanBuildFrom[List[T], T, List[T]]): SPickler[List[T]] with Unpickler[List[T]] =
+  //  mkSeqSetPickler[T, List]
 
   // mutable collections
 
