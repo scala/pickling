@@ -78,6 +78,7 @@ trait PicklerMacros extends Macro {
       }
     }
     def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
+      println(s"compute class IR for ${tpe.toString}")
       val cir = flattenedClassIR(tpe)
 
       val hintKnownSize = computeKnownSizeIfPossible(cir) match {

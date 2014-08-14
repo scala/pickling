@@ -44,6 +44,8 @@ class IRs[U <: Universe with Singleton](val uni: U) {
   /** Creates FieldIRs for the given type, tp.
   */
   private def fields(tp: Type): Q = {
+    println(s"computing fields for ${tp.toString}")
+
     val ctor = tp.declaration(nme.CONSTRUCTOR) match {
       case overloaded: TermSymbol => overloaded.alternatives.head.asMethod // NOTE: primary ctor is always the first in the list
       case primaryCtor: MethodSymbol => primaryCtor
@@ -62,15 +64,45 @@ class IRs[U <: Universe with Singleton](val uni: U) {
     val (paramAccessors, otherAccessors) = allAccessors.partition(_.isParamAccessor)
 
     def mkFieldIR(sym: TermSymbol, param: Option[TermSymbol], accessor: Option[MethodSymbol]) = {
+      /*
       val (quantified, rawTp) = tp match { case ExistentialType(quantified, tpe) => (quantified, tpe); case tpe => (Nil, tpe) }
       val rawSymTp = accessor.getOrElse(sym).typeSignatureIn(rawTp) match { case NullaryMethodType(tpe) => tpe; case tpe => tpe }
       val symTp = existentialAbstraction(quantified, rawSymTp)
+      */
+      val symTp = tp match {
+        case ExistentialType(quantified, rawTpe) =>
+          println(s"computing fields of existential type ${tp.toString}")
+          ???
+        case _ =>
+          accessor.getOrElse(sym).typeSignatureIn(tp) match {
+            case NullaryMethodType(tpe) => tpe; case tpe => tpe
+          }
+      }
+
       FieldIR(sym.name.toString.trim, symTp, param, accessor)
     }
 
-    val paramFields = ctorParams.map(sym => mkFieldIR(sym, Some(sym), paramAccessors.find(_.name == sym.name)))
+    val paramFields = ctorParams.map { sym =>
+      println(s"real info about ctor parm $sym:")
+
+      val classSym = tp.typeSymbol.asClass
+      println(s"tp classSym: $classSym")
+      val paramClassSym = sym.typeSignature.typeSymbol.asClass
+      println(s"param classSym: $paramClassSym")
+
+      println(s"sym.typeSignature: ${sym.typeSignature}")
+
+      println(s"sym.getter: ${sym.getter}")
+      val paramTpe = sym.typeSignatureIn(tp)
+      println(s"type: $paramTpe")
+
+      mkFieldIR(sym, Some(sym), paramAccessors.find(_.name == sym.name))
+    }
     val varGetters = otherAccessors.collect{ case meth if meth.isGetter && meth.accessed != NoSymbol && meth.accessed.asTerm.isVar => meth }
     val varFields = varGetters.map(sym => mkFieldIR(sym, None, Some(sym)))
+
+    println(s"paramFields: $paramFields.mkString(",")")
+    println(s"varFields: $varFields.mkString(",")")
 
     paramFields ++ varFields
   }
@@ -84,7 +116,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
 
   private val f3 = (c: C) =>
     c.tpe.baseClasses
-         .map(superSym => c.tpe.baseType(superSym))
+         .map(superSym => c.tpe.baseType(superSym).asSeenFrom(c.tpe, superSym))
          .map(tp => ClassIR(tp, null, fields(tp)))
 
   private val compose =

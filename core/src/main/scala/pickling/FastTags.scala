@@ -7,7 +7,7 @@ import scala.reflect.runtime.{universe => ru}
 import language.experimental.macros
 import scala.reflect.ClassTag
 
-trait FastTypeTag[T] extends Equals {
+trait FastTypeTag[+T] extends Equals {
   def mirror: ru.Mirror
   def tpe: ru.Type
   def key: String
@@ -106,7 +106,7 @@ trait FastTypeTagMacros extends Macro {
     q"""
       new FastTypeTag[$T] {
         def mirror = scala.pickling.internal.`package`.currentMirror
-        lazy val tpe = scala.reflect.runtime.universe.typeTag[$T].tpe.normalize
+        lazy val tpe = scala.reflect.runtime.universe.weakTypeOf[$T]
         def key = ${T.key}
       }
     """
