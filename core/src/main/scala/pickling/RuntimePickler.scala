@@ -53,6 +53,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
       // however, it depends on whether the type of the field is effectively final or not.
       // essentially, we have to emulate the behavior of generated picklers, which make
       // the same decision.
+      println(s"creating runtime pickler to pickle $fldClass field of class ${picklee.getClass.getName}")
       val fldPickler = SPickler.genPickler(classLoader, fldClass).asInstanceOf[SPickler[Any]]
       //debug(s"looked up field pickler: $fldPickler")
 
