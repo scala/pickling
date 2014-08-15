@@ -18,7 +18,7 @@ class Employee {
 case class Firefighter(val name: String, val age: Int, val since: Int) extends Employee with Person
 
 class InheritancePrivateTest extends FunSuite {
-  test("main") {
+  test("case class") {
     val f = new Firefighter("Jeff", 45, 1990)
     f.setSalary(30000)
 
@@ -32,8 +32,14 @@ class InheritancePrivateTest extends FunSuite {
       |  "salary": 30000
       |}
     """.trim.stripMargin)
-    assert(pickleF.unpickle[Firefighter] === f)
-    assert(pickleF.unpickle[Firefighter].exposeSalary === 30000)
+    val uf = pickleF.unpickle[Firefighter]
+    assert(uf === f)
+    assert(uf.exposeSalary === 30000)
+  }
+
+  test("base class") {
+    val f = new Firefighter("Jeff", 45, 1990)
+    f.setSalary(30000)
 
     val pickleE = (f: Employee).pickle
     assert(pickleE.value === """
@@ -45,8 +51,14 @@ class InheritancePrivateTest extends FunSuite {
       |  "salary": 30000
       |}
     """.trim.stripMargin)
-    assert(pickleE.unpickle[Employee] === f)
-    assert(pickleF.unpickle[Employee].exposeSalary === 30000)
+    val ue = pickleE.unpickle[Employee]
+    assert(ue === f)
+    assert(ue.exposeSalary === 30000)
+  }
+
+  test("base trait") {
+    val f = new Firefighter("Jeff", 45, 1990)
+    f.setSalary(30000)
 
     val pickleP = (f: Person).pickle
     assert(pickleP.value === """
