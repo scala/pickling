@@ -31,7 +31,6 @@ class IRs[U <: Universe with Singleton](val uni: U) {
     var canCallCtor: Boolean = true
   }
 
-
   def newClassIR(tpe: Type): ClassIR = {
     // create new instance of ClassIR(tpe: Type, parent: ClassIR, fields: List[FieldIR])
     // (a) ignore parent (TODO: remove)
@@ -81,7 +80,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
       FieldIR(sym.name.toString, symTpe, Some(sym), accessorOpt)
     }
 
-    val nonParamFieldIRs = filteredGetters.filterNot(_.isParamAccessor).map { sym: MethodSymbol =>
+    val nonParamFieldIRs = filteredGetters.filterNot(_.isParamAccessor).filter(_.isVar).map { sym: MethodSymbol =>
       val rawSymTpe = sym.typeSignatureIn(rawTpe) match { case NullaryMethodType(ntpe) => ntpe; case ntpe => ntpe }
       val symTpe = existentialAbstraction(quantified, rawSymTpe)
 /*
