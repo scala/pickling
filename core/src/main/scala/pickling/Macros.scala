@@ -33,7 +33,7 @@ trait PicklerMacros extends Macro {
       if (fir.isPublic) q"picklee.${newTermName(fir.name)}"
       else reflectively("picklee", fir)(fm => q"$fm.get.asInstanceOf[${fir.tpe}]").head //TODO: don't think it's possible for this to return an empty list, so head should be OK
 
-    def computeKnownSizeOfObjectOutput(nestedTpe: Type): (Option[Tree], List[Tree]) = {
+    def computeKnownSizeOfObjectOutput(cir: ClassIR): (Option[Tree], List[Tree]) = {
       // for now we cannot compute a fixed size for ObjectOutputs
       // in the future this will be a possible optimization (faster Externalizables)
       None -> List()
@@ -44,15 +44,15 @@ trait PicklerMacros extends Macro {
     // this allows us to remove array copying and allocation bottlenecks
     // Note: this takes a "flattened" ClassIR
     // returns a tree with the size and a list of trees that have to be checked for null
-    def computeKnownSizeIfPossible(cTpe: Type, cir: ClassIR): (Option[Tree], List[Tree]) = {
-      if (cTpe <:< typeOf[Array[_]]) {
-        val TypeRef(_, _, List(elTpe)) = cTpe
+    def computeKnownSizeIfPossible(cir: ClassIR): (Option[Tree], List[Tree]) = {
+      if (cir.tpe <:< typeOf[Array[_]]) {
+        val TypeRef(_, _, List(elTpe)) = cir.tpe
         val knownSize =
           if (elTpe.isEffectivelyPrimitive) Some(q"picklee.length * ${primitiveSizes(elTpe)} + 4")
           else None
         knownSize -> Nil
       } else if (tpe <:< typeOf[java.io.Externalizable]) {
-        computeKnownSizeOfObjectOutput(cTpe) match {
+        computeKnownSizeOfObjectOutput(cir) match {
           case (None, lst) => None -> List()
           case _ => c.abort(c.enclosingPosition, "not implemented")
         }
@@ -78,13 +78,10 @@ trait PicklerMacros extends Macro {
       }
     }
     def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
-      //val ocir = flattenedClassIR(tpe)
-      //println(s"CIR(${tpe.toString}): fields: ${ocir.fields.mkString(",")}")
+      //println(s"compute class IR for ${tpe.toString}")
+      val cir = flattenedClassIR(tpe)
 
-      val cir = newClassIR(tpe)
-      //println(s"NEWCIR(${tpe.toString}): fields: ${cir.fields.mkString(",")}")
-
-      val hintKnownSize = computeKnownSizeIfPossible(cir.tpe, cir) match {
+      val hintKnownSize = computeKnownSizeIfPossible(cir) match {
         case (None, lst) => q""
         case (Some(tree), lst) =>
           val typeNameLen = tpe.key.getBytes("UTF-8").length
@@ -435,7 +432,6 @@ trait PickleMacros extends Macro {
   """
 
   def createRuntimePickler(builder: c.Tree): c.Tree = q"""
-    println("creating runtime pickler for " + clazz.getName)
     val classLoader = this.getClass.getClassLoader
     $builder.hintTag(scala.pickling.FastTypeTag.mkRaw(clazz, scala.reflect.runtime.universe.runtimeMirror(classLoader)))
     SPickler.genPickler(classLoader, clazz)
@@ -520,8 +516,6 @@ trait PickleMacros extends Macro {
     val tpe = weakTypeOf[T].widen // TODO: I used widen to make module classes work, but I don't think it's okay to do that
     // val sym = tpe.typeSymbol.asClass // if this is called on an abstract type, an exception will be thrown (an abstract class will still fail, but it'll fail later)
     val q"${_}($pickleeArg)" = c.prefix.tree
-
-    println(s"generating dispatch for ${tpe.toString}")
 
     val dispatchLogic = genDispatchLogic(tpe, builder)
 
