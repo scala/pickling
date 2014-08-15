@@ -17,7 +17,7 @@ abstract class Person extends Creature {
 case class Firefighter(val name: String, val age: Int, val salary: Int) extends Person
 
 class Inheritance2Test extends FunSuite {
-  test("main") {
+  test("case class") {
     val f = new Firefighter("Josephine", 48, 40000)
 
     val pickleF = (f: Firefighter).pickle
@@ -30,8 +30,13 @@ class Inheritance2Test extends FunSuite {
       |  "species": "human"
       |}
     """.trim.stripMargin)
-    assert(pickleF.unpickle[Firefighter] === f)
-    assert(pickleF.unpickle[Firefighter].species === "human")
+    val uf = pickleF.unpickle[Firefighter]
+    assert(uf === f)
+    assert(uf.species === "human")
+  }
+
+  test("abstract class") {
+    val f = new Firefighter("Josephine", 48, 40000)
 
     val pickleP = (f: Person).pickle
     assert(pickleP.value === """
@@ -43,8 +48,13 @@ class Inheritance2Test extends FunSuite {
       |  "species": "human"
       |}
     """.trim.stripMargin)
-    assert(pickleP.unpickle[Person] === f)
-    assert(pickleP.unpickle[Person].species === "human")
+    val up = pickleP.unpickle[Person]
+    assert(up === f)
+    assert(up.species === "human")
+  }
+
+  test("abstract class 2") {
+    val f = new Firefighter("Josephine", 48, 40000)
 
     val pickleC = (f: Creature).pickle
     assert(pickleC.value === """
@@ -56,7 +66,8 @@ class Inheritance2Test extends FunSuite {
       |  "species": "human"
       |}
     """.trim.stripMargin)
-    assert(pickleC.unpickle[Creature] === f)
-    assert(pickleC.unpickle[Creature].species === "human")
+    val uc = pickleC.unpickle[Creature]
+    assert(uc === f)
+    assert(uc.species === "human")
   }
 }
