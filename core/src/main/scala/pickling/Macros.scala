@@ -78,8 +78,7 @@ trait PicklerMacros extends Macro {
       }
     }
     def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
-      //println(s"compute class IR for ${tpe.toString}")
-      val cir = flattenedClassIR(tpe)
+      val cir = newClassIR(tpe)
 
       val hintKnownSize = computeKnownSizeIfPossible(cir) match {
         case (None, lst) => q""
@@ -249,31 +248,24 @@ trait UnpicklerMacros extends Macro {
       } else {
       // TODO: validate that the tpe argument of unpickle and weakTypeOf[T] work together
       // NOTE: step 1) this creates an instance and initializes its fields reified from constructor arguments
-      val cir = flattenedClassIR(tpe)
+      val cir = newClassIR(tpe)
       val isPreciseType = targs.length == sym.typeParams.length && targs.forall(_.typeSymbol.isClass)
 
-      val ctors = tpe.members.collect {
-        case m: MethodSymbol if m.isConstructor => m
+      val primaryCtor = tpe.declaration(nme.CONSTRUCTOR) match {
+        case overloaded: TermSymbol => overloaded.alternatives.head.asMethod // NOTE: primary ctor is always the first in the list
+        case primaryCtor: MethodSymbol => primaryCtor
+        case NoSymbol => NoSymbol
       }
-      // println(s"ctors: ${ctors.mkString(",")}")
 
-      val someConstructorIsPrivate = ctors.exists(_.isPrivate)
-      // println(s"someConstructorIsPrivate: $someConstructorIsPrivate")
-      val canCallCtor = !someConstructorIsPrivate && !cir.fields.exists(_.isErasedParam) && isPreciseType && {
+      val canCallCtor = !primaryCtor.isPrivate && !cir.fields.exists(_.isErasedParam) && isPreciseType && {
         // there must not be a transient ctor param
         // STEP 1: we need to figure out if there is a transient ctor param
-        val primaryCtor = tpe.declaration(nme.CONSTRUCTOR) match {
-          case overloaded: TermSymbol => overloaded.alternatives.head.asMethod // NOTE: primary ctor is always the first in the list
-          case primaryCtor: MethodSymbol => primaryCtor
-          case NoSymbol => NoSymbol
-        }
-
         val allAccessors = tpe.declarations.collect { case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
 
         val (filteredAccessors, transientAccessors) = allAccessors.partition(irs.notMarkedTransient) // shoulsai iaobjsobj aaaobjsecta insteeyd  m d daybe
 
         val hasTransientParam = (primaryCtor != NoSymbol) && primaryCtor.asMethod.paramss.flatten.exists { sym =>
-          transientAccessors.exists(acc => acc.name.toString == sym.name.toString)
+          transientAccessors.exists(_.name == sym.name)
         }
 
         !hasTransientParam
