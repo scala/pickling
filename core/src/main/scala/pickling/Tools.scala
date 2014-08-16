@@ -213,7 +213,7 @@ abstract class ShareAnalyzer[U <: Universe](val u: U) {
           // 2) the entire sealed hierarchy should be added to todo
           else if (!currSym.isFinal) true // NOTE: returning true here is important for soundness!
           else {
-            val more = flattenedClassIR(currTpe).fields.map(_.tpe)
+            val more = newClassIR(currTpe).fields.map(_.tpe)
             loop(rest ++ more, visited + currTpe)
           }
         case _ => false
@@ -405,8 +405,8 @@ abstract class Macro { self =>
       }
     }
     val field = fir.field.get
-    val ownerSymbol = newTermName(fir.name + "Owner")
-    val firSymbol = newTermName(fir.name + "Symbol")
+    val ownerSymbol = c.fresh(newTermName(fir.name + "Owner"))
+    val firSymbol = c.fresh(newTermName(fir.name + "Symbol"))
     // TODO: make sure this works for:
     // 1) private[this] fields
     // 2) inherited private[this] fields

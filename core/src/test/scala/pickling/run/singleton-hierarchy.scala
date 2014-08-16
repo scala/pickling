@@ -23,7 +23,6 @@ class SingletonHierarchyTest extends FunSuite {
     test(E(2), """
       |JSONPickle({
       |  "tpe": "scala.pickling.singleton.hierarchy.E",
-      |  "x": 2,
       |  "x": 2
       |})
     """.stripMargin.trim)
