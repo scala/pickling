@@ -29,7 +29,7 @@ class RuntimeTypeInfo(classLoader: ClassLoader, clazz: Class[_]) {
   }
 
   val irs = new IRs[ru.type](ru)
-  val cir = irs.flattenedClassIR(tpe)
+  val cir = irs.newClassIR(tpe)
 
   val tag = FastTypeTag(mirror, tpe, tpe.key)
 }
