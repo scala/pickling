@@ -393,6 +393,15 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   implicit val stringPicklerUnpickler: SPickler[String] with Unpickler[String] = mkPrimitivePicklerUnpickler[String]
   implicit val unitPicklerUnpickler: SPickler[Unit] with Unpickler[Unit] = mkPrimitivePicklerUnpickler[Unit]
 
+  implicit val byteArrPicklerUnpickler: SPickler[Array[Byte]] with Unpickler[Array[Byte]] = mkPrimitivePicklerUnpickler[Array[Byte]]
+  implicit val shortArrPicklerUnpickler: SPickler[Array[Short]] with Unpickler[Array[Short]] = mkPrimitivePicklerUnpickler[Array[Short]]
+  implicit val charArrPicklerUnpickler: SPickler[Array[Char]] with Unpickler[Array[Char]] = mkPrimitivePicklerUnpickler[Array[Char]]
+  implicit val intArrPicklerUnpickler: SPickler[Array[Int]] with Unpickler[Array[Int]] = mkPrimitivePicklerUnpickler[Array[Int]]
+  implicit val longArrPicklerUnpickler: SPickler[Array[Long]] with Unpickler[Array[Long]] = mkPrimitivePicklerUnpickler[Array[Long]]
+  implicit val booleanArrPicklerUnpickler: SPickler[Array[Boolean]] with Unpickler[Array[Boolean]] = mkPrimitivePicklerUnpickler[Array[Boolean]]
+  implicit val floatArrPicklerUnpickler: SPickler[Array[Float]] with Unpickler[Array[Float]] = mkPrimitivePicklerUnpickler[Array[Float]]
+  implicit val doubleArrPicklerUnpickler: SPickler[Array[Double]] with Unpickler[Array[Double]] = mkPrimitivePicklerUnpickler[Array[Double]]
+
   implicit def refPickler: SPickler[refs.Ref] = throw new Error("cannot pickle refs") // TODO: make this a macro
   implicit val refUnpickler: Unpickler[refs.Ref] = mkPrimitivePicklerUnpickler[refs.Ref]
 

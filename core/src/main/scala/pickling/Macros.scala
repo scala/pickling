@@ -79,6 +79,7 @@ trait PicklerMacros extends Macro {
     }
     def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
       val cir = newClassIR(tpe)
+      // println(s"CIR for ${tpe.toString}: ${cir.fields.mkString(",")}")
 
       val hintKnownSize = computeKnownSizeIfPossible(cir) match {
         case (None, lst) => q""
@@ -250,14 +251,14 @@ trait UnpicklerMacros extends Macro {
       // NOTE: step 1) this creates an instance and initializes its fields reified from constructor arguments
       val cir = newClassIR(tpe)
       val isPreciseType = targs.length == sym.typeParams.length && targs.forall(_.typeSymbol.isClass)
-
+/*
       val primaryCtor = tpe.declaration(nme.CONSTRUCTOR) match {
         case overloaded: TermSymbol => overloaded.alternatives.head.asMethod // NOTE: primary ctor is always the first in the list
         case primaryCtor: MethodSymbol => primaryCtor
         case NoSymbol => NoSymbol
       }
-
-      val canCallCtor = !primaryCtor.isPrivate && !cir.fields.exists(_.isErasedParam) && isPreciseType && {
+*/
+      val canCallCtor = /*!primaryCtor.isPrivate && !cir.fields.exists(_.isErasedParam) && isPreciseType && {
         // there must not be a transient ctor param
         // STEP 1: we need to figure out if there is a transient ctor param
         val allAccessors = tpe.declarations.collect { case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
@@ -269,7 +270,7 @@ trait UnpicklerMacros extends Macro {
         }
 
         !hasTransientParam
-      }
+      }*/ cir.canCallCtor
       // STEP 2: remove transient fields from the "pending fields", the fields that need to be restored.
 
       // TODO: for ultimate loop safety, pendingFields should be hoisted to the outermost unpickling scope

@@ -232,7 +232,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
 
           pendingFields.zip(fieldVals) foreach {
             case (fir, fval) =>
-              if (fir.hasGetter) {
+              if (fir.field.nonEmpty) {
                 val fmX = im.reflectField(fir.field.get)
                 fmX.set(fval)
               } else {

@@ -404,7 +404,9 @@ abstract class Macro { self =>
         Nil
       }
     }
-    val field = fir.field.get
+    // val field = fir.field.get
+    val owner = if (fir.param.nonEmpty) fir.param.get.owner
+      else fir.accessor.get.owner
     val ownerSymbol = c.fresh(newTermName(fir.name + "Owner"))
     val firSymbol = c.fresh(newTermName(fir.name + "Symbol"))
     // TODO: make sure this works for:
@@ -413,8 +415,8 @@ abstract class Macro { self =>
     // 3) overridden fields
     val wrappedBody =
       q"""
-        val $ownerSymbol = implicitly[scala.pickling.FastTypeTag[${field.owner.asClass.toType.erasure}]].tpe
-        val $firSymbol = $ownerSymbol.member(newTermName(${field.name.toString}))
+        val $ownerSymbol = implicitly[scala.pickling.FastTypeTag[${owner.asClass.toType.erasure}]].tpe
+        val $firSymbol = $ownerSymbol.member(newTermName(${fir.name}))
         if ($firSymbol.isTerm) ${body(q"im.reflectField($firSymbol.asTerm)")}
       """.asInstanceOf[Block]
     prologue ++ wrappedBody.stats :+ wrappedBody.expr
