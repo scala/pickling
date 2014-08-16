@@ -46,6 +46,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
     val (filteredAccessors, _) = allAccessors.partition(notMarkedTransient)
 
     val goodAccessorsNotParams = filteredAccessors.filterNot(_.isParamAccessor)
+
     val goodAccessorsNotParamsVars = goodAccessorsNotParams.filter(acc => acc.isSetter && acc.accessed != NoSymbol) // 2.10 compat: !acc.isAbstract
 
     goodAccessorsNotParamsVars.map { symSetter: MethodSymbol =>
