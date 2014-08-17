@@ -106,7 +106,7 @@ trait FastTypeTagMacros extends Macro {
     q"""
       new FastTypeTag[$T] {
         def mirror = scala.pickling.internal.`package`.currentMirror
-        lazy val tpe = scala.reflect.runtime.universe.typeTag[$T].tpe.normalize
+        lazy val tpe = scala.reflect.runtime.universe.weakTypeOf[$T]
         def key = ${T.key}
       }
     """

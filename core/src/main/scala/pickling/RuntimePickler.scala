@@ -8,7 +8,7 @@ import ir._
 import internal._
 
 
-class RuntimeTypeInfo(classLoader: ClassLoader, clazz: Class[_]) {
+class RuntimeTypeInfo(classLoader: ClassLoader, clazz: Class[_], share: refs.Share) {
   import ru._
   import definitions._
 
@@ -29,19 +29,30 @@ class RuntimeTypeInfo(classLoader: ClassLoader, clazz: Class[_]) {
   }
 
   val irs = new IRs[ru.type](ru)
-  val cir = irs.flattenedClassIR(tpe)
+  val cir = irs.newClassIR(tpe)
 
   val tag = FastTypeTag(mirror, tpe, tpe.key)
+
+  val shareAnalyzer = new ShareAnalyzer[ru.type](ru) {
+    def shareEverything = share.isInstanceOf[refs.ShareEverything]
+    def shareNothing = share.isInstanceOf[refs.ShareNothing]
+  }
+  def shouldBotherAboutSharing(tpe: Type) = shareAnalyzer.shouldBotherAboutSharing(tpe)
+  def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
 }
 
-// TODO: sharing
-class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: PickleFormat, share: refs.Share) extends RuntimeTypeInfo(classLoader, clazz) {
+class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: PickleFormat, share: refs.Share) extends RuntimeTypeInfo(classLoader, clazz, share) {
   import ru._
 
   sealed abstract class Logic(fir: irs.FieldIR, isEffFinal: Boolean) {
     def run(builder: PBuilder, picklee: Any, im: ru.InstanceMirror): Unit = {
-      val fldMirror = im.reflectField(fir.field.get)
-      val fldValue: Any = fldMirror.get
+      val fldValue: Any = if (fir.accessor.nonEmpty) {
+        val getterMirror = im.reflectMethod(fir.accessor.get)
+        getterMirror()
+      } else {
+        val fldMirror = im.reflectField(fir.field.get)
+        fldMirror.get
+      }
       val fldClass = if (fldValue != null) fldValue.getClass else null
 
       //debug(s"pickling field of type: ${fir.tpe.toString}")
@@ -53,6 +64,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
       // however, it depends on whether the type of the field is effectively final or not.
       // essentially, we have to emulate the behavior of generated picklers, which make
       // the same decision.
+      // println(s"creating runtime pickler to pickle $fldClass field of class ${picklee.getClass.getName}")
       val fldPickler = SPickler.genPickler(classLoader, fldClass).asInstanceOf[SPickler[Any]]
       //debug(s"looked up field pickler: $fldPickler")
 
@@ -125,7 +137,23 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
     val fieldTag = FastTypeTag.mkRaw(fieldClass, mirror)
     //debug(s"fieldTag for pickleInto: ${fieldTag.key}")
     builder.hintTag(fieldTag)
-    pickler.pickle(fieldValue, builder)
+
+    val fieldTpe = fieldTag.tpe
+    if (shouldBotherAboutSharing(fieldTpe))
+      fieldValue match {
+        case null => pickler.asInstanceOf[SPickler[Null]].pickle(null, builder)
+        case _ =>
+          val oid = scala.pickling.internal.lookupPicklee(fieldValue)
+          builder.hintOid(oid)
+          if (oid == -1) {
+            pickler.pickle(fieldValue, builder)
+          } else {
+            builder.beginEntry(fieldValue)
+            builder.endEntry()
+          }
+      }
+    else
+      pickler.pickle(fieldValue, builder)
   }
 
   def mkPickler: SPickler[_] = {
@@ -133,7 +161,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
       val format: PickleFormat = pf
 
       val fields: List[Logic] = cir.fields.flatMap { fir =>
-        if (fir.hasGetter)
+        if (fir.accessor.nonEmpty)
           List(
             if (fir.tpe.typeSymbol.isEffectivelyFinal) new EffectivelyFinalLogic(fir)
             else if (fir.tpe.typeSymbol.asType.isAbstractType) new AbstractLogic(fir)

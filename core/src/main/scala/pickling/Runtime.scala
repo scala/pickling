@@ -55,7 +55,7 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_], shar
   //debug(s"PicklerRuntime: tpe = $tpe, tag = ${tag.toString}")
   val irs = new IRs[ru.type](ru)
   import irs._
-  val cir = flattenedClassIR(tpe)
+  val cir = newClassIR(tpe)
   //debug(s"PicklerRuntime: cir = $cir")
 
   val shareAnalyzer = new ShareAnalyzer[ru.type](ru) {
@@ -165,7 +165,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
   val clazz = mirror.runtimeClass(tpe.erasure)
   val irs = new IRs[ru.type](ru)
   import irs._
-  val cir = flattenedClassIR(tpe)
+  val cir = newClassIR(tpe)
   debug("UnpicklerRuntime: cir = " + cir)
 
   val shareAnalyzer = new ShareAnalyzer[ru.type](ru) {
@@ -232,7 +232,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
 
           pendingFields.zip(fieldVals) foreach {
             case (fir, fval) =>
-              if (fir.hasGetter) {
+              if (fir.field.nonEmpty) {
                 val fmX = im.reflectField(fir.field.get)
                 fmX.set(fval)
               } else {
