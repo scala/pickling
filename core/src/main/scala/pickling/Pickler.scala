@@ -59,7 +59,7 @@ trait GenPicklers extends CorePicklersUnpicklers {
           val elemTag = FastTypeTag.mkRaw(elemClass, mirror)
           val elemPickler = genPickler(classLoader, elemClass, elemTag)
 
-          mkRuntimeTravPickler[Array[AnyRef]](mirror, elemTag, tag, elemPickler, null)
+          mkRuntimeTravPickler[Array[AnyRef]](mirror, elemClass, elemTag, tag, elemPickler, null)
         } else {
           val runtime = new RuntimePickler(classLoader, clazz)
           runtime.mkPickler
@@ -99,9 +99,10 @@ trait GenUnpicklers extends CorePicklersUnpicklers {
           val elemTypeString = className.substring(12, len-1)
           // debug(s"creating tag for element type: $elemTypeString")
           val elemTag = FastTypeTag(mirror, elemTypeString)
+          val elemClass = Class.forName(elemTypeString)
           val elemUnpickler = Unpickler.genUnpickler(mirror, elemTag)
 
-          mkRuntimeTravPickler[Array[AnyRef]](mirror, elemTag, tag, null, elemUnpickler)
+          mkRuntimeTravPickler[Array[AnyRef]](mirror, elemClass, elemTag, tag, null, elemUnpickler)
         } else {
           val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
           runtime.genUnpickler

@@ -107,9 +107,9 @@ trait LowPriorityPicklersUnpicklers {
     }
   }
 
-  def mkRuntimeTravPickler[C <% Traversable[_]](mirror: ru.Mirror, elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
+  def mkRuntimeTravPickler[C <% Traversable[_]](mirror: ru.Mirror, elemClass: Class[_], elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
                                                   elemPickler0: SPickler[_], elemUnpickler0: Unpickler[_])
-                                                 (implicit pf: PickleFormat, cbf: CanBuildFrom[C, AnyRef, C]):
+                                                 (implicit pf: PickleFormat):
     SPickler[C] with Unpickler[C] = new SPickler[C] with Unpickler[C] {
 
     val format: PickleFormat = pf
@@ -137,19 +137,20 @@ trait LowPriorityPicklersUnpicklers {
       val reader = preader.beginCollection()
 
       val length = reader.readLength()
-      val builder = cbf.apply()
+      val newArray = java.lang.reflect.Array.newInstance(elemClass, length).asInstanceOf[Array[AnyRef]]
+
       var i = 0
       while (i < length) {
         val r = reader.readElement()
         r.beginEntryNoTag()
         val elem = elemUnpickler.unpickle(elemTag, r)
         r.endEntry()
-        builder += elem.asInstanceOf[AnyRef]
+        newArray(i) = elem.asInstanceOf[AnyRef]
         i = i + 1
       }
 
       preader.endCollection()
-      builder.result
+      newArray
     }
   }
 
