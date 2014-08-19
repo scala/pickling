@@ -5,6 +5,7 @@ import scala.pickling.internal._
 import scala.language.experimental.macros
 import scala.language.higherKinds
 
+import scala.reflect.runtime.{universe => ru}
 import scala.reflect.runtime.universe._
 
 import scala.collection.immutable
@@ -79,6 +80,79 @@ trait LowPriorityPicklersUnpicklers {
 
   implicit def mutMapPickler[K: FastTypeTag, V: FastTypeTag](implicit elemPickler: SPickler[(K, V)], elemUnpickler: Unpickler[(K, V)], pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[mutable.Map[K, V]], format: PickleFormat, cbf: CanBuildFrom[mutable.Map[K, V], (K, V), mutable.Map[K, V]]): SPickler[mutable.Map[K, V]] with Unpickler[mutable.Map[K, V]] =
     mkMapPickler[K, V, mutable.Map]
+
+
+  def mkAnyRefArrayTravPickler[C <% Traversable[_]](mirror: ru.Mirror, classLoader: ClassLoader)(implicit pf: PickleFormat, cbf: CanBuildFrom[C, AnyRef, C]):
+    SPickler[C] /*with Unpickler[C]*/ = new SPickler[C] /*with Unpickler[C]*/ {
+
+    val format: PickleFormat = pf
+
+    def pickle(coll: C, builder: PBuilder): Unit = {
+      builder.hintTag(FastTypeTag.ArrayAnyRef)
+      builder.beginEntry(coll)
+
+      builder.beginCollection(coll.size)
+      (coll: Traversable[_]).asInstanceOf[Traversable[AnyRef]].foreach { (elem: AnyRef) =>
+        builder putElement { b =>
+          val elemClass = elem.getClass
+          val elemTag = FastTypeTag.mkRaw(elemClass, mirror) // slow: `mkRaw` is called for each element
+          b.hintTag(elemTag)
+          val pickler = SPickler.genPickler(classLoader, elemClass, elemTag).asInstanceOf[SPickler[AnyRef]]
+          pickler.pickle(elem, b)
+        }
+      }
+      builder.endCollection()
+
+      builder.endEntry()
+    }
+  }
+
+  def mkFastArrayTravPickler[C <% Traversable[_]](mirror: ru.Mirror, elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
+                                                  elemPickler0: SPickler[_], elemUnpickler0: Unpickler[_])
+                                                 (implicit pf: PickleFormat, cbf: CanBuildFrom[C, AnyRef, C]):
+    SPickler[C] with Unpickler[C] = new SPickler[C] with Unpickler[C] {
+
+    val format: PickleFormat = pf
+
+    val elemPickler   = elemPickler0.asInstanceOf[SPickler[AnyRef]]
+    val elemUnpickler = elemUnpickler0.asInstanceOf[Unpickler[AnyRef]]
+
+    def pickle(coll: C, builder: PBuilder): Unit = {
+      builder.hintTag(collTag)
+      builder.beginEntry(coll)
+
+      builder.beginCollection(coll.size)
+      (coll: Traversable[_]).asInstanceOf[Traversable[AnyRef]].foreach { (elem: AnyRef) =>
+        builder putElement { b =>
+          b.hintTag(elemTag)
+          elemPickler.pickle(elem, b)
+        }
+      }
+      builder.endCollection()
+
+      builder.endEntry()
+    }
+
+    def unpickle(tpe: => FastTypeTag[_], preader: PReader): Any = {
+      val reader = preader.beginCollection()
+
+      val length = reader.readLength()
+      val builder = cbf.apply()
+      var i = 0
+      while (i < length) {
+        val r = reader.readElement()
+        r.beginEntryNoTag()
+        val elem = elemUnpickler.unpickle(elemTag, r)
+        r.endEntry()
+        builder += elem.asInstanceOf[AnyRef]
+        i = i + 1
+      }
+
+      preader.endCollection()
+      builder.result
+    }
+  }
+
 
   def mkTravPickler[T: FastTypeTag, C <% Traversable[_]: FastTypeTag]
     (implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T],
@@ -271,7 +345,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
   }
 }
 
-trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPriorityPicklersUnpicklers {
+trait CorePicklersUnpicklers extends LowPriorityPicklersUnpicklers {
   import java.math.{BigDecimal, BigInteger}
   import java.util.{Date, TimeZone}
   import java.text.SimpleDateFormat
@@ -362,11 +436,15 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
     }
   }
 
-  abstract class AutoRegister[T](name: String) extends SPickler[T] with Unpickler[T] {
+  abstract class AutoRegister[T: FastTypeTag](name: String) extends SPickler[T] with Unpickler[T] {
+    debug(s"autoregistering pickler $this under key '$name'")
     GlobalRegistry.picklerMap += (name -> this)
+    val tag = implicitly[FastTypeTag[T]]
+    debug(s"autoregistering unpickler $this under key '${tag.key}'")
+    GlobalRegistry.unpicklerMap += (tag.key -> this)
   }
 
-  class PrimitivePicklerUnpickler[T](name: String) extends AutoRegister[T](name) {
+  class PrimitivePicklerUnpickler[T: FastTypeTag](name: String) extends AutoRegister[T](name) {
     val format = null // not used
     def pickle(picklee: T, builder: PBuilder): Unit = {
       builder.beginEntry(picklee)
