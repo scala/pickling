@@ -35,9 +35,9 @@ object FastTypeTag {
   implicit val Double  = stdTag[Double]
   implicit val Unit    = stdTag[Unit]
 
-  val ScalaString = stdTag[String]
   implicit val JavaString = stdTag[java.lang.String]
 
+  implicit val ArrayString = stdTag[Array[String]]
   implicit val ArrayByte = stdTag[Array[Byte]]
   implicit val ArrayShort = stdTag[Array[Short]]
   implicit val ArrayChar = stdTag[Array[Char]]
@@ -71,6 +71,7 @@ object FastTypeTag {
 
   def valueTypeName(tag: FastTypeTag[_]): String = {
     val clazz: Class[_] = tag match {
+      case FastTypeTag.JavaString => classOf[java.lang.String]
       case FastTypeTag.Byte => classOf[java.lang.Byte]
       case FastTypeTag.Short => classOf[java.lang.Short]
       case FastTypeTag.Char => classOf[java.lang.Character]
@@ -82,13 +83,21 @@ object FastTypeTag {
       case _ => null
     }
     if (clazz == null) tag match {
+      case FastTypeTag.ArrayString => "[Ljava.lang.String;"
       case FastTypeTag.ArrayInt => "[I"
-      case FastTypeTag.ArrayDouble => "[D" // TODO: all array types
+      case FastTypeTag.ArrayDouble => "[D"
+      case FastTypeTag.ArrayBoolean => "[Z"
+      case FastTypeTag.ArrayLong => "[J"
+      case FastTypeTag.ArrayByte => "[B"
+      case FastTypeTag.ArrayFloat => "[F"
+      case FastTypeTag.ArrayChar => "[C"
+      case FastTypeTag.ArrayShort => "[S"
       case _ => tag.key
     } else clazz.getName
   }
 
   val raw = Map[Class[_], FastTypeTag[_]](
+    classOf[java.lang.String] -> FastTypeTag.JavaString,
     classOf[java.lang.Byte] -> FastTypeTag.Byte,
     classOf[java.lang.Short] -> FastTypeTag.Short,
     classOf[java.lang.Character] -> FastTypeTag.Char,
@@ -97,6 +106,7 @@ object FastTypeTag {
     classOf[java.lang.Boolean] -> FastTypeTag.Boolean,
     classOf[java.lang.Float] -> FastTypeTag.Float,
     classOf[java.lang.Double] -> FastTypeTag.Double,
+    classOf[Array[String]] -> FastTypeTag.ArrayString,
     classOf[Array[Int]] -> FastTypeTag.ArrayInt,
     classOf[Array[Byte]] -> FastTypeTag.ArrayByte,
     classOf[Array[Short]] -> FastTypeTag.ArrayShort,
