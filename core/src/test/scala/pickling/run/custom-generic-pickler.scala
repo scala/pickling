@@ -17,7 +17,7 @@ class MyClassPickler[A](implicit val format: PickleFormat, aTypeTag: FastTypeTag
     builder.beginEntry(picklee)
 
     builder.putField("myString",
-      b => b.hintTag(FastTypeTag.JavaString).beginEntry(picklee.myString).endEntry()
+      b => b.hintTag(FastTypeTag.String).beginEntry(picklee.myString).endEntry()
     )
 
     builder.putField("a",
@@ -31,7 +31,7 @@ class MyClassPickler[A](implicit val format: PickleFormat, aTypeTag: FastTypeTag
   }
 
   override def unpickle(tag: => FastTypeTag[_], reader: PReader): MyClass[A] = {
-    reader.hintTag(FastTypeTag.JavaString)
+    reader.hintTag(FastTypeTag.String)
     val tag = reader.beginEntry()
 	  val myStringUnpickled = stringUnpickler.unpickle(tag, reader).asInstanceOf[String]
 	  reader.endEntry()

@@ -100,7 +100,7 @@ package binary {
           case KEY_DOUBLE =>
             val longValue = java.lang.Double.doubleToRawLongBits(picklee.asInstanceOf[Double])
             Util.encodeLong(output, longValue)
-          case KEY_JAVA_STRING =>
+          case KEY_STRING =>
             Util.encodeString(output, picklee.asInstanceOf[String])
           case KEY_ARRAY_BYTE =>
             Util.encodeByteArray(output, picklee.asInstanceOf[Array[Byte]])
@@ -357,7 +357,7 @@ package binary {
           val r = decodeLong()
           java.lang.Double.longBitsToDouble(r)
 
-        case KEY_JAVA_STRING => decodeString()
+        case KEY_STRING => decodeString()
 
         case KEY_ARRAY_BYTE    => decodeByteArray()
         case KEY_ARRAY_SHORT   => decodeShortArray()
@@ -463,7 +463,7 @@ package binary {
             newpos = pos+8
             java.lang.Double.longBitsToDouble(r)
 
-          case KEY_JAVA_STRING => val r = Util.decodeStringFrom(arr, pos); newpos = r._2 ; r._1
+          case KEY_STRING => val r = Util.decodeStringFrom(arr, pos); newpos = r._2 ; r._1
 
           case KEY_ARRAY_BYTE => val r = Util.decodeByteArrayFrom(arr, pos); newpos = r._2 ; r._1
           case KEY_ARRAY_SHORT => val r = Util.decodeShortArrayFrom(arr, pos); newpos = r._2 ; r._1
@@ -516,7 +516,7 @@ package binary {
     val KEY_DOUBLE  = FastTypeTag.Double.key
     val KEY_UNIT    = FastTypeTag.Unit.key
 
-    val KEY_JAVA_STRING  = FastTypeTag.JavaString.key
+    val KEY_STRING  = FastTypeTag.String.key
 
     val KEY_ARRAY_BYTE    = FastTypeTag.ArrayByte.key
     val KEY_ARRAY_SHORT   = FastTypeTag.ArrayShort.key
@@ -529,8 +529,8 @@ package binary {
 
     val KEY_REF = FastTypeTag.Ref.key
 
-    val primitives = Set(KEY_NULL, KEY_REF, KEY_BYTE, KEY_SHORT, KEY_CHAR, KEY_INT, KEY_LONG, KEY_BOOLEAN, KEY_FLOAT, KEY_DOUBLE, KEY_UNIT, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_SHORT, KEY_ARRAY_CHAR, KEY_ARRAY_INT, KEY_ARRAY_LONG, KEY_ARRAY_BOOLEAN, KEY_ARRAY_FLOAT, KEY_ARRAY_DOUBLE)
-    val nullablePrimitives = Set(KEY_NULL, KEY_JAVA_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_SHORT, KEY_ARRAY_CHAR, KEY_ARRAY_INT, KEY_ARRAY_LONG, KEY_ARRAY_BOOLEAN, KEY_ARRAY_FLOAT, KEY_ARRAY_DOUBLE)
+    val primitives = Set(KEY_NULL, KEY_REF, KEY_BYTE, KEY_SHORT, KEY_CHAR, KEY_INT, KEY_LONG, KEY_BOOLEAN, KEY_FLOAT, KEY_DOUBLE, KEY_UNIT, KEY_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_SHORT, KEY_ARRAY_CHAR, KEY_ARRAY_INT, KEY_ARRAY_LONG, KEY_ARRAY_BOOLEAN, KEY_ARRAY_FLOAT, KEY_ARRAY_DOUBLE)
+    val nullablePrimitives = Set(KEY_NULL, KEY_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_SHORT, KEY_ARRAY_CHAR, KEY_ARRAY_INT, KEY_ARRAY_LONG, KEY_ARRAY_BOOLEAN, KEY_ARRAY_FLOAT, KEY_ARRAY_DOUBLE)
 
     type PickleType = BinaryPickle
     type OutputType = ArrayOutput[Byte]
