@@ -108,14 +108,14 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
             fields.foreach { case (fir, isEffFinal) =>
               val fldMirror = im.reflectField(fir.field.get)
               val fldValue: Any = fldMirror.get
-              debug("pickling field value: " + fldValue)
+              // debug("pickling field value: " + fldValue)
 
               val fldClass = if (fldValue != null) fldValue.getClass else null
               // by using only the class we convert Int to Integer
               // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
               //val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
               val fldTag = FastTypeTag.mkRaw(fldClass, mirror)
-              val fldPickler = /*fldRuntime.genPickler*/SPickler.genPickler(classLoader, fldClass, fldTag).asInstanceOf[SPickler[Any]]
+              val fldPickler = SPickler.genPickler(classLoader, fldClass, fldTag).asInstanceOf[SPickler[Any]]
 
               builder.putField(fir.name, b => {
                 if (isEffFinal) {
@@ -128,14 +128,12 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
                 }
               })
 
-/*
-              builder.putField(fir.name, b => {
-                val fstaticTpe = fir.tpe.erasure
-                if (fldClass == null || fldClass == mirror.runtimeClass(fstaticTpe)) builder.hintDynamicallyElidedType()
-                if (fstaticTpe.typeSymbol.isEffectivelyFinal) builder.hintStaticallyElidedType()
-                fldPickler.pickle(fldValue, b)
-              })
-*/
+              // builder.putField(fir.name, b => {
+              //   val fstaticTpe = fir.tpe.erasure
+              //   if (fldClass == null || fldClass == mirror.runtimeClass(fstaticTpe)) builder.hintDynamicallyElidedType()
+              //   if (fstaticTpe.typeSymbol.isEffectivelyFinal) builder.hintStaticallyElidedType()
+              //   fldPickler.pickle(fldValue, b)
+              // })
             }
           }
 
@@ -162,12 +160,12 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
 
   val tpe = tag.tpe
   val sym = tpe.typeSymbol.asType
-  debug("UnpicklerRuntime: tpe = " + tpe)
+  // debug("UnpicklerRuntime: tpe = " + tpe)
   val clazz = mirror.runtimeClass(tpe.erasure)
   val irs = new IRs[ru.type](ru)
   import irs._
   val cir = newClassIR(tpe)
-  debug("UnpicklerRuntime: cir = " + cir)
+  // debug("UnpicklerRuntime: cir = " + cir)
 
   val shareAnalyzer = new ShareAnalyzer[ru.type](ru) {
     def shareEverything = share.isInstanceOf[refs.ShareEverything]

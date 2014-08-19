@@ -111,12 +111,12 @@ object FastTypeTag {
     if (clazz == null) FastTypeTag.Null
     else try {
       raw.getOrElse(clazz, {
-        debug(s"!!! could not find primitive tag for class ${clazz.getName} !!!")
+        // debug(s"!!! could not find primitive tag for class ${clazz.getName} !!!")
         // handle arrays of non-primitive element type
         if (clazz.isArray) {
           // create Type without going through `typeFromString`
           val elemClass = clazz.getComponentType()
-          debug(s"creating tag for array with element type '${elemClass.getName}'")
+          // debug(s"creating tag for array with element type '${elemClass.getName}'")
           val elemClassSymbol = try {
             mirror.classSymbol(elemClass)
           } catch {
