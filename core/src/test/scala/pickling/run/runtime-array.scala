@@ -25,7 +25,7 @@ class RuntimeArrayTest extends FunSuite {
     def testIt(x: Any): Unit = {
       val p = x.pickle
       val up = p.unpickle[Any]
-      val arr = up.asInstanceOf[Array[AnyRef]]
+      val arr = up.asInstanceOf[Array[(Int, Double)]]
       assert(arr.mkString(",") == "(5,0.5),(6,0.6)")
     }
 
