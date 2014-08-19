@@ -114,7 +114,8 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
               // by using only the class we convert Int to Integer
               // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
               //val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
-              val fldPickler = /*fldRuntime.genPickler*/SPickler.genPickler(classLoader, fldClass).asInstanceOf[SPickler[Any]]
+              val fldTag = FastTypeTag.mkRaw(fldClass, mirror)
+              val fldPickler = /*fldRuntime.genPickler*/SPickler.genPickler(classLoader, fldClass, fldTag).asInstanceOf[SPickler[Any]]
 
               builder.putField(fir.name, b => {
                 if (isEffFinal) {
