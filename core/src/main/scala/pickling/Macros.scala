@@ -500,8 +500,11 @@ trait PickleMacros extends Macro {
       import scala.pickling._
       import scala.pickling.internal._
       val picklee = $pickleeArg
+      GRL.acquire()
       val pickler = $dispatchLogic
-      pickler.asInstanceOf[SPickler[$tpe]].pickle(picklee, $builder)
+      val res = pickler.asInstanceOf[SPickler[$tpe]].pickle(picklee, $builder)
+      GRL.release()
+      res
     """
   }
 
@@ -608,6 +611,7 @@ trait UnpickleMacros extends Macro {
 
     q"""
       val reader = $readerArg
+      GRL.acquire()
       reader.hintTag(implicitly[scala.pickling.FastTypeTag[$tpe]])
       $staticHint
       val typeString = reader.beginEntryNoTag()
@@ -615,6 +619,7 @@ trait UnpickleMacros extends Macro {
       val result = unpickler.unpickle({ scala.pickling.FastTypeTag(typeString) }, reader)
       reader.endEntry()
       $unpickleeCleanup
+      GRL.release()
       result.asInstanceOf[$tpe]
     """
   }
