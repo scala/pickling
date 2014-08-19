@@ -35,7 +35,7 @@ object FastTypeTag {
   implicit val Double  = stdTag[Double]
   implicit val Unit    = stdTag[Unit]
 
-  implicit val JavaString = stdTag[java.lang.String]
+  implicit val String = stdTag[java.lang.String]
 
   implicit val ArrayString = stdTag[Array[String]]
   implicit val ArrayByte = stdTag[Array[Byte]]
@@ -71,7 +71,7 @@ object FastTypeTag {
 
   def valueTypeName(tag: FastTypeTag[_]): String = {
     val clazz: Class[_] = tag match {
-      case FastTypeTag.JavaString => classOf[java.lang.String]
+      case FastTypeTag.String => classOf[java.lang.String]
       case FastTypeTag.Byte => classOf[java.lang.Byte]
       case FastTypeTag.Short => classOf[java.lang.Short]
       case FastTypeTag.Char => classOf[java.lang.Character]
@@ -97,7 +97,7 @@ object FastTypeTag {
   }
 
   val raw = Map[Class[_], FastTypeTag[_]](
-    classOf[java.lang.String] -> FastTypeTag.JavaString,
+    classOf[java.lang.String] -> FastTypeTag.String,
     classOf[java.lang.Byte] -> FastTypeTag.Byte,
     classOf[java.lang.Short] -> FastTypeTag.Short,
     classOf[java.lang.Character] -> FastTypeTag.Char,
