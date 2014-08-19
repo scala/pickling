@@ -52,14 +52,14 @@ trait GenPicklers extends CorePicklersUnpicklers {
     val className = if (clazz == null) "null" else clazz.getName
     GlobalRegistry.picklerMap.get(className) match {
       case None =>
-        debug(s"!!! could not find registered pickler for class $className !!!")
+        // debug(s"!!! could not find registered pickler for class $className !!!")
         val pickler: SPickler[_] = if (clazz.isArray) {
           val mirror = ru.runtimeMirror(classLoader)
           val elemClass = clazz.getComponentType()
           val elemTag = FastTypeTag.mkRaw(elemClass, mirror)
           val elemPickler = genPickler(classLoader, elemClass, elemTag)
 
-          mkFastArrayTravPickler[Array[AnyRef]](mirror, elemTag, tag, elemPickler, null)
+          mkRuntimeTravPickler[Array[AnyRef]](mirror, elemTag, tag, elemPickler, null)
         } else {
           val runtime = new RuntimePickler(classLoader, clazz)
           runtime.mkPickler
@@ -92,16 +92,16 @@ trait GenUnpicklers extends CorePicklersUnpicklers {
     val className = tag.key
     GlobalRegistry.unpicklerMap.get(className) match {
       case None =>
-        debug(s"!!! could not find registered pickler for class $className !!!")
+        // debug(s"!!! could not find registered pickler for class $className !!!")
         val unpickler = if (className.startsWith("scala.Array")) {
-          debug(s"runtime unpickling of an array: $className")
+          // debug(s"runtime unpickling of an array: $className")
           val len = className.length
           val elemTypeString = className.substring(12, len-1)
-          debug(s"creating tag for element type: $elemTypeString")
+          // debug(s"creating tag for element type: $elemTypeString")
           val elemTag = FastTypeTag(mirror, elemTypeString)
           val elemUnpickler = Unpickler.genUnpickler(mirror, elemTag)
 
-          mkFastArrayTravPickler[Array[AnyRef]](mirror, elemTag, tag, null, elemUnpickler)
+          mkRuntimeTravPickler[Array[AnyRef]](mirror, elemTag, tag, null, elemUnpickler)
         } else {
           val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
           runtime.genUnpickler

@@ -56,7 +56,7 @@ package object internal {
               if (typename.endsWith(".type")) mirror.staticModule(typename.stripSuffix(".type")).moduleClass
               else mirror.staticClass(typename)
             } catch {
-              case t: Throwable =>
+              case t: ScalaReflectionException =>
                 sys.error(s"""error: cannot find class or module with type name '$typename'
                              |full type string: '$stpe'""".stripMargin)
             }

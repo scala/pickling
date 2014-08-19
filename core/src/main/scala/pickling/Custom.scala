@@ -107,7 +107,7 @@ trait LowPriorityPicklersUnpicklers {
     }
   }
 
-  def mkFastArrayTravPickler[C <% Traversable[_]](mirror: ru.Mirror, elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
+  def mkRuntimeTravPickler[C <% Traversable[_]](mirror: ru.Mirror, elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
                                                   elemPickler0: SPickler[_], elemUnpickler0: Unpickler[_])
                                                  (implicit pf: PickleFormat, cbf: CanBuildFrom[C, AnyRef, C]):
     SPickler[C] with Unpickler[C] = new SPickler[C] with Unpickler[C] {
