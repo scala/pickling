@@ -10,7 +10,7 @@ class CustomPersonXPickler(implicit val format: PickleFormat) extends SPickler[P
   def pickle(picklee: PersonX, builder: PBuilder) = {
     builder.hintTag(implicitly[FastTypeTag[PersonX]])
     builder.beginEntry(picklee).putField("name", b => {
-      b.hintTag(FastTypeTag.ScalaString)
+      b.hintTag(FastTypeTag.JavaString)
       b.beginEntry(picklee.name)
       b.endEntry()
     })
