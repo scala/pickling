@@ -45,6 +45,9 @@ object Compat {
 
   def UnpickleMacros_pickleUnpickle[T: c.WeakTypeTag](c: Context): c.Expr[T] = {
     val c0: c.type = c
+    val tpe = c.universe.weakTypeOf[T]
+    // abort if someone forgets to pass a type parameter to the unpickle method
+    if (tpe.typeSymbol.isAbstract) c.abort(c.enclosingPosition, "cannot unpickle because the (inferred) type argument to unpickle is abstract. Typically, this is caused by omitting an explicit type argument for unpickle. Always invoke unpickle with a concrete type argument, for example, unpickle[Int]")
     val bundle = new { val c: c0.type = c0 } with UnpickleMacros
     c.Expr[T](bundle.pickleUnpickle[T])
   }
