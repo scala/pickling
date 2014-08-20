@@ -409,8 +409,9 @@ trait PickleMacros extends Macro {
 
   def createRuntimePickler(builder: c.Tree): c.Tree = q"""
     val classLoader = this.getClass.getClassLoader
-    $builder.hintTag(scala.pickling.FastTypeTag.mkRaw(clazz, scala.reflect.runtime.universe.runtimeMirror(classLoader)))
-    SPickler.genPickler(classLoader, clazz)
+    val tag = scala.pickling.FastTypeTag.mkRaw(clazz, scala.reflect.runtime.universe.runtimeMirror(classLoader))
+    $builder.hintTag(tag)
+    SPickler.genPickler(classLoader, clazz, tag)
   """
 
   def isCaseClass(tpe: c.Type): Boolean = {
