@@ -11,6 +11,15 @@ package object internal {
   import ru._
   import compat._
 
+  /* Global reflection lock.
+   * It is used to avoid data races that typically lead to runtime exceptions
+   * when using (Scala) runtime reflection on Scala 2.10.x.
+   *
+   * Note: visibility must be public, so that the lock can be accessed from
+   *       macro-generated code.
+   */
+  val GRL = new java.util.concurrent.locks.ReentrantLock
+
   // TOGGLE DEBUGGING
   private val debugEnabled: Boolean = System.getProperty("pickling.debug", "false").toBoolean
   private[pickling] def debug(output: => String) = if (debugEnabled) println(output)
