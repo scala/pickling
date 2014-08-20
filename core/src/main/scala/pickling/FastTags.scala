@@ -83,6 +83,7 @@ object FastTypeTag {
       case _ => null
     }
     if (clazz == null) tag match {
+      case FastTypeTag.Null => "null"
       case FastTypeTag.ArrayString => "[Ljava.lang.String;"
       case FastTypeTag.ArrayInt => "[I"
       case FastTypeTag.ArrayDouble => "[D"
