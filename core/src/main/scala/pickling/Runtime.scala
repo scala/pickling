@@ -159,7 +159,6 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
   import scala.reflect.runtime.{universe => ru}
 
   val tpe = tag.tpe
-  val sym = tpe.typeSymbol.asType
   // debug("UnpicklerRuntime: tpe = " + tpe)
   val clazz = mirror.runtimeClass(tpe.erasure)
   val irs = new IRs[ru.type](ru)

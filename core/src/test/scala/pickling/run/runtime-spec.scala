@@ -75,6 +75,10 @@ object RuntimeJsonSpec extends Properties("runtime-json") {
     roundTrip(p)
   }
 
+  property("Option[Int]") = Prop forAll { (x: Option[Int]) =>
+    roundTrip(x)
+  }
+
   property("C") = Prop forAll { (i: Int) =>
     roundTrip(C(i))
   }
@@ -101,6 +105,17 @@ object RuntimeJsonSpec extends Properties("runtime-json") {
     val up = p.unpickle[Any]
     val t2 = up.asInstanceOf[(Int, Array[Double])]
     t._1 == t2._1 && t._2.mkString(",") == t2._2.mkString(",")
+  }
+
+  property("Array[(Int, Array[Double])]") = Prop forAll { (t: Array[(Int, Array[Double])]) =>
+    val obj: Any = t
+    val p = obj.pickle
+    val up = p.unpickle[Any]
+    val t2 = up.asInstanceOf[Array[(Int, Array[Double])]]
+    t2.zipWithIndex.forall { case (pair, index) =>
+      val otherPair = t(index)
+      otherPair._1 == pair._1 && otherPair._2.mkString(",") == pair._2.mkString(",")
+    }
   }
 }
 
@@ -168,6 +183,10 @@ object RuntimeBinarySpec extends Properties("runtime-binary") {
     roundTrip(p)
   }
 
+  property("Option[Int]") = Prop forAll { (x: Option[Int]) =>
+    roundTrip(x)
+  }
+
   property("C") = Prop forAll { (i: Int) =>
     roundTrip(C(i))
   }
@@ -194,5 +213,16 @@ object RuntimeBinarySpec extends Properties("runtime-binary") {
     val up = p.unpickle[Any]
     val t2 = up.asInstanceOf[(Int, Array[Double])]
     t._1 == t2._1 && t._2.mkString(",") == t2._2.mkString(",")
+  }
+
+  property("Array[(Int, Array[Double])]") = Prop forAll { (t: Array[(Int, Array[Double])]) =>
+    val obj: Any = t
+    val p = obj.pickle
+    val up = p.unpickle[Any]
+    val t2 = up.asInstanceOf[Array[(Int, Array[Double])]]
+    t2.zipWithIndex.forall { case (pair, index) =>
+      val otherPair = t(index)
+      otherPair._1 == pair._1 && otherPair._2.mkString(",") == pair._2.mkString(",")
+    }
   }
 }

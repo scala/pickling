@@ -86,13 +86,15 @@ trait Unpickler[T] {
 }
 
 trait GenUnpicklers extends CorePicklersUnpicklers {
+
   implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
-  def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit format: PickleFormat, share: refs.Share): Unpickler[_] = {
+
+  def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit pf: PickleFormat, share: refs.Share): Unpickler[_] = {
     // println(s"generating runtime unpickler for ${tag.key}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
     val className = tag.key
     GlobalRegistry.unpicklerMap.get(className) match {
       case None =>
-        // debug(s"!!! could not find registered pickler for class $className !!!")
+        // debug(s"!!! could not find registered unpickler for class $className !!!")
         val unpickler = if (className.startsWith("scala.Array")) {
           // debug(s"runtime unpickling of an array: $className")
           val len = className.length
@@ -103,6 +105,16 @@ trait GenUnpicklers extends CorePicklersUnpicklers {
           val elemUnpickler = Unpickler.genUnpickler(mirror, elemTag)
 
           mkRuntimeTravPickler[Array[AnyRef]](mirror, elemClass, elemTag, tag, null, elemUnpickler)
+        } else if (className.endsWith(".type")) {
+          // Return an Unpickler[_]
+          // Note: creating an InterpretedUnpicklerRuntime has too much overhead in this case
+          new Unpickler[Any] {
+            val format: PickleFormat = pf
+            val moduleSym = mirror.staticModule(className.stripSuffix(".type"))
+            val moduleMirror = mirror.reflectModule(moduleSym)
+            def unpickle(tagDontAccess: => FastTypeTag[_], reader: PReader): Any =
+              moduleMirror.instance
+          }
         } else {
           val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
           runtime.genUnpickler
