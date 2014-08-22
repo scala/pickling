@@ -48,15 +48,16 @@ object Compat {
     val c0: c.type = c
     val tpe = c.universe.weakTypeOf[T]
     // abort if someone forgets to pass a type parameter to the unpickle method
-    val unpicklerTpe = appliedType(typeOf[Unpickler[_]].typeConstructor, List(tpe))
-    val tree = c.inferImplicitValue(unpicklerTpe, silent = true, withMacrosDisabled = true)
-    // println(tree.tpe)
-    // println("condition 1: " + (tree.tpe <:< typeOf[Generated]))
-    // println("condition 2: " + tpe.typeSymbol.asType.isAbstractType)
-    // println("unpickler tpe is: " + unpicklerTpe)
-    // println("result of inferimplicit on that unpickler: " + c.inferImplicitValue(unpicklerTpe))
-    if (tree.isEmpty && tpe.typeSymbol.asType.isAbstractType)
-      c.abort(c.enclosingPosition, "cannot unpickle because the (inferred) type argument to unpickle is abstract. Typically, this is caused by omitting an explicit type argument for unpickle. Always invoke unpickle with a concrete type argument, for example, unpickle[Int]")
+    val isNothing = tpe =:= definitions.NothingTpe
+    val unpickleSym = c.mirror.staticClass("scala.pickling.Pickle").asType.toType.member(newTermName("unpickle"))
+    val typeArgMissing = tpe match {
+      case t: TypeRef => t.typeSymbol.owner == unpickleSym || isNothing
+      case _ => false
+    }
+    if (typeArgMissing)
+      c.abort(c.enclosingPosition, """cannot unpickle because the (inferred) type argument of unpickle is abstract.
+        |Typically, this is caused by omitting an explicit type argument. Always invoke unpickle with a concrete
+        |type argument, for example, unpickle[Int]""".stripMargin)
     val bundle = new { val c: c0.type = c0 } with UnpickleMacros
     c.Expr[T](bundle.pickleUnpickle[T])
   }

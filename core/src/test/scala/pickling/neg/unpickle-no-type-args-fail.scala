@@ -6,7 +6,7 @@ import org.scalatest.FunSuite
 
 class UnpickleNoTypeArgsFailTest extends FunSuite {
   test("main") {
-    expectError("cannot unpickle because the (inferred) type argument to unpickle is abstract. Typically, this is caused by omitting an explicit type argument for unpickle.") {
+    expectError("cannot unpickle because the (inferred) type argument of unpickle is abstract") {
       """
         | import _root_.scala.pickling._
         | import _root_.scala.pickling.json._
