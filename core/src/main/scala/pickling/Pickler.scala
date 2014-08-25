@@ -45,9 +45,8 @@ object DPickler {
 trait GenPicklers extends CorePicklersUnpicklers {
 
   implicit def genPickler[T](implicit format: PickleFormat): SPickler[T] = macro Compat.PicklerMacros_impl[T]
-  // TODO: the primitive pickler hack employed here is funny, but I think we should fix this one
-  // since people probably would also have to deal with the necessity to abstract over pickle formats
-  def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit format: PickleFormat, share: refs.Share): SPickler[_] = {
+
+  def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit pf: PickleFormat, share: refs.Share): SPickler[_] = {
     // println(s"generating runtime pickler for $clazz") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
     val className = if (clazz == null) "null" else clazz.getName
     GlobalRegistry.picklerMap.get(className) match {
@@ -60,6 +59,16 @@ trait GenPicklers extends CorePicklersUnpicklers {
           val elemPickler = genPickler(classLoader, elemClass, elemTag)
 
           mkRuntimeTravPickler[Array[AnyRef]](mirror, elemClass, elemTag, tag, elemPickler, null)
+        } else if (className.endsWith("$")) {
+          // Return an SPickler[_]
+          // Note: creating a RuntimePickler has too much overhead in this case
+          new SPickler[Any] {
+            val format: PickleFormat = pf
+            def pickle(picklee: Any, builder: PBuilder): Unit = {
+              builder.beginEntry(picklee)
+              builder.endEntry()
+            }
+          }
         } else {
           val runtime = new RuntimePickler(classLoader, clazz)
           runtime.mkPickler
