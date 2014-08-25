@@ -42,7 +42,7 @@ object DPickler {
   implicit def genDPickler[T](implicit format: PickleFormat): DPickler[T] = macro Compat.PicklerMacros_dpicklerImpl[T]
 }
 
-trait GenPicklers extends CorePicklersUnpicklers {
+trait GenPicklers extends RuntimePicklersUnpicklers {
 
   implicit def genPickler[T](implicit format: PickleFormat): SPickler[T] = macro Compat.PicklerMacros_impl[T]
   // TODO: the primitive pickler hack employed here is funny, but I think we should fix this one
@@ -77,7 +77,7 @@ trait GenPicklers extends CorePicklersUnpicklers {
 // this is important for the dispatch between custom and generated picklers
 trait Generated
 
-object SPickler extends GenPicklers
+object SPickler extends CorePicklersUnpicklers
 
 @implicitNotFound(msg = "Cannot generate an unpickler for ${T}. Recompile with -Xlog-implicits for details")
 trait Unpickler[T] {
@@ -85,8 +85,8 @@ trait Unpickler[T] {
   def unpickle(tag: => FastTypeTag[_], reader: PReader): Any
 }
 
-trait GenUnpicklers extends CorePicklersUnpicklers {
-  implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
+trait GenUnpicklers extends RuntimePicklersUnpicklers {
+  implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] with Generated = macro Compat.UnpicklerMacros_impl[T]
   def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit format: PickleFormat, share: refs.Share): Unpickler[_] = {
     // println(s"generating runtime unpickler for ${tag.key}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
     val className = tag.key
@@ -115,4 +115,4 @@ trait GenUnpicklers extends CorePicklersUnpicklers {
   }
 }
 
-object Unpickler extends GenUnpicklers
+object Unpickler extends CorePicklersUnpicklers
