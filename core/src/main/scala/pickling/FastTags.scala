@@ -67,6 +67,7 @@ object FastTypeTag {
   }
 
   def apply(mirror: ru.Mirror, key: String): FastTypeTag[_] = apply(mirror, typeFromString(mirror, key), key)
+
   def apply(key: String): FastTypeTag[_] = macro Compat.FastTypeTagMacros_apply
 
   def valueTypeName(tag: FastTypeTag[_]): String = {
@@ -138,7 +139,12 @@ object FastTypeTag {
           val key = "scala.Array[" + elemClass.getName + "]"
           apply(mirror, tpe, key)
         } else {
-          apply(mirror, clazz.getName())
+          val className = clazz.getName()
+          val key = if (className.endsWith("$"))
+            className.substring(0, className.length-1) + ".type"
+          else
+            className
+          apply(mirror, key)
         }
       })
     } catch {
