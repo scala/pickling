@@ -19,10 +19,10 @@ object Compat {
     c.Expr[SPickler[T]](bundle.impl[T](format.tree))
   }
 
-  def UnpicklerMacros_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[Unpickler[T]] = {
+  def UnpicklerMacros_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[Unpickler[T] with Generated] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with UnpicklerMacros
-    c.Expr[Unpickler[T]](bundle.impl[T](format.tree))
+    c.Expr[Unpickler[T] with Generated](bundle.impl[T](format.tree))
   }
 
   def PickleMacros_pickle[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[format.value.PickleType] = {
@@ -44,7 +44,20 @@ object Compat {
   }
 
   def UnpickleMacros_pickleUnpickle[T: c.WeakTypeTag](c: Context): c.Expr[T] = {
+    import c.universe._
     val c0: c.type = c
+    val tpe = c.universe.weakTypeOf[T]
+    // abort if someone forgets to pass a type parameter to the unpickle method
+    val isNothing = tpe =:= definitions.NothingTpe
+    val unpickleSym = c.mirror.staticClass("scala.pickling.Pickle").asType.toType.member(newTermName("unpickle"))
+    val typeArgMissing = tpe match {
+      case t: TypeRef => t.typeSymbol.owner == unpickleSym || isNothing
+      case _ => false
+    }
+    if (typeArgMissing)
+      c.abort(c.enclosingPosition, """cannot unpickle because the (inferred) type argument of unpickle is abstract.
+        |Typically, this is caused by omitting an explicit type argument. Always invoke unpickle with a concrete
+        |type argument, for example, unpickle[Int]""".stripMargin)
     val bundle = new { val c: c0.type = c0 } with UnpickleMacros
     c.Expr[T](bundle.pickleUnpickle[T])
   }
