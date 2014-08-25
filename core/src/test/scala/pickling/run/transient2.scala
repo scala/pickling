@@ -66,15 +66,15 @@ class FlatMappedRDD[U: ClassTag, T: ClassTag](
 }
 
 
-// class Transient2SparkTest extends FunSuite {
-//   test("main") {
-//     val sc = new SparkContext(new SparkConf(true))
-//     val rdd = new RDD[Int](sc, Seq(new Dependency(null)))
-//     val fmrdd = new FlatMappedRDD[Int, Int](rdd, (x: Int) => (1 to x).toList)
+class Transient2SparkTest extends FunSuite {
+  test("main") {
+    val sc = new SparkContext(new SparkConf(true))
+    val rdd = new RDD[Int](sc, Seq(new Dependency(null)))
+    val fmrdd = new FlatMappedRDD[Int, Int](rdd, (x: Int) => (1 to x).toList)
 
-//     val p: JSONPickle = fmrdd.pickle
-//     val up = p.unpickle[FlatMappedRDD[Int, Int]]
+    val p: JSONPickle = fmrdd.pickle
+    val up = p.unpickle[FlatMappedRDD[Int, Int]]
 
-//     assert(up.getIt(up.x) == List(1, 2, 3, 4, 5))
-//   }
-// }
+    assert(up.getIt(up.x) == List(1, 2, 3, 4, 5))
+  }
+}
