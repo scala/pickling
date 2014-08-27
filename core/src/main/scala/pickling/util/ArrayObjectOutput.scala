@@ -96,7 +96,7 @@ case class GenObjectOutput(
   def writeUTF(x: String): Unit = { stringArrBuf += x }
 
   // Members declared in java.io.ObjectOutput
-  def close(): Unit = ???
+  def close(): Unit = {}
   def flush(): Unit = ???
   def write(x1: Array[Byte],x2: Int,x3: Int): Unit = ???
   def write(x: Array[Byte]): Unit = { arrByteArrBuf += x }
