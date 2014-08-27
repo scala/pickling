@@ -354,6 +354,7 @@ trait UnpicklerMacros extends Macro {
     val unpicklerName = c.fresh(syntheticUnpicklerName(tpe).toTermName)
     q"""
       implicit object $unpicklerName extends scala.pickling.Unpickler[$tpe] with Generated {
+        import scala.language.existentials
         import scala.pickling._
         import scala.pickling.ir._
         import scala.pickling.internal._

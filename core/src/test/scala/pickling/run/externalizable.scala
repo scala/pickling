@@ -151,6 +151,24 @@ class StorageLevel2 (
     }
 }
 
+class StorageLevel3(private var s: String, private var x: Int) extends Externalizable {
+  override def writeExternal(out: ObjectOutput) {
+    out.writeUTF(s)
+    out.writeInt(x)
+  }
+
+  override def readExternal(in: ObjectInput) {
+    s = in.readUTF()
+    x = in.readInt()
+  }
+
+  override def equals(other: Any): Boolean =
+    other.isInstanceOf[StorageLevel3] && {
+      val o = other.asInstanceOf[StorageLevel3]
+      o.s == s && o.x == x
+    }
+}
+
 class ExternalizableTest extends FunSuite {
   test("main") {
     import json._
@@ -167,6 +185,15 @@ class ExternalizableTest extends FunSuite {
     val obj = new StorageLevel2(false, true, false, 1)
     val p = obj.pickle
     val up = p.unpickle[StorageLevel2]
+    assert(up == obj)
+  }
+
+  test("writeUTF/readUTF") {
+    import json._
+
+    val obj = new StorageLevel3("test", 5)
+    val pickle: JSONPickle = obj.pickle
+    val up = pickle.unpickle[StorageLevel3]
     assert(up == obj)
   }
 }
