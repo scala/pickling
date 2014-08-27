@@ -177,8 +177,11 @@ package binary {
       val buf = Array[Byte](la, nextByte(), nextByte(), nextByte())
       val len = Util.decodeIntFrom(buf, 0)
       val bytes = Array.ofDim[Byte](len)
-      val num = in.read(bytes)
-      if (num < len) throw new Exception("Could not read enough bytes from input stream")
+      var num = in.read(bytes)
+      while (num < len) {
+        val readMore = in.read(bytes, num, len - num)
+        num += readMore
+      }
       new String(bytes, "UTF-8")
     }
 
