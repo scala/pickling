@@ -27,19 +27,23 @@ class GenObjectInput(booleanIter: Iterator[Boolean],
                      longIter: Iterator[Long],
                      shortIter: Iterator[Int],
                      arrByteIter: Iterator[Array[Byte]],
-                     anyRefIter: Iterator[Any]) extends ObjectInput {
+                     anyRefIter: Iterator[Any],
+                     stringIter: Iterator[String]) extends ObjectInput {
   def readByte(): Byte = byteIter.next().asInstanceOf[Byte]
   def readBoolean(): Boolean = booleanIter.next()
   def readChar(): Char = charIter.next().asInstanceOf[Char]
   def readDouble(): Double = doubleIter.next()
   def readFloat(): Float = floatIter.next()
   def readFully(x1: Array[Byte], x2: Int, x3: Int): Unit = ???
-  def readFully(x: Array[Byte]): Unit = arrByteIter.next()
+  def readFully(dest: Array[Byte]): Unit = {
+    val src = arrByteIter.next()
+    java.lang.System.arraycopy(src, 0, dest, 0, dest.length)
+  }
   def readInt(): Int = intIter.next()
   def readLine(): String = ???
   def readLong(): Long = longIter.next()
   def readShort(): Short = shortIter.next().asInstanceOf[Short]
-  def readUTF(): String = ???
+  def readUTF(): String = stringIter.next()
   def readUnsignedByte(): Int = ???
   def readUnsignedShort(): Int = ???
   def skipBytes(x1: Int): Int = ???
@@ -62,7 +66,8 @@ case class GenObjectOutput(
   val longArrBuf: ArrayBuffer[Long] = new ArrayBuffer[Long],
   val shortArrBuf: ArrayBuffer[Int] = new ArrayBuffer[Int],
   val arrByteArrBuf: ArrayBuffer[Array[Byte]] = new ArrayBuffer[Array[Byte]],
-  val anyRefArrBuf: ArrayBuffer[Any] = new ArrayBuffer[Any]
+  val anyRefArrBuf: ArrayBuffer[Any] = new ArrayBuffer[Any],
+  val stringArrBuf: ArrayBuffer[String] = new ArrayBuffer[String]
   ) extends ObjectOutput {
   def toInput: ObjectInput = new GenObjectInput(
     booleanArrBuf.iterator,
@@ -74,7 +79,8 @@ case class GenObjectOutput(
     longArrBuf.iterator,
     shortArrBuf.iterator,
     arrByteArrBuf.iterator,
-    anyRefArrBuf.iterator)
+    anyRefArrBuf.iterator,
+    stringArrBuf.iterator)
 
   // Members declared in java.io.DataOutput
   def writeBoolean(x: Boolean): Unit = { booleanArrBuf += x }
@@ -87,10 +93,10 @@ case class GenObjectOutput(
   def writeInt(x: Int): Unit = { intArrBuf += x }
   def writeLong(x: Long): Unit = { longArrBuf += x }
   def writeShort(x: Int): Unit = { shortArrBuf += x }
-  def writeUTF(x: String): Unit = ???
+  def writeUTF(x: String): Unit = { stringArrBuf += x }
 
   // Members declared in java.io.ObjectOutput
-  def close(): Unit = ???
+  def close(): Unit = {}
   def flush(): Unit = ???
   def write(x1: Array[Byte],x2: Int,x3: Int): Unit = ???
   def write(x: Array[Byte]): Unit = { arrByteArrBuf += x }
