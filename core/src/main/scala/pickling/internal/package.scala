@@ -61,13 +61,17 @@ package object internal {
       val result =
         AppliedType.parse(stpe) match {
           case (AppliedType(typename, appliedTypeArgs), _) =>
+            def errorMsg = s"""error: cannot find class or module with type name '$typename'
+                              |full type string: '$stpe'""".stripMargin
+
             val sym = try {
               if (typename.endsWith(".type")) mirror.staticModule(typename.stripSuffix(".type")).moduleClass
               else mirror.staticClass(typename)
             } catch {
-              case t: ScalaReflectionException =>
-                sys.error(s"""error: cannot find class or module with type name '$typename'
-                             |full type string: '$stpe'""".stripMargin)
+              case _: ScalaReflectionException =>
+                sys.error(errorMsg)
+              case _: scala.reflect.internal.MissingRequirementError =>
+                sys.error(errorMsg)
             }
             val tycon = sym.asType.toTypeConstructor
             appliedType(tycon, appliedTypeArgs.map(starg => typeFromString(mirror, starg.toString)))
