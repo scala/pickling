@@ -170,7 +170,7 @@ package object internal {
     result
   }
   def preregisterUnpicklee() = {
-    var nextUnpicklee = nextUnpickleeTL.get()
+    val nextUnpicklee = nextUnpickleeTL.get()
     val index = nextUnpicklee
 
     val unpicklees = unpickleesTL.get()
@@ -186,8 +186,7 @@ package object internal {
     target(index) = null
 
     // println(s"preregisterUnpicklee() at $index")
-    nextUnpicklee += 1
-    nextUnpickleeTL.set(nextUnpicklee)
+    nextUnpickleeTL.set(nextUnpicklee + 1)
     index
   }
   def registerUnpicklee(unpicklee: Any, index: Int) = {
