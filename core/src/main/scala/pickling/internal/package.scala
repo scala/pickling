@@ -170,16 +170,23 @@ package object internal {
     result
   }
   def preregisterUnpicklee() = {
-    var nextUnpicklee = nextUnpickleeTL.get()
+    val nextUnpicklee = nextUnpickleeTL.get()
+    val index = nextUnpicklee
+
     val unpicklees = unpickleesTL.get()
 
-    val index = nextUnpicklee
-    // TODO: dynamically resize the array!
-    unpicklees(index) = null
+    val len = unpicklees.length
+    val target = if (index == len) {
+      val newArr = Array.ofDim[Any](len * 2)
+      System.arraycopy(unpicklees, 0, newArr, 0, len)
+      unpickleesTL.set(newArr)
+      newArr
+    } else
+      unpicklees
+    target(index) = null
+
     // println(s"preregisterUnpicklee() at $index")
-    nextUnpicklee += 1
-    nextUnpickleeTL.set(nextUnpicklee)
-    unpickleesTL.set(unpicklees)
+    nextUnpickleeTL.set(nextUnpicklee + 1)
     index
   }
   def registerUnpicklee(unpicklee: Any, index: Int) = {

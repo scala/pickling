@@ -4,7 +4,16 @@ import org.scalatest.FunSuite
 import scala.pickling._
 import binary._
 
+import java.io.ByteArrayInputStream
+
 class C(val name: String, val desc: String, var c: C, val arr: Array[Int])
+
+case class Outer(a: Array[Simple])
+
+class Simple(x: Int) {
+  var y: String = ""
+}
+
 
 class ShareBinaryTest extends FunSuite {
   val c1 = new C("c1", "desc", null, Array(1))
@@ -78,5 +87,22 @@ class ShareBinaryTest extends FunSuite {
     assert(c21.name === "c1")
     assert(c21.desc === "desc")
     assert(c21.arr.toList === List(1))
+  }
+
+  test("register many unpicklees") {
+    val output = new ByteArrayBufferOutput
+    val arr = Array.ofDim[Simple](66000)
+
+    for (i <- 0 until 66000) {
+      val obj = new Simple(i)
+      obj.y = "hello" + i
+      arr(i) = obj
+    }
+    val o = Outer(arr)
+
+    o.pickleTo(output)
+
+    val streamPickle = BinaryPickleStream(new ByteArrayInputStream(output.result))
+    streamPickle.unpickle[Outer]
   }
 }
