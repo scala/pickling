@@ -210,8 +210,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
                 if (shouldBotherAboutSharing(fir.tpe)) registerUnpicklee(result, preregisterUnpicklee())
                 result
               } else {
-                val fieldRuntime = new InterpretedUnpicklerRuntime(mirror, fdynamicTag)
-                val fieldUnpickler = fieldRuntime.genUnpickler
+                val fieldUnpickler = Unpickler.genUnpickler(mirror, fdynamicTag)
                 fieldUnpickler.unpickle(fdynamicTag, freader)
               }
             }

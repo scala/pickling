@@ -178,21 +178,48 @@ class Tools[C <: Context](val c: C) {
   }
 }
 
-abstract class ShareAnalyzer[U <: Universe](val u: U) {
+trait RichTypes {
+  type MyUniverse <: Universe
+  val u: MyUniverse
+
+  import u._
+  import definitions._
+
+  implicit class RichType(tpe: scala.reflect.api.Universe#Type) {
+    def key: String = {
+      tpe.normalize match {
+        case ExistentialType(tparams, TypeRef(pre, sym, targs))
+        if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
+          TypeRef(pre, sym, Nil).key
+        case TypeRef(pre, sym, targs) if pre.typeSymbol.isModuleClass =>
+          sym.fullName +
+          (if (sym.isModuleClass) ".type" else "") +
+          (if (targs.isEmpty) "" else targs.map(_.key).mkString("[", ",", "]"))
+        case _ =>
+          tpe.toString
+      }
+    }
+
+    def isEffectivelyPrimitive: Boolean = tpe match {
+      case TypeRef(_, sym: ClassSymbol, _) if sym.isPrimitive => true
+      case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.typeSymbol.isClass && eltpe.typeSymbol.asClass.isPrimitive => true
+      case _ => false
+    }
+
+    def isEffectivelyFinal = tpe.typeSymbol.isEffectivelyFinal
+
+    def isNotNullable = tpe.typeSymbol.isNotNullable
+  }
+}
+
+abstract class ShareAnalyzer[U <: Universe](val u: U) extends RichTypes {
+  type MyUniverse = U
+
   import u._
   import definitions._
 
   val irs = new ir.IRs[u.type](u)
   import irs._
-
-  // FIXME: duplication wrt pickling.`package`, but I don't really fancy abstracting away this path-dependent madness
-  implicit class RichTypeFIXME(tpe: Type) {
-    def isEffectivelyPrimitive: Boolean = tpe match {
-      case TypeRef(_, sym: ClassSymbol, _) if sym.isPrimitive => true
-      case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.isEffectivelyPrimitive => true
-      case _ => false
-    }
-  }
 
   def shareEverything: Boolean
   def shareNothing: Boolean
@@ -239,11 +266,16 @@ abstract class ShareAnalyzer[U <: Universe](val u: U) {
   }
 }
 
-abstract class Macro { self =>
+abstract class Macro extends RichTypes { self =>
+  type MyUniverse = scala.reflect.macros.Universe
+
   val c: Context
+  val u: MyUniverse = c.universe
+
   import c.universe._
   import compat._
   import definitions._
+
   val RefTpe = weakTypeOf[refs.Ref]
 
   val tools = new Tools[c.type](c)
@@ -267,29 +299,6 @@ abstract class Macro { self =>
         case tpe if tpe.typeSymbol.isClass => tpe
         case tpe => fail(s"$name resolved as $tpe is invalid")
       }
-    }
-  }
-
-  // FIXME: duplication wrt pickling.`package`, but I don't really fancy abstracting away this path-dependent madness
-  implicit class RichTypeFIXME(tpe: Type) {
-    def key: String = {
-      tpe.normalize match {
-        case ExistentialType(tparams, TypeRef(pre, sym, targs))
-        if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
-          TypeRef(pre, sym, Nil).key
-        case TypeRef(pre, sym, targs) if pre.typeSymbol.isModuleClass =>
-          sym.fullName +
-          (if (sym.isModuleClass) ".type" else "") +
-          (if (targs.isEmpty) "" else targs.map(_.key).mkString("[", ",", "]"))
-        case _ =>
-          tpe.toString
-      }
-    }
-    def canCauseLoops: Boolean = shareAnalyzer.canCauseLoops(tpe)
-    def isEffectivelyPrimitive: Boolean = tpe match {
-      case TypeRef(_, sym: ClassSymbol, _) if sym.isPrimitive => true
-      case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.isEffectivelyPrimitive => true
-      case _ => false
     }
   }
 
@@ -428,25 +437,63 @@ case class Hints(
   knownSize: Int = -1,
   isStaticallyElidedType: Boolean = false,
   isDynamicallyElidedType: Boolean = false,
-  oid: Int = -1) {
+  oid: Int = -1,
+  pinned: Boolean = false) {
   def isElidedType = isStaticallyElidedType || isDynamicallyElidedType
 }
 
 trait PickleTools {
-  var hints = new Hints()
-  var areHintsPinned = false
+  protected var hints: List[Hints] = List(Hints())
+  def areHintsPinned: Boolean = hints.head.pinned
 
-  def hintTag(tag: FastTypeTag[_]): this.type = { hints = hints.copy(tag = tag); this }
-  def hintKnownSize(knownSize: Int): this.type = { hints = hints.copy(knownSize = knownSize); this }
-  def hintStaticallyElidedType(): this.type = { hints = hints.copy(isStaticallyElidedType = true); this }
-  def hintDynamicallyElidedType(): this.type = { hints = hints.copy(isDynamicallyElidedType = true); this }
-  def hintOid(oid: Int): this.type = { hints = hints.copy(oid = oid); this }
-  def pinHints(): this.type = { areHintsPinned = true; this }
-  def unpinHints(): this.type = { areHintsPinned = false; hints = new Hints(); this }
+  def hintTag(tag: FastTypeTag[_]): this.type = {
+    hints = hints.head.copy(tag = tag) :: hints.tail
+    this
+  }
+
+  def hintKnownSize(knownSize: Int): this.type = {
+    hints = hints.head.copy(knownSize = knownSize) :: hints.tail
+    this
+  }
+
+  def hintStaticallyElidedType(): this.type = {
+    hints = hints.head.copy(isStaticallyElidedType = true) :: hints.tail
+    this
+  }
+
+  def hintDynamicallyElidedType(): this.type = {
+    hints = hints.head.copy(isDynamicallyElidedType = true) :: hints.tail
+    this
+  }
+
+  def hintOid(oid: Int): this.type = {
+    hints = hints.head.copy(oid = oid) :: hints.tail
+    this
+  }
+
+  def pinHints(): this.type = {
+    hints = hints.head.copy(pinned = true) :: hints.tail
+    this
+  }
+
+  def unpinHints(): this.type = {
+    hints = hints.head.copy(pinned = false) :: hints.tail
+    this
+  }
+
+  def pushHints(): this.type = {
+    hints = Hints() :: hints
+    this
+  }
+
+  def popHints(): this.type = {
+    hints = hints.tail
+    this
+  }
 
   def withHints[T](body: Hints => T): T = {
-    val hints = this.hints
-    if (!areHintsPinned) this.hints = new Hints
+    val hints = this.hints.head
+    if (!hints.pinned) this.hints = Hints() :: this.hints.tail
     body(hints)
   }
 }

@@ -25,27 +25,12 @@ package object internal {
   private[pickling] def debug(output: => String) = if (debugEnabled) println(output)
 
 
-  // ----- internal extension methods for symbols and types -----
+  // ----- internal extension methods for symbols -----
   private[pickling] implicit class RichSymbol(sym: scala.reflect.api.Universe#Symbol) {
     def isEffectivelyFinal = sym.asInstanceOf[scala.reflect.internal.Symbols#Symbol].isEffectivelyFinal
     def isEffectivelyPrimitive = throw new Exception("use Type.isEffectivelyPrimitive instead")
     def isNotNullable = sym.isClass && (sym.asClass.isPrimitive || sym.asClass.isDerivedValueClass)
     def isNullable = sym.isClass && !isNotNullable
-  }
-
-  private[pickling] implicit class RichType(tpe: scala.reflect.api.Universe#Type) {
-    def isEffectivelyFinal = tpe.typeSymbol.isEffectivelyFinal
-    // TODO: doesn't work...
-    // def isEffectivelyPrimitive: Boolean = {
-    //   tpe.typeSymbol.isPrimitive || {
-    //     val args = tpe.asInstanceOf[scala.reflect.internal.SymbolTable#Type].typeArguments
-    //     def isArrayOfSomething = tpe.toString.startsWith("scala.Array[") || tpe.toString.startsWith("Array[")
-    //     def isParameterizedByPrimitive = args.nonEmpty && args.head.isEffectivelyPrimitive
-    //     isArrayOfSomething && isParameterizedByPrimitive
-    //   }
-    // }
-    def isNotNullable = tpe.typeSymbol.isNotNullable
-    def isNullable = tpe.typeSymbol.isNullable
   }
 
   var cachedMirror: ru.Mirror = null
@@ -101,7 +86,7 @@ package object internal {
     }
     def isEffectivelyPrimitive: Boolean = tpe match {
       case TypeRef(_, sym: ClassSymbol, _) if sym.isPrimitive => true
-      case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.isEffectivelyPrimitive => true
+      case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.typeSymbol.isClass && eltpe.typeSymbol.asClass.isPrimitive => true
       case _ => false
     }
   }
