@@ -184,6 +184,7 @@ trait RichTypes {
 
   import u._
   import definitions._
+  import compat._
 
   implicit class RichType(tpe: scala.reflect.api.Universe#Type) {
     def key: String = {
