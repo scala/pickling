@@ -93,12 +93,11 @@ trait LowPriorityPicklersUnpicklers {
     val isPrimitive = elemTag.tpe.isEffectivelyPrimitive
 
     def pickle(coll: C, builder: PBuilder): Unit = {
-      builder.hintTag(collTag)
       if (elemTag == FastTypeTag.Int) builder.hintKnownSize(coll.size * 4 + 100)
       builder.beginEntry(coll)
-
       builder.beginCollection(coll.size)
 
+      builder.pushHints()
       if (isPrimitive) {
         builder.hintStaticallyElidedType()
         builder.hintTag(elemTag)
@@ -112,7 +111,7 @@ trait LowPriorityPicklersUnpicklers {
         }
       }
 
-      if (isPrimitive) builder.unpinHints()
+      builder.popHints()
       builder.endCollection()
       builder.endEntry()
     }
@@ -120,6 +119,7 @@ trait LowPriorityPicklersUnpicklers {
     def unpickle(tpe: => FastTypeTag[_], preader: PReader): Any = {
       val reader = preader.beginCollection()
 
+      preader.pushHints()
       if (isPrimitive) {
         reader.hintStaticallyElidedType()
         reader.hintTag(elemTag)
@@ -138,7 +138,7 @@ trait LowPriorityPicklersUnpicklers {
         i = i + 1
       }
 
-      if (isPrimitive) reader.unpinHints()
+      preader.popHints()
       preader.endCollection()
       builder.result
     }
