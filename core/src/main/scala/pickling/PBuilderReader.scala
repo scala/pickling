@@ -30,6 +30,7 @@ trait PReader extends Hintable {
   def mirror: Mirror
   def beginEntry(): FastTypeTag[_]
   def beginEntryNoTag(): String
+  def beginEntryNoTagDebug(debugOn: Boolean): String
   def atPrimitive: Boolean
   def readPrimitive(): Any
   def atObject: Boolean
@@ -43,4 +44,6 @@ trait PReader extends Hintable {
   def unpickleTopLevel[T]: T = macro Compat.UnpickleMacros_readerUnpickleTopLevel[T]
 }
 
-case class PicklingException(msg: String) extends Exception(msg)
+case class PicklingException(msg: String) extends RuntimeException(msg)
+
+class EndOfStreamException extends RuntimeException

@@ -2,7 +2,7 @@ package scala.pickling
 
 import scala.language.experimental.macros
 
-import scala.reflect.runtime.universe._
+import scala.reflect.runtime.universe.Mirror
 
 trait Pickle {
   type ValueType

@@ -196,7 +196,11 @@ package json {
       }
       nested
     }
-    def beginEntryNoTag(): String = beginEntry().key
+
+    def beginEntryNoTag(): String =
+      beginEntryNoTagDebug(false)
+
+    def beginEntryNoTagDebug(debugOn: Boolean): String = beginEntry().key
     def beginEntry(): FastTypeTag[_] = withHints { hints =>
       lastReadTag = {
         if (datum == null) FastTypeTag.Null

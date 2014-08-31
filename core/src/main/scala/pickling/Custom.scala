@@ -366,7 +366,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
 
   abstract class AutoRegister[T: FastTypeTag](name: String) extends SPickler[T] with Unpickler[T] {
     debug(s"autoregistering pickler $this under key '$name'")
-    GlobalRegistry.picklerMap += (name -> this)
+    GlobalRegistry.picklerMap += (name -> (x => this))
     val tag = implicitly[FastTypeTag[T]]
     debug(s"autoregistering unpickler $this under key '${tag.key}'")
     GlobalRegistry.unpicklerMap += (tag.key -> this)
@@ -379,7 +379,15 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
       builder.endEntry()
     }
     def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
-      reader.readPrimitive()
+      try {
+        reader.readPrimitive()
+      } catch {
+        case PicklingException(msg) =>
+          throw PicklingException(s"""error in unpickle of primitive unpickler '$name':
+                                     |tag in unpickle: '${tag.key}'
+                                     |message:
+                                     |$msg""".stripMargin)
+      }
     }
   }
 
@@ -423,78 +431,4 @@ trait ListPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
   def mkArray(picklee: c.Tree) = q"$picklee.toArray"
   def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ListBuffer[$eltpe]()"
   def mkResult(buffer: c.Tree) = q"$buffer.toList"
-}
-
-trait RuntimePicklersUnpicklers {
-  def mkAnyRefArrayTravPickler[C <% Traversable[_]](mirror: ru.Mirror, classLoader: ClassLoader)(implicit pf: PickleFormat, cbf: CanBuildFrom[C, AnyRef, C]):
-    SPickler[C] /*with Unpickler[C]*/ = new SPickler[C] /*with Unpickler[C]*/ {
-
-    val format: PickleFormat = pf
-
-    def pickle(coll: C, builder: PBuilder): Unit = {
-      builder.hintTag(FastTypeTag.ArrayAnyRef)
-      builder.beginEntry(coll)
-
-      builder.beginCollection(coll.size)
-      (coll: Traversable[_]).asInstanceOf[Traversable[AnyRef]].foreach { (elem: AnyRef) =>
-        builder putElement { b =>
-          val elemClass = elem.getClass
-          val elemTag = FastTypeTag.mkRaw(elemClass, mirror) // slow: `mkRaw` is called for each element
-          b.hintTag(elemTag)
-          val pickler = SPickler.genPickler(classLoader, elemClass, elemTag).asInstanceOf[SPickler[AnyRef]]
-          pickler.pickle(elem, b)
-        }
-      }
-      builder.endCollection()
-
-      builder.endEntry()
-    }
-  }
-
-  def mkRuntimeTravPickler[C <% Traversable[_]](mirror: ru.Mirror, elemClass: Class[_], elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
-                                                  elemPickler0: SPickler[_], elemUnpickler0: Unpickler[_])
-                                                 (implicit pf: PickleFormat):
-    SPickler[C] with Unpickler[C] = new SPickler[C] with Unpickler[C] {
-
-    val format: PickleFormat = pf
-
-    val elemPickler   = elemPickler0.asInstanceOf[SPickler[AnyRef]]
-    val elemUnpickler = elemUnpickler0.asInstanceOf[Unpickler[AnyRef]]
-
-    def pickle(coll: C, builder: PBuilder): Unit = {
-      builder.hintTag(collTag)
-      builder.beginEntry(coll)
-
-      builder.beginCollection(coll.size)
-      (coll: Traversable[_]).asInstanceOf[Traversable[AnyRef]].foreach { (elem: AnyRef) =>
-        builder putElement { b =>
-          b.hintTag(elemTag)
-          elemPickler.pickle(elem, b)
-        }
-      }
-      builder.endCollection()
-
-      builder.endEntry()
-    }
-
-    def unpickle(tpe: => FastTypeTag[_], preader: PReader): Any = {
-      val reader = preader.beginCollection()
-
-      val length = reader.readLength()
-      val newArray = java.lang.reflect.Array.newInstance(elemClass, length).asInstanceOf[Array[AnyRef]]
-
-      var i = 0
-      while (i < length) {
-        val r = reader.readElement()
-        r.beginEntryNoTag()
-        val elem = elemUnpickler.unpickle(elemTag, r)
-        r.endEntry()
-        newArray(i) = elem.asInstanceOf[AnyRef]
-        i = i + 1
-      }
-
-      preader.endCollection()
-      newArray
-    }
-  }
 }
