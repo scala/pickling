@@ -152,7 +152,7 @@ class MapStatusTest extends FunSuite {
     val clazz = classTag[T].runtimeClass
     val p = implicitly[SPickler[T]]
     val up = implicitly[Unpickler[T]]
-    GlobalRegistry.picklerMap += (clazz.getName() -> p)
+    GlobalRegistry.picklerMap += (clazz.getName() -> (x => p))
     GlobalRegistry.unpicklerMap += (clazz.getName() -> up)
   }
 

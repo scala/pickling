@@ -62,7 +62,7 @@ class WrappedArrayTest extends FunSuite {
     }
   }
 
-  GlobalRegistry.picklerMap += ("scala.collection.mutable.WrappedArray$ofRef" -> mkAnyRefWrappedArrayPickler)
+  GlobalRegistry.picklerMap += ("scala.collection.mutable.WrappedArray$ofRef" -> (x => mkAnyRefWrappedArrayPickler))
   GlobalRegistry.unpicklerMap += ("scala.collection.mutable.WrappedArray.ofRef[java.lang.Object]" -> mkAnyRefWrappedArrayPickler)
 
   test("main") {

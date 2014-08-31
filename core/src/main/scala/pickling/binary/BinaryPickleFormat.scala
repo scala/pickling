@@ -169,13 +169,26 @@ package binary {
     import format._
 
     def nextByte(): Byte = {
-      in.read().asInstanceOf[Byte]
+      val b = in.read()
+      if (b == -1) throw new EndOfStreamException
+      b.asInstanceOf[Byte]
     }
 
     def decodeStringWithLookahead(la: Byte): String = {
       // read 3 more bytes
       val buf = Array[Byte](la, nextByte(), nextByte(), nextByte())
-      val len = Util.decodeIntFrom(buf, 0)
+      val len = {
+        val len0 = Util.decodeIntFrom(buf, 0)
+        if (len0 > 1000) {
+          debug(s"@@@ corrupted length of type string: $len0")
+          throw new EndOfStreamException
+        } else if (len0 < 0) {
+          debug(s"@@@ negative length of type string: $len0\n@@@ buf: [${buf.mkString(",")}]")
+          0
+        } else {
+          len0
+        }
+      }
       val bytes = Array.ofDim[Byte](len)
       var num = in.read(bytes)
       while (num < len) {
@@ -187,8 +200,14 @@ package binary {
 
     var gla: Option[Byte] = None
 
-    def beginEntryNoTag(): String = {
+    def beginEntryNoTag(): String =
+      beginEntryNoTagDebug(false)
+
+    def beginEntryNoTagDebug(debugOn: Boolean): String = {
       val res: Any = withHints { hints =>
+        // if (debugOn)
+        //   debug(s"hints: $hints")
+
         if (hints.isElidedType && nullablePrimitives.contains(hints.tag.key)) {
           val lookahead = nextByte()
           lookahead match {
@@ -200,6 +219,8 @@ package binary {
           hints.tag
         } else {
           val lookahead = nextByte()
+          // if (debugOn)
+          //   debug(s"checking lookahead: $lookahead")
           lookahead match {
             case NULL_TAG =>
               FastTypeTag.Null
@@ -209,11 +230,18 @@ package binary {
               FastTypeTag.Ref
             case _ =>
               // do not consume lookahead byte
-              decodeStringWithLookahead(lookahead)
+              val res = decodeStringWithLookahead(lookahead)
+              // if (debugOn)
+              //   debug(s"decodeStringWithLookahead: $res")
+              if (res == "")
+                throw new PicklingException(s"encountered empty type string. debug info: $hints")
+              res
           }
         }
       }
       if (res.isInstanceOf[String]) {
+        // if (debugOn)
+        //   debug(s"replacing tag with last type string read: ${res.asInstanceOf[String]}")
         _lastTagRead = null
         _lastTypeStringRead = res.asInstanceOf[String]
         _lastTypeStringRead
@@ -397,7 +425,10 @@ package binary {
 
     private var pos = 0
 
-    def beginEntryNoTag(): String = {
+    def beginEntryNoTag(): String =
+      beginEntryNoTagDebug(false)
+
+    def beginEntryNoTagDebug(debugOn: Boolean): String = {
       val res: Any = withHints { hints =>
         if (hints.isElidedType && nullablePrimitives.contains(hints.tag.key)) {
           val lookahead = arr(pos)
@@ -503,10 +534,10 @@ package binary {
   }
 
   class BinaryPickleFormat extends PickleFormat {
-    val ELIDED_TAG: Byte = -1
-    val NULL_TAG: Byte = -2
-    val REF_TAG: Byte = -3
-    val UNIT_TAG: Byte = -4
+    val NULL_TAG  : Byte = -2
+    val REF_TAG   : Byte = -3
+    val UNIT_TAG  : Byte = -4
+    val ELIDED_TAG: Byte = -5
 
     val KEY_NULL    = FastTypeTag.Null.key
     val KEY_BYTE    = FastTypeTag.Byte.key
