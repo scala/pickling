@@ -135,13 +135,7 @@ trait RuntimePicklersUnpicklers {
       while (i < length) {
         try {
           val r = reader.readElement()
-
-          if (elemTag == "scala.Array[scala.Double]") {
-            debug(s"@@@ found Double array: hintStaticallyElidedType()")
-            r.hintStaticallyElidedType()
-            r.hintTag(FastTypeTag.ArrayDouble)
-          }
-
+          r.hintTag(elemTag)
           r.beginEntryNoTag()
           val elem = elemUnpickler.unpickle(elemTag, r)
           r.endEntry()
@@ -209,11 +203,6 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unp
   def unpickleField(name: String, reader: PReader): Any = {
     val reader1 = reader.readField(name)
     val tag1 = reader1.beginEntry()
-
-    // if (tag1.tpe.typeSymbol.isEffectivelyFinal)
-    //   reader1.hintStaticallyElidedType()
-    if (tag1.key == "scala.Array[scala.Array[scala.Double]]")
-      reader1.hintStaticallyElidedType()
 
     val value = {
       if (reader1.atPrimitive) {
