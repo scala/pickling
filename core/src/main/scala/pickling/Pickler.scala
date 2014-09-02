@@ -52,7 +52,7 @@ trait GenPicklers extends RuntimePicklersUnpicklers {
     val className = if (clazz == null) "null" else clazz.getName
     GlobalRegistry.picklerMap.get(className) match {
       case None =>
-        // debug(s"!!! could not find registered pickler for class $className !!!")
+        // debug(s"!!! could not find registered pickler for class $className, tag ${tag.key} !!!")
         val pickler: SPickler[_] = if (clazz.isArray) {
           val mirror = ru.runtimeMirror(classLoader)
           val elemClass = clazz.getComponentType()
@@ -86,20 +86,21 @@ trait Unpickler[T] {
 }
 
 trait GenUnpicklers extends RuntimePicklersUnpicklers {
+
   implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] with Generated = macro Compat.UnpicklerMacros_impl[T]
+
   def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit format: PickleFormat, share: refs.Share): Unpickler[_] = {
     // println(s"generating runtime unpickler for ${tag.key}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
     val className = tag.key
     GlobalRegistry.unpicklerMap.get(className) match {
       case None =>
-        // debug(s"!!! could not find registered pickler for class $className !!!")
+        // debug(s"!!! could not find registered unpickler for class $className !!!")
         val unpickler = if (className.startsWith("scala.Array")) {
           // debug(s"runtime unpickling of an array: $className")
-          val len = className.length
-          val elemTypeString = className.substring(12, len-1)
+          val elemTypeString = className.substring(12, className.length - 1)
           // debug(s"creating tag for element type: $elemTypeString")
           val elemTag = FastTypeTag(mirror, elemTypeString)
-          val elemClass = Class.forName(elemTypeString)
+          val elemClass = Classes.classFromString(elemTypeString)
           val elemUnpickler = Unpickler.genUnpickler(mirror, elemTag)
 
           mkRuntimeTravPickler[Array[AnyRef]](mirror, elemClass, elemTag, tag, null, elemUnpickler)

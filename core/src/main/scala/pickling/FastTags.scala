@@ -1,10 +1,10 @@
 package scala.pickling
 
+import scala.language.experimental.macros
+
 import scala.pickling.internal._
-import scala.reflect.macros.Context
-import scala.reflect.api.{Universe => ApiUniverse}
+
 import scala.reflect.runtime.{universe => ru}
-import language.experimental.macros
 import scala.reflect.ClassTag
 
 trait FastTypeTag[T] extends Equals {
@@ -107,6 +107,16 @@ object FastTypeTag {
     classOf[java.lang.Boolean] -> FastTypeTag.Boolean,
     classOf[java.lang.Float] -> FastTypeTag.Float,
     classOf[java.lang.Double] -> FastTypeTag.Double,
+
+    classOf[Byte] -> FastTypeTag.Byte,
+    classOf[Short] -> FastTypeTag.Short,
+    classOf[Char] -> FastTypeTag.Char,
+    classOf[Int] -> FastTypeTag.Int,
+    classOf[Long] -> FastTypeTag.Long,
+    classOf[Boolean] -> FastTypeTag.Boolean,
+    classOf[Float] -> FastTypeTag.Float,
+    classOf[Double] -> FastTypeTag.Double,
+
     classOf[Array[String]] -> FastTypeTag.ArrayString,
     classOf[Array[Int]] -> FastTypeTag.ArrayInt,
     classOf[Array[Byte]] -> FastTypeTag.ArrayByte,
@@ -118,28 +128,43 @@ object FastTypeTag {
     classOf[Array[Double]] -> FastTypeTag.ArrayDouble
   )
 
+  def mkRawArrayTypeAndKey(clazz: Class[_], mirror: ru.Mirror): (ru.Type, String) = {
+    // create Type without going through `typeFromString`
+    val elemClass = clazz.getComponentType()
+    // debug(s"creating tag for array with element type '${elemClass.getName}'")
+
+    val (elemTpe, elemKey) = if (elemClass.isArray) {
+      mkRawArrayTypeAndKey(elemClass, mirror)
+    } else {
+      val elemClassSymbol = try {
+        mirror.classSymbol(elemClass)
+      } catch {
+        case t: Throwable =>
+          sys.error(s"error: could not find class '${elemClass.getName}' in runtime mirror")
+      }
+      val primitiveTag: FastTypeTag[_] = raw.getOrElse(elemClass, null)
+      val k = if (primitiveTag == null) elemClass.getName else primitiveTag.key
+      (elemClassSymbol.asType.toType, k)
+    }
+
+    val tpe = ru.appliedType(ru.definitions.ArrayClass.toType, List(elemTpe))
+    val key = "scala.Array[" + elemKey + "]"
+    (tpe, key)
+  }
+
+  def mkRawArray(clazz: Class[_], mirror: ru.Mirror): FastTypeTag[_] = {
+    val (tpe, key) = mkRawArrayTypeAndKey(clazz, mirror)
+    apply(mirror, tpe, key)
+  }
+
   def mkRaw(clazz: Class[_], mirror: ru.Mirror): FastTypeTag[_] =
     if (clazz == null) FastTypeTag.Null
     else try {
       raw.getOrElse(clazz, {
         // debug(s"!!! could not find primitive tag for class ${clazz.getName} !!!")
         // handle arrays of non-primitive element type
-        if (clazz.isArray) {
-          // create Type without going through `typeFromString`
-          val elemClass = clazz.getComponentType()
-          // debug(s"creating tag for array with element type '${elemClass.getName}'")
-          val elemClassSymbol = try {
-            mirror.classSymbol(elemClass)
-          } catch {
-            case t: Throwable =>
-              sys.error(s"error: could not find class '${elemClass.getName}' in runtime mirror")
-          }
-          val tpe = ru.appliedType(ru.definitions.ArrayClass.toType, List(elemClassSymbol.asType.toType))
-          val key = "scala.Array[" + elemClass.getName + "]"
-          apply(mirror, tpe, key)
-        } else {
-          apply(mirror, clazz.getName())
-        }
+        if (clazz.isArray) mkRawArray(clazz, mirror)
+        else apply(mirror, clazz.getName())
       })
     } catch {
       case t: Throwable =>
