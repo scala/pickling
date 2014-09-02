@@ -62,4 +62,27 @@ class BinaryInputStreamReaderTest extends FunSuite {
   	val bools = (1 to 200).map(x => scala.util.Random.nextBoolean())
     testPerson[Boolean, PersonBoolean](PersonBoolean("James", bools.toArray))
   }
+
+  test("end of stream") {
+    val obj1 = Employee("James", 30)
+    val obj2 = Employee("Jim", 40)
+
+    val output = new ByteArrayBufferOutput
+    obj1.pickleTo(output)
+    obj2.pickleTo(output)
+
+    val streamPickle = BinaryPickleStream(new ByteArrayInputStream(output.result))
+    val readObj1     = streamPickle.unpickle[Employee]
+    val readObj2     = streamPickle.unpickle[Employee]
+    try {
+      streamPickle.unpickle[Employee]
+      assert(false, "EndOfStreamException not thrown")
+    } catch {
+      case _: EndOfStreamException =>
+        /* expected */
+    } finally {
+      assert(obj1.toString == readObj1.toString)
+      assert(obj2.toString == readObj2.toString)
+    }
+  }
 }
