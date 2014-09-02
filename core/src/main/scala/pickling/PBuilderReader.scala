@@ -12,6 +12,8 @@ trait Hintable {
   def hintOid(id: Int): this.type
   def pinHints(): this.type
   def unpinHints(): this.type
+  def pushHints(): this.type
+  def popHints(): this.type
 }
 
 trait PBuilder extends Hintable {

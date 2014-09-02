@@ -73,7 +73,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
       // the same decision.
       // println(s"creating runtime pickler to pickle $fldClass field of class ${picklee.getClass.getName}")
       val fldTag = FastTypeTag.mkRaw(fldClass, mirror)
-      debug(s"!!! finding pickler for field with class ${fldClass.getName}")
+      // debug(s"!!! finding pickler for field with class ${fldClass.getName}")
       val fldPickler = SPickler.genPickler(classLoader, fldClass, fldTag).asInstanceOf[SPickler[Any]]
       //debug(s"looked up field pickler: $fldPickler")
 
