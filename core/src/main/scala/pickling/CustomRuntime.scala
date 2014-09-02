@@ -100,8 +100,8 @@ trait RuntimePicklersUnpicklers {
     }
   }
 
-  def mkRuntimeTravPickler[C <% Traversable[_]](mirror: ru.Mirror, elemClass: Class[_], elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
-                                                  elemPickler0: SPickler[_], elemUnpickler0: Unpickler[_]):
+  def mkRuntimeTravPickler[C <% Traversable[_]](elemClass: Class[_], elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
+                                                elemPickler0: SPickler[_], elemUnpickler0: Unpickler[_]):
     SPickler[C] with Unpickler[C] = new SPickler[C] with Unpickler[C] {
 
     val format = null // unused
@@ -109,24 +109,40 @@ trait RuntimePicklersUnpicklers {
     val elemPickler   = elemPickler0.asInstanceOf[SPickler[AnyRef]]
     val elemUnpickler = elemUnpickler0.asInstanceOf[Unpickler[AnyRef]]
 
-    def pickle(coll: C, builder: PBuilder): Unit = {
-      builder.hintTag(collTag)
-      builder.beginEntry(coll)
+    val isPrimitive = elemTag.tpe.isEffectivelyPrimitive
 
+    def pickle(coll: C, builder: PBuilder): Unit = {
+      builder.beginEntry(coll)
       builder.beginCollection(coll.size)
+
+      builder.pushHints()
+      if (isPrimitive) {
+        builder.hintStaticallyElidedType()
+        builder.hintTag(elemTag)
+        builder.pinHints()
+      }
+
       (coll: Traversable[_]).asInstanceOf[Traversable[AnyRef]].foreach { (elem: AnyRef) =>
         builder putElement { b =>
-          b.hintTag(elemTag)
+          if (!isPrimitive) b.hintTag(elemTag)
           elemPickler.pickle(elem, b)
         }
       }
-      builder.endCollection()
 
+      builder.popHints()
+      builder.endCollection()
       builder.endEntry()
     }
 
     def unpickle(tag: => FastTypeTag[_], preader: PReader): Any = {
       val reader = preader.beginCollection()
+
+      preader.pushHints()
+      if (isPrimitive) {
+        reader.hintStaticallyElidedType()
+        reader.hintTag(elemTag)
+        reader.pinHints()
+      }
 
       val length = reader.readLength()
       val newArray = java.lang.reflect.Array.newInstance(elemClass, length).asInstanceOf[Array[AnyRef]]
@@ -135,7 +151,6 @@ trait RuntimePicklersUnpicklers {
       while (i < length) {
         try {
           val r = reader.readElement()
-          r.hintTag(elemTag)
           r.beginEntryNoTag()
           val elem = elemUnpickler.unpickle(elemTag, r)
           r.endEntry()
@@ -156,6 +171,7 @@ trait RuntimePicklersUnpicklers {
         }
       }
 
+      preader.popHints()
       preader.endCollection()
       newArray
     }

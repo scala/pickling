@@ -179,15 +179,12 @@ package binary {
       val buf = Array[Byte](la, nextByte(), nextByte(), nextByte())
       val len = {
         val len0 = Util.decodeIntFrom(buf, 0)
-        if (len0 > 1000) {
-          debug(s"@@@ corrupted length of type string: $len0")
-          throw new EndOfStreamException
-        } else if (len0 < 0) {
-          debug(s"@@@ negative length of type string: $len0\n@@@ buf: [${buf.mkString(",")}]")
-          0
-        } else {
+        if (len0 > 1000)
+          throw PicklingException(s"decodeStringWithLookahead: corrupted length of type string: $len0")
+        else if (len0 < 0)
+          throw PicklingException(s"decodeStringWithLookahead: negative length of type string: $len0\nbuf: [${buf.mkString(",")}]")
+        else
           len0
-        }
       }
       val bytes = Array.ofDim[Byte](len)
       var num = in.read(bytes)
@@ -230,11 +227,16 @@ package binary {
               FastTypeTag.Ref
             case _ =>
               // do not consume lookahead byte
-              val res = decodeStringWithLookahead(lookahead)
+              val res = try {
+                decodeStringWithLookahead(lookahead)
+              } catch {
+                case PicklingException(msg) =>
+                  val primInfo = if (hints.tag == null) ""
+                    else s"\nnullable prim: ${nullablePrimitives.contains(hints.tag.key)}\nprim: ${primitives.contains(hints.tag.key)}"
+                  throw PicklingException(s"error decoding type string. debug info: $hints$primInfo\ncause:$msg")
+              }
               // if (debugOn)
               //   debug(s"decodeStringWithLookahead: $res")
-              if (res == "")
-                throw new PicklingException(s"encountered empty type string. debug info: $hints")
               res
           }
         }
