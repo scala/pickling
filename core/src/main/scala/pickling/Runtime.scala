@@ -64,8 +64,6 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_], shar
   }
   def shouldBotherAboutSharing(tpe: Type) = shareAnalyzer.shouldBotherAboutSharing(tpe)
   def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
-
-  def genPickler(implicit format: PickleFormat): SPickler[_]
 }
 
 class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(implicit share: refs.Share) extends PicklerRuntime(classLoader, preclazz, share) {
@@ -74,10 +72,10 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
   debug("InterpretedPicklerRuntime: preclazz = " + preclazz)
   debug("InterpretedPicklerRuntime: clazz    = " + clazz)
 
-  override def genPickler(implicit pf: PickleFormat): SPickler[_] = {
+  def genPickler: SPickler[_] = {
     // build "interpreted" runtime pickler
     new SPickler[Any] with PickleTools {
-      val format: PickleFormat = pf
+      val format: PickleFormat = null // unused
 
       val fields: List[(irs.FieldIR, Boolean)] =
         cir.fields.filter(_.hasGetter).map(fir => (fir, fir.tpe.typeSymbol.isEffectivelyFinal))
@@ -174,9 +172,9 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
   def shouldBotherAboutSharing(tpe: Type) = shareAnalyzer.shouldBotherAboutSharing(tpe)
   def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
 
-  def genUnpickler(implicit pf: PickleFormat): Unpickler[Any] = {
+  def genUnpickler: Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
-      val format: PickleFormat = pf
+      val format: PickleFormat = null // unused
       def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
         if (reader.atPrimitive) {
           val result = reader.readPrimitive()
@@ -202,8 +200,17 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
 
             val fstaticSym = fstaticTag.tpe.typeSymbol
             if (fstaticSym.isEffectivelyFinal) freader.hintStaticallyElidedType()
-            val fdynamicTag = freader.beginEntry()
-
+            val fdynamicTag = try {
+              freader.beginEntry()
+            } catch {
+              case e @ PicklingException(msg) =>
+                debug(s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}':
+                         |$msg
+                         |enclosing object has type: '${tag.key}'
+                         |static type of field: '${fir.tpe.key}'
+                         |""".stripMargin)
+                throw e
+            }
             val fval = {
               if (freader.atPrimitive) {
                 val result = freader.readPrimitive()

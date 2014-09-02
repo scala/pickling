@@ -149,7 +149,7 @@ package object internal {
     val unpicklees = unpickleesTL.get()
 
     // println(s"lookupUnpicklee($index)")
-    if (index >= nextUnpicklee) throw new Error(s"fatal error: invalid index $index in unpicklee cache of length $nextUnpicklee")
+    if (index >= nextUnpicklee) throw PicklingException(s"fatal error: invalid index $index in unpicklee cache of length $nextUnpicklee")
     val result = unpicklees(index)
     if (result == null) throw new Error(s"fatal error: unpicklee cache is corrupted at $index")
     result
