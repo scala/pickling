@@ -106,8 +106,13 @@ trait GenUnpicklers extends RuntimePicklersUnpicklers {
 
           mkRuntimeTravPickler[Array[AnyRef]](elemClass, elemTag, tag, null, elemUnpickler)
         } else {
-          debug(s"@@@ creating InterpretedUnpicklerRuntime for type $className")
-          val runtime = new InterpretedUnpicklerRuntime(mirror, tag)
+          val runtime = if (share.isInstanceOf[refs.ShareNothing]) {
+              // debug(s"@@@ creating ShareNothingInterpretedUnpicklerRuntime for type $className")
+              new ShareNothingInterpretedUnpicklerRuntime(mirror, tag)
+            } else {
+              // debug(s"@@@ creating InterpretedUnpicklerRuntime for type $className")
+              new InterpretedUnpicklerRuntime(mirror, tag)
+            }
           runtime.genUnpickler
         }
         GlobalRegistry.unpicklerMap += (className -> unpickler)
