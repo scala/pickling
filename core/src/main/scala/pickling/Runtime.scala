@@ -149,9 +149,14 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
   }
 }
 
+trait UnpicklerRuntime {
+  def genUnpickler: Unpickler[Any]
+}
+
 // TODO: currently this works with an assumption that sharing settings for unpickling are the same as for pickling
 // of course this might not be the case, so we should be able to read `share` from the pickle itself
-class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit share: refs.Share) {
+class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit share: refs.Share)
+    extends UnpicklerRuntime {
   import scala.reflect.runtime.universe._
   import definitions._
   import scala.reflect.runtime.{universe => ru}
@@ -230,6 +235,98 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
           // TODO: in principle, we could invoke a constructor here
           val inst = scala.concurrent.util.Unsafe.instance.allocateInstance(clazz)
           if (shouldBotherAboutSharing(tpe)) registerUnpicklee(inst, preregisterUnpicklee())
+          val im = mirror.reflect(inst)
+
+          //debug(s"pendingFields: ${pendingFields.size}")
+          //debug(s"fieldVals: ${fieldVals.size}")
+
+          pendingFields.zip(fieldVals) foreach {
+            case (fir, fval) =>
+              if (fir.field.nonEmpty) {
+                val fmX = im.reflectField(fir.field.get)
+                fmX.set(fval)
+              } else {
+                val javaField = clazz.getDeclaredField(fir.name)
+                javaField.setAccessible(true)
+                javaField.set(inst, fval)
+              }
+          }
+
+          inst
+        }
+      }
+    }
+  }
+}
+
+class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit share: refs.Share)
+    extends UnpicklerRuntime {
+  import scala.reflect.runtime.universe._
+  import definitions._
+  import scala.reflect.runtime.{universe => ru}
+
+  val tpe = tag.tpe
+  val sym = tpe.typeSymbol.asType
+  // debug("UnpicklerRuntime: tpe = " + tpe)
+  val clazz = mirror.runtimeClass(tpe.erasure)
+  val irs = new IRs[ru.type](ru)
+  import irs._
+  val cir = newClassIR(tpe)
+  // debug("UnpicklerRuntime: cir = " + cir)
+
+  def genUnpickler: Unpickler[Any] = {
+    new Unpickler[Any] with PickleTools {
+      val format: PickleFormat = null // unused
+      def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+        if (reader.atPrimitive) {
+          reader.readPrimitive()
+        } else {
+          val pendingFields =
+            if (tag.key.contains("anonfun$")) {
+              List[FieldIR]()
+            } else {
+              cir.fields.filter(fir =>
+                fir.hasGetter || {
+                  // exists as Java field
+                  scala.util.Try(clazz.getDeclaredField(fir.name)).isSuccess
+                })
+            }
+
+          def fieldVals = pendingFields.map(fir => {
+            val freader = reader.readField(fir.name)
+            val fstaticTag = FastTypeTag(mirror, fir.tpe, fir.tpe.key)
+            freader.hintTag(fstaticTag)
+
+            val fstaticSym = fstaticTag.tpe.typeSymbol
+            if (fstaticSym.isEffectivelyFinal) freader.hintStaticallyElidedType()
+            val fdynamicTag = try {
+              freader.beginEntry()
+            } catch {
+              case e @ PicklingException(msg) =>
+                debug(s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}':
+                         |$msg
+                         |enclosing object has type: '${tag.key}'
+                         |static type of field: '${fir.tpe.key}'
+                         |""".stripMargin)
+                throw e
+            }
+            val fval = {
+              if (freader.atPrimitive) {
+                val result = freader.readPrimitive()
+                result
+              } else {
+                val fieldUnpickler = Unpickler.genUnpickler(mirror, fdynamicTag)
+                fieldUnpickler.unpickle(fdynamicTag, freader)
+              }
+            }
+
+            freader.endEntry()
+            fval
+          })
+
+          // TODO: need to support modules and other special guys here
+          // TODO: in principle, we could invoke a constructor here
+          val inst = scala.concurrent.util.Unsafe.instance.allocateInstance(clazz)
           val im = mirror.reflect(inst)
 
           //debug(s"pendingFields: ${pendingFields.size}")
