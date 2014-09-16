@@ -59,6 +59,7 @@ package json {
     private def pickleArray(arr: Array[_], tag: FastTypeTag[_]) = {
       unindent()
       appendLine("[")
+      pushHints()
       hintStaticallyElidedType()
       hintTag(tag)
       pinHints()
@@ -67,7 +68,7 @@ package json {
         putElement(b => b.beginEntry(arr(i)).endEntry())
         i += 1
       }
-      unpinHints()
+      popHints()
       appendLine("")
       append("]")
       indent()
@@ -189,13 +190,17 @@ package json {
     private def mkNestedReader(datum: Any) = {
       val nested = new JSONPickleReader(datum, mirror, format)
       if (this.areHintsPinned) {
-        nested.areHintsPinned = true
+        nested.pinHints()
         nested.hints = hints
         nested.lastReadTag = lastReadTag
       }
       nested
     }
-    def beginEntryNoTag(): String = beginEntry().key
+
+    def beginEntryNoTag(): String =
+      beginEntryNoTagDebug(false)
+
+    def beginEntryNoTagDebug(debugOn: Boolean): String = beginEntry().key
     def beginEntry(): FastTypeTag[_] = withHints { hints =>
       lastReadTag = {
         if (datum == null) FastTypeTag.Null

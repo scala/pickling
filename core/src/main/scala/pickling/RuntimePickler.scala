@@ -47,7 +47,7 @@ class RuntimeTypeInfo(classLoader: ClassLoader, clazz: Class[_], share: refs.Sha
   def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
 }
 
-class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: PickleFormat, share: refs.Share) extends RuntimeTypeInfo(classLoader, clazz, share) {
+class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit share: refs.Share) extends RuntimeTypeInfo(classLoader, clazz, share) {
   import ru._
 
   sealed abstract class Logic(fir: irs.FieldIR, isEffFinal: Boolean) {
@@ -73,7 +73,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
       // the same decision.
       // println(s"creating runtime pickler to pickle $fldClass field of class ${picklee.getClass.getName}")
       val fldTag = FastTypeTag.mkRaw(fldClass, mirror)
-      debug(s"!!! finding pickler for field with class ${fldClass.getName}")
+      // debug(s"!!! finding pickler for field with class ${fldClass.getName}")
       val fldPickler = SPickler.genPickler(classLoader, fldClass, fldTag).asInstanceOf[SPickler[Any]]
       //debug(s"looked up field pickler: $fldPickler")
 
@@ -173,7 +173,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit pf: Pic
 
   def mkPickler: SPickler[_] = {
     new SPickler[Any] {
-      val format: PickleFormat = pf
+      val format: PickleFormat = null // unused
 
       val fields: List[Logic] = cir.fields.flatMap { fir =>
         if (fir.accessor.nonEmpty)
