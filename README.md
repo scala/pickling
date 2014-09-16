@@ -1,7 +1,7 @@
 scala/pickling
 ==============
 
-[![Build Status](https://secure.travis-ci.org/scala/pickling.png)](http://travis-ci.org/scala/pickling)
+[![Build Status](https://travis-ci.org/scala/pickling.svg?branch=0.9.x)](https://travis-ci.org/scala/pickling.svg?branch=0.9.x)
 
 
 **Scala Pickling** is an automatic serialization framework made for Scala. It's fast, boilerplate-free, and allows users to easily swap in/out different serialization formats (such as binary, or JSON), or even to provide your own custom serialization format.
