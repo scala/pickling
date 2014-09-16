@@ -1,5 +1,8 @@
 site_name: Scala Pickling
+site_url: http://lampwww.epfl.ch/~hmiller/pickling/
 version: 0.9.0
-
+# pages:
+# - [index.md, Home]
+# - [about.md, About]
 theme_dir: docs/theme
 repo_url: https://github.com/scala/pickling

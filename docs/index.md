@@ -1,3 +1,3 @@
-## Getting Started
+# Getting Started
 
 ## Installation
