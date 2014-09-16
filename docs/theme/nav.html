@@ -12,8 +12,7 @@
             </button>
 
             <!-- Main title -->
-            <a class="navbar-brand" href="{{ homepage_url }}"><img src="{{ base_url }}/img/pickling-logo.png"/></a>
-            <span class="version-number">{{ version }}</span>
+            <a class="navbar-brand" href="{{ homepage_url }}"><img src="{{ base_url }}/img/pickling-logo.png"/><span class="version-number"> v0.9.0</span></a>
             <!-- <a class="navbar-brand" href="{{ homepage_url }}">{{ site_name }}</a> -->
         </div>
 
@@ -50,14 +49,8 @@
                 {% endif %}
                 {% if repo_url %}
                 <li>
-                    <a href="{{ repo_url }}">
-                        {% if repo_name == 'GitHub' %}
-                            <i class="fa fa-github"></i>
-                        {% elif repo_name == 'Bitbucket' %}
-                            <i class="fa fa-bitbucket"></i>
-                        {% endif %}
-                        {{ repo_name }}
-                    </a>
+                    <iframe class="github-stars" src="http://ghbtns.com/github-btn.html?user=scala&repo=pickling&type=watch&count=true"
+  allowtransparency="true" frameborder="0" scrolling="0" width="110" height="20"></iframe>
                 </li>
                 {% endif %}
             </ul>

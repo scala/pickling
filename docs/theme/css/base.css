@@ -99,3 +99,15 @@ div.source-links {
         width: 263px;
     }
 }
+
+.github-stars {
+    margin-top: 26px;
+}
+
+.version-number {
+    font-family: "museo-slab",serif;
+    font-style: normal;
+    font-weight: 300;
+    color: #586E75;
+    font-size: 16px;
+}
