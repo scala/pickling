@@ -1,0 +1,5 @@
+site_name: Scala Pickling
+version: 0.9.0
+
+theme_dir: docs/theme
+repo_url: https://github.com/scala/pickling
