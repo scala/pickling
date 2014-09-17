@@ -76,3 +76,19 @@ Known limitations:
   3. Picklers are generated directly at call sites, since we cannot have introduceTopLevel in 2.10.x.
   4. No runtime compilation, since it's not obvious how to package it without inducing a dependency on `scala-compiler.jar`.
  -->
+
+## Contributing
+
+### Building
+
+Scala/pickling uses sbt. So, just make sure you've got [sbt installed](http://www.scala-sbt.org/0.13/tutorial/Setup.html), `cd` into the root directory of pickling, and simply type `sbt` at the command line.
+
+To build Scala/pickling, from the sbt prompt, just type `compile`.
+
+To run the Scala/pickling test suite, from the sbt prompt, just type `test`.
+
+If you want to add documentation, our overview-style docs are located in the `docs/` directory. We use [mkdocs](http://www.mkdocs.org/), a tool for taking hierarchies of documentation written in markdown, and generating a static set of docs. To install `mkdocs`, you need python and pip, the python package manager. Installation is one line, `pip install mkdocs`. _Note: if pip fails, try installing version 1.2.1 of pip by doing `sudo easy_install pip==1.2.1`)_.
+
+To preview the docs on a local web server, just run `mkdocs serve` from the root directory of pickling and visit http://localhost:8000.
+
+To generate a directory of the static HTML, just run `mkdocs build`. The static HTML will be located in `/site`.
