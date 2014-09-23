@@ -18,11 +18,11 @@ class JSONCollectionTest extends FunSuite {
     assert(up === Seq(1, 2, 3))
   }
 
-  test("IndexedSeq") {
-    val p = IndexedSeq(1, 2, 3).pickle
-    val up = p.unpickle[IndexedSeq[Int]]
-    assert(up === IndexedSeq(1, 2, 3))
-  }
+  // test("IndexedSeq") {
+  //   val p = IndexedSeq(1, 2, 3).pickle
+  //   val up = p.unpickle[IndexedSeq[Int]]
+  //   assert(up === IndexedSeq(1, 2, 3))
+  // }
 
   test("LinearSeq") {
     val p = LinearSeq(1, 2, 3).pickle
