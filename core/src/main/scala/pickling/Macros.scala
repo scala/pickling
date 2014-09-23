@@ -408,6 +408,11 @@ trait PickleMacros extends Macro {
     implicitly[SPickler[$tpe]]
   """
 
+  def createNullPickler(builder: c.Tree): c.Tree = q"""
+    $builder.hintTag(scala.pickling.FastTypeTag.Null)
+    scala.pickling.SPickler.nullPicklerUnpickler
+  """
+
   def createRuntimePickler(builder: c.Tree): c.Tree = q"""
     val classLoader = this.getClass.getClassLoader
     val tag = scala.pickling.FastTypeTag.mkRaw(clazz, scala.reflect.runtime.universe.runtimeMirror(classLoader))
@@ -440,10 +445,10 @@ trait PickleMacros extends Macro {
       """
     def finalDispatch = {
       if (sym.isNotNullable) createPickler(tpe, builder)
-      else q"if (picklee != null) ${createPickler(tpe, builder)} else ${createPickler(NullTpe, builder)}"
+      else q"if (picklee != null) ${createPickler(tpe, builder)} else ${createNullPickler(builder)}"
     }
     def nonFinalDispatch = {
-      val nullDispatch = CaseDef(Literal(Constant(null)), EmptyTree, createPickler(NullTpe, builder))
+      val nullDispatch = CaseDef(Literal(Constant(null)), EmptyTree, createNullPickler(builder))
       val compileTimeDispatch = compileTimeDispatchees(tpe) filter (_ != NullTpe) map (subtpe =>
         CaseDef(Bind(newTermName("clazz"), Ident(nme.WILDCARD)), q"clazz == classOf[$subtpe]", createPickler(subtpe, builder))
       )

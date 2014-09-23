@@ -18,7 +18,7 @@ import internal._
  *  the erasure of its static type `T`.
  */
 @implicitNotFound(msg = "Cannot generate a pickler for ${T}. Recompile with -Xlog-implicits for details")
-trait SPickler[T] {
+trait SPickler[-T] {
   val format: PickleFormat
   def pickle(picklee: T, builder: PBuilder): Unit
 }
