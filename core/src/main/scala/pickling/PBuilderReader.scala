@@ -40,8 +40,6 @@ trait PReader extends Hintable {
   def readLength(): Int
   def readElement(): PReader
   def endCollection(): Unit
-  def unpickle[T]: T = macro Compat.UnpickleMacros_readerUnpickle[T]
-  def unpickleTopLevel[T]: T = macro Compat.UnpickleMacros_readerUnpickleTopLevel[T]
 }
 
 case class PicklingException(msg: String) extends RuntimeException(msg)
