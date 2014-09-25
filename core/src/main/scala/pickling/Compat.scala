@@ -62,18 +62,6 @@ object Compat {
     c.Expr[T](bundle.pickleUnpickle[T])
   }
 
-  def UnpickleMacros_readerUnpickle[T: c.WeakTypeTag](c: Context): c.Expr[T] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with UnpickleMacros
-    c.Expr[T](bundle.readerUnpickle[T])
-  }
-
-  def UnpickleMacros_readerUnpickleTopLevel[T: c.WeakTypeTag](c: Context): c.Expr[T] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with UnpickleMacros
-    c.Expr[T](bundle.readerUnpickleTopLevel[T])
-  }
-
   def ListPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with ListPicklerUnpicklerMacro
