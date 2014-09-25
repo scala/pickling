@@ -157,7 +157,7 @@ trait LowPriorityPicklersUnpicklers {
     mkTravPickler[T, Coll[T]]
 }
 
-trait CollectionPicklerUnpicklerMacro extends Macro {
+trait CollectionPicklerUnpicklerMacro extends Macro with UnpickleMacros {
   def mkType(eltpe: c.Type): c.Type
   def mkArray(picklee: c.Tree): c.Tree
   def mkBuffer(eltpe: c.Type): c.Tree
@@ -253,10 +253,13 @@ trait CollectionPicklerUnpicklerMacro extends Macro {
                 val elem = elunpickler.unpickle(eltag, r).asInstanceOf[$eltpe]
                 r.endEntry()
                 buffer += elem
-              """.asInstanceOf[Tree] else q"""
-                val elem = r.unpickle[$eltpe]
-                buffer += elem
-              """.asInstanceOf[Tree]
+              """.asInstanceOf[Tree] else {
+                val readerUnpickleTree = readerUnpickle(eltpe, newTermName("r"))
+                q"""
+                  val elem = $readerUnpickleTree
+                  buffer += elem
+                """.asInstanceOf[Tree]
+              }
             }
             i += 1
           }
