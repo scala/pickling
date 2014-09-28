@@ -2,8 +2,6 @@ package scala
 
 import scala.language.experimental.macros
 
-import scala.reflect.runtime.{universe => ru}
-import ru._
 
 package object pickling {
 
@@ -11,6 +9,10 @@ package object pickling {
     def pickle(implicit format: PickleFormat): format.PickleType = macro Compat.PickleMacros_pickle[T]
     def pickleInto(builder: PBuilder): Unit = macro Compat.PickleMacros_pickleInto[T]
     def pickleTo(output: Output[_])(implicit format: PickleFormat): Unit = macro Compat.PickleMacros_pickleTo[T]
+  }
+
+  implicit class UnpickleOps(pickle: Pickle) {
+    def unpickle[T]: T = macro Compat.UnpickleMacros_pickleUnpickle[T]
   }
 
 }
