@@ -35,10 +35,6 @@ object Tools {
         value
     }
   }
-
-  // TODO: the standard "c.topLevelRef orElse c.introduceTopLevel" approach doesn't work with the runtime compiler
-  // hence we should go for this hack. at least it's not going to OOM us...
-  val generatedNames = MutableSet[Any]()
 }
 
 class Tools[C <: Context](val c: C) {
@@ -290,19 +286,6 @@ abstract class Macro extends RichTypes { self =>
   val irs = new ir.IRs[c.universe.type](c.universe)
   import irs._
 
-  private def innerType(target: Tree, name: String): Type = {
-    def fail(msg: String) = c.abort(c.enclosingPosition, s"$msg for ${target} of type ${target.tpe}")
-    // val carrier = c.typeCheck(tq"${target.tpe}#${TypeName(name)}", mode = c.TYPEmode, silent = true)
-    val carrier = c.typeCheck(q"{ val x: ${target.tpe}#${newTypeName(name)} = ??? }", silent = true)
-    carrier match {
-      case EmptyTree => fail(s"Couldn't resolve $name")
-      case Block(ValDef(_, _, tpt, _) :: _, _) => tpt.tpe.normalize match {
-        case tpe if tpe.typeSymbol.isClass => tpe
-        case tpe => fail(s"$name resolved as $tpe is invalid")
-      }
-    }
-  }
-
   def shouldBotherAboutCleaning(tpe: Type) = shareAnalyzer.shouldBotherAboutCleaning(tpe)
   def shouldBotherAboutSharing(tpe: Type) = shareAnalyzer.shouldBotherAboutSharing(tpe)
   def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
@@ -320,8 +303,6 @@ abstract class Macro extends RichTypes { self =>
     if (shareEverything && shareNothing) c.abort(c.enclosingPosition, "inconsistent sharing configuration: both ShareEverything and ShareNothing are in scope")
     shareNothing
   }
-
-  def pickleFormatType(pickle: Tree): Type = innerType(pickle, "PickleFormatType")
 
   def compileTimeDispatchees(tpe: Type): List[Type] = tools.compileTimeDispatchees(tpe, rootMirror)
 
