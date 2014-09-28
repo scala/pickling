@@ -3,6 +3,8 @@ package scala.pickling
 import scala.language.experimental.macros
 import scala.language.reflectiveCalls
 
+import java.util.IdentityHashMap
+
 import HasCompat._
 
 package object internal {
@@ -93,39 +95,42 @@ package object internal {
 
 
   // ----- utilities for managing object identity -----
-  private val pickleesTL = new ThreadLocal[ReactMap] {
-    override def initialValue() = new ReactMap
+  private val pickleesTL = new ThreadLocal[IdentityHashMap[AnyRef, Integer]] {
+    override def initialValue() = new IdentityHashMap[AnyRef, Integer]()
   }
   private val nextPickleeTL = new ThreadLocal[Int] {
     override def initialValue() = 0
   }
 
-  def lookupPicklee(picklee: Any) = {
-    var nextPicklee = nextPickleeTL.get()
+  def lookupPicklee(picklee: Any): Int = {
+    val anyRefPicklee = picklee.asInstanceOf[AnyRef]
+    // check if `anyRefPicklee` is already in the map.
+    // if so, obtain its index, else insert at index `nextPicklee`.
     val picklees = pickleesTL.get()
-
-    val index = nextPicklee
-    val result = picklees.insertIfNotThere(picklee.asInstanceOf[AnyRef], index)
-    // println(s"lookupPicklee($picklee) = $result")
-    if (result == -1) {
-      nextPicklee += 1
-      nextPickleeTL.set(nextPicklee)
+    if (picklees.containsKey(anyRefPicklee)) {
+      picklees.get(anyRefPicklee).intValue
+    } else {
+      val nextPicklee = nextPickleeTL.get()
+      picklees.put(anyRefPicklee, new Integer(nextPicklee))
+      nextPickleeTL.set(nextPicklee + 1)
+      -1
     }
-    pickleesTL.set(picklees)
-    result
   }
+
   def registerPicklee(picklee: Any) = {
     var nextPicklee = nextPickleeTL.get()
     val picklees = pickleesTL.get()
 
     val index = nextPicklee
-    picklees.insert(picklee.asInstanceOf[AnyRef], index)
+    picklees.put(picklee.asInstanceOf[AnyRef], new Integer(index))
+
     // println(s"registerPicklee($picklee, $index)")
     nextPicklee += 1
     nextPickleeTL.set(nextPicklee)
     pickleesTL.set(picklees)
     index
   }
+
   def clearPicklees() = {
     var nextPicklee = nextPickleeTL.get()
     val picklees = pickleesTL.get()
@@ -154,6 +159,7 @@ package object internal {
     if (result == null) throw new Error(s"fatal error: unpicklee cache is corrupted at $index")
     result
   }
+
   def preregisterUnpicklee() = {
     val nextUnpicklee = nextUnpickleeTL.get()
     val index = nextUnpicklee
@@ -174,6 +180,7 @@ package object internal {
     nextUnpickleeTL.set(nextUnpicklee + 1)
     index
   }
+
   def registerUnpicklee(unpicklee: Any, index: Int) = {
     val unpicklees = unpickleesTL.get()
 
@@ -181,6 +188,7 @@ package object internal {
     unpicklees(index) = unpicklee
     unpickleesTL.set(unpicklees)
   }
+
   def clearUnpicklees() = {
     var nextUnpicklee = nextUnpickleeTL.get()
     val unpicklees = unpickleesTL.get()
