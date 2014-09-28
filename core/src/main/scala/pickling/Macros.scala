@@ -537,9 +537,9 @@ trait PickleMacros extends Macro {
   }
 }
 
-// purpose of this macro: implementation of unpickle method on type Pickle, which does
-// 1) dispatch to the correct unpickler based on the type of the input,
-// 2) insert a call in the generated code to the genUnpickler macro (described above)
+// purpose of this macro: implementation of unpickle method of class UnpickleOps, which:
+// 1) dispatches to the correct unpickler based on the type of the input;
+// 2) inserts a call in the generated code to the genUnpickler macro (described above)
 trait UnpickleMacros extends Macro {
 
   // TODO: currently this works with an assumption that sharing settings for unpickling are the same as for pickling
@@ -548,15 +548,15 @@ trait UnpickleMacros extends Macro {
   def pickleUnpickle[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
     val tpe = weakTypeOf[T]
-    val pickleArg = c.prefix.tree
+    val q"$unpickleOps($pickleArg)" = c.prefix.tree
     val readerName = c.fresh(newTermName("reader"))
     val readerUnpickleTree = readerUnpickleTopLevel(tpe, readerName)
     q"""
       import scala.language.existentials
       import scala.pickling._
       import scala.pickling.internal._
-      val pickle = $pickleArg
-      val format = implicitly[${pickleFormatType(pickleArg)}]
+      val format = implicitly[PickleFormat]
+      val pickle = $pickleArg.asInstanceOf[format.PickleType]
       val $readerName = format.createReader(pickle, scala.pickling.internal.`package`.currentMirror)
       $readerUnpickleTree
     """
@@ -574,6 +574,7 @@ trait UnpickleMacros extends Macro {
     val sym = tpe.typeSymbol
 
     def createUnpickler(tpe: Type) = q"implicitly[Unpickler[$tpe]]"
+
     def finalDispatch = {
       if (sym.isNotNullable) createUnpickler(tpe)
       else q"""
