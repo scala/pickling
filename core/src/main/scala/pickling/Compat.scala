@@ -49,7 +49,7 @@ object Compat {
     val tpe = c.universe.weakTypeOf[T]
     // abort if someone forgets to pass a type parameter to the unpickle method
     val isNothing = tpe =:= definitions.NothingTpe
-    val unpickleSym = c.mirror.staticClass("scala.pickling.Pickle").asType.toType.member(newTermName("unpickle"))
+    val unpickleSym = c.mirror.staticClass("scala.pickling.UnpickleOps").asType.toType.member(newTermName("unpickle"))
     val typeArgMissing = tpe match {
       case t: TypeRef => t.typeSymbol.owner == unpickleSym || isNothing
       case _ => false
