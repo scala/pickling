@@ -1,5 +1,7 @@
 package scala.pickling
 
+import scala.reflect.ClassTag
+import scala.collection.mutable.ArrayBuffer
 import java.io.OutputStream
 
 trait Output[T] {
@@ -10,23 +12,18 @@ trait Output[T] {
 
 }
 
-// and then demand Output[Nothing] in the abstract PickleFormat
-// in JSON we can demand Output[String], since Output[Nothing] <: Output[String]
-
-import scala.reflect.ClassTag
-
 class OutputStreamOutput(out: OutputStream) extends ArrayOutput[Byte] {
   def result(): Array[Byte] =
-   null
+    null
 
   def +=(obj: Byte) =
-   out.write(obj.asInstanceOf[Int])
+    out.write(obj.asInstanceOf[Int])
 
   def put(obj: Array[Byte]): this.type = {
-   out.write(obj)
-   this
+    out.write(obj)
+    this
   }
- }
+}
 
 // Array output with a few more methods for performance
 abstract class ArrayOutput[T: ClassTag] extends Output[Array[T]] {
@@ -40,7 +37,6 @@ abstract class ArrayOutput[T: ClassTag] extends Output[Array[T]] {
     this.put(arr)
 }
 
-import scala.collection.mutable.ArrayBuffer
 
 class ByteArrayBufferOutput extends ArrayOutput[Byte] {
 
@@ -100,5 +96,4 @@ class StringOutput extends Output[String] {
   }
 
   override def toString = buf.toString
-
 }
