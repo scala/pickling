@@ -532,7 +532,7 @@ trait UnpickleMacros extends Macro {
   def pickleUnpickle[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
     val tpe = weakTypeOf[T]
-    val q"$unpickleOps($pickleArg)" = c.prefix.tree
+    val pickleArg = c.prefix.tree
     val readerName = c.fresh(newTermName("reader"))
     val readerUnpickleTree = readerUnpickleTopLevel(tpe, readerName)
     q"""
@@ -540,7 +540,7 @@ trait UnpickleMacros extends Macro {
       import scala.pickling._
       import scala.pickling.internal._
       val format = implicitly[PickleFormat]
-      val pickle = $pickleArg.asInstanceOf[format.PickleType]
+      val pickle = $pickleArg.thePickle.asInstanceOf[format.PickleType]
       val $readerName = format.createReader(pickle, scala.pickling.internal.`package`.currentMirror)
       $readerUnpickleTree
     """
