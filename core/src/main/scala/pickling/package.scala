@@ -11,7 +11,7 @@ package object pickling {
     def pickleTo(output: Output[_])(implicit format: PickleFormat): Unit = macro Compat.PickleMacros_pickleTo[T]
   }
 
-  implicit class UnpickleOps(val pickle: Pickle) {
+  implicit class UnpickleOps(val thePickle: Pickle) {
     def unpickle[T]: T = macro Compat.UnpickleMacros_pickleUnpickle[T]
   }
 

@@ -540,7 +540,7 @@ trait UnpickleMacros extends Macro {
       import scala.pickling._
       import scala.pickling.internal._
       val format = implicitly[PickleFormat]
-      val pickle = $pickleArg.pickle.asInstanceOf[format.PickleType]
+      val pickle = $pickleArg.thePickle.asInstanceOf[format.PickleType]
       val $readerName = format.createReader(pickle, scala.pickling.internal.`package`.currentMirror)
       $readerUnpickleTree
     """
