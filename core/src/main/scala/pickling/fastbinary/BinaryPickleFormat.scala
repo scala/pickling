@@ -1,155 +1,158 @@
-package scala.pickling
-
-import scala.pickling.internal._
-import scala.language.implicitConversions
-import scala.reflect.runtime.universe.Mirror
+package scala.pickling.fastbinary
 
 import java.io.InputStream
 
-package object binary {
-  implicit val pickleFormat = new BinaryPickleFormat
-  implicit def toBinaryPickle(value: Array[Byte]): BinaryPickle = BinaryPickle(value)
+import scala.reflect.runtime.universe.Mirror
+
+import scala.pickling.binary.{Constants, Util}
+import scala.pickling.internal.lookupUnpicklee
+import scala.pickling.{Pickle, PickleFormat, PBuilder, PReader, PicklingException, EndOfStreamException, FastTypeTag,
+                       PickleTools, ArrayOutput, ByteArrayOutput, ByteArrayBufferOutput}
+
+
+class BinaryPickleFormat extends PickleFormat with Constants {
+  type PickleType = BinaryPickle
+  type OutputType = FastArrayOutput
+
+  def createBuilder() = new BinaryPickleBuilder(this, null)
+  def createBuilder(out: FastArrayOutput): PBuilder = new BinaryPickleBuilder(this, out)
+
+  def createReader(pickle: PickleType, mirror: Mirror) = pickle.createReader(mirror, this)
 }
 
-package binary {
+abstract class BinaryPickle extends Pickle {
+  type PickleFormatType = BinaryPickleFormat
+  type ValueType = Array[Byte]
 
-  abstract class BinaryPickle extends Pickle {
-    type PickleFormatType = BinaryPickleFormat
-    type ValueType = Array[Byte]
+  val value: Array[Byte]
 
-    val value: Array[Byte]
+  def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader
+}
 
-    def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader
-  }
+case class BinaryPickleArray(data: Array[Byte]) extends BinaryPickle {
+  val value: Array[Byte] = data
 
-  case class BinaryPickleArray(data: Array[Byte]) extends BinaryPickle {
-    val value: Array[Byte] = data
+  def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader =
+    new BinaryPickleReader(data, mirror, format)
 
-    def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader =
-      new BinaryPickleReader(data, mirror, format)
+  override def toString = s"""BinaryPickle(${value.mkString("[", ",", "]")})"""
+}
 
-    override def toString = s"""BinaryPickle(${value.mkString("[", ",", "]")})"""
-  }
+case class BinaryPickleStream(input: InputStream) extends BinaryPickle {
+  val value: Array[Byte] = Array.ofDim[Byte](0)
 
-  case class BinaryPickleStream(input: InputStream) extends BinaryPickle {
-    val value: Array[Byte] = Array.ofDim[Byte](0)
+  def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader =
+    new BinaryInputStreamReader(input, mirror, format)
 
-    def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader =
-      new BinaryInputStreamReader(input, mirror, format)
+  /* Do not override def toString to avoid traversing the input stream. */
+}
 
-    /* Do not override def toString to avoid traversing the input stream. */
-  }
+object BinaryPickle {
+  def apply(a: Array[Byte]): BinaryPickle =
+    new BinaryPickleArray(a)
+}
 
-  object BinaryPickle {
-    def apply(a: Array[Byte]): BinaryPickle =
-      new BinaryPickleArray(a)
-  }
+final class BinaryPickleBuilder(format: BinaryPickleFormat, out: FastArrayOutput) extends PBuilder with PickleTools {
+  import format._
 
-  final class BinaryPickleBuilder(format: BinaryPickleFormat, out: ArrayOutput[Byte]) extends PBuilder with PickleTools {
-    import format._
+  // if no output provided: create output caching large pre-allocated array
+  private var output: FastArrayOutput =
+    if (out == null) new FastArrayOutput
+    else out
 
-    private var output: ArrayOutput[Byte] = out
-
-    @inline private[this] def mkOutput(knownSize: Int): Unit =
-      if (output == null)
-        output = if (knownSize != -1) new ByteArrayOutput(knownSize)
-                 else new ByteArrayBufferOutput
-
-    @inline def beginEntry(picklee: Any): PBuilder = withHints { hints =>
-      mkOutput(hints.knownSize)
-
-      if (picklee == null) {
-        Util.encodeByte(output, NULL_TAG)
-      } else if (hints.oid != -1) {
-        Util.encodeByte(output, REF_TAG)
-        Util.encodeInt(output, hints.oid)
-      } else {
-        if (!hints.isElidedType) {
-          // quickly decide whether we should use picklee.getClass instead
-          val ts =
-            if (hints.tag.key.contains("anonfun$")) picklee.getClass.getName
-            else hints.tag.key
-          Util.encodeString(output, ts)
-        }
-
-        // NOTE: it looks like we don't have to write object ids at all
-        // traversals employed by pickling and unpickling are exactly the same
-        // hence when unpickling it's enough to just increment the nextUnpicklee counter
-        // and everything will work out automatically!
-
-        hints.tag.key match { // PERF: should store typestring once in hints.
-          case KEY_UNIT =>
-            Util.encodeByte(output, UNIT_TAG)
-          case KEY_NULL =>
-            Util.encodeByte(output, NULL_TAG)
-          case KEY_BYTE =>
-            Util.encodeByte(output, picklee.asInstanceOf[Byte])
-          case KEY_SHORT =>
-            Util.encodeShort(output, picklee.asInstanceOf[Short])
-          case KEY_CHAR =>
-            Util.encodeChar(output, picklee.asInstanceOf[Char])
-          case KEY_INT =>
-            Util.encodeInt(output, picklee.asInstanceOf[Int])
-          case KEY_LONG =>
-            Util.encodeLong(output, picklee.asInstanceOf[Long])
-          case KEY_BOOLEAN =>
-            Util.encodeBoolean(output, picklee.asInstanceOf[Boolean])
-          case KEY_FLOAT =>
-            val intValue = java.lang.Float.floatToRawIntBits(picklee.asInstanceOf[Float])
-            Util.encodeInt(output, intValue)
-          case KEY_DOUBLE =>
-            val longValue = java.lang.Double.doubleToRawLongBits(picklee.asInstanceOf[Double])
-            Util.encodeLong(output, longValue)
-          case KEY_STRING =>
-            Util.encodeString(output, picklee.asInstanceOf[String])
-          case KEY_ARRAY_BYTE =>
-            Util.encodeByteArray(output, picklee.asInstanceOf[Array[Byte]])
-          case KEY_ARRAY_CHAR =>
-            Util.encodeCharArray(output, picklee.asInstanceOf[Array[Char]])
-          case KEY_ARRAY_SHORT =>
-            Util.encodeShortArray(output, picklee.asInstanceOf[Array[Short]])
-          case KEY_ARRAY_INT =>
-            Util.encodeIntArray(output, picklee.asInstanceOf[Array[Int]])
-          case KEY_ARRAY_LONG =>
-            Util.encodeLongArray(output, picklee.asInstanceOf[Array[Long]])
-          case KEY_ARRAY_BOOLEAN =>
-            Util.encodeBooleanArray(output, picklee.asInstanceOf[Array[Boolean]])
-          case KEY_ARRAY_FLOAT =>
-            Util.encodeFloatArray(output, picklee.asInstanceOf[Array[Float]])
-          case KEY_ARRAY_DOUBLE =>
-            Util.encodeDoubleArray(output, picklee.asInstanceOf[Array[Double]])
-          case _ =>
-            if (hints.isElidedType) Util.encodeByte(output, ELIDED_TAG)
-        }
+  @inline def beginEntry(picklee: Any): PBuilder = withHints { hints =>
+    if (picklee == null) {
+      Util.encodeByte(output, NULL_TAG)
+    } else if (hints.oid != -1) {
+      Util.encodeByte(output, REF_TAG)
+      Util.encodeInt(output, hints.oid)
+    } else {
+      if (!hints.isElidedType) {
+        // quickly decide whether we should use picklee.getClass instead
+        val ts =
+          if (hints.tag.key.contains("anonfun$")) picklee.getClass.getName
+          else hints.tag.key
+        Util.encodeString(output, ts)
       }
-      this
-    }
 
-    @inline def putField(name: String, pickler: PBuilder => Unit): PBuilder = {
-      // can skip writing name if we pickle/unpickle in the same order
-      pickler(this)
-      this
-    }
+      // NOTE: it looks like we don't have to write object ids at all
+      // traversals employed by pickling and unpickling are exactly the same
+      // hence when unpickling it's enough to just increment the nextUnpicklee counter
+      // and everything will work out automatically!
 
-    @inline def endEntry(): Unit = { /* do nothing */ }
-
-    @inline def beginCollection(length: Int): PBuilder = {
-      Util.encodeInt(output, length)
-      this
+      hints.tag.key match { // PERF: should store typestring once in hints.
+        case KEY_UNIT =>
+          Util.encodeByte(output, UNIT_TAG)
+        case KEY_NULL =>
+          Util.encodeByte(output, NULL_TAG)
+        case KEY_BYTE =>
+          Util.encodeByte(output, picklee.asInstanceOf[Byte])
+        case KEY_SHORT =>
+          Util.encodeShort(output, picklee.asInstanceOf[Short])
+        case KEY_CHAR =>
+          Util.encodeChar(output, picklee.asInstanceOf[Char])
+        case KEY_INT =>
+          Util.encodeInt(output, picklee.asInstanceOf[Int])
+        case KEY_LONG =>
+          Util.encodeLong(output, picklee.asInstanceOf[Long])
+        case KEY_BOOLEAN =>
+          Util.encodeBoolean(output, picklee.asInstanceOf[Boolean])
+        case KEY_FLOAT =>
+          val intValue = java.lang.Float.floatToRawIntBits(picklee.asInstanceOf[Float])
+          Util.encodeInt(output, intValue)
+        case KEY_DOUBLE =>
+          val longValue = java.lang.Double.doubleToRawLongBits(picklee.asInstanceOf[Double])
+          Util.encodeLong(output, longValue)
+        case KEY_STRING =>
+          Util.encodeString(output, picklee.asInstanceOf[String])
+        case KEY_ARRAY_BYTE =>
+          Util.encodeByteArray(output, picklee.asInstanceOf[Array[Byte]])
+        case KEY_ARRAY_CHAR =>
+          Util.encodeCharArray(output, picklee.asInstanceOf[Array[Char]])
+        case KEY_ARRAY_SHORT =>
+          Util.encodeShortArray(output, picklee.asInstanceOf[Array[Short]])
+        case KEY_ARRAY_INT =>
+          Util.encodeIntArray(output, picklee.asInstanceOf[Array[Int]])
+        case KEY_ARRAY_LONG =>
+          Util.encodeLongArray(output, picklee.asInstanceOf[Array[Long]])
+        case KEY_ARRAY_BOOLEAN =>
+          Util.encodeBooleanArray(output, picklee.asInstanceOf[Array[Boolean]])
+        case KEY_ARRAY_FLOAT =>
+          Util.encodeFloatArray(output, picklee.asInstanceOf[Array[Float]])
+        case KEY_ARRAY_DOUBLE =>
+          Util.encodeDoubleArray(output, picklee.asInstanceOf[Array[Double]])
+        case _ =>
+          if (hints.isElidedType) Util.encodeByte(output, ELIDED_TAG)
+      }
     }
-
-    @inline def putElement(pickler: PBuilder => Unit): PBuilder = {
-      pickler(this)
-      this
-    }
-
-    @inline def endCollection(): Unit = {
-    }
-
-    @inline def result() = {
-      BinaryPickle(output.result())
-    }
+    this
   }
+
+  @inline def putField(name: String, pickler: PBuilder => Unit): PBuilder = {
+    // can skip writing name if we pickle/unpickle in the same order
+    pickler(this)
+    this
+  }
+
+  @inline def endEntry(): Unit = { /* do nothing */ }
+
+  @inline def beginCollection(length: Int): PBuilder = {
+    Util.encodeInt(output, length)
+    this
+  }
+
+  @inline def putElement(pickler: PBuilder => Unit): PBuilder = {
+    pickler(this)
+    this
+  }
+
+  @inline def endCollection(): Unit = {
+  }
+
+  @inline def result() = {
+    BinaryPickle(output.result())
+  }
+}
 
   abstract class AbstractBinaryReader(val mirror: Mirror) {
     protected var _lastTagRead: FastTypeTag[_] = null
@@ -534,46 +537,3 @@ package binary {
 
     def endCollection(): Unit = { /* do nothing */ }
   }
-
-  trait Constants {
-    val NULL_TAG  : Byte = -2
-    val REF_TAG   : Byte = -3
-    val UNIT_TAG  : Byte = -4
-    val ELIDED_TAG: Byte = -5
-
-    val KEY_NULL    = FastTypeTag.Null.key
-    val KEY_BYTE    = FastTypeTag.Byte.key
-    val KEY_SHORT   = FastTypeTag.Short.key
-    val KEY_CHAR    = FastTypeTag.Char.key
-    val KEY_INT     = FastTypeTag.Int.key
-    val KEY_LONG    = FastTypeTag.Long.key
-    val KEY_BOOLEAN = FastTypeTag.Boolean.key
-    val KEY_FLOAT   = FastTypeTag.Float.key
-    val KEY_DOUBLE  = FastTypeTag.Double.key
-    val KEY_UNIT    = FastTypeTag.Unit.key
-
-    val KEY_STRING  = FastTypeTag.String.key
-
-    val KEY_ARRAY_BYTE    = FastTypeTag.ArrayByte.key
-    val KEY_ARRAY_SHORT   = FastTypeTag.ArrayShort.key
-    val KEY_ARRAY_CHAR    = FastTypeTag.ArrayChar.key
-    val KEY_ARRAY_INT     = FastTypeTag.ArrayInt.key
-    val KEY_ARRAY_LONG    = FastTypeTag.ArrayLong.key
-    val KEY_ARRAY_BOOLEAN = FastTypeTag.ArrayBoolean.key
-    val KEY_ARRAY_FLOAT   = FastTypeTag.ArrayFloat.key
-    val KEY_ARRAY_DOUBLE  = FastTypeTag.ArrayDouble.key
-
-    val KEY_REF = FastTypeTag.Ref.key
-
-    val primitives = Set(KEY_NULL, KEY_REF, KEY_BYTE, KEY_SHORT, KEY_CHAR, KEY_INT, KEY_LONG, KEY_BOOLEAN, KEY_FLOAT, KEY_DOUBLE, KEY_UNIT, KEY_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_SHORT, KEY_ARRAY_CHAR, KEY_ARRAY_INT, KEY_ARRAY_LONG, KEY_ARRAY_BOOLEAN, KEY_ARRAY_FLOAT, KEY_ARRAY_DOUBLE)
-    val nullablePrimitives = Set(KEY_NULL, KEY_STRING, KEY_ARRAY_BYTE, KEY_ARRAY_SHORT, KEY_ARRAY_CHAR, KEY_ARRAY_INT, KEY_ARRAY_LONG, KEY_ARRAY_BOOLEAN, KEY_ARRAY_FLOAT, KEY_ARRAY_DOUBLE)
-  }
-
-  class BinaryPickleFormat extends PickleFormat with Constants {
-    type PickleType = BinaryPickle
-    type OutputType = ArrayOutput[Byte]
-    def createBuilder() = new BinaryPickleBuilder(this, null)
-    def createBuilder(out: ArrayOutput[Byte]): PBuilder = new BinaryPickleBuilder(this, out)
-    def createReader(pickle: PickleType, mirror: Mirror) = pickle.createReader(mirror, this)
-  }
-}
