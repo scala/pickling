@@ -164,7 +164,12 @@ object FastTypeTag {
         // debug(s"!!! could not find primitive tag for class ${clazz.getName} !!!")
         // handle arrays of non-primitive element type
         if (clazz.isArray) mkRawArray(clazz, mirror)
-        else apply(mirror, clazz.getName())
+        else {
+          val clazzName =
+            if (clazz.getName().contains("anonfun$")) clazz.getName()
+            else clazz.getName().replace('$', '.')
+          apply(mirror, clazzName)
+        }
       })
     } catch {
       case t: Throwable =>
