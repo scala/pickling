@@ -82,8 +82,7 @@ class Tools[C <: Context](val c: C) {
         // NOTE: only looking for classes defined in objects or top-level classes!
         case PackageDef(_, stats) => stats.foreach(loop)
         case cdef: ClassDef => analyze(cdef.symbol)
-        case mdef: ModuleDef => // analyze(mdef.symbol.asModule.moduleClass)
-          mdef.impl.body.foreach(loop)
+        case mdef: ModuleDef => mdef.impl.body.foreach(loop)
         case _ => // do nothing
       }
       c.enclosingRun.units.map(_.body).foreach(loop)
