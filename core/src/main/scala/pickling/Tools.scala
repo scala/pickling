@@ -79,10 +79,11 @@ class Tools[C <: Context](val c: C) {
       val subclasses = MutableList[Symbol]()
       def analyze(sym: Symbol) = if (isRelevantSubclass(baseSym, sym)) subclasses += sym
       def loop(tree: Tree): Unit = tree match {
-        // NOTE: only looking for top-level classes!
+        // NOTE: only looking for classes defined in objects or top-level classes!
         case PackageDef(_, stats) => stats.foreach(loop)
         case cdef: ClassDef => analyze(cdef.symbol)
-        case mdef: ModuleDef => analyze(mdef.symbol.asModule.moduleClass)
+        case mdef: ModuleDef => // analyze(mdef.symbol.asModule.moduleClass)
+          mdef.impl.body.foreach(loop)
         case _ => // do nothing
       }
       c.enclosingRun.units.map(_.body).foreach(loop)
