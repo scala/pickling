@@ -34,7 +34,17 @@ case class BinaryPickleStream(input: InputStream) extends BinaryPickle {
   /* Do not override def toString to avoid traversing the input stream. */
 }
 
+case class BinaryInputPickle(input: BinaryInput) extends BinaryPickle {
+  val value: Array[Byte] = Array.ofDim[Byte](0)
+
+  def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader =
+    new BinaryPickleReader2(input, mirror, format)
+
+  /* Do not override def toString to avoid traversing the input stream. */
+}
+
 object BinaryPickle {
+  //TODO override that stuff
   def apply(a: Array[Byte]): BinaryPickle =
     new BinaryPickleArray(a)
 }
@@ -42,8 +52,9 @@ object BinaryPickle {
 class BinaryPickleBuilder2(format: BinaryPickleFormat, output: BinaryOutput) extends PBuilder with PickleTools {
   import format._
   
+  
   @inline def beginEntry(picklee: Any): PBuilder = withHints { hints =>
-    //mkOutput(hints.knownSize)
+    output.ensureCapacity(hints.knownSize)
 
     if (picklee == null) {
       output.putByte( NULL_TAG)
