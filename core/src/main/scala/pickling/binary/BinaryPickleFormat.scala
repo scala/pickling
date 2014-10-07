@@ -45,8 +45,12 @@ package object binary {
   class BinaryPickleFormat extends PickleFormat with Constants {
     type PickleType = BinaryPickle
     type OutputType = ArrayOutput[Byte]
-    def createBuilder() = new BinaryPickleBuilder(this, null)
-    def createBuilder(out: ArrayOutput[Byte]): PBuilder = new BinaryPickleBuilder(this, out)
+    //def createBuilder() = new BinaryPickleBuilder(this, null)
+    def createBuilder(): PBuilder = createBuilder(new ByteArrayOutput)
+    //def createBuilder(out: ArrayOutput[Byte]): PBuilder = new BinaryPickleBuilder(this, out)
+    def createBuilder(out: ArrayOutput[Byte]): PBuilder = createBuilder(new PickleArrayOutput(out))
+    def createBuilder(out: BinaryOutput): PBuilder = new BinaryPickleBuilder2(this, out)
+    def createBuilder(out: java.nio.ByteBuffer): PBuilder = createBuilder(new ByteBufferOutput(out))
     def createReader(pickle: PickleType, mirror: Mirror) = pickle.createReader(mirror, this)
   }
 
