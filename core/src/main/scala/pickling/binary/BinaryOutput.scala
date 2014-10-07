@@ -2,6 +2,8 @@ package scala.pickling.binary
 
 abstract class BinaryOutput {
 
+  def result: Option[Array[Byte]]
+
   def putBoolean(value: Boolean): Unit
 
   def putByte(value: Byte): Unit
@@ -18,7 +20,11 @@ abstract class BinaryOutput {
 
   def putDouble(value: Double): Unit
 
-  def putString(value: String): Unit
+  def putString(value: String) {
+    val bytes = value.getBytes("UTF-8")
+    putByteArray(bytes)
+  }
+  
 
   //generic method when the performance is not an issue
   @inline private def putArray[T](array: Array[T], put: T => Unit): Unit = {
@@ -37,29 +43,66 @@ abstract class BinaryOutput {
 
 }
 
-//TODO how to deal with capacity issue ?
-class ByteBufferOutput(buffer: java.nio.ByteBuffer) extends BinaryOutput {
+class ByteBufferOutput(_buffer: java.nio.ByteBuffer) extends BinaryOutput {
 
-  def putBoolean(value: Boolean) = buffer.put(value.asInstanceOf[Byte])
+  import java.nio.ByteOrder
+  import java.nio.ByteBuffer
+  
+  def result = None
 
-  def putByte(value: Byte) = buffer.put(value)
+  private var buffer = _buffer
+  assert(buffer.order == ByteOrder.BIG_ENDIAN)
 
-  def putChar(value: Char) = buffer.putChar(value)
+  private def grow {
+    val newSize = 2*buffer.capacity
+    assert(newSize > 0)
+    val newBuffer =
+      if (buffer.isDirect) ByteBuffer.allocateDirect(newSize)
+      else ByteBuffer.allocate(newSize)
+    //copy the content
+    val pos = buffer.position
+    buffer.limit(pos)
+    buffer.position(0)
+    newBuffer.put(buffer)
+    buffer = newBuffer
+  }
 
-  def putShort(value: Short) = buffer.putShort(value)
+  @inline private def withReallocate[A](op: A => ByteBuffer, value: A) {
+    while(true) {
+      buffer.mark
+      try {
+        op(value)
+        return
+      } catch {
+        case _: java.nio.BufferOverflowException =>
+          buffer.reset
+          grow
+      }
+    }
+  }
 
-  def putInt(value: Int) = buffer.putInt(value)
+  def putBoolean(value: Boolean) = withReallocate[Byte](buffer.put, value.asInstanceOf[Byte])
 
-  def putLong(value: Long) = buffer.putLong(value)
+  def putByte(value: Byte) =  withReallocate[Byte](buffer.put, value)
 
-  def putFloat(value: Float) = buffer.putFloat(value)
+  def putChar(value: Char) = withReallocate(buffer.putChar, value)
 
-  def putDouble(value: Double) = buffer.putDouble(value)
+  def putShort(value: Short) = withReallocate(buffer.putShort, value)
 
-  def putString(value: String) {
-    val bytes = value.getBytes("UTF-8")
-    putInt(bytes.length)
-    buffer.put(bytes)
+  def putInt(value: Int) = withReallocate(buffer.putInt, value)
+
+  def putLong(value: Long) = withReallocate(buffer.putLong, value)
+
+  def putFloat(value: Float) = withReallocate(buffer.putFloat, value)
+
+  def putDouble(value: Double) = withReallocate(buffer.putDouble, value)
+
+  override def putByteArray(value: Array[Byte]): Unit = {
+    def process(value: Array[Byte]) = {
+      putInt(value.size)
+      buffer.put(value)
+    }
+    withReallocate(process, value)
   }
 
 }
@@ -67,6 +110,8 @@ class ByteBufferOutput(buffer: java.nio.ByteBuffer) extends BinaryOutput {
 class ByteArrayOutput(initialCapacity: Int = 1024) extends BinaryOutput {
 
   val buffer = new java.io.ByteArrayOutputStream(initialCapacity)
+
+  def result = Some(buffer.toByteArray)
 
   def putBoolean(value: Boolean) {
     if (value) buffer.write(1)
@@ -78,47 +123,31 @@ class ByteArrayOutput(initialCapacity: Int = 1024) extends BinaryOutput {
   }
 
   def putChar(value: Char) {
-    val fst = value >>> 8 & 0xff
-    val snd = value & 0xff
-    buffer.write(fst)
-    buffer.write(snd)
+    buffer.write(value >>> 8 & 0xff)
+    buffer.write(value & 0xff)
   }
 
   def putShort(value: Short) {
-    val fst = value >>> 8 & 0xff
-    val snd = value & 0xff
-    buffer.write(fst)
-    buffer.write(snd)
+    buffer.write(value >>> 8 & 0xff)
+    buffer.write(value & 0xff)
   }
 
   def putInt(value: Int) {
-    val fst = value >>> 24
-    val snd = value >>> 16 & 0xff
-    val thrd = value >>> 8 & 0xff
-    val frth = value & 0xff
-    buffer.write(fst)
-    buffer.write(snd)
-    buffer.write(thrd)
-    buffer.write(frth)
+    buffer.write(value >>> 24)
+    buffer.write(value >>> 16 & 0xff)
+    buffer.write(value >>> 8 & 0xff)
+    buffer.write(value & 0xff)
   }
 
   def putLong(value: Long) {
-    val elem1 = (value >>> 56 & 0xff).asInstanceOf[Int]
-    val elem2 = (value >>> 48 & 0xff).asInstanceOf[Int]
-    val elem3 = (value >>> 40 & 0xff).asInstanceOf[Int]
-    val elem4 = (value >>> 32 & 0xff).asInstanceOf[Int]
-    val elem5 = (value >>> 24 & 0xff).asInstanceOf[Int]
-    val elem6 = (value >>> 16 & 0xff).asInstanceOf[Int]
-    val elem7 = (value >>> 8 & 0xff).asInstanceOf[Int]
-    val elem8 = (value & 0xff).asInstanceOf[Int]
-    buffer.write(elem1)
-    buffer.write(elem2)
-    buffer.write(elem3)
-    buffer.write(elem4)
-    buffer.write(elem5)
-    buffer.write(elem6)
-    buffer.write(elem7)
-    buffer.write(elem8)
+    buffer.write((value >>> 56 & 0xff).asInstanceOf[Int])
+    buffer.write((value >>> 48 & 0xff).asInstanceOf[Int])
+    buffer.write((value >>> 40 & 0xff).asInstanceOf[Int])
+    buffer.write((value >>> 32 & 0xff).asInstanceOf[Int])
+    buffer.write((value >>> 24 & 0xff).asInstanceOf[Int])
+    buffer.write((value >>> 16 & 0xff).asInstanceOf[Int])
+    buffer.write((value >>> 8 & 0xff).asInstanceOf[Int])
+    buffer.write((value & 0xff).asInstanceOf[Int])
   }
 
   def putFloat(value: Float) {
@@ -131,32 +160,33 @@ class ByteArrayOutput(initialCapacity: Int = 1024) extends BinaryOutput {
     putLong(longValue)
   }
 
-  def putString(value: String) {
-    val bytes = value.getBytes("UTF-8")
-    putInt(bytes.length)
-    buffer.write(bytes)
+  override def putByteArray(value: Array[Byte]): Unit = {
+    putInt(value.length)
+    buffer.write(value)
   }
-
-}
-
-class DataStreamOutput(stream: java.io.DataOutputStream) extends BinaryOutput {
   
-  def putBoolean(value: Boolean) = stream.writeBoolean(value)
-
-  def putByte(value: Byte) = stream.writeByte(value)
-
-  def putChar(value: Char) = stream.writeChar(value)
-
-  def putShort(value: Short) = stream.writeShort(value)
-
-  def putInt(value: Int) = stream.writeInt(value)
-
-  def putLong(value: Long) = stream.writeLong(value)
-
-  def putFloat(value: Float) = stream.writeFloat(value)
-
-  def putDouble(value: Double) = stream.writeDouble(value)
-
-  def putString(value: String) = stream.writeUTF(value)
+  //TODO override array
 
 }
+
+//  class DataStreamOutput(stream: java.io.DataOutputStream) extends BinaryOutput {
+//    
+//    def putBoolean(value: Boolean) = stream.writeBoolean(value)
+
+//    def putByte(value: Byte) = stream.writeByte(value)
+
+//    def putChar(value: Char) = stream.writeChar(value)
+
+//    def putShort(value: Short) = stream.writeShort(value)
+
+//    def putInt(value: Int) = stream.writeInt(value)
+
+//    def putLong(value: Long) = stream.writeLong(value)
+
+//    def putFloat(value: Float) = stream.writeFloat(value)
+
+//    def putDouble(value: Double) = stream.writeDouble(value)
+
+//    override def putString(value: String) = stream.writeUTF(value)
+
+//  }
