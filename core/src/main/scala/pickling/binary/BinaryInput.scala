@@ -32,14 +32,44 @@ abstract class BinaryInput {
     array
   }
 
-  def getBooleanArray(): Unit = getArray(getBoolean)
-  def getByteArray(): Unit = getArray(getByte)
-  def getCharArray(): Unit = getArray(getChar)
-  def getDoubleArray(): Unit = getArray(getDouble)
-  def getFloatArray(): Unit = getArray(getFloat)
-  def getIntArray(): Unit = getArray(getInt)
-  def getLongArray(): Unit = getArray(getLong)
-  def getShortArray(): Unit = getArray(getShort)
+  def getBooleanArray(): Array[Boolean] = getArray(getBoolean)
+  def getByteArray(): Array[Byte] = getArray(getByte)
+  def getCharArray(): Array[Char] = getArray(getChar)
+  def getDoubleArray(): Array[Double] = getArray(getDouble)
+  def getFloatArray(): Array[Float] = getArray(getFloat)
+  def getIntArray(): Array[Int] = getArray(getInt)
+  def getLongArray(): Array[Long] = getArray(getLong)
+  def getShortArray(): Array[Short] = getArray(getShort)
+
+  //TODO lookahead
+  protected var lookahead: Option[Byte] = None
+
+  def setLookahead(b: Byte) {
+    lookahead = Some(b)
+  }
+
+  def getIntWithLookahead() = {
+    lookahead match {
+      case Some(b) =>
+        var i = b << 24
+        i |= getByte << 16
+        i |= getByte << 8
+        i |= getByte
+        lookahead = None
+        i
+      case None =>
+        getInt
+    }
+  }
+  
+  def getBytes(array: Array[Byte])
+
+  def getStringWithLookahead() {
+    val size = getIntWithLookahead
+    val array = Array.ofDim[Byte](size)
+    getBytes(array)
+  }
+
 }
 
 class ByteBufferInput(buffer: java.nio.ByteBuffer) extends BinaryInput {
@@ -65,6 +95,10 @@ class ByteBufferInput(buffer: java.nio.ByteBuffer) extends BinaryInput {
     val bytes = Array.ofDim[Byte](size)
     buffer.get(bytes)
     new String(bytes, "UTF-8")
+  }
+
+  def getBytes(array: Array[Byte]) {
+    buffer.get(array)
   }
 
 }
@@ -141,26 +175,35 @@ class ByteArrayInput(data: Array[Byte]) extends BinaryInput {
     idx += size
     new String(bytes, "UTF-8")
   }
-}
+  
+  def getBytes(array: Array[Byte]) {
+    val size = array.size
+    data.copyToArray(array, idx, size)
+    idx += size
+  }
 
-class DataStreamInput(stream: java.io.DataInputStream) extends BinaryInput {
-
-  def getBoolean() = stream.readBoolean()
-
-  def getByte() = stream.readByte()
-
-  def getChar() = stream.readChar()
-
-  def getShort() = stream.readShort()
-
-  def getInt() = stream.readInt()
-
-  def getLong() = stream.readLong()
-
-  def getFloat() = stream.readFloat()
-
-  def getDouble() = stream.readDouble()
-
-  def getString() = stream.readUTF()
+  //TODO override array for faster copy
 
 }
+
+//  class DataStreamInput(stream: java.io.DataInputStream) extends BinaryInput {
+
+//    def getBoolean() = stream.readBoolean()
+
+//    def getByte() = stream.readByte()
+
+//    def getChar() = stream.readChar()
+
+//    def getShort() = stream.readShort()
+
+//    def getInt() = stream.readInt()
+
+//    def getLong() = stream.readLong()
+
+//    def getFloat() = stream.readFloat()
+
+//    def getDouble() = stream.readDouble()
+
+//    def getString() = stream.readUTF()
+
+//  }

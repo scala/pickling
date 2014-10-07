@@ -132,8 +132,10 @@ class BinaryPickleBuilder2(format: BinaryPickleFormat, output: BinaryOutput) ext
   }
 
   @inline def result() = {
-    ???
-    //BinaryPickle(output.result())
+    output.result match {
+      case Some(b) => BinaryPickle(b)
+      case None => null
+    }
   }
 
 }
@@ -261,37 +263,6 @@ abstract class AbstractBinaryReader(val mirror: Mirror) {
 class BinaryPickleReader2(in: BinaryInput, mirror: Mirror, format: BinaryPickleFormat) extends AbstractBinaryReader(mirror) with PReader with PickleTools {
   import format._
   
-  def nextByte(): Byte = ???
-//{
-//  val b = in.read()
-//  if (b == -1) throw new EndOfStreamException
-//  b.asInstanceOf[Byte]
-//}
-
-  def decodeStringWithLookahead(la: Byte): String = ???
-//{
-//  // read 3 more bytes
-//  val buf = Array[Byte](la, nextByte(), nextByte(), nextByte())
-//  val len = {
-//    val len0 = Util.decodeIntFrom(buf, 0)
-//    if (len0 > 1000)
-//      throw PicklingException(s"decodeStringWithLookahead: corrupted length of type string: $len0")
-//    else if (len0 < 0)
-//      throw PicklingException(s"decodeStringWithLookahead: negative length of type string: $len0\nbuf: [${buf.mkString(",")}]")
-//    else
-//      len0
-//  }
-//  val bytes = Array.ofDim[Byte](len)
-//  var num = in.read(bytes)
-//  while (num < len) {
-//    val readMore = in.read(bytes, num, len - num)
-//    num += readMore
-//  }
-//  new String(bytes, "UTF-8")
-//}
-
-  var gla: Option[Byte] = None
-
   def beginEntryNoTag(): String =
     beginEntryNoTagDebug(false)
 
@@ -301,16 +272,16 @@ class BinaryPickleReader2(in: BinaryInput, mirror: Mirror, format: BinaryPickleF
       //   debug(s"hints: $hints")
 
       if (hints.isElidedType && nullablePrimitives.contains(hints.tag.key)) {
-        val lookahead = nextByte()
+        val lookahead = in.getByte()
         lookahead match {
-          case NULL_TAG => gla = Some(lookahead); FastTypeTag.Null
+          case NULL_TAG => in.setLookahead(lookahead); FastTypeTag.Null
           case REF_TAG  => FastTypeTag.Ref
-          case _        => gla = Some(lookahead); hints.tag
+          case _        => in.setLookahead(lookahead); hints.tag
         }
       } else if (hints.isElidedType && primitives.contains(hints.tag.key)) {
         hints.tag
       } else {
-        val lookahead = nextByte()
+        val lookahead = in.getByte()
         // if (debugOn)
         //   debug(s"checking lookahead: $lookahead")
         lookahead match {
@@ -323,7 +294,8 @@ class BinaryPickleReader2(in: BinaryInput, mirror: Mirror, format: BinaryPickleF
           case _ =>
             // do not consume lookahead byte
             val res = try {
-              decodeStringWithLookahead(lookahead)
+              in.setLookahead(lookahead)
+              in.getStringWithLookahead
             } catch {
               case PicklingException(msg) =>
                 val primInfo = if (hints.tag == null) ""
