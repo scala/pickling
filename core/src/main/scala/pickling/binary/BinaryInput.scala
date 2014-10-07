@@ -20,11 +20,16 @@ abstract class BinaryInput {
 
   def getDouble(): Double
 
-  def getString(): String
+  def getString(): String = {
+    val size = getIntWithLookahead
+    val array = Array.ofDim[Byte](size)
+    getBytes(array)
+    new String(array, "UTF-8")
+  }
 
   //generic method when the performance is not an issue
   @inline private def getArray[T: ClassTag](get: () => T): Array[T] = {
-    val size = getInt
+    val size = getIntWithLookahead
     val array = Array.ofDim[T](size)
     for(i <- 0 until size) {
       array(i) = get()
@@ -41,7 +46,6 @@ abstract class BinaryInput {
   def getLongArray(): Array[Long] = getArray(getLong)
   def getShortArray(): Array[Short] = getArray(getShort)
 
-  //TODO lookahead
   protected var lookahead: Option[Byte] = None
 
   def setLookahead(b: Byte) {
@@ -64,10 +68,12 @@ abstract class BinaryInput {
   
   def getBytes(array: Array[Byte])
 
-  def getStringWithLookahead() {
-    val size = getIntWithLookahead
-    val array = Array.ofDim[Byte](size)
-    getBytes(array)
+  def getStringWithLookahead(la: Byte): String = {
+    val oldLa = lookahead
+    setLookahead(la)
+    val res = getString
+    lookahead = oldLa
+    res
   }
 
 }
@@ -90,12 +96,12 @@ class ByteBufferInput(buffer: java.nio.ByteBuffer) extends BinaryInput {
 
   def getDouble() = buffer.getDouble
 
-  def getString() = {
-    val size = getInt
-    val bytes = Array.ofDim[Byte](size)
-    buffer.get(bytes)
-    new String(bytes, "UTF-8")
-  }
+//def getString() = {
+//  val size = getInt
+//  val bytes = Array.ofDim[Byte](size)
+//  buffer.get(bytes)
+//  new String(bytes, "UTF-8")
+//}
 
   def getBytes(array: Array[Byte]) {
     buffer.get(array)
@@ -108,11 +114,9 @@ class ByteArrayInput(data: Array[Byte]) extends BinaryInput {
   private var idx = 0
    
   def getBoolean() = {
-    val res = (data(idx) != 0)
-    idx += 1
-    res
+    getByte() != 0 
   }
-
+  
   def getByte() = {
     val res = data(idx)
     idx += 1
@@ -138,7 +142,7 @@ class ByteArrayInput(data: Array[Byte]) extends BinaryInput {
   def getInt() = {
     var res = (0: Int)
     res |= data(idx  ) << 24
-    res |= data(idx+1) << 26
+    res |= data(idx+1) << 16
     res |= data(idx+2) << 8
     res |= data(idx+3)
     idx += 4
@@ -147,14 +151,14 @@ class ByteArrayInput(data: Array[Byte]) extends BinaryInput {
 
   def getLong() = {
     var res = (0: Long)
-    res |= data(idx  ) << 56
-    res |= data(idx+1) << 48
-    res |= data(idx+2) << 40
-    res |= data(idx+3) << 32
-    res |= data(idx+4) << 24
-    res |= data(idx+5) << 26
-    res |= data(idx+6) << 8
-    res |= data(idx+7)
+    res |= (data(idx  ).toLong << 56) & 0xFFFFFFFFFFFFFFFFL
+    res |= (data(idx+1).toLong << 48) & 0x00FFFFFFFFFFFFFFL
+    res |= (data(idx+2).toLong << 40) & 0x0000FFFFFFFFFFFFL
+    res |= (data(idx+3).toLong << 32) & 0x000000FFFFFFFFFFL
+    res |= (data(idx+4).toLong << 24) & 0x00000000FFFFFFFFL
+    res |= (data(idx+5).toLong << 16) & 0x0000000000FFFFFFL
+    res |= (data(idx+6).toLong << 8 ) & 0x000000000000FFFFL
+    res |= (data(idx+7).toLong      ) & 0x00000000000000FFL
     idx += 8
     res
   }
@@ -169,16 +173,16 @@ class ByteArrayInput(data: Array[Byte]) extends BinaryInput {
     java.lang.Double.longBitsToDouble(r)
   }
 
-  def getString() = {
-    val size = getInt
-    val bytes = data.slice(idx, idx + size)
-    idx += size
-    new String(bytes, "UTF-8")
-  }
+//def getString() = {
+//  val size = getInt
+//  val bytes = data.slice(idx, idx + size)
+//  idx += size
+//  new String(bytes, "UTF-8")
+//}
   
   def getBytes(array: Array[Byte]) {
     val size = array.size
-    data.copyToArray(array, idx, size)
+    data.view(idx, idx+size).copyToArray(array, 0, size)
     idx += size
   }
 
