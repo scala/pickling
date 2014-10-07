@@ -132,8 +132,8 @@ class ByteArrayOutput(initialCapacity: Int = 1024) extends BinaryOutput {
   }
 
   def putBoolean(value: Boolean) {
-    if (value) buffer.write(1)
-    else buffer.write(0)
+    if (value) putByte(1)
+    else putByte(0)
   }
 
   def putByte(value: Byte) {

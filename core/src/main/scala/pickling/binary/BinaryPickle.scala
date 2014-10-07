@@ -20,7 +20,8 @@ case class BinaryPickleArray(data: Array[Byte]) extends BinaryPickle {
   val value: Array[Byte] = data
 
   def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader =
-    new BinaryPickleReader(data, mirror, format)
+    new BinaryPickleReader2(new ByteArrayInput(data), mirror, format)
+    //new BinaryPickleReader(data, mirror, format)
 
   override def toString = s"""BinaryPickle(${value.mkString("[", ",", "]")})"""
 }
@@ -49,7 +50,7 @@ object BinaryPickle {
     new BinaryPickleArray(a)
 }
 
-class BinaryPickleBuilder2(format: BinaryPickleFormat, output: BinaryOutput) extends PBuilder with PickleTools {
+class BinaryPickleBuilder2(format: BinaryPickleFormat, output: BinaryOutput) extends BinaryPBuilder with PickleTools {
   import format._
   
   
@@ -145,13 +146,13 @@ class BinaryPickleBuilder2(format: BinaryPickleFormat, output: BinaryOutput) ext
   @inline def result() = {
     output.result match {
       case Some(b) => BinaryPickle(b)
-      case None => null
+      case None => BinaryPickle(null) //TODO is that safe ?
     }
   }
 
 }
 
-class BinaryPickleBuilder(format: BinaryPickleFormat, out: ArrayOutput[Byte]) extends PBuilder with PickleTools {
+class BinaryPickleBuilder(format: BinaryPickleFormat, out: ArrayOutput[Byte]) extends BinaryPBuilder with PickleTools {
   import format._
 
   private var output: ArrayOutput[Byte] = out
@@ -285,7 +286,8 @@ class BinaryPickleReader2(in: BinaryInput, mirror: Mirror, format: BinaryPickleF
       if (hints.isElidedType && nullablePrimitives.contains(hints.tag.key)) {
         val lookahead = in.getByte()
         lookahead match {
-          case NULL_TAG => in.setLookahead(lookahead); FastTypeTag.Null
+          case UNIT_TAG => FastTypeTag.Unit
+          case NULL_TAG => FastTypeTag.Null
           case REF_TAG  => FastTypeTag.Ref
           case _        => in.setLookahead(lookahead); hints.tag
         }
@@ -305,8 +307,7 @@ class BinaryPickleReader2(in: BinaryInput, mirror: Mirror, format: BinaryPickleF
           case _ =>
             // do not consume lookahead byte
             val res = try {
-              in.setLookahead(lookahead)
-              in.getStringWithLookahead
+              in.getStringWithLookahead(lookahead)
             } catch {
               case PicklingException(msg) =>
                 val primInfo = if (hints.tag == null) ""
