@@ -80,6 +80,8 @@ class BinaryInputStreamReaderTest extends FunSuite {
     } catch {
       case _: EndOfStreamException =>
         /* expected */
+      case _: java.io.EOFException =>
+        /* expected */
     } finally {
       assert(obj1.toString == readObj1.toString)
       assert(obj2.toString == readObj2.toString)

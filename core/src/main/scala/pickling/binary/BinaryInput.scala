@@ -4,7 +4,9 @@ import scala.reflect.ClassTag
 
 abstract class BinaryInput {
 
-  def getBoolean(): Boolean
+  def getBoolean(): Boolean = {
+    getByte() != 0 
+  }
 
   def getByte(): Byte
 
@@ -21,9 +23,7 @@ abstract class BinaryInput {
   def getDouble(): Double
 
   def getString(): String = {
-    val size = getIntWithLookahead
-    val array = Array.ofDim[Byte](size)
-    getBytes(array)
+    val array = getByteArray
     new String(array, "UTF-8")
   }
 
@@ -56,9 +56,9 @@ abstract class BinaryInput {
     lookahead match {
       case Some(b) =>
         var i = b << 24
-        i |= getByte << 16
-        i |= getByte << 8
-        i |= getByte
+        i |= (getByte.toInt << 16) & 0xFF0000
+        i |= (getByte.toInt << 8) & 0xFF00
+        i |= (getByte.toInt) & 0xFF
         lookahead = None
         i
       case None =>
@@ -66,8 +66,6 @@ abstract class BinaryInput {
     }
   }
   
-  def getBytes(array: Array[Byte])
-
   def getStringWithLookahead(la: Byte): String = {
     val oldLa = lookahead
     setLookahead(la)
@@ -80,7 +78,8 @@ abstract class BinaryInput {
 
 class ByteBufferInput(buffer: java.nio.ByteBuffer) extends BinaryInput {
 
-  def getBoolean() = buffer.get.asInstanceOf[Boolean]
+  import java.nio.ByteOrder
+  assert(buffer.order == ByteOrder.BIG_ENDIAN)
 
   def getByte() = buffer.get
 
@@ -96,15 +95,11 @@ class ByteBufferInput(buffer: java.nio.ByteBuffer) extends BinaryInput {
 
   def getDouble() = buffer.getDouble
 
-//def getString() = {
-//  val size = getInt
-//  val bytes = Array.ofDim[Byte](size)
-//  buffer.get(bytes)
-//  new String(bytes, "UTF-8")
-//}
-
-  def getBytes(array: Array[Byte]) {
+  override def getByteArray(): Array[Byte] = {
+    val size = getIntWithLookahead
+    val array = Array.ofDim[Byte](size)
     buffer.get(array)
+    array
   }
 
 }
@@ -113,10 +108,6 @@ class ByteArrayInput(data: Array[Byte]) extends BinaryInput {
 
   private var idx = 0
    
-  def getBoolean() = {
-    getByte() != 0 
-  }
-  
   def getByte() = {
     val res = data(idx)
     idx += 1
@@ -126,7 +117,7 @@ class ByteArrayInput(data: Array[Byte]) extends BinaryInput {
   def getChar() = {
     var res = 0
     res |= data(idx  ) << 8
-    res |= data(idx+1)
+    res |= data(idx+1).toInt & 0xFF
     idx += 2
     res.asInstanceOf[Char]
   }
@@ -134,17 +125,17 @@ class ByteArrayInput(data: Array[Byte]) extends BinaryInput {
   def getShort() = {
     var res = 0
     res |= data(idx  ) << 8
-    res |= data(idx+1)
+    res |= data(idx+1).toInt & 0xFF
     idx += 2
     res.asInstanceOf[Short]
   }
 
   def getInt() = {
     var res = (0: Int)
-    res |= data(idx  ) << 24
-    res |= data(idx+1) << 16
-    res |= data(idx+2) << 8
-    res |= data(idx+3)
+    res |= (data(idx  ) << 24)
+    res |= (data(idx+1) << 16) & 0xFF0000
+    res |= (data(idx+2) << 8 ) & 0xFF00
+    res |= (data(idx+3)      ) & 0xFF
     idx += 4
     res
   }
@@ -173,41 +164,35 @@ class ByteArrayInput(data: Array[Byte]) extends BinaryInput {
     java.lang.Double.longBitsToDouble(r)
   }
 
-//def getString() = {
-//  val size = getInt
-//  val bytes = data.slice(idx, idx + size)
-//  idx += size
-//  new String(bytes, "UTF-8")
-//}
-  
-  def getBytes(array: Array[Byte]) {
-    val size = array.size
+  override def getByteArray(): Array[Byte] = {
+    val size = getIntWithLookahead
+    val array = Array.ofDim[Byte](size)
     data.view(idx, idx+size).copyToArray(array, 0, size)
     idx += size
+    array
   }
 
   //TODO override array for faster copy
 
 }
 
-//  class DataStreamInput(stream: java.io.DataInputStream) extends BinaryInput {
+class StreamInput(stream: java.io.InputStream) extends BinaryInput {
+  val ds = new java.io.DataInputStream(stream)
+  def getByte() = ds.readByte()
+  def getChar() = ds.readChar()
+  def getShort() = ds.readShort()
+  def getInt() = ds.readInt()
+  def getLong() = ds.readLong()
+  def getFloat() = ds.readFloat()
+  def getDouble() = ds.readDouble()
 
-//    def getBoolean() = stream.readBoolean()
+  override def getByteArray(): Array[Byte] = {
+    val size = getIntWithLookahead
+    val array = Array.ofDim[Byte](size)
+    ds.readFully(array)
+    array
+  }
 
-//    def getByte() = stream.readByte()
-
-//    def getChar() = stream.readChar()
-
-//    def getShort() = stream.readShort()
-
-//    def getInt() = stream.readInt()
-
-//    def getLong() = stream.readLong()
-
-//    def getFloat() = stream.readFloat()
-
-//    def getDouble() = stream.readDouble()
-
-//    def getString() = stream.readUTF()
-
-//  }
+  //TODO check endianness
+  
+}
