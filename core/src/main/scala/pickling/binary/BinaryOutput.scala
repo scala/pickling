@@ -6,7 +6,10 @@ abstract class BinaryOutput {
 
   def ensureCapacity(capacity: Int): Unit
 
-  def putBoolean(value: Boolean): Unit
+  def putBoolean(value: Boolean): Unit = {
+    if (value) putByte(1)
+    else putByte(0)
+  }
 
   def putByte(value: Byte): Unit
 
@@ -95,8 +98,6 @@ class ByteBufferOutput(_buffer: java.nio.ByteBuffer) extends BinaryOutput {
     }
   }
 
-  def putBoolean(value: Boolean) = withReallocate[Byte](buffer.put, value.asInstanceOf[Byte])
-
   def putByte(value: Byte) =  withReallocate[Byte](buffer.put, value)
 
   def putChar(value: Char) = withReallocate(buffer.putChar, value)
@@ -129,11 +130,6 @@ class ByteArrayOutput(initialCapacity: Int = 1024) extends BinaryOutput {
   
   def ensureCapacity(capacity: Int) {
     //TODO ignore for the moment, not sure if it is worth creating a new buffer and copying the old one
-  }
-
-  def putBoolean(value: Boolean) {
-    if (value) putByte(1)
-    else putByte(0)
   }
 
   def putByte(value: Byte) {
@@ -203,11 +199,6 @@ class PickleArrayOutput(buffer: scala.pickling.ArrayOutput[Byte]) extends Binary
     buffer += i.asInstanceOf[Byte]
   }
 
-  def putBoolean(value: Boolean) {
-    if (value) write(1)
-    else write(0)
-  }
-
   def putByte(value: Byte) {
     write(value)
   }
@@ -257,24 +248,21 @@ class PickleArrayOutput(buffer: scala.pickling.ArrayOutput[Byte]) extends Binary
 
 }
 
-//  class DataStreamOutput(stream: java.io.DataOutputStream) extends BinaryOutput {
-//    
-//    def putBoolean(value: Boolean) = stream.writeBoolean(value)
+class StreamOutput(stream: java.io.OutputStream) extends BinaryOutput {
+  val ds = new java.io.DataOutputStream(stream)
+  def result = None
+  def ensureCapacity(capacity: Int) { }
+  def putByte(value: Byte) = ds.writeByte(value)
+  def putChar(value: Char) = ds.writeChar(value)
+  def putShort(value: Short) = ds.writeShort(value)
+  def putInt(value: Int) = ds.writeInt(value)
+  def putLong(value: Long) = ds.writeLong(value)
+  def putFloat(value: Float) = ds.writeFloat(value)
+  def putDouble(value: Double) = ds.writeDouble(value)
+  
+  override def putByteArray(value: Array[Byte]): Unit = {
+    putInt(value.length)
+    ds.write(value)
+  }
 
-//    def putByte(value: Byte) = stream.writeByte(value)
-
-//    def putChar(value: Char) = stream.writeChar(value)
-
-//    def putShort(value: Short) = stream.writeShort(value)
-
-//    def putInt(value: Int) = stream.writeInt(value)
-
-//    def putLong(value: Long) = stream.writeLong(value)
-
-//    def putFloat(value: Float) = stream.writeFloat(value)
-
-//    def putDouble(value: Double) = stream.writeDouble(value)
-
-//    override def putString(value: String) = stream.writeUTF(value)
-
-//  }
+}
