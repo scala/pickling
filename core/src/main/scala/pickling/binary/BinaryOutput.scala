@@ -55,11 +55,12 @@ class ByteBufferOutput(_buffer: java.nio.ByteBuffer) extends BinaryOutput {
   
   def result = None
 
-  private var buffer = _buffer
+  var buffer = _buffer
   assert(buffer.order == ByteOrder.BIG_ENDIAN)
 
   private def growTo(newSize: Int) {
-    assert(newSize > 0)
+    //println("growing to " + newSize)
+    assert(newSize > 0) //can we overflow before running out of memory ?
     val newBuffer =
       if (buffer.isDirect) ByteBuffer.allocateDirect(newSize)
       else ByteBuffer.allocate(newSize)
@@ -69,6 +70,10 @@ class ByteBufferOutput(_buffer: java.nio.ByteBuffer) extends BinaryOutput {
     buffer.position(0)
     newBuffer.put(buffer)
     buffer = newBuffer
+    //assert(newBuffer.position == pos)
+    //assert((0 until pos).forall(i => buffer.get(i) == newBuffer.get(i)))
+    //println("capapcity = " + buffer.capacity)
+    //println(buffer.toString)
   }
 
 
@@ -90,6 +95,7 @@ class ByteBufferOutput(_buffer: java.nio.ByteBuffer) extends BinaryOutput {
       try {
         op(value)
         return
+        assert(false, "after return ?")
       } catch {
         case _: java.nio.BufferOverflowException =>
           buffer.reset
@@ -98,26 +104,32 @@ class ByteBufferOutput(_buffer: java.nio.ByteBuffer) extends BinaryOutput {
     }
   }
 
-  def putByte(value: Byte) =  withReallocate[Byte](buffer.put, value)
 
-  def putChar(value: Char) = withReallocate(buffer.putChar, value)
+  @inline private def bb(i: Byte) = { buffer.put(i) }
+  def putByte(value: Byte) =  withReallocate[Byte](bb, value)
 
-  def putShort(value: Short) = withReallocate(buffer.putShort, value)
+  @inline private def cc(i: Char) = { buffer.putChar(i) }
+  def putChar(value: Char) = withReallocate(cc, value)
 
-  def putInt(value: Int) = withReallocate(buffer.putInt, value)
+  @inline private def ss(i: Short) = { buffer.putShort(i) }
+  def putShort(value: Short) = withReallocate(ss, value)
 
-  def putLong(value: Long) = withReallocate(buffer.putLong, value)
+  @inline private def ii(i: Int) = { buffer.putInt(i) }
+  def putInt(value: Int) = withReallocate(ii, value)
 
-  def putFloat(value: Float) = withReallocate(buffer.putFloat, value)
+  @inline private def ll(i: Long) = { buffer.putLong(i) }
+  def putLong(value: Long) = withReallocate(ll, value)
 
-  def putDouble(value: Double) = withReallocate(buffer.putDouble, value)
+  @inline private def ff(i: Float) = { buffer.putFloat(i) }
+  def putFloat(value: Float) = withReallocate(ff, value)
 
+  @inline private def dd(i: Double) = { buffer.putDouble(i) }
+  def putDouble(value: Double) = withReallocate(dd, value)
+
+  @inline private def pba(value: Array[Byte]) = { buffer.put(value) }
   override def putByteArray(value: Array[Byte]): Unit = {
-    def process(value: Array[Byte]) = {
-      putInt(value.size)
-      buffer.put(value)
-    }
-    withReallocate(process, value)
+    putInt(value.size)
+    withReallocate(pba, value)
   }
 
 }
