@@ -2,14 +2,9 @@ package scala.pickling.binary
 
 abstract class BinaryOutput {
 
-  def result: Option[Array[Byte]]
+  def result: Option[Array[Byte]] //TODO allow multiple outputs type (e.g. bytebuffer)
 
   def ensureCapacity(capacity: Int): Unit
-
-  def putBoolean(value: Boolean): Unit = {
-    if (value) putByte(1)
-    else putByte(0)
-  }
 
   def putByte(value: Byte): Unit
 
@@ -25,26 +20,52 @@ abstract class BinaryOutput {
 
   def putDouble(value: Double): Unit
 
+  def putBytes(bytes: Array[Byte], len: Int): Unit
+
+  ////////////////////////
+  // Derived operations //
+  ////////////////////////
+  
+  def putBoolean(value: Boolean): Unit = {
+    if (value) putByte(1)
+    else putByte(0)
+  }
+
   def putString(value: String) {
     val bytes = value.getBytes("UTF-8")
     putByteArray(bytes)
   }
-  
 
-  //generic method when the performance is not an issue
-  @inline private def putArray[T](array: Array[T], put: T => Unit): Unit = {
-    putInt(array.size)
-    for(elt <- array) put(elt)
+  private val chunkSize = 128
+  private val chunk = Array.ofDim[Byte](chunkSize)
+
+  protected def putArrayByChunk[T <: AnyVal](arr: Array[T], offset: Long, eltSize: Int) {
+    val nbrElt = arr.length
+    putInt(nbrElt)
+    var srcOffset = offset //UnsafeMemory.byteArrayOffset
+    var toCopy = nbrElt * eltSize
+    while (toCopy > 0) {
+      val byteLen = math.min(chunkSize, toCopy)
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset, chunk, UnsafeMemory.byteArrayOffset, byteLen)
+      toCopy -= byteLen
+      srcOffset += byteLen
+      putBytes(chunk, byteLen)
+    }
   }
 
-  def putBooleanArray(value: Array[Boolean]): Unit = putArray(value, putBoolean)
-  def putByteArray(value: Array[Byte]): Unit = putArray(value, putByte)
-  def putCharArray(value: Array[Char]): Unit = putArray(value, putChar)
-  def putDoubleArray(value: Array[Double]): Unit = putArray(value, putDouble)
-  def putFloatArray(value: Array[Float]): Unit = putArray(value, putFloat)
-  def putIntArray(value: Array[Int]): Unit = putArray(value, putInt)
-  def putLongArray(value: Array[Long]): Unit = putArray(value, putLong)
-  def putShortArray(value: Array[Short]): Unit = putArray(value, putShort)
+  def putByteArray(value: Array[Byte]): Unit = {
+    val size = value.size
+    putInt(size)
+    putBytes(value, size)
+  }
+  
+  def putBooleanArray(value: Array[Boolean]): Unit = putArrayByChunk(value, UnsafeMemory.booleanArrayOffset, 1)
+  def putCharArray(value: Array[Char]): Unit = putArrayByChunk(value, UnsafeMemory.charArrayOffset, 2)
+  def putShortArray(value: Array[Short]): Unit = putArrayByChunk(value, UnsafeMemory.shortArrayOffset, 2)
+  def putIntArray(value: Array[Int]): Unit = putArrayByChunk(value, UnsafeMemory.intArrayOffset, 4)
+  def putFloatArray(value: Array[Float]): Unit = putArrayByChunk(value, UnsafeMemory.floatArrayOffset, 4)
+  def putLongArray(value: Array[Long]): Unit = putArrayByChunk(value, UnsafeMemory.longArrayOffset, 8)
+  def putDoubleArray(value: Array[Double]): Unit = putArrayByChunk(value, UnsafeMemory.doubleArrayOffset, 8)
 
 }
 
@@ -104,7 +125,6 @@ class ByteBufferOutput(_buffer: java.nio.ByteBuffer) extends BinaryOutput {
     }
   }
 
-
   @inline private def bb(i: Byte) = { buffer.put(i) }
   def putByte(value: Byte) =  withReallocate[Byte](bb, value)
 
@@ -125,11 +145,10 @@ class ByteBufferOutput(_buffer: java.nio.ByteBuffer) extends BinaryOutput {
 
   @inline private def dd(i: Double) = { buffer.putDouble(i) }
   def putDouble(value: Double) = withReallocate(dd, value)
-
-  @inline private def pba(value: Array[Byte]) = { buffer.put(value) }
-  override def putByteArray(value: Array[Byte]): Unit = {
-    putInt(value.size)
-    withReallocate(pba, value)
+  
+  @inline private def pbs(value: Array[Byte])(len: Int) = { buffer.put(value, 0, len) }
+  def putBytes(value: Array[Byte], len: Int): Unit = {
+    withReallocate(pbs(value), len)
   }
 
 }
@@ -185,13 +204,12 @@ class ByteArrayOutput(initialCapacity: Int = 1024) extends BinaryOutput {
     val longValue = java.lang.Double.doubleToRawLongBits(value)
     putLong(longValue)
   }
-
-  override def putByteArray(value: Array[Byte]): Unit = {
-    putInt(value.length)
-    buffer.write(value)
-  }
   
-  //TODO override array
+  def putBytes(value: Array[Byte], len: Int): Unit = {
+    buffer.write(value, 0, len)
+  }
+
+  //TODO override array to avoid intermediate copy
 
 }
 
@@ -257,6 +275,11 @@ class PickleArrayOutput(buffer: scala.pickling.ArrayOutput[Byte]) extends Binary
     putInt(value.length)
     buffer.put(value)
   }
+  
+  def putBytes(value: Array[Byte], len: Int): Unit = {
+    val slice = value.slice(0, len)
+    buffer.put(slice)
+  }
 
 }
 
@@ -271,10 +294,6 @@ class StreamOutput(stream: java.io.OutputStream) extends BinaryOutput {
   def putLong(value: Long) = ds.writeLong(value)
   def putFloat(value: Float) = ds.writeFloat(value)
   def putDouble(value: Double) = ds.writeDouble(value)
-  
-  override def putByteArray(value: Array[Byte]): Unit = {
-    putInt(value.length)
-    ds.write(value)
-  }
+  def putBytes(value: Array[Byte], len: Int) = ds.write(value, 0, len)
 
 }

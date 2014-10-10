@@ -4,10 +4,6 @@ import scala.reflect.ClassTag
 
 abstract class BinaryInput {
 
-  def getBoolean(): Boolean = {
-    getByte() != 0 
-  }
-
   def getByte(): Byte
 
   def getChar(): Char
@@ -21,30 +17,54 @@ abstract class BinaryInput {
   def getFloat(): Float
 
   def getDouble(): Double
+  
+  def getBytes(target: Array[Byte], len: Int): Unit
+
+  ////////////////////////
+  // Derived operations //
+  ////////////////////////
+
+  def getBoolean(): Boolean = { 
+    getByte() != 0 
+  }
 
   def getString(): String = {
     val array = getByteArray
     new String(array, "UTF-8")
   }
-
-  //generic method when the performance is not an issue
-  @inline private def getArray[T: ClassTag](get: () => T): Array[T] = {
+  
+  private val chunkSize = 128
+  private val chunk = Array.ofDim[Byte](chunkSize)
+  
+  def getArrayByChunk[T <: AnyVal: ClassTag](offset: Long, eltSize: Int): Array[T] = {
     val size = getIntWithLookahead
     val array = Array.ofDim[T](size)
-    for(i <- 0 until size) {
-      array(i) = get()
+    var toCopy = size * eltSize
+    var destOffset = offset
+    while (toCopy > 0) {
+      val byteLen = math.min(chunkSize, toCopy)
+      getBytes(chunk, byteLen)
+      UnsafeMemory.unsafe.copyMemory(chunk, UnsafeMemory.byteArrayOffset, array, destOffset, byteLen)
+      toCopy -= byteLen
+      destOffset += byteLen
     }
     array
   }
+  
+  def getByteArray(): Array[Byte] = {
+    val size = getIntWithLookahead
+    val array = Array.ofDim[Byte](size)
+    getBytes(array, size)
+    array
+  }
 
-  def getBooleanArray(): Array[Boolean] = getArray(getBoolean)
-  def getByteArray(): Array[Byte] = getArray(getByte)
-  def getCharArray(): Array[Char] = getArray(getChar)
-  def getDoubleArray(): Array[Double] = getArray(getDouble)
-  def getFloatArray(): Array[Float] = getArray(getFloat)
-  def getIntArray(): Array[Int] = getArray(getInt)
-  def getLongArray(): Array[Long] = getArray(getLong)
-  def getShortArray(): Array[Short] = getArray(getShort)
+  def getBooleanArray(): Array[Boolean] = getArrayByChunk[Boolean](UnsafeMemory.booleanArrayOffset, 1)
+  def getCharArray(): Array[Char] = getArrayByChunk[Char](UnsafeMemory.charArrayOffset, 2)
+  def getShortArray(): Array[Short] = getArrayByChunk[Short](UnsafeMemory.shortArrayOffset, 2)
+  def getIntArray(): Array[Int] = getArrayByChunk[Int](UnsafeMemory.intArrayOffset, 4)
+  def getFloatArray(): Array[Float] = getArrayByChunk[Float](UnsafeMemory.floatArrayOffset, 4)
+  def getLongArray(): Array[Long] = getArrayByChunk[Long](UnsafeMemory.longArrayOffset, 8)
+  def getDoubleArray(): Array[Double] = getArrayByChunk[Double](UnsafeMemory.doubleArrayOffset, 8)
 
   protected var lookahead: Option[Byte] = None
 
@@ -95,11 +115,8 @@ class ByteBufferInput(buffer: java.nio.ByteBuffer) extends BinaryInput {
 
   def getDouble() = buffer.getDouble
 
-  override def getByteArray(): Array[Byte] = {
-    val size = getIntWithLookahead
-    val array = Array.ofDim[Byte](size)
-    buffer.get(array)
-    array
+  def getBytes(target: Array[Byte], len: Int): Unit = {
+    buffer.get(target, 0, len)
   }
 
 }
@@ -164,12 +181,9 @@ class ByteArrayInput(data: Array[Byte]) extends BinaryInput {
     java.lang.Double.longBitsToDouble(r)
   }
 
-  override def getByteArray(): Array[Byte] = {
-    val size = getIntWithLookahead
-    val array = Array.ofDim[Byte](size)
-    data.view(idx, idx+size).copyToArray(array, 0, size)
-    idx += size
-    array
+  def getBytes(target: Array[Byte], len: Int): Unit = {
+    UnsafeMemory.unsafe.copyMemory(data, UnsafeMemory.byteArrayOffset +  idx, target, UnsafeMemory.byteArrayOffset, len)
+    idx += len
   }
 
   //TODO override array for faster copy
@@ -186,13 +200,9 @@ class StreamInput(stream: java.io.InputStream) extends BinaryInput {
   def getFloat() = ds.readFloat()
   def getDouble() = ds.readDouble()
 
-  override def getByteArray(): Array[Byte] = {
-    val size = getIntWithLookahead
-    val array = Array.ofDim[Byte](size)
-    ds.readFully(array)
-    array
+  def getBytes(target: Array[Byte], len: Int): Unit = {
+    ds.readFully(target, 0, len)
   }
-
   //TODO check endianness
   
 }
