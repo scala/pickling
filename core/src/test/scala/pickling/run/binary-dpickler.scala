@@ -15,6 +15,7 @@ class BinaryDPicklerTest extends FunSuite {
       val ff = Firefighter("Jim", 43, 30000)
 
       val builder = pickleFormat.createBuilder()
+      builder.beginPickle()
       dp.pickle(ff, builder)
       val pickle = builder.result()
       val up = pickle.unpickle[Person]
