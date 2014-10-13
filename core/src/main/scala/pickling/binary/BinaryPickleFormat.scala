@@ -50,10 +50,25 @@ package binary {
 
     private var output: ArrayOutput[Byte] = out
 
+    private var writeVersion = false
+
     @inline private[this] def mkOutput(knownSize: Int): Unit =
-      if (output == null)
+      if (output == null) {
         output = if (knownSize != -1) new ByteArrayOutput(knownSize)
                  else new ByteArrayBufferOutput
+        if (writeVersion) {
+          writeVersion = false
+          Util.encodeByte(output, format.version.asInstanceOf[Byte])
+        }
+      } else if (writeVersion) {
+        writeVersion = false
+        Util.encodeByte(output, format.version.asInstanceOf[Byte])
+      }
+
+    def beginPickle(): PBuilder = {
+      writeVersion = true
+      this
+    }
 
     @inline def beginEntry(picklee: Any): PBuilder = withHints { hints =>
       mkOutput(hints.knownSize)
@@ -196,6 +211,14 @@ package binary {
     }
 
     var gla: Option[Byte] = None
+
+    def beginPickle(): PReader = {
+      // read format version and check for mismatch
+      val v = nextByte()
+      if (v != format.version)
+        throw new Exception(s"Incompatible pickle format version: read version $v, expected version ${format.version}")
+      this
+    }
 
     def beginEntryNoTag(): String =
       beginEntryNoTagDebug(false)
@@ -427,6 +450,15 @@ package binary {
 
     private var pos = 0
 
+    def beginPickle(): PReader = {
+      // read format version and check for mismatch
+      val v = arr(pos)
+      pos += 1
+      if (v != format.version)
+        throw new Exception(s"Incompatible pickle format version: read version $v, expected version ${format.version}")
+      this
+    }
+
     def beginEntryNoTag(): String =
       beginEntryNoTagDebug(false)
 
@@ -572,6 +604,9 @@ package binary {
   class BinaryPickleFormat extends PickleFormat with Constants {
     type PickleType = BinaryPickle
     type OutputType = ArrayOutput[Byte]
+
+    val version = 2
+
     def createBuilder() = new BinaryPickleBuilder(this, null)
     def createBuilder(out: ArrayOutput[Byte]): PBuilder = new BinaryPickleBuilder(this, out)
     def createReader(pickle: PickleType, mirror: Mirror) = pickle.createReader(mirror, this)
