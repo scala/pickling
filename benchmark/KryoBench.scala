@@ -16,6 +16,8 @@ import scala.collection.mutable.Builder
 import org.evactor.model.events.DataEvent
 import scala.util.Random
 
+import scala.pickling.testing
+
 class KryoSerializer {
   val kryo = new KryoReflectionFactorySupport
     //new Kryo
