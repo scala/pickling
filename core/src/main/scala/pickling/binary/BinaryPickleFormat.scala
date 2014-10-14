@@ -13,7 +13,7 @@ trait BinaryPBuilder extends PBuilder {
 class BinaryPickleFormat extends PickleFormat with Constants {
   type PickleType = BinaryPickle
   type OutputType = ArrayOutput[Byte]
-  def createBuilder(): BinaryPBuilder = createBuilder(new ByteArrayOutput)
+  def createBuilder(): BinaryPBuilder = new BinaryPickleBuilder(this, null)
   def createBuilder(out: ArrayOutput[Byte]): BinaryPBuilder = createBuilder(new PickleArrayOutput(out))
   def createBuilder(out: BinaryOutput): BinaryPBuilder = new BinaryPickleBuilder(this, out)
   def createBuilder(out: java.nio.ByteBuffer): BinaryPBuilder = createBuilder(new ByteBufferOutput(out))

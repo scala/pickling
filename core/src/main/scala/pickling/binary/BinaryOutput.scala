@@ -36,8 +36,8 @@ abstract class BinaryOutput {
     putByteArray(bytes)
   }
 
-  private val chunkSize = 128
-  private val chunk = Array.ofDim[Byte](chunkSize)
+  protected val chunkSize = 1024
+  protected val chunk = Array.ofDim[Byte](chunkSize)
 
   protected def putArrayByChunk[T <: AnyVal](arr: Array[T], offset: Long, eltSize: Int) {
     val nbrElt = arr.length
@@ -146,9 +146,24 @@ class ByteBufferOutput(_buffer: java.nio.ByteBuffer) extends BinaryOutput {
   @inline private def dd(i: Double) = { buffer.putDouble(i) }
   def putDouble(value: Double) = withReallocate(dd, value)
   
-  @inline private def pbs(value: Array[Byte])(len: Int) = { buffer.put(value, 0, len) }
   def putBytes(value: Array[Byte], len: Int): Unit = {
-    withReallocate(pbs(value), len)
+    ensureCapacity(len)
+    buffer.put(value, 0, len)
+  }
+  
+  override protected def putArrayByChunk[T <: AnyVal](arr: Array[T], offset: Long, eltSize: Int) {
+    val nbrElt = arr.length
+    putInt(nbrElt)
+    var srcOffset = offset //UnsafeMemory.byteArrayOffset
+    var toCopy = nbrElt * eltSize
+    ensureCapacity(toCopy)
+    while (toCopy > 0) {
+      val byteLen = math.min(chunkSize, toCopy)
+      UnsafeMemory.unsafe.copyMemory(arr, srcOffset, chunk, UnsafeMemory.byteArrayOffset, byteLen)
+      toCopy -= byteLen
+      srcOffset += byteLen
+      putBytes(chunk, byteLen)
+    }
   }
 
 }
