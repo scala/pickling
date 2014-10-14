@@ -51,12 +51,21 @@ object BinaryPickle {
     new BinaryPickleArray(a)
 }
 
-class BinaryPickleBuilder(format: BinaryPickleFormat, output: BinaryOutput) extends BinaryPBuilder with PickleTools {
+class BinaryPickleBuilder(format: BinaryPickleFormat, out: BinaryOutput) extends BinaryPBuilder with PickleTools {
   import format._
   
-  
+  private var output: BinaryOutput = out
+
+  @inline private[this] def mkOutput(knownSize: Int): Unit = {
+    if (output == null)
+      output = if (knownSize != -1) new ByteArrayOutput(knownSize)
+               else new ByteArrayOutput
+    else
+      output.ensureCapacity(knownSize)
+  }
+
   @inline def beginEntry(picklee: Any): PBuilder = withHints { hints =>
-    output.ensureCapacity(hints.knownSize)
+    mkOutput(hints.knownSize)
 
     if (picklee == null) {
       output.putByte( NULL_TAG)
