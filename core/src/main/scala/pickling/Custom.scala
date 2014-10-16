@@ -80,6 +80,43 @@ trait LowPriorityPicklersUnpicklers {
   implicit def mutMapPickler[K: FastTypeTag, V: FastTypeTag](implicit elemPickler: SPickler[(K, V)], elemUnpickler: Unpickler[(K, V)], pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[mutable.Map[K, V]], format: PickleFormat, cbf: CanBuildFrom[mutable.Map[K, V], (K, V), mutable.Map[K, V]]): SPickler[mutable.Map[K, V]] with Unpickler[mutable.Map[K, V]] =
     mkMapPickler[K, V, mutable.Map]
 
+  implicit def uuidPickler(implicit longPickler: SPickler[Long], longUnpickler: Unpickler[Long], pf: PickleFormat) = new SPickler[java.util.UUID] with Unpickler[java.util.UUID] {
+
+    val format: PickleFormat = pf
+
+    def pickle(uuid: java.util.UUID, builder: PBuilder):Unit = {
+      builder.beginEntry(uuid)
+      builder.hintStaticallyElidedType()
+      builder.hintTag(FastTypeTag.Long)
+      builder.pinHints()
+      builder.putField("msb", { b=>
+        longPickler.pickle(uuid.getMostSignificantBits, b)
+      })
+      builder.putField("lsb", { b=>
+        longPickler.pickle(uuid.getLeastSignificantBits, b)
+      })
+      builder.unpinHints()
+      builder.endEntry()
+    }
+
+    def unpickle(tpe: => FastTypeTag[_], preader: PReader): Any = {
+      val reader = preader
+      reader.hintStaticallyElidedType()
+      reader.hintTag(FastTypeTag.Long)
+      reader.pinHints()
+      val r1 = reader.readField("msb")
+      r1.beginEntryNoTag()
+      val msb = longUnpickler.unpickle(FastTypeTag.Long, r1).asInstanceOf[Long]
+      r1.endEntry()
+      val r2 = reader.readField("lsb")
+      r2.beginEntryNoTag()
+      val lsb = longUnpickler.unpickle(FastTypeTag.Long, r2).asInstanceOf[Long]
+      r2.endEntry()
+      reader.unpinHints()
+      new java.util.UUID(msb, lsb)
+    }
+  }
+
   def mkTravPickler[T: FastTypeTag, C <% Traversable[_]: FastTypeTag]
     (implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T],
               pf: PickleFormat, cbf: CanBuildFrom[C, T, C],
