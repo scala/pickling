@@ -58,8 +58,10 @@ class BinaryPickleBuilder(format: BinaryPickleFormat, out: BinaryOutput) extends
 
   @inline private[this] def mkOutput(knownSize: Int): Unit = {
     if (output == null)
-      output = if (knownSize != -1) new ByteArrayOutput(knownSize)
-               else new ByteArrayOutput
+      output = if (knownSize != -1) new ByteArrayOutputS(knownSize)
+               else new ByteArrayOutputS
+    //output = if (knownSize != -1) new ByteArrayOutput(knownSize)
+    //         else new ByteArrayOutput
     else
       output.ensureCapacity(knownSize)
   }
