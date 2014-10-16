@@ -31,7 +31,6 @@ case class BinaryPickleStream(input: InputStream) extends BinaryPickle {
 
   def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader =
     new BinaryPickleReader(new StreamInput(input), mirror, format)
-    //new BinaryInputStreamReader(input, mirror, format)
 
   /* Do not override def toString to avoid traversing the input stream. */
 }
@@ -58,10 +57,8 @@ class BinaryPickleBuilder(format: BinaryPickleFormat, out: BinaryOutput) extends
 
   @inline private[this] def mkOutput(knownSize: Int): Unit = {
     if (output == null)
-      output = if (knownSize != -1) new ByteArrayOutputS(knownSize)
-               else new ByteArrayOutputS
-    //output = if (knownSize != -1) new ByteArrayOutput(knownSize)
-    //         else new ByteArrayOutput
+      output = if (knownSize != -1) new ByteArrayOutput(knownSize)
+               else new ByteArrayOutput
     else
       output.ensureCapacity(knownSize)
   }
@@ -156,10 +153,7 @@ class BinaryPickleBuilder(format: BinaryPickleFormat, out: BinaryOutput) extends
   }
 
   @inline def result() = {
-    output.result match {
-      case Some(b) => BinaryPickle(b)
-      case None => BinaryPickle(null) //TODO is that safe ?
-    }
+    BinaryPickle(output.result)
   }
 
 }

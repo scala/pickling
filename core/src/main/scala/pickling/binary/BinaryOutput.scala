@@ -2,7 +2,7 @@ package scala.pickling.binary
 
 abstract class BinaryOutput {
 
-  def result: Option[Array[Byte]] //TODO allow multiple outputs type (e.g. bytebuffer)
+  def result: Array[Byte] //can be null
 
   def ensureCapacity(capacity: Int): Unit
 
@@ -69,108 +69,33 @@ abstract class BinaryOutput {
 
 }
 
-class ByteBufferOutput(_buffer: java.nio.ByteBuffer) extends BinaryOutput {
+class ByteBufferOutput(buffer: java.nio.ByteBuffer) extends BinaryOutput {
 
   import java.nio.ByteOrder
   import java.nio.ByteBuffer
-  
-  def result = None
 
-  var buffer = _buffer
   assert(buffer.order == ByteOrder.BIG_ENDIAN)
-
-  private def growTo(newSize: Int) {
-    //println("growing to " + newSize)
-    assert(newSize > 0) //can we overflow before running out of memory ?
-    val newBuffer =
-      if (buffer.isDirect) ByteBuffer.allocateDirect(newSize)
-      else ByteBuffer.allocate(newSize)
-    //copy the content
-    val pos = buffer.position
-    buffer.limit(pos)
-    buffer.position(0)
-    newBuffer.put(buffer)
-    buffer = newBuffer
-    //assert(newBuffer.position == pos)
-    //assert((0 until pos).forall(i => buffer.get(i) == newBuffer.get(i)))
-    //println("capapcity = " + buffer.capacity)
-    //println(buffer.toString)
-  }
-
-
-  private def grow {
-    val newSize = 2*buffer.capacity
-    growTo(newSize)
-  }
+  
+  def result: Array[Byte] = null
 
   def ensureCapacity(capacity: Int) {
-    val left = buffer.remaining
-    if (left < capacity) {
-      growTo(buffer.capacity + (capacity - left))
-    }
+    if (buffer.remaining < capacity)
+      throw new java.nio.BufferOverflowException()
   }
 
-  @inline private def withReallocate[A](op: A => ByteBuffer, value: A) {
-    while(true) {
-      buffer.mark
-      try {
-        op(value)
-        return
-        assert(false, "after return ?")
-      } catch {
-        case _: java.nio.BufferOverflowException =>
-          buffer.reset
-          grow
-      }
-    }
-  }
-
-  @inline private def bb(i: Byte) = { buffer.put(i) }
-  def putByte(value: Byte) =  withReallocate[Byte](bb, value)
-
-  @inline private def cc(i: Char) = { buffer.putChar(i) }
-  def putChar(value: Char) = withReallocate(cc, value)
-
-  @inline private def ss(i: Short) = { buffer.putShort(i) }
-  def putShort(value: Short) = withReallocate(ss, value)
-
-  @inline private def ii(i: Int) = { buffer.putInt(i) }
-  def putInt(value: Int) = withReallocate(ii, value)
-
-  @inline private def ll(i: Long) = { buffer.putLong(i) }
-  def putLong(value: Long) = withReallocate(ll, value)
-
-  @inline private def ff(i: Float) = { buffer.putFloat(i) }
-  def putFloat(value: Float) = withReallocate(ff, value)
-
-  @inline private def dd(i: Double) = { buffer.putDouble(i) }
-  def putDouble(value: Double) = withReallocate(dd, value)
-  
-  def putBytes(value: Array[Byte], len: Int): Unit = {
-    ensureCapacity(len)
-    buffer.put(value, 0, len)
-  }
-  
-  override protected def putArrayByChunk[T <: AnyVal](arr: Array[T], offset: Long, eltSize: Int) {
-    val nbrElt = arr.length
-    putInt(nbrElt)
-    var srcOffset = offset //UnsafeMemory.byteArrayOffset
-    var toCopy = nbrElt * eltSize
-    ensureCapacity(toCopy)
-    while (toCopy > 0) {
-      val byteLen = math.min(chunkSize, toCopy)
-      UnsafeMemory.unsafe.copyMemory(arr, srcOffset, chunk, UnsafeMemory.byteArrayOffset, byteLen)
-      toCopy -= byteLen
-      srcOffset += byteLen
-      putBytes(chunk, byteLen)
-    }
-  }
-
+  def putByte(value: Byte) = buffer.put(value)
+  def putChar(value: Char) = buffer.putChar(value)
+  def putShort(value: Short) = buffer.putShort(value)
+  def putInt(value: Int) = buffer.putInt(value)
+  def putLong(value: Long) = buffer.putLong(value)
+  def putFloat(value: Float) = buffer.putFloat(value)
+  def putDouble(value: Double) = buffer.putDouble(value)
+  def putBytes(value: Array[Byte], len: Int) = buffer.put(value, 0, len)
 }
 
 class StreamOutput(stream: java.io.OutputStream) extends BinaryOutput {
   val ds = new java.io.DataOutputStream(stream)
-  def result: Option[Array[Byte]] = None
+  def result: Array[Byte] = null
   def ensureCapacity(capacity: Int) { }
   def putByte(value: Byte) = ds.writeByte(value)
   def putChar(value: Char) = ds.writeChar(value)
@@ -182,15 +107,15 @@ class StreamOutput(stream: java.io.OutputStream) extends BinaryOutput {
   def putBytes(value: Array[Byte], len: Int) = ds.write(value, 0, len)
 }
 
-class ByteArrayOutputS(buffer: java.io.ByteArrayOutputStream) extends StreamOutput(buffer) {
+class ByteArrayOutput(buffer: java.io.ByteArrayOutputStream) extends StreamOutput(buffer) {
   def this(initialCapacity: Int) = this(new java.io.ByteArrayOutputStream(initialCapacity))
   def this() = this(1024)
-  override def result = Some(buffer.toByteArray)
+  override def result = buffer.toByteArray
 }
 
 //TODO as a pool rather than a single array
 //TODO that might be dangerous in terms of security (exfiltrate data through the preAlloc array)
-object ByteArrayOutput {
+object FastByteArrayOutput {
 
   private val lock = new java.util.concurrent.locks.ReentrantLock()
   private var preAlloc = Array.ofDim[Byte](64 * 1024 * 1024) // 64 MB
@@ -217,7 +142,7 @@ object ByteArrayOutput {
 
 }
 
-class ByteArrayOutput(initialCapacity: Int = 10 * 1024 * 1024) extends BinaryOutput {
+class FastByteArrayOutput(initialCapacity: Int = 10 * 1024 * 1024) extends BinaryOutput {
 
   override protected val chunkSize = 1024 * 1024
   override protected val chunk = null
@@ -230,12 +155,12 @@ class ByteArrayOutput(initialCapacity: Int = 10 * 1024 * 1024) extends BinaryOut
   private var stored = 0 //current size
 
   def init() {
-    val h = ByteArrayOutput.get
+    val h = FastByteArrayOutput.get
     if (h != null && h.size >= initialCapacity) {
       head = h
       preA = h
     } else {
-      ByteArrayOutput.set(h)
+      FastByteArrayOutput.set(h)
       head = new Array[Byte](initialCapacity)
     }
   }
@@ -254,12 +179,12 @@ class ByteArrayOutput(initialCapacity: Int = 10 * 1024 * 1024) extends BinaryOut
     }
     //release resources
     if (preA != null) {
-      ByteArrayOutput.set(preA)
+      FastByteArrayOutput.set(preA)
     }
     head = null
     chunks = Nil
     //
-    Some(target)
+    target
   }
   
   def ensureCapacity(capacity: Int) {
@@ -349,76 +274,6 @@ class ByteArrayOutput(initialCapacity: Int = 10 * 1024 * 1024) extends BinaryOut
     putInt(nbrElt)
     UnsafeMemory.unsafe.copyMemory(arr, offset, head, UnsafeMemory.byteArrayOffset + pos, byteLen)
     pos += byteLen
-  }
-
-}
-
-class PickleArrayOutput(buffer: scala.pickling.ArrayOutput[Byte]) extends BinaryOutput {
-  
-  def result = {
-    val res = buffer.result
-    if (res == null) None
-    else Some(res)
-  }
-  
-  def ensureCapacity(capacity: Int) {
-    //TODO ignore for the moment, not sure if it is worth creating a new buffer and copying the old one
-  }
-
-  @inline private def write(i: Int) {
-    buffer += i.asInstanceOf[Byte]
-  }
-
-  def putByte(value: Byte) {
-    write(value)
-  }
-
-  def putChar(value: Char) {
-    write(value >>> 8 & 0xff)
-    write(value & 0xff)
-  }
-
-  def putShort(value: Short) {
-    write(value >>> 8 & 0xff)
-    write(value & 0xff)
-  }
-
-  def putInt(value: Int) {
-    write(value >>> 24)
-    write(value >>> 16 & 0xff)
-    write(value >>> 8 & 0xff)
-    write(value & 0xff)
-  }
-
-  def putLong(value: Long) {
-    write((value >>> 56 & 0xff).asInstanceOf[Int])
-    write((value >>> 48 & 0xff).asInstanceOf[Int])
-    write((value >>> 40 & 0xff).asInstanceOf[Int])
-    write((value >>> 32 & 0xff).asInstanceOf[Int])
-    write((value >>> 24 & 0xff).asInstanceOf[Int])
-    write((value >>> 16 & 0xff).asInstanceOf[Int])
-    write((value >>> 8 & 0xff).asInstanceOf[Int])
-    write((value & 0xff).asInstanceOf[Int])
-  }
-
-  def putFloat(value: Float) {
-    val intValue = java.lang.Float.floatToRawIntBits(value)
-    putInt(intValue)
-  }
-
-  def putDouble(value: Double) {
-    val longValue = java.lang.Double.doubleToRawLongBits(value)
-    putLong(longValue)
-  }
-
-  override def putByteArray(value: Array[Byte]): Unit = {
-    putInt(value.length)
-    buffer.put(value)
-  }
-  
-  def putBytes(value: Array[Byte], len: Int): Unit = {
-    val slice = value.slice(0, len)
-    buffer.put(slice)
   }
 
 }
