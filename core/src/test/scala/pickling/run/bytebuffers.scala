@@ -10,10 +10,10 @@ object Primitives extends Properties("bytebuffer primitive tests") {
   
   def roundTrip[T: SPickler: Unpickler: FastTypeTag](obj: T): Boolean = {
     try {
-      val out = new ByteBufferOutput(ByteBuffer.allocate(512))
+      val buf = ByteBuffer.allocate(1024)
+      val out = new ByteBufferOutput(buf)
       val builder = pickleFormat.createBuilder(out)
       obj.pickleInto(builder)
-      val buf = out.buffer
       buf.rewind
       val p = new BinaryInputPickle(new ByteBufferInput(buf))
       val up = p.unpickle[T]
@@ -53,18 +53,5 @@ class ByteBufferTest extends FunSuite {
     res == 0x12345678
   }
   
-  test("reallocation") {
-    val obj = (0 until 500).toArray
-    val buf = ByteBuffer.allocate(12)
-    val out = new ByteBufferOutput(buf)
-    val builder = pickleFormat.createBuilder(out)
-    obj.pickleInto(builder)
-    val buf2 = out.buffer
-    buf2.rewind
-    val p = new BinaryInputPickle(new ByteBufferInput(buf2))
-    val up = p.unpickle[Array[Int]]
-    obj == up
-  }
-
 }
 
