@@ -92,7 +92,7 @@ class ShareBinaryTest extends FunSuite {
   }
 
   test("register many unpicklees") {
-    val output = new ByteArrayBufferOutput
+    val output = new ByteArrayOutput
     val arr = Array.ofDim[Simple](66000)
 
     for (i <- 0 until 66000) {
