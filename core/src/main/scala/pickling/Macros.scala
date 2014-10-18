@@ -31,7 +31,10 @@ trait PicklerMacros extends Macro with PickleMacros {
 
     def getField(fir: FieldIR): Tree =
       if (fir.isPublic) q"picklee.${newTermName(fir.name)}"
-      else reflectively("picklee", fir)(fm => q"$fm.get.asInstanceOf[${fir.tpe}]").head //TODO: don't think it's possible for this to return an empty list, so head should be OK
+      else if (fir.javaSetter.isDefined) {
+        val getter = newTermName("get" + fir.name)
+        q"picklee.$getter"
+      } else reflectively("picklee", fir)(fm => q"$fm.get.asInstanceOf[${fir.tpe}]").head //TODO: don't think it's possible for this to return an empty list, so head should be OK
 
     def computeKnownSizeOfObjectOutput(cir: ClassIR): (Option[Tree], List[Tree]) = {
       // for now we cannot compute a fixed size for ObjectOutputs
@@ -143,6 +146,8 @@ trait PicklerMacros extends Macro with PickleMacros {
         } else if (fir.hasGetter) {
           if (fir.isPublic) List(putField(q"picklee.${newTermName(fir.name)}"))
           else reflectively("picklee", fir)(fm => putField(q"$fm.get.asInstanceOf[${fir.tpe}]"))
+        } else if (fir.javaSetter.isDefined) {
+          List(putField(getField(fir)))
         } else {
           reflectivelyWithoutGetter("picklee", fir)(fvalue =>
             tryPutField(q"$fvalue.asInstanceOf[scala.util.Try[${fir.tpe}]]"))
@@ -151,7 +156,6 @@ trait PicklerMacros extends Macro with PickleMacros {
       val endEntry = q"builder.endEntry()"
       if (shouldBotherAboutSharing(tpe)) {
         q"""
-          import scala.reflect.runtime.universe._
           val oid = scala.pickling.internal.`package`.lookupPicklee(picklee)
           builder.hintOid(oid)
           $beginEntry
@@ -160,7 +164,6 @@ trait PicklerMacros extends Macro with PickleMacros {
         """
       } else {
         q"""
-          import scala.reflect.runtime.universe._
           $beginEntry
           ..$putFields
           $endEntry
@@ -279,12 +282,14 @@ trait UnpicklerMacros extends Macro with UnpickleMacros {
 
       // pending fields are fields that are restored after instantiation (e.g., through field assignments)
       val pendingFields = if (!canCallCtor) cir.fields else cir.fields.filter(fir =>
-        fir.isNonParam || shouldBotherAboutLooping(fir.tpe)
+        fir.isNonParam || shouldBotherAboutLooping(fir.tpe) || fir.javaSetter.isDefined
       )
 
       val instantiationLogic = {
         if (sym.isModuleClass) {
           q"${sym.module}"
+        } else if (cir.javaGetInstance) {
+          q"""java.lang.Class.forName(${tpe.toString}).getDeclaredMethod("getInstance").invoke(null)"""
         } else if (canCallCtor) {
           val ctorFirs = cir.fields.filter(_.param.isDefined)
           val ctorSig: Map[Symbol, Type] = ctorFirs.map(fir => (fir.param.get: Symbol, fir.tpe)).toMap
@@ -314,7 +319,34 @@ trait UnpicklerMacros extends Macro with UnpickleMacros {
           val initPendingFields = pendingFields.flatMap(fir => {
             val readFir = readField(fir.name, fir.tpe)
             if (fir.isPublic && fir.hasSetter) List(q"$instance.${newTermName(fir.name)} = $readFir".asInstanceOf[Tree])
-            else if (fir.accessor.isEmpty) List(q"""
+            else if (fir.javaSetter.isDefined) {
+              val JavaProperty(name, declaredIn, isAccessible) = fir.javaSetter.get
+              if (!isAccessible) {
+                val methodName = "set" + name
+                // obtain Class of parameter
+                val className = fir.tpe.toString
+                val (classTree, readTree) = className match {
+                  case "Byte"    => (q"java.lang.Byte.TYPE",      q"new java.lang.Byte($readFir)")
+                  case "Short"   => (q"java.lang.Short.TYPE",     q"new java.lang.Short($readFir)")
+                  case "Char"    => (q"java.lang.Character.TYPE", q"new java.lang.Character($readFir)")
+                  case "Int"     => (q"java.lang.Integer.TYPE",   q"new java.lang.Integer($readFir)")
+                  case "Long"    => (q"java.lang.Long.TYPE",      q"new java.lang.Long($readFir)")
+                  case "Float"   => (q"java.lang.Float.TYPE",     q"new java.lang.Float($readFir)")
+                  case "Double"  => (q"java.lang.Double.TYPE",    q"new java.lang.Double($readFir)")
+                  case "Boolean" => (q"java.lang.Boolean.TYPE",   q"new java.lang.Boolean($readFir)")
+                  case _         => (q"Class.forName($className)", readFir)
+                }
+                List(q"""
+                  val paramClass = $classTree
+                  val method = Class.forName($declaredIn).getDeclaredMethod($methodName, paramClass)
+                  method.setAccessible(true)
+                  method.invoke($instance, $readTree)
+                """)
+              } else {
+                val setter = newTermName("set" + name)
+                List(q"$instance.$setter($readFir)")
+              }
+            } else if (fir.accessor.isEmpty) List(q"""
               try {
                 val javaField = $instance.getClass.getDeclaredField(${fir.name})
                 javaField.setAccessible(true)
@@ -366,7 +398,6 @@ trait UnpicklerMacros extends Macro with UnpickleMacros {
         import scala.pickling._
         import scala.pickling.ir._
         import scala.pickling.internal._
-        import scala.reflect.runtime.universe._
         val format = implicitly[${format.tpe}]
         def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = $unpickleLogic
       }
