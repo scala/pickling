@@ -177,14 +177,19 @@ trait PicklerMacros extends Macro with PickleMacros {
 
     //println("trying to generate pickler for type " + tpe.toString)
 
-    if (tpe.typeSymbol.isClass) {
-      // if class is abstract return instance of `PicklerUnpicklerNotFound`.
-      // this triggers the generation of a dispatch based on the runtime class of the picklee.
-      val classSym = tpe.typeSymbol.asClass
-      if (classSym.isAbstractClass) {
-        //println("abstract class, returning PicklerUnpicklerNotFound")
-        return q"new scala.pickling.PicklerUnpicklerNotFound[$tpe]"
-      }
+    tpe.normalize match {
+      case RefinedType(parents, decls) =>
+        c.abort(c.enclosingPosition, "cannot generate pickler for refined type")
+      case _ if tpe.typeSymbol.isClass =>
+        // if class is abstract return instance of `PicklerUnpicklerNotFound`.
+        // this triggers the generation of a dispatch based on the runtime class of the picklee.
+        val classSym = tpe.typeSymbol.asClass
+        if (classSym.isAbstractClass) {
+          //println("abstract class, returning PicklerUnpicklerNotFound")
+          return q"new scala.pickling.PicklerUnpicklerNotFound[$tpe]"
+        }
+      case _ =>
+        c.abort(c.enclosingPosition, "cannot generate pickler")
     }
 
     val picklerName = c.fresh(syntheticPicklerName(tpe).toTermName)
@@ -491,6 +496,19 @@ trait PickleMacros extends Macro {
         }
       """
     }
+
+    def refinedDispatch(parentTpe: Type) = {
+      val inferred = c.inferImplicitValue(appliedType(typeOf[SPickler[_]].typeConstructor, tpe))
+      if (inferred == EmptyTree) {
+        c.abort(c.enclosingPosition, s"could not find implicit pickler for refined type: $tpe")
+      } else {
+        q"""
+          $builder.hintTag(implicitly[scala.pickling.FastTypeTag[$parentTpe]])
+          $inferred
+        """
+      }
+    }
+
     // NOTE: this has zero effect on performance...
     // def listDispatch = {
     //   val List(nullTpe, consTpe, nilTpe) = compileTimeDispatchees(tpe)
@@ -509,7 +527,10 @@ trait PickleMacros extends Macro {
     }
 
     if (sym.asType.isAbstractType || sym.isEffectivelyFinal) createPickler(tpe, builder)
-    else nonFinalDispatch
+    else tpe.normalize match {
+      case RefinedType(parents, _) => refinedDispatch(parents.head)
+      case _ => nonFinalDispatch
+    }
   }
 
   /** Used by the main `pickle` macro. Its purpose is to pickle the object that it's called on *into* the
