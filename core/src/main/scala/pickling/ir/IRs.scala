@@ -20,7 +20,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
 
   sealed abstract class PickleIR
 
-  case class JavaProperty(name: String, declaredIn: String, isAccessible: Boolean)
+  case class JavaProperty(name: String, declaredIn: String, isSetterPublic: Boolean)
 
   /* If javaSetter.nonEmpty there is both a getter and a setter method.
    */
@@ -235,8 +235,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
         try Some(Class.forName(tpe.toString).getDeclaredMethod("getInstance"))
         catch { case _: NoSuchMethodException => None }
       methodOpt.nonEmpty && {
-        val method = methodOpt.get
-        val mods   = method.getModifiers
+        val mods = methodOpt.get.getModifiers
         Modifier.isStatic(mods) && Modifier.isPublic(mods)
       }
     } else false
