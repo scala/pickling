@@ -181,7 +181,9 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
     new Unpickler[Any] with PickleTools {
       val format: PickleFormat = null // unused
       def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
-        if (reader.atPrimitive) {
+        if (cir.javaGetInstance) {
+          clazz.getDeclaredMethod("getInstance").invoke(null)
+        } else if (reader.atPrimitive) {
           val result = reader.readPrimitive()
           if (shouldBotherAboutSharing(tpe)) registerUnpicklee(result, preregisterUnpicklee())
           result
