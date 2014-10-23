@@ -2,6 +2,7 @@ package scala.pickling
 package ir
 
 import scala.reflect.api.Universe
+import java.lang.reflect.Modifier
 
 import HasCompat._
 
@@ -17,8 +18,13 @@ class IRs[U <: Universe with Singleton](val uni: U) {
   // step 2: based on the strategy, we collect the FieldIRs.
   // we should have a method for each strategy.
 
- sealed abstract class PickleIR
-  case class FieldIR(name: String, tpe: Type, param: Option[TermSymbol], accessor: Option[MethodSymbol]) {
+  sealed abstract class PickleIR
+
+  case class JavaProperty(name: String, declaredIn: String, isSetterPublic: Boolean)
+
+  /* If javaSetter.nonEmpty there is both a getter and a setter method.
+   */
+  case class FieldIR(name: String, tpe: Type, param: Option[TermSymbol], accessor: Option[MethodSymbol], javaSetter: Option[JavaProperty] = None) {
     def field = accessor.map(_.accessed.asTerm)
     def getter = accessor.map(_.getter).flatMap(sym => if (sym != NoSymbol) Some(sym) else None)
     def setter = accessor.map(_.setter).flatMap(sym => if (sym != NoSymbol) Some(sym) else None)
@@ -35,7 +41,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
     def isNonParam = !isParam
   }
 
-  case class ClassIR(tpe: Type, parent: ClassIR, fields: List[FieldIR]) extends PickleIR {
+  case class ClassIR(tpe: Type, parent: ClassIR, fields: List[FieldIR], javaGetInstance: Boolean = false) extends PickleIR {
     var canCallCtor: Boolean = true
   }
 
@@ -58,18 +64,41 @@ class IRs[U <: Universe with Singleton](val uni: U) {
     }
   }
 
-  def nonAbstractVars(tpe: Type, quantified: List[Symbol], rawTpeOfOwner: Type): List[FieldIR] = {
-    // could collect all those that are setters
+  def nonAbstractVars(tpe: Type, quantified: List[Symbol], rawTpeOfOwner: Type, isJava: Boolean): List[FieldIR] = {
+    val javaFieldIRs = if (isJava) {
+      // candidates for setter/getter combo
+      val candidates = tpe.declarations.collect {
+        case sym: MethodSymbol if sym.name.toString.startsWith("get") => sym.name.toString.substring(3)
+      }
+      tpe.declarations.flatMap {
+        case sym: MethodSymbol if sym.name.toString.startsWith("set") =>
+          val shortName = sym.name.toString.substring(3)
+          if (candidates.find(_ == shortName).nonEmpty && shortName.length > 0) {
+            val rawSymTpe = sym.typeSignatureIn(rawTpeOfOwner) match {
+              case MethodType(List(param), _) => param.typeSignature
+              case _ => throw PicklingException("expected method type for method ${sym.name.toString}")
+            }
+            val symTpe = existentialAbstraction(quantified, rawSymTpe)
+
+            List(FieldIR(shortName, symTpe, None, None, Some(JavaProperty(shortName, tpe.toString, sym.isPublic))))
+          } else {
+            List()
+          }
+
+        case _ => List()
+      }
+    } else {
+      List()
+    }
+
     (tpe.declarations.collect {
-      //
       case sym: MethodSymbol if !sym.isParamAccessor && sym.isSetter && sym.accessed != NoSymbol =>
         val rawSymTpe =
           sym.getter.typeSignatureIn(rawTpeOfOwner) match { case NullaryMethodType(ntpe) => ntpe; case ntpe => ntpe }
         val symTpe =
           existentialAbstraction(quantified, rawSymTpe)
         FieldIR(sym.getter.name.toString, symTpe, None, Some(sym.getter.asMethod))
-    }).toList
-
+    }).toList ++ javaFieldIRs
   }
 
   def newClassIR(tpe: Type): ClassIR = {
@@ -143,7 +172,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
 
       // (b) non-abstract vars (also private ones)
       val allNonAbstractVars = baseClasses.flatMap { baseClass =>
-        nonAbstractVars(tpe.baseType(baseClass), quantified, rawTpe)
+        nonAbstractVars(tpe.baseType(baseClass), quantified, rawTpe, baseClass.isJava)
       }
 
       ctorFieldIRs ++ allNonAbstractVars
@@ -201,7 +230,17 @@ class IRs[U <: Universe with Singleton](val uni: U) {
       fields
     }
 
-    val cir = ClassIR(tpe, null, /*ctorParamFieldIRs ++ nonParamFieldIRsOfBaseClasses*/fieldIRs)
+    val useGetInstance = if (!(tpe =:= AnyRefTpe) && tpe.typeSymbol.isJava && fieldIRs.isEmpty) {
+      val methodOpt =
+        try Some(Class.forName(tpe.toString).getDeclaredMethod("getInstance"))
+        catch { case _: NoSuchMethodException => None }
+      methodOpt.nonEmpty && {
+        val mods = methodOpt.get.getModifiers
+        Modifier.isStatic(mods) && Modifier.isPublic(mods)
+      }
+    } else false
+
+    val cir = ClassIR(tpe, null, fieldIRs, useGetInstance)
     cir.canCallCtor = canCallCtor
     cir
   }

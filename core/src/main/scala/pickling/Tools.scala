@@ -386,8 +386,7 @@ abstract class Macro extends RichTypes { self =>
       if (!reflectivePrologueEmitted) {
         reflectivePrologueEmitted = true
         val initMirror = q"""
-          import scala.reflect.runtime.universe._
-          val mirror = runtimeMirror(this.getClass.getClassLoader)
+          val mirror = scala.reflect.runtime.universe.runtimeMirror(this.getClass.getClassLoader)
           val im = mirror.reflect($target)
         """.asInstanceOf[Block]
         initMirror.stats :+ initMirror.expr
@@ -407,7 +406,7 @@ abstract class Macro extends RichTypes { self =>
     val wrappedBody =
       q"""
         val $ownerSymbol = implicitly[scala.pickling.FastTypeTag[${owner.asClass.toType.erasure}]].tpe
-        val $firSymbol = $ownerSymbol.member(newTermName(${fir.name}))
+        val $firSymbol = $ownerSymbol.member(scala.reflect.runtime.universe.newTermName(${fir.name}))
         if ($firSymbol.isTerm) ${body(q"im.reflectField($firSymbol.asTerm)")}
       """.asInstanceOf[Block]
     prologue ++ wrappedBody.stats :+ wrappedBody.expr
