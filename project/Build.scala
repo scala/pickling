@@ -120,7 +120,7 @@ object MyBuild extends Build {
       InputKey[Unit]("graphpick")          <<= InputKey[Unit]("graphpick")          in Compile in benchmark,
       InputKey[Unit]("graphjava")          <<= InputKey[Unit]("graphjava")          in Compile in benchmark,
       InputKey[Unit]("graphkryo")          <<= InputKey[Unit]("graphkryo")          in Compile in benchmark,
-      organization := "org.scala-lang",
+      organization := "org.scala-lang.modules",
       organizationName := "LAMP/EPFL",
       organizationHomepage := Some(new URL("http://lamp.epfl.ch")),
       publishMavenStyle := true,
