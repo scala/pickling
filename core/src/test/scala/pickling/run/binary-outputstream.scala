@@ -3,7 +3,6 @@ package scala.pickling.test.binary
 import org.scalatest.FunSuite
 
 import java.io.{OutputStream, ByteArrayOutputStream, ByteArrayInputStream}
-import scala.pickling.OutputStreamOutput
 
 import scala.pickling._
 import binary._
@@ -14,7 +13,7 @@ class BinaryOutputStreamTest extends FunSuite {
     val obj2 = Employee("Jim", 40)
 
     val stream = new ByteArrayOutputStream
-    val output = new OutputStreamOutput(stream)
+    val output = new StreamOutput(stream)
     obj1.pickleTo(output)
     obj2.pickleTo(output)
 

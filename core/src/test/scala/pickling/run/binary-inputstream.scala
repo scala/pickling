@@ -67,7 +67,7 @@ class BinaryInputStreamReaderTest extends FunSuite {
     val obj1 = Employee("James", 30)
     val obj2 = Employee("Jim", 40)
 
-    val output = new ByteArrayBufferOutput
+    val output = new ByteArrayOutput
     obj1.pickleTo(output)
     obj2.pickleTo(output)
 
@@ -79,6 +79,8 @@ class BinaryInputStreamReaderTest extends FunSuite {
       assert(false, "EndOfStreamException not thrown")
     } catch {
       case _: EndOfStreamException =>
+        /* expected */
+      case _: java.io.EOFException =>
         /* expected */
     } finally {
       assert(obj1.toString == readObj1.toString)
