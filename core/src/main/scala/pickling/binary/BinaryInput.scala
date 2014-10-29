@@ -199,6 +199,7 @@ class ByteArrayInput(data: Array[Byte]) extends BinaryInput {
 }
 
 class StreamInput(stream: java.io.InputStream) extends BinaryInput {
+  //by default java, uses big-endian.
   val ds = new java.io.DataInputStream(stream)
   def getByte() = ds.readByte()
   def getChar() = ds.readChar()
@@ -211,6 +212,5 @@ class StreamInput(stream: java.io.InputStream) extends BinaryInput {
   def getBytes(target: Array[Byte], len: Int): Unit = {
     ds.readFully(target, 0, len)
   }
-  //TODO check endianness
   
 }
