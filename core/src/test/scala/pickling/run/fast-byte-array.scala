@@ -1,19 +1,40 @@
-package scala.pickling.bytebuffers
+package scala.pickling.fastbinary
+package test
+
+import org.scalatest.FunSuite
+import org.scalacheck.{Properties, Prop, Gen}
 
 import scala.pickling._
 import binary._
-import java.nio.ByteBuffer
-import org.scalacheck.{Properties, Prop, Gen}
+
 import org.scalatest.FunSuite
 
-object Primitives extends Properties("bytebuffer primitive tests") {
+class FastArrayOutputTest extends FunSuite {
+
+    test("allocating chunks") {
+        //allocate a dummy to grab the preallocated array
+        val dummy = new FastByteArrayOutput
+        val out = new FastByteArrayOutput
+        val size = 10000
+        for (_ <- 1 to size) out.putByte(0x0f)
+        val result = out.result
+        assert(result.length == size)
+        assert(result.forall( _ == 0x0f))
+        //release the preallocated array
+        dummy.result
+    }
+
+}
+
+object Primitives extends Properties("fast byte array primitive tests") {
   
   def roundTrip[T: SPickler: Unpickler: FastTypeTag](obj: T): Boolean = {
     try {
-      val buf = ByteBuffer.allocate(1024)
-      obj.pickleTo(buf)
-      buf.rewind
-      val p = BinaryPickle(buf)
+      //val dummy = new FastByteArrayOutput
+      val out = new FastByteArrayOutput
+      obj.pickleTo(out)
+      //dummy.result
+      val p = BinaryPickle(out.result)
       val up = p.unpickle[T]
       obj == up
     } catch {
@@ -35,21 +56,5 @@ object Primitives extends Properties("bytebuffer primitive tests") {
   property("String") = Prop forAll { (s: String) => roundTrip[String](s) }
   property("(Int, String)") = Prop forAll { (p: (Int, String)) => roundTrip[(Int,String)](p) }
 
-}
-
-class ByteBufferTest extends FunSuite {
-
-  test("lookahead") {
-    val buf = ByteBuffer.allocate(32)
-    val out = new ByteBufferOutput(buf)
-    out.putInt(0x12345678)
-    buf.rewind
-    val in = new ByteBufferInput(buf)
-    val b = in.getByte
-    in.setLookahead(b)
-    val res = in.getIntWithLookahead
-    res == 0x12345678
-  }
-  
 }
 

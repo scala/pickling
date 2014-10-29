@@ -104,7 +104,7 @@ class ShareBinaryTest extends FunSuite {
 
     o.pickleTo(output)
 
-    val streamPickle = BinaryPickleStream(new ByteArrayInputStream(output.result))
+    val streamPickle = BinaryPickle(new ByteArrayInputStream(output.result))
     streamPickle.unpickle[Outer]
   }
 }

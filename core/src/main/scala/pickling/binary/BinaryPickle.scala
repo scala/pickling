@@ -6,6 +6,7 @@ import scala.language.implicitConversions
 import scala.reflect.runtime.universe.Mirror
 
 import java.io.InputStream
+import java.nio.ByteBuffer
 
 abstract class BinaryPickle extends Pickle {
   type PickleFormatType = BinaryPickleFormat
@@ -26,15 +27,6 @@ case class BinaryPickleArray(data: Array[Byte]) extends BinaryPickle {
   override def toString = s"""BinaryPickle(${value.mkString("[", ",", "]")})"""
 }
 
-case class BinaryPickleStream(input: InputStream) extends BinaryPickle {
-  val value: Array[Byte] = Array.ofDim[Byte](0)
-
-  def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader =
-    new BinaryPickleReader(new StreamInput(input), mirror, format)
-
-  /* Do not override def toString to avoid traversing the input stream. */
-}
-
 case class BinaryInputPickle(input: BinaryInput) extends BinaryPickle {
   val value: Array[Byte] = Array.ofDim[Byte](0)
 
@@ -45,9 +37,10 @@ case class BinaryInputPickle(input: BinaryInput) extends BinaryPickle {
 }
 
 object BinaryPickle {
-  //TODO override that stuff
-  def apply(a: Array[Byte]): BinaryPickle =
-    new BinaryPickleArray(a)
+  def apply(a: Array[Byte]): BinaryPickle = new BinaryPickleArray(a)
+  def apply(a: BinaryInput): BinaryPickle = new BinaryInputPickle(a)
+  def apply(a: InputStream): BinaryPickle = new BinaryInputPickle(new StreamInput(a))
+  def apply(a: ByteBuffer): BinaryPickle = new BinaryInputPickle(new ByteBufferInput(a))
 }
 
 class BinaryPickleBuilder(format: BinaryPickleFormat, out: BinaryOutput) extends BinaryPBuilder with PickleTools {
@@ -175,13 +168,10 @@ abstract class AbstractBinaryReader(val mirror: Mirror) {
 class BinaryPickleReader(in: BinaryInput, mirror: Mirror, format: BinaryPickleFormat) extends AbstractBinaryReader(mirror) with PReader with PickleTools {
   import format._
   
-  def beginEntryNoTag(): String =
-    beginEntryNoTagDebug(false)
+  def beginEntryNoTagDebug(debug: Boolean): String = beginEntryNoTag
 
-  def beginEntryNoTagDebug(debugOn: Boolean): String = {
+  def beginEntryNoTag: String = {
     val res: Any = withHints { hints =>
-      // if (debugOn)
-      //   debug(s"hints: $hints")
 
       if (hints.isElidedType && nullablePrimitives.contains(hints.tag.key)) {
         val lookahead = in.getByte()
@@ -195,8 +185,6 @@ class BinaryPickleReader(in: BinaryInput, mirror: Mirror, format: BinaryPickleFo
         hints.tag
       } else {
         val lookahead = in.getByte()
-        // if (debugOn)
-        //   debug(s"checking lookahead: $lookahead")
         lookahead match {
           case NULL_TAG =>
             FastTypeTag.Null
@@ -214,15 +202,11 @@ class BinaryPickleReader(in: BinaryInput, mirror: Mirror, format: BinaryPickleFo
                   else s"\nnullable prim: ${nullablePrimitives.contains(hints.tag.key)}\nprim: ${primitives.contains(hints.tag.key)}"
                 throw PicklingException(s"error decoding type string. debug info: $hints$primInfo\ncause:$msg")
             }
-            // if (debugOn)
-            //   debug(s"decodeStringWithLookahead: $res")
             res
         }
       }
     }
     if (res.isInstanceOf[String]) {
-      // if (debugOn)
-      //   debug(s"replacing tag with last type string read: ${res.asInstanceOf[String]}")
       _lastTagRead = null
       _lastTypeStringRead = res.asInstanceOf[String]
       _lastTypeStringRead
