@@ -37,6 +37,7 @@ object NegativeCompilation {
   }
 
   def eval(code: String, compileOptions: String = ""): Any = {
+    // println(s"eval compile options: $compileOptions")
     val tb = mkToolbox(compileOptions)
     tb.eval(tb.parse(code))
   }
@@ -65,9 +66,11 @@ object NegativeCompilation {
     f.getAbsolutePath
   }
 
-  def quasiquotesJar: String =
-    if (scalaBinaryVersion == "2.10") ":quasiquotes_2.10-2.0.0.jar"
+  def quasiquotesJar: String = {
+    val dir = System.getProperty("user.dir")
+    if (scalaBinaryVersion == "2.10") s":$dir/quasiquotes_2.10-2.0.0.jar"
     else ""
+  }
 
   def expectError(errorSnippet: String, compileOptions: String = "",
                   baseCompileOptions: String = s"-cp ${toolboxClasspath}${quasiquotesJar}")(code: String) {
