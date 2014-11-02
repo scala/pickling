@@ -19,7 +19,6 @@ import internal._
  */
 @implicitNotFound(msg = "Cannot generate a pickler for ${T}. Recompile with -Xlog-implicits for details")
 trait SPickler[T] {
-  val format: PickleFormat
   def pickle(picklee: T, builder: PBuilder): Unit
 }
 
@@ -34,7 +33,6 @@ trait SPickler[T] {
  */
 @implicitNotFound(msg = "Cannot generate a DPickler for ${T}. Recompile with -Xlog-implicits for details")
 trait DPickler[T] {
-  val format: PickleFormat
   def pickle(picklee: T, builder: PBuilder): Unit
 }
 
@@ -81,7 +79,6 @@ object SPickler extends CorePicklersUnpicklers with RuntimePicklersUnpicklers
 
 @implicitNotFound(msg = "Cannot generate an unpickler for ${T}. Recompile with -Xlog-implicits for details")
 trait Unpickler[T] {
-  val format: PickleFormat
   def unpickle(tag: => FastTypeTag[_], reader: PReader): Any
 }
 
