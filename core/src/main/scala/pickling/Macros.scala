@@ -498,7 +498,7 @@ trait PickleMacros extends Macro {
     }
 
     def refinedDispatch(parentTpe: Type) = {
-      val inferred = c.inferImplicitValue(appliedType(typeOf[SPickler[_]].typeConstructor, tpe))
+      val inferred = c.inferImplicitValue(appliedType(typeOf[SPickler[_]].typeConstructor, List(tpe)))
       if (inferred == EmptyTree) {
         c.abort(c.enclosingPosition, s"could not find implicit pickler for refined type: $tpe")
       } else {
