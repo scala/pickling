@@ -1,8 +1,5 @@
 import sbt._
 import Keys._
-import scala.util.Properties
-import scala.xml.{Node => XmlNode, NodeSeq => XmlNodeSeq, _}
-import scala.xml.transform._
 import java.net.URL
 
 object BuildSettings {
