@@ -173,8 +173,6 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit share: 
 
   def mkPickler: SPickler[_] = {
     new SPickler[Any] {
-      val format: PickleFormat = null // unused
-
       val fields: List[Logic] = cir.fields.flatMap { fir =>
         if (fir.accessor.nonEmpty)
           List(
