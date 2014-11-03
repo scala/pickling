@@ -11,8 +11,7 @@ import internal._
 /** A static pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
  *  static type `T`, and pickles it to an instance of `PBuilder`. In the process the object
  *  is turned into some external representation like a byte array. The particular external
- *  representation (the "pickle format") is defined by the `format` val member (of type
- *  `PickleFormat`).
+ *  representation (the "pickle format") is defined by the `builder`.
  *
  *  This pickler requires that the dynamic type of the object-to-be-pickled is equal to
  *  the erasure of its static type `T`.
@@ -25,8 +24,7 @@ trait SPickler[T] {
 /** A dynamic pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
  *  static type `T`, and pickles it to an instance of `PBuilder`. In the process the object
  *  is turned into some external representation like a byte array. The particular external
- *  representation (the "pickle format") is defined by the `format` val member (of type
- *  `PickleFormat`).
+ *  representation (the "pickle format") is defined by the `builder`.
  *
  *  In contrast to static picklers (instances of type `SPickler[T]`), a dynamic pickler of
  *  type `DPickler[T]` pickles any object of type `T`.

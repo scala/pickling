@@ -75,8 +75,6 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
   def genPickler: SPickler[_] = {
     // build "interpreted" runtime pickler
     new SPickler[Any] with PickleTools {
-      val format: PickleFormat = null // unused
-
       val fields: List[(irs.FieldIR, Boolean)] =
         cir.fields.filter(_.hasGetter).map(fir => (fir, fir.tpe.typeSymbol.isEffectivelyFinal))
 
@@ -179,7 +177,6 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
 
   def genUnpickler: Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
-      val format: PickleFormat = null // unused
       def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
         if (cir.javaGetInstance) {
           clazz.getDeclaredMethod("getInstance").invoke(null)
@@ -278,7 +275,6 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_
 
   def genUnpickler: Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
-      val format: PickleFormat = null // unused
       def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
         if (reader.atPrimitive) {
           reader.readPrimitive()
