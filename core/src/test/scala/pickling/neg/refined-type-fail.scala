@@ -12,11 +12,8 @@ class RefinedTypeFailTest extends FunSuite {
         |
         |class C { type Cap }
         |
-        |object Test {
-        |  type T = C { type Cap = Int }
-        |  val x: T = null
-        |  val p = x.pickle
-        |}""".stripMargin
+        |val x: C { type Cap = Int } = new C { type Cap = Int }
+        |val p = x.pickle""".stripMargin
     }
   }
 }

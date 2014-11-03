@@ -68,7 +68,7 @@ object NegativeCompilation {
 
   def quasiquotesJar: String = {
     val dir = System.getProperty("user.dir")
-    if (scalaBinaryVersion == "2.10") s":$dir/quasiquotes_2.10-2.0.0.jar"
+    if (scalaBinaryVersion == "2.10") s":$dir/quasiquotes_2.10-2.0.1.jar"
     else ""
   }
 
