@@ -40,7 +40,7 @@ object DPickler {
 
 trait GenPicklers extends RuntimePicklersUnpicklers {
 
-  implicit def genPickler[T](implicit format: PickleFormat): SPickler[T] = macro Compat.PicklerMacros_impl[T]
+  implicit def genPickler[T]: SPickler[T] = macro Compat.PicklerMacros_impl[T]
   // TODO: the primitive pickler hack employed here is funny, but I think we should fix this one
   // since people probably would also have to deal with the necessity to abstract over pickle formats
   def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit share: refs.Share): SPickler[_] = {
@@ -82,7 +82,7 @@ trait Unpickler[T] {
 
 trait GenUnpicklers extends RuntimePicklersUnpicklers {
 
-  implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] with Generated = macro Compat.UnpicklerMacros_impl[T]
+  implicit def genUnpickler[T]: Unpickler[T] with Generated = macro Compat.UnpicklerMacros_impl[T]
 
   // Note: parameter `tag` may be `null`.
   def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit share: refs.Share): Unpickler[_] = {
