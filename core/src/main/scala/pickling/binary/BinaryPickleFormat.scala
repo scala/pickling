@@ -9,6 +9,7 @@ import java.io.InputStream
 package object binary {
   implicit val pickleFormat = new BinaryPickleFormat
   implicit def toBinaryPickle(value: Array[Byte]): BinaryPickle = BinaryPickle(value)
+  implicit def toUnpickleOps(value: Array[Byte]): UnpickleOps = new UnpickleOps(BinaryPickle(value))
 }
 
 package binary {
