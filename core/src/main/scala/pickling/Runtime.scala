@@ -184,6 +184,9 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
           val result = reader.readPrimitive()
           if (shouldBotherAboutSharing(tpe)) registerUnpicklee(result, preregisterUnpicklee())
           result
+        } else if (tag.key.endsWith("$")) {
+          val c = Class.forName(tag.key)
+          c.getField("MODULE$").get(c)
         } else {
           val pendingFields =
             if (tag.key.contains("anonfun$")) {
@@ -278,6 +281,9 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_
       def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
         if (reader.atPrimitive) {
           reader.readPrimitive()
+        } else if (tag.key.endsWith("$")) {
+          val c = Class.forName(tag.key)
+          c.getField("MODULE$").get(c)
         } else {
           val pendingFields =
             if (tag.key.contains("anonfun$")) {
