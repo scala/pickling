@@ -14,6 +14,8 @@ class BinaryPickleFormat extends PickleFormat with Constants {
   type PickleType = BinaryPickle
   type OutputType = FastArrayOutput
 
+  val version = 2
+
   def createBuilder() = new BinaryPickleBuilder(this, null)
   def createBuilder(out: FastArrayOutput): PBuilder = new BinaryPickleBuilder(this, out)
 
@@ -59,6 +61,11 @@ final class BinaryPickleBuilder(format: BinaryPickleFormat, out: FastArrayOutput
   private var output: FastArrayOutput =
     if (out == null) new FastArrayOutput
     else out
+
+  def beginPickle(): PBuilder = {
+    // TODO: write version of pickle format to pickle
+    this
+  }
 
   @inline def beginEntry(picklee: Any): PBuilder = withHints { hints =>
     if (picklee == null) {
@@ -199,6 +206,11 @@ final class BinaryPickleBuilder(format: BinaryPickleFormat, out: FastArrayOutput
     }
 
     var gla: Option[Byte] = None
+
+    def beginPickle(): PReader = {
+      // TODO: read format version and check for mismatch
+      this
+    }
 
     def beginEntryNoTag(): String =
       beginEntryNoTagDebug(false)
@@ -429,6 +441,11 @@ final class BinaryPickleBuilder(format: BinaryPickleFormat, out: FastArrayOutput
     import format._
 
     private var pos = 0
+
+    def beginPickle(): PReader = {
+      // TODO: read format version and check for mismatch
+      this
+    }
 
     def beginEntryNoTag(): String =
       beginEntryNoTagDebug(false)

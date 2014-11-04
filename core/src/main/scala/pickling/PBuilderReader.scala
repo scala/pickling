@@ -17,6 +17,7 @@ trait Hintable {
 }
 
 trait PBuilder extends Hintable {
+  def beginPickle(): PBuilder
   def beginEntry(picklee: Any): PBuilder
   def putField(name: String, pickler: PBuilder => Unit): PBuilder
   def endEntry(): Unit
@@ -28,6 +29,7 @@ trait PBuilder extends Hintable {
 
 trait PReader extends Hintable {
   def mirror: Mirror
+  def beginPickle(): PReader
   def beginEntry(): FastTypeTag[_]
   def beginEntryNoTag(): String
   def beginEntryNoTagDebug(debugOn: Boolean): String

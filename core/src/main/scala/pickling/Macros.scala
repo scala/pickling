@@ -80,6 +80,7 @@ trait PicklerMacros extends Macro with PickleMacros {
         (resOpt, resLst)
       }
     }
+
     def unifiedPickle = { // NOTE: unified = the same code works for both primitives and objects
       val cir = newClassIR(tpe)
       // println(s"CIR for ${tpe.toString}: ${cir.fields.mkString(",")}")
@@ -91,15 +92,17 @@ trait PicklerMacros extends Macro with PickleMacros {
           val noNullTree  = lst.foldLeft[Tree](Literal(Constant(true)))((acc, curr) => q"$acc && ($curr != null)")
           q"""
             if ($noNullTree) {
-              val size = $tree + $typeNameLen + 4
+              val size = $tree + $typeNameLen + 5
               builder.hintKnownSize(size)
             }
           """
       }
+
       val beginEntry = q"""
         $hintKnownSize
         builder.beginEntry(picklee)
       """
+
       val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
       val putFields =
         if (tpe <:< typeOf[java.io.Externalizable]) {
@@ -416,28 +419,24 @@ trait PickleMacros extends Macro {
   import definitions._
 
   def pickleTo[T: c.WeakTypeTag](output: c.Tree)(format: c.Tree): c.Tree = {
-    val tpe = weakTypeOf[T]
     val q"${_}($pickleeArg)" = c.prefix.tree
-    val endPickle = if (shouldBotherAboutCleaning(tpe)) q"clearPicklees()" else q"";
-    q"""
-      import scala.pickling._
-      import scala.pickling.internal._
-      val picklee: $tpe = $pickleeArg
-      val builder = $format.createBuilder($output)
-      picklee.pickleInto(builder)
-      $endPickle
-    """
+    pickleImpl[T](pickleeArg, q"$format.createBuilder($output)")
   }
 
   def pickle[T: c.WeakTypeTag](format: c.Tree): c.Tree = {
-    val tpe = weakTypeOf[T]
     val q"${_}($pickleeArg)" = c.prefix.tree
+    pickleImpl[T](pickleeArg, q"$format.createBuilder()")
+  }
+
+  def pickleImpl[T: c.WeakTypeTag](pickleeArg: c.Tree, mkBuilder: c.Tree): c.Tree = {
+    val tpe = weakTypeOf[T]
     val endPickle = if (shouldBotherAboutCleaning(tpe)) q"clearPicklees()" else q"";
     q"""
       import scala.pickling._
       import scala.pickling.internal._
       val picklee: $tpe = $pickleeArg
-      val builder = $format.createBuilder()
+      val builder = $mkBuilder
+      builder.beginPickle()
       picklee.pickleInto(builder)
       $endPickle
       builder.result()
@@ -591,6 +590,7 @@ trait UnpickleMacros extends Macro {
       val format = implicitly[scala.pickling.PickleFormat]
       val pickle = $pickleArg.thePickle.asInstanceOf[format.PickleType]
       val $readerName = format.createReader(pickle, scala.pickling.internal.`package`.currentMirror)
+      $readerName.beginPickle()
       $readerUnpickleTree
     """
   }

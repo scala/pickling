@@ -23,6 +23,9 @@ package json {
   class JSONPickleFormat extends PickleFormat {
     type PickleType = JSONPickle
     type OutputType = Output[String]
+
+    val version = 2
+
     def createBuilder() = new JSONPickleBuilder(this, new StringOutput)
     def createBuilder(out: Output[String]): PBuilder = new JSONPickleBuilder(this, out)
     def createReader(pickle: JSONPickle, mirror: Mirror) = {
@@ -96,6 +99,12 @@ package json {
       FastTypeTag.ArrayFloat.key -> ((picklee: Any) => pickleArray(picklee.asInstanceOf[Array[Float]], FastTypeTag.Float)),
       FastTypeTag.ArrayDouble.key -> ((picklee: Any) => pickleArray(picklee.asInstanceOf[Array[Double]], FastTypeTag.Double))
     )
+
+    def beginPickle(): PBuilder = {
+      // write version of pickle format to pickle
+      this
+    }
+
     def beginEntry(picklee: Any): PBuilder = withHints { hints =>
       indent()
       if (hints.oid != -1) {
@@ -196,6 +205,11 @@ package json {
         nested.lastReadTag = lastReadTag
       }
       nested
+    }
+
+    def beginPickle(): PReader = {
+      // TODO: read format version and check for mismatch
+      this
     }
 
     def beginEntryNoTag(): String =
