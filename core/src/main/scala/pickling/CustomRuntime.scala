@@ -153,17 +153,17 @@ trait RuntimePicklersUnpicklers {
           newArray(i) = elem.asInstanceOf[AnyRef]
           i = i + 1
         } catch {
-          case PicklingException(msg) =>
+          case PicklingException(msg, cause) =>
             throw PicklingException(s"""error in unpickle of 'mkRuntimeTravPickler':
                                        |collTag: '${collTag.key}'
                                        |elemTag: '${elemTag.key}'
                                        |message:
-                                       |$msg""".stripMargin)
+                                       |$msg""".stripMargin, cause)
           case e: Exception =>
             e.printStackTrace()
             throw PicklingException(s"""exception in unpickle of 'mkRuntimeTravPickler':
                                        |collTag: '${collTag.key}'
-                                       |elemTag: '${elemTag.key}'""".stripMargin)
+                                       |elemTag: '${elemTag.key}'""".stripMargin, Some(e))
         }
       }
 
@@ -222,12 +222,12 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unp
         try {
           unpickler1.unpickle(tag1, reader1)
         } catch {
-          case PicklingException(msg) =>
+          case PicklingException(msg, cause) =>
             throw PicklingException(s"""error in unpickle of '${this.getClass.getName}':
                                        |field name: '$name'
                                        |field tag: '${tag1.key}'
                                        |message:
-                                       |$msg""".stripMargin)
+                                       |$msg""".stripMargin, cause)
         }
       }
     }

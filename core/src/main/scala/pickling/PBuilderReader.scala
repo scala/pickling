@@ -42,6 +42,14 @@ trait PReader extends Hintable {
   def endCollection(): Unit
 }
 
-case class PicklingException(msg: String) extends RuntimeException(msg)
+/**
+ * Exception thrown when the pickling or unpickling process fails.
+ * @param message error message
+ * @param cause exception causing the pickling exception if any
+ */
+final case class PicklingException(message: String, cause: Option[Throwable] = None) extends RuntimeException(message, cause.orNull)
 
-class EndOfStreamException extends RuntimeException
+/**
+ * Exception thrown when a stream ends unexpectedly during unpickling.
+ */
+final class EndOfStreamException extends RuntimeException("End of stream reached while unpickling")
