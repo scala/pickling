@@ -165,9 +165,10 @@ object FastTypeTag {
         // handle arrays of non-primitive element type
         if (clazz.isArray) mkRawArray(clazz, mirror)
         else {
+          val clazzName0 = clazz.getName()
           val clazzName =
-            if (clazz.getName().contains("anonfun$")) clazz.getName()
-            else clazz.getName().replace('$', '.')
+            if (clazzName0.contains("anonfun$") || clazzName0.contains("$colon$colon") || clazzName0.endsWith("$")) clazzName0
+            else clazzName0.replace('$', '.')
           apply(mirror, clazzName)
         }
       })
