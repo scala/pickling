@@ -376,11 +376,11 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
       try {
         reader.readPrimitive()
       } catch {
-        case PicklingException(msg) =>
+        case PicklingException(msg, cause) =>
           throw PicklingException(s"""error in unpickle of primitive unpickler '$name':
                                      |tag in unpickle: '${tag.key}'
                                      |message:
-                                     |$msg""".stripMargin)
+                                     |$msg""".stripMargin, cause)
       }
     }
   }

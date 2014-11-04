@@ -207,7 +207,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
             val fdynamicTag = try {
               freader.beginEntry()
             } catch {
-              case e @ PicklingException(msg) =>
+              case e @ PicklingException(msg, cause) =>
                 debug(s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}':
                          |$msg
                          |enclosing object has type: '${tag.key}'
@@ -300,7 +300,7 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_
             val fdynamicTag = try {
               freader.beginEntry()
             } catch {
-              case e @ PicklingException(msg) =>
+              case e @ PicklingException(msg, cause) =>
                 debug(s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}':
                          |$msg
                          |enclosing object has type: '${tag.key}'
