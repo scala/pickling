@@ -183,7 +183,7 @@ trait FastTypeTagMacros extends Macro {
     import c.universe._
     val T = weakTypeOf[T]
     q"""
-      new FastTypeTag[$T] {
+      new scala.pickling.FastTypeTag[$T] {
         def mirror = scala.pickling.internal.`package`.currentMirror
         lazy val tpe = scala.reflect.runtime.universe.weakTypeOf[$T]
         def key = ${T.key}
@@ -194,7 +194,7 @@ trait FastTypeTagMacros extends Macro {
     import c.universe._
     val T = weakTypeOf[T]
     q"""
-      new FastTypeTag[ClassTag[$T]] {
+      new scala.pickling.FastTypeTag[ClassTag[$T]] {
         def mirror = scala.pickling.internal.`package`.currentMirror
         lazy val tpe = scala.reflect.runtime.universe.weakTypeOf[ClassTag[$T]]
         def key = "ClassTag[" + ${T.key} + "]"
