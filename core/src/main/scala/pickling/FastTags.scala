@@ -167,7 +167,7 @@ object FastTypeTag {
         else {
           val clazzName0 = clazz.getName()
           val clazzName =
-            if (clazzName0.contains("anonfun$") || clazzName0.contains("$colon$colon") || clazzName0.endsWith("$")) clazzName0
+            if (clazzName0.contains("anonfun$") || clazzName0.contains("$colon$colon") || clazzName0.endsWith("$") || clazzName0.endsWith("$sp")) clazzName0
             else clazzName0.replace('$', '.')
           apply(mirror, clazzName)
         }
