@@ -330,6 +330,8 @@ abstract class Macro extends RichTypes { self =>
     import Compat._
 
     val candidates = c.enclosingImplicits
+    if (candidates.isEmpty)
+      return body
     val ourPt      = candidates.head.pt
 
     def debug(msg: Any) = {
