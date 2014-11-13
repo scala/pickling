@@ -75,8 +75,6 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
   def genPickler: SPickler[_] = {
     // build "interpreted" runtime pickler
     new SPickler[Any] with PickleTools {
-      val format: PickleFormat = null // unused
-
       val fields: List[(irs.FieldIR, Boolean)] =
         cir.fields.filter(_.hasGetter).map(fir => (fir, fir.tpe.typeSymbol.isEffectivelyFinal))
 
@@ -179,7 +177,6 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
 
   def genUnpickler: Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
-      val format: PickleFormat = null // unused
       def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
         if (cir.javaGetInstance) {
           clazz.getDeclaredMethod("getInstance").invoke(null)
@@ -187,6 +184,9 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
           val result = reader.readPrimitive()
           if (shouldBotherAboutSharing(tpe)) registerUnpicklee(result, preregisterUnpicklee())
           result
+        } else if (tag.key.endsWith("$")) {
+          val c = Class.forName(tag.key)
+          c.getField("MODULE$").get(c)
         } else {
           val pendingFields =
             if (tag.key.contains("anonfun$")) {
@@ -210,7 +210,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
             val fdynamicTag = try {
               freader.beginEntry()
             } catch {
-              case e @ PicklingException(msg) =>
+              case e @ PicklingException(msg, cause) =>
                 debug(s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}':
                          |$msg
                          |enclosing object has type: '${tag.key}'
@@ -278,10 +278,12 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_
 
   def genUnpickler: Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
-      val format: PickleFormat = null // unused
       def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
         if (reader.atPrimitive) {
           reader.readPrimitive()
+        } else if (tag.key.endsWith("$")) {
+          val c = Class.forName(tag.key)
+          c.getField("MODULE$").get(c)
         } else {
           val pendingFields =
             if (tag.key.contains("anonfun$")) {
@@ -304,7 +306,7 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_
             val fdynamicTag = try {
               freader.beginEntry()
             } catch {
-              case e @ PicklingException(msg) =>
+              case e @ PicklingException(msg, cause) =>
                 debug(s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}':
                          |$msg
                          |enclosing object has type: '${tag.key}'

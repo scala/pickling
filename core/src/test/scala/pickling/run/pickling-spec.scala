@@ -58,6 +58,12 @@ object PicklingJsonSpec extends Properties("pickling-json") {
   import json._
   import PicklingSpec._
 
+  property("UnpickleOps") = Prop forAll { (x: String) =>
+    val pickle: JSONPickle = x.pickle
+    val x1 = pickle.value.unpickle[String]
+    x1 == x
+  }
+
   // subsumes test base.scala
   property("Base") = Prop forAll { (b: Base) =>
     val pickle: JSONPickle = b.pickle
@@ -296,6 +302,12 @@ object PicklingJsonSpec extends Properties("pickling-json") {
 object PicklingBinarySpec extends Properties("pickling-binary") {
   import binary._
   import PicklingSpec._
+
+  property("UnpickleOps") = Prop forAll { (x: String) =>
+    val pickle: BinaryPickle = x.pickle
+    val x1 = pickle.value.unpickle[String]
+    x1 == x
+  }
 
   // subsumes test base.scala
   property("Base") = Prop forAll { (b: Base) =>

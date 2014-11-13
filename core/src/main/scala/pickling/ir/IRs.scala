@@ -233,7 +233,13 @@ class IRs[U <: Universe with Singleton](val uni: U) {
     val useGetInstance = if (!(tpe =:= AnyRefTpe) && tpe.typeSymbol.isJava && fieldIRs.isEmpty) {
       val methodOpt =
         try Some(Class.forName(tpe.toString).getDeclaredMethod("getInstance"))
-        catch { case _: NoSuchMethodException => None }
+        catch {
+          case _: NoSuchMethodException       => None
+          case _: ClassNotFoundException      => None
+          case _: LinkageError                => None
+          case _: ExceptionInInitializerError => None
+          case _: SecurityException           => None
+        }
       methodOpt.nonEmpty && {
         val mods = methodOpt.get.getModifiers
         Modifier.isStatic(mods) && Modifier.isPublic(mods)

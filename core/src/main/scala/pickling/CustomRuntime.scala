@@ -75,10 +75,8 @@ trait RuntimePicklersUnpicklers {
   GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcZZ$sp" -> (new Tuple2RTPickler(null)))
 
 
-  def mkAnyRefArrayTravPickler[C <% Traversable[_]](mirror: ru.Mirror, classLoader: ClassLoader)(implicit pf: PickleFormat, cbf: CanBuildFrom[C, AnyRef, C]):
+  def mkAnyRefArrayTravPickler[C <% Traversable[_]](mirror: ru.Mirror, classLoader: ClassLoader)(implicit cbf: CanBuildFrom[C, AnyRef, C]):
     SPickler[C] /*with Unpickler[C]*/ = new SPickler[C] /*with Unpickler[C]*/ {
-
-    val format: PickleFormat = pf
 
     def pickle(coll: C, builder: PBuilder): Unit = {
       builder.hintTag(FastTypeTag.ArrayAnyRef)
@@ -103,8 +101,6 @@ trait RuntimePicklersUnpicklers {
   def mkRuntimeTravPickler[C <% Traversable[_]](elemClass: Class[_], elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
                                                 elemPickler0: SPickler[_], elemUnpickler0: Unpickler[_]):
     SPickler[C] with Unpickler[C] = new SPickler[C] with Unpickler[C] {
-
-    val format = null // unused
 
     val elemPickler   = elemPickler0.asInstanceOf[SPickler[AnyRef]]
     val elemUnpickler = elemUnpickler0.asInstanceOf[Unpickler[AnyRef]]
@@ -157,17 +153,17 @@ trait RuntimePicklersUnpicklers {
           newArray(i) = elem.asInstanceOf[AnyRef]
           i = i + 1
         } catch {
-          case PicklingException(msg) =>
+          case PicklingException(msg, cause) =>
             throw PicklingException(s"""error in unpickle of 'mkRuntimeTravPickler':
                                        |collTag: '${collTag.key}'
                                        |elemTag: '${elemTag.key}'
                                        |message:
-                                       |$msg""".stripMargin)
+                                       |$msg""".stripMargin, cause)
           case e: Exception =>
             e.printStackTrace()
             throw PicklingException(s"""exception in unpickle of 'mkRuntimeTravPickler':
                                        |collTag: '${collTag.key}'
-                                       |elemTag: '${elemTag.key}'""".stripMargin)
+                                       |elemTag: '${elemTag.key}'""".stripMargin, Some(e))
         }
       }
 
@@ -181,8 +177,6 @@ trait RuntimePicklersUnpicklers {
 
 
 class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unpickler[(Any, Any)] {
-  val format = null // unused
-
   def pickleField(name: String, value: Any, builder: PBuilder): Unit = {
     val (tag1, pickler1) = if (value == null) {
       (FastTypeTag.Null.asInstanceOf[FastTypeTag[Any]], SPickler.nullPicklerUnpickler.asInstanceOf[SPickler[Any]])
@@ -228,12 +222,12 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unp
         try {
           unpickler1.unpickle(tag1, reader1)
         } catch {
-          case PicklingException(msg) =>
+          case PicklingException(msg, cause) =>
             throw PicklingException(s"""error in unpickle of '${this.getClass.getName}':
                                        |field name: '$name'
                                        |field tag: '${tag1.key}'
                                        |message:
-                                       |$msg""".stripMargin)
+                                       |$msg""".stripMargin, cause)
         }
       }
     }
