@@ -165,9 +165,10 @@ object FastTypeTag {
         // handle arrays of non-primitive element type
         if (clazz.isArray) mkRawArray(clazz, mirror)
         else {
+          val clazzName0 = clazz.getName()
           val clazzName =
-            if (clazz.getName().contains("anonfun$")) clazz.getName()
-            else clazz.getName().replace('$', '.')
+            if (clazzName0.contains("anonfun$") || clazzName0.contains("$colon$colon") || clazzName0.endsWith("$") || clazzName0.endsWith("$sp")) clazzName0
+            else clazzName0.replace('$', '.')
           apply(mirror, clazzName)
         }
       })
@@ -182,7 +183,7 @@ trait FastTypeTagMacros extends Macro {
     import c.universe._
     val T = weakTypeOf[T]
     q"""
-      new FastTypeTag[$T] {
+      new scala.pickling.FastTypeTag[$T] {
         def mirror = scala.pickling.internal.`package`.currentMirror
         lazy val tpe = scala.reflect.runtime.universe.weakTypeOf[$T]
         def key = ${T.key}
@@ -193,7 +194,7 @@ trait FastTypeTagMacros extends Macro {
     import c.universe._
     val T = weakTypeOf[T]
     q"""
-      new FastTypeTag[ClassTag[$T]] {
+      new scala.pickling.FastTypeTag[ClassTag[$T]] {
         def mirror = scala.pickling.internal.`package`.currentMirror
         lazy val tpe = scala.reflect.runtime.universe.weakTypeOf[ClassTag[$T]]
         def key = "ClassTag[" + ${T.key} + "]"

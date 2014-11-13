@@ -1,14 +1,10 @@
 import sbt._
 import Keys._
-import scala.util.Properties
-import scala.xml.{Node => XmlNode, NodeSeq => XmlNodeSeq, _}
-import scala.xml.transform._
 import java.net.URL
 
 object BuildSettings {
   val buildVersion = "0.10.0-SNAPSHOT"
-  val buildScalaVersion = System.getProperty("scala.version", "2.11.2")
-
+  val buildScalaVersion = System.getProperty("scala.version", "2.11.4")
   val buildSettings = Defaults.defaultSettings ++ Seq(
     version := buildVersion,
     scalaVersion := buildScalaVersion,
@@ -73,19 +69,19 @@ object MyBuild extends Build {
       scalacOptions ++= Seq("-optimise"),
       libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
       libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _), // for ToolBox
-      libraryDependencies += "org.scalatest" %% "scalatest" % "2.1.3" % "test",
-      libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.11.3" % "test",
+      libraryDependencies += "org.scalatest" %% "scalatest" % "2.1.7" % "test",
+      libraryDependencies += "org.scalacheck" %% "scalacheck" % "1.11.6" % "test",
       libraryDependencies := {
         CrossVersion.partialVersion(scalaVersion.value) match {
           // if scala 2.11+ is used, quasiquotes are merged into scala-reflect
           case Some((2, scalaMajor)) if scalaMajor >= 11 =>
             libraryDependencies.value ++ Seq(
-              "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.1")
+              "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2")
           // in Scala 2.10, quasiquotes are provided by macro-paradise
           case Some((2, 10)) =>
             libraryDependencies.value ++ Seq(
-              compilerPlugin("org.scalamacros" % "paradise" % "2.0.0" cross CrossVersion.full),
-              "org.scalamacros" %% "quasiquotes" % "2.0.0")
+              compilerPlugin("org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full),
+              "org.scalamacros" %% "quasiquotes" % "2.0.1")
         }
       },
       conflictWarning in ThisBuild := ConflictWarning.disable,
@@ -179,7 +175,7 @@ object MyBuild extends Build {
     settings = buildSettings ++ Seq(
       sourceDirectory in Compile <<= baseDirectory(root => root),
       sourceDirectory in Test <<= baseDirectory(root => root),
-      libraryDependencies += "org.scalatest" %% "scalatest" % "2.1.3",
+      libraryDependencies += "org.scalatest" %% "scalatest" % "2.1.7",
       parallelExecution in Test := false,
       // scalacOptions ++= Seq()
       scalacOptions ++= Seq("-Xlog-implicits")
