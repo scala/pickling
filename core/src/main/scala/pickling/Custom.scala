@@ -18,7 +18,6 @@ import immutable.:: //TODO: this should go away
 import mutable.ArrayBuffer
 
 class PicklerUnpicklerNotFound[T] extends SPickler[T] with Unpickler[T] with Generated {
-  val format = null // not used
   def pickle(picklee: T, builder: PBuilder): Unit = ???
   def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = ???
 }
@@ -84,11 +83,9 @@ trait LowPriorityPicklersUnpicklers {
 
   def mkTravPickler[T: FastTypeTag, C <% Traversable[_]: FastTypeTag]
     (implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T],
-              pf: PickleFormat, cbf: CanBuildFrom[C, T, C],
-              collTag: FastTypeTag[C]): SPickler[C] with Unpickler[C] =
+              cbf: CanBuildFrom[C, T, C], collTag: FastTypeTag[C]): SPickler[C] with Unpickler[C] =
     new SPickler[C] with Unpickler[C] {
 
-    val format: PickleFormat = pf
     val elemTag  = implicitly[FastTypeTag[T]]
     val isPrimitive = elemTag.tpe.isEffectivelyPrimitive
 
@@ -177,8 +174,6 @@ trait CollectionPicklerUnpicklerMacro extends Macro with UnpickleMacros {
         import scala.pickling._
         import scala.pickling.internal._
         import scala.pickling.`package`.PickleOps
-
-        val format = implicitly[${format.tpe}]
 
         val elpickler: SPickler[$eltpe] = {
           val elpickler = "bam!"
@@ -282,7 +277,6 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   import java.text.SimpleDateFormat
 
   implicit object BigDecimalPicklerUnpickler extends SPickler[BigDecimal] with Unpickler[BigDecimal] {
-    val format = null // not used
     def pickle(picklee: BigDecimal, builder: PBuilder): Unit = {
       builder.beginEntry(picklee)
 
@@ -308,7 +302,6 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   }
 
   implicit object BigIntPicklerUnpickler extends SPickler[BigInteger] with Unpickler[BigInteger] {
-    val format = null // not used
     def pickle(picklee: BigInteger, builder: PBuilder): Unit = {
       builder.beginEntry(picklee)
 
@@ -342,7 +335,6 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
     }
     private def dateFormat = dateFormatTemplate.clone.asInstanceOf[SimpleDateFormat]
 
-    val format = null // not used
     def pickle(picklee: Date, builder: PBuilder): Unit = {
       builder.beginEntry(picklee)
 
@@ -376,7 +368,6 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   }
 
   class PrimitivePicklerUnpickler[T: FastTypeTag](name: String) extends AutoRegister[T](name) {
-    val format = null // not used
     def pickle(picklee: T, builder: PBuilder): Unit = {
       builder.beginEntry(picklee)
       builder.endEntry()
@@ -385,11 +376,11 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
       try {
         reader.readPrimitive()
       } catch {
-        case PicklingException(msg) =>
+        case PicklingException(msg, cause) =>
           throw PicklingException(s"""error in unpickle of primitive unpickler '$name':
                                      |tag in unpickle: '${tag.key}'
                                      |message:
-                                     |$msg""".stripMargin)
+                                     |$msg""".stripMargin, cause)
       }
     }
   }
