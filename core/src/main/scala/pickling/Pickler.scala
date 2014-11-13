@@ -11,30 +11,26 @@ import internal._
 /** A static pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
  *  static type `T`, and pickles it to an instance of `PBuilder`. In the process the object
  *  is turned into some external representation like a byte array. The particular external
- *  representation (the "pickle format") is defined by the `format` val member (of type
- *  `PickleFormat`).
+ *  representation (the "pickle format") is defined by the `builder`.
  *
  *  This pickler requires that the dynamic type of the object-to-be-pickled is equal to
  *  the erasure of its static type `T`.
  */
 @implicitNotFound(msg = "Cannot generate a pickler for ${T}. Recompile with -Xlog-implicits for details")
 trait SPickler[T] {
-  val format: PickleFormat
   def pickle(picklee: T, builder: PBuilder): Unit
 }
 
 /** A dynamic pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
  *  static type `T`, and pickles it to an instance of `PBuilder`. In the process the object
  *  is turned into some external representation like a byte array. The particular external
- *  representation (the "pickle format") is defined by the `format` val member (of type
- *  `PickleFormat`).
+ *  representation (the "pickle format") is defined by the `builder`.
  *
  *  In contrast to static picklers (instances of type `SPickler[T]`), a dynamic pickler of
  *  type `DPickler[T]` pickles any object of type `T`.
  */
 @implicitNotFound(msg = "Cannot generate a DPickler for ${T}. Recompile with -Xlog-implicits for details")
 trait DPickler[T] {
-  val format: PickleFormat
   def pickle(picklee: T, builder: PBuilder): Unit
 }
 
@@ -44,7 +40,7 @@ object DPickler {
 
 trait GenPicklers extends RuntimePicklersUnpicklers {
 
-  implicit def genPickler[T](implicit format: PickleFormat): SPickler[T] = macro Compat.PicklerMacros_impl[T]
+  implicit def genPickler[T]: SPickler[T] = macro Compat.PicklerMacros_impl[T]
   // TODO: the primitive pickler hack employed here is funny, but I think we should fix this one
   // since people probably would also have to deal with the necessity to abstract over pickle formats
   def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit share: refs.Share): SPickler[_] = {
@@ -81,13 +77,12 @@ object SPickler extends CorePicklersUnpicklers with RuntimePicklersUnpicklers
 
 @implicitNotFound(msg = "Cannot generate an unpickler for ${T}. Recompile with -Xlog-implicits for details")
 trait Unpickler[T] {
-  val format: PickleFormat
   def unpickle(tag: => FastTypeTag[_], reader: PReader): Any
 }
 
 trait GenUnpicklers extends RuntimePicklersUnpicklers {
 
-  implicit def genUnpickler[T](implicit format: PickleFormat): Unpickler[T] with Generated = macro Compat.UnpicklerMacros_impl[T]
+  implicit def genUnpickler[T]: Unpickler[T] with Generated = macro Compat.UnpicklerMacros_impl[T]
 
   // Note: parameter `tag` may be `null`.
   def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit share: refs.Share): Unpickler[_] = {

@@ -9,6 +9,7 @@ import java.io.InputStream
 package object binary {
   implicit val pickleFormat = new BinaryPickleFormat
   implicit def toBinaryPickle(value: Array[Byte]): BinaryPickle = BinaryPickle(value)
+  implicit def toUnpickleOps(value: Array[Byte]): UnpickleOps = new UnpickleOps(BinaryPickle(value))
 }
 
 package binary {
@@ -230,10 +231,10 @@ package binary {
               val res = try {
                 decodeStringWithLookahead(lookahead)
               } catch {
-                case PicklingException(msg) =>
+                case PicklingException(msg, cause) =>
                   val primInfo = if (hints.tag == null) ""
                     else s"\nnullable prim: ${nullablePrimitives.contains(hints.tag.key)}\nprim: ${primitives.contains(hints.tag.key)}"
-                  throw PicklingException(s"error decoding type string. debug info: $hints$primInfo\ncause:$msg")
+                  throw PicklingException(s"error decoding type string. debug info: $hints$primInfo\ncause:$msg $cause")
               }
               // if (debugOn)
               //   debug(s"decodeStringWithLookahead: $res")
