@@ -1,7 +1,7 @@
 scala/pickling
 ==============
 
-[![Build Status](https://travis-ci.org/scala/pickling.svg?branch=0.9.x)](https://travis-ci.org/scala/pickling.svg?branch=0.9.x) 
+[![Build Status](https://travis-ci.org/scala/pickling.svg?branch=0.9.x)](https://travis-ci.org/scala/pickling/)
 [![Stories in Ready](https://badge.waffle.io/scala/pickling.png?label=ready&title=Ready)](http://waffle.io/scala/pickling)
 
 
@@ -38,7 +38,7 @@ You can use Scala Pickling in your sbt project by simply adding the following de
 libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.9.0"
 ```
 
-If you would like to run the latest development version of scala/pickling (0.9.1-SNAPHSHOT), you also need to add the Sonatype "snapshots" repository resolver to your build file:
+If you would like to run the latest development version of scala/pickling (0.9.1-SNAPHSHOT, or 0.10.0-SNAPSHOT), you also need to add the Sonatype "snapshots" repository resolver to your build file:
 
 ```scala
 libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.9.1-SNAPSHOT"
@@ -46,9 +46,17 @@ libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.9.1-SNAPSHOT"
 resolvers += Resolver.sonatypeRepo("snapshots")
 ```
 
+or,
+
+```scala
+libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.10.0-SNAPSHOT"
+
+resolvers += Resolver.sonatypeRepo("snapshots")
+```
+
 For a more illustrative example, see a [sample sbt project which uses Scala Pickling](https://github.com/xeno-by/sbt-example-pickling).
 
-Or you can just directly download the jar ([Scala 2.10](https://oss.sonatype.org/service/local/artifact/maven/redirect?r=releases&g=org.scala-lang&a=scala-pickling_2.10&v=0.9.0&e=jar), [Scala 2.11](https://oss.sonatype.org/service/local/artifact/maven/redirect?r=releases&g=org.scala-lang&a=scala-pickling_2.11&v=0.9.0&e=jar)).
+Or you can just directly download the 0.9.0 jar ([Scala 2.10](https://oss.sonatype.org/service/local/artifact/maven/redirect?r=releases&g=org.scala-lang&a=scala-pickling_2.10&v=0.9.0&e=jar), [Scala 2.11](https://oss.sonatype.org/service/local/artifact/maven/redirect?r=releases&g=org.scala-lang&a=scala-pickling_2.11&v=0.9.0&e=jar)).
 
 ## What makes it different?
 
