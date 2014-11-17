@@ -49,7 +49,7 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 or,
 
 ```scala
-libraryDependencies += "org.scala-lang" %% "scala-pickling" % "0.10.0-SNAPSHOT"
+libraryDependencies += "org.scala-lang.modules" %% "scala-pickling" % "0.10.0-SNAPSHOT"
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 ```
