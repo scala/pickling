@@ -2,11 +2,11 @@ language: scala
 script:
   - sbt ++$TRAVIS_SCALA_VERSION clean test
 scala:
-  - 2.11.2
+  - 2.11.4
 jdk:
   - openjdk7
   - oraclejdk7
 notifications:
   email:
     - heather.miller@epfl.ch
-    - philipp.haller@typesafe.com
+    - philipp.haller@a3.epfl.ch
