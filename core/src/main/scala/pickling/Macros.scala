@@ -29,6 +29,7 @@ trait PicklerMacros extends Macro with PickleMacros {
       typeOf[Boolean] -> 1
     )
 
+    // uses "picklee"
     def getField(fir: FieldIR): Tree =
       if (fir.isPublic) q"picklee.${newTermName(fir.name)}"
       else if (fir.javaSetter.isDefined) {
@@ -419,12 +420,14 @@ trait PickleMacros extends Macro {
     val tpe = weakTypeOf[T]
     val q"${_}($pickleeArg)" = c.prefix.tree
     val endPickle = if (shouldBotherAboutCleaning(tpe)) q"clearPicklees()" else q"";
+    val pickleeName = newTermName("picklee$pickleTo$")
+    val builderName = newTermName("builder$pickleTo$")
     q"""
       import scala.pickling._
       import scala.pickling.internal._
-      val picklee: $tpe = $pickleeArg
-      val builder = $format.createBuilder($output)
-      picklee.pickleInto(builder)
+      val $pickleeName: $tpe = $pickleeArg
+      val $builderName = $format.createBuilder($output)
+      $pickleeName.pickleInto($builderName)
       $endPickle
     """
   }
@@ -433,14 +436,16 @@ trait PickleMacros extends Macro {
     val tpe = weakTypeOf[T]
     val q"${_}($pickleeArg)" = c.prefix.tree
     val endPickle = if (shouldBotherAboutCleaning(tpe)) q"clearPicklees()" else q"";
+    val pickleeName = newTermName("picklee$pickle$")
+    val builderName = newTermName("builder$pickle$")
     q"""
       import scala.pickling._
       import scala.pickling.internal._
-      val picklee: $tpe = $pickleeArg
-      val builder = $format.createBuilder()
-      picklee.pickleInto(builder)
+      val $pickleeName: $tpe = $pickleeArg
+      val $builderName = $format.createBuilder()
+      $pickleeName.pickleInto($builderName)
       $endPickle
-      builder.result()
+      $builderName.result()
     """
   }
 
@@ -471,7 +476,7 @@ trait PickleMacros extends Macro {
     }
   }
 
-  def genDispatchLogic(tpe: c.Type, builder: c.Tree): c.Tree = {
+  def genDispatchLogic(tpe: c.Type, builder: c.Tree, pickleeName: c.TermName): c.Tree = {
     val sym = tpe.typeSymbol
 
     def nonFinalDispatch = {
@@ -484,7 +489,7 @@ trait PickleMacros extends Macro {
       q"""
         val customPickler = implicitly[scala.pickling.SPickler[$tpe]]
         if (customPickler.isInstanceOf[scala.pickling.PicklerUnpicklerNotFound[_]] || customPickler.isInstanceOf[scala.pickling.Generated]) {
-          val clazz = if (picklee != null) picklee.getClass else null
+          val clazz = if ($pickleeName != null) $pickleeName.getClass else null
           ${Match(q"clazz", compileTimeDispatch :+ runtimeDispatch)}
         } else {
           // without Generated we would arrive here in two cases:
@@ -545,13 +550,16 @@ trait PickleMacros extends Macro {
     val tpe = weakTypeOf[T].widen // to make module classes work
     val sym = tpe.typeSymbol
 
+    val pickleeName = newTermName("picklee$pickleInto$")
+    val picklerName = newTermName("pickler$pickleInto$")
+
     val picklingLogic = if (sym.isClass && sym.asClass.isPrimitive) q"""
-      val pickler = ${createPickler(tpe, builder)}
-      pickler.pickle(picklee, $builder)
+      val $picklerName = ${createPickler(tpe, builder)}
+      $picklerName.pickle($pickleeName, $builder)
     """ else q"""
-      if (picklee != null) {
-        val pickler = ${genDispatchLogic(tpe, builder)}
-        pickler.asInstanceOf[scala.pickling.SPickler[$tpe]].pickle(picklee, $builder)
+      if ($pickleeName != null) {
+        val $picklerName = ${genDispatchLogic(tpe, builder, pickleeName)}
+        $picklerName.asInstanceOf[scala.pickling.SPickler[$tpe]].pickle($pickleeName, $builder)
       } else {
         $builder.hintTag(scala.pickling.FastTypeTag.Null)
         scala.pickling.SPickler.nullPicklerUnpickler.pickle(null, $builder)
@@ -562,7 +570,7 @@ trait PickleMacros extends Macro {
       import scala.language.existentials
       import scala.pickling._
       import scala.pickling.internal._
-      val picklee: $tpe = $picklee
+      val $pickleeName: $tpe = $picklee
       scala.pickling.internal.GRL.lock()
       $picklingLogic
       scala.pickling.internal.GRL.unlock()
@@ -582,15 +590,17 @@ trait UnpickleMacros extends Macro {
     import c.universe._
     val tpe = weakTypeOf[T]
     val pickleArg = c.prefix.tree
-    val readerName = c.fresh(newTermName("reader"))
+    val readerName = newTermName("reader$unpickle$")
     val readerUnpickleTree = readerUnpickleTopLevel(tpe, readerName)
+    val formatName = newTermName("format$unpickle$")
+    val pickleName = newTermName("pickle$unpickle$")
     q"""
       import scala.language.existentials
       import scala.pickling._
       import scala.pickling.internal._
-      val format = implicitly[scala.pickling.PickleFormat]
-      val pickle = $pickleArg.thePickle.asInstanceOf[format.PickleType]
-      val $readerName = format.createReader(pickle, scala.pickling.internal.`package`.currentMirror)
+      val $formatName = implicitly[scala.pickling.PickleFormat]
+      val $pickleName = $pickleArg.thePickle.asInstanceOf[$formatName.PickleType]
+      val $readerName = $formatName.createReader($pickleName, scala.pickling.internal.`package`.currentMirror)
       $readerUnpickleTree
     """
   }
@@ -618,7 +628,8 @@ trait UnpickleMacros extends Macro {
       """
     }
 
-    val customDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"customUnpickler")
+    val customUnpicklerName = newTermName("customUnpickler$unpickle$")
+    val customDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"$customUnpicklerName")
     val refDispatch = CaseDef(Literal(Constant(FastTypeTag.Ref.key)), EmptyTree, createUnpickler(typeOf[refs.Ref]))
 
     def nonFinalDispatch = {
@@ -632,8 +643,8 @@ trait UnpickleMacros extends Macro {
       """)
 
       q"""
-        val customUnpickler = implicitly[scala.pickling.Unpickler[$tpe]]
-        if (customUnpickler.isInstanceOf[scala.pickling.PicklerUnpicklerNotFound[_]] || customUnpickler.isInstanceOf[scala.pickling.Generated]) {
+        val $customUnpicklerName = implicitly[scala.pickling.Unpickler[$tpe]]
+        if ($customUnpicklerName.isInstanceOf[scala.pickling.PicklerUnpicklerNotFound[_]] || $customUnpicklerName.isInstanceOf[scala.pickling.Generated]) {
           ${Match(q"typeString", compileTimeDispatch :+ refDispatch :+ runtimeDispatch)}
         } else {
           ${Match(q"typeString", List(refDispatch) :+ customDispatch)}
@@ -643,7 +654,7 @@ trait UnpickleMacros extends Macro {
 
     def abstractTypeDispatch =
       q"""
-        val customUnpickler = implicitly[scala.pickling.Unpickler[$tpe]]
+        val $customUnpicklerName = implicitly[scala.pickling.Unpickler[$tpe]]
         ${Match(q"typeString", List(refDispatch) :+ customDispatch)}
       """
 
@@ -654,13 +665,15 @@ trait UnpickleMacros extends Macro {
       else nonFinalDispatch
     val unpickleeCleanup = if (isTopLevel && shouldBotherAboutCleaning(tpe)) q"clearUnpicklees()" else q""
 
+    val unpicklerName = newTermName("unpickler$unpickle$")
+
     q"""
       scala.pickling.internal.GRL.lock()
       $readerName.hintTag(implicitly[scala.pickling.FastTypeTag[$tpe]])
       $staticHint
       val typeString = $readerName.beginEntryNoTag()
-      val unpickler = $dispatchLogic
-      val result = unpickler.unpickle({ scala.pickling.FastTypeTag(typeString) }, $readerName)
+      val $unpicklerName = $dispatchLogic
+      val result = $unpicklerName.unpickle({ scala.pickling.FastTypeTag(typeString) }, $readerName)
       $readerName.endEntry()
       $unpickleeCleanup
       scala.pickling.internal.GRL.unlock()
