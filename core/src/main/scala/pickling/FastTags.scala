@@ -182,6 +182,9 @@ trait FastTypeTagMacros extends Macro {
   def impl[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
     val T = weakTypeOf[T]
+    if (T.typeSymbol.isParameter)
+      c.abort(c.enclosingPosition, s"cannot generate FastTypeTag for type parameter $T, FastTypeTag can only be generated for concrete types")
+
     q"""
       new scala.pickling.FastTypeTag[$T] {
         def mirror = scala.pickling.internal.`package`.currentMirror

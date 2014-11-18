@@ -35,7 +35,7 @@ trait DPickler[T] {
 }
 
 object DPickler {
-  implicit def genDPickler[T](implicit format: PickleFormat): DPickler[T] = macro Compat.PicklerMacros_dpicklerImpl[T]
+  implicit def genDPickler[T]: DPickler[T] = macro Compat.PicklerMacros_dpicklerImpl[T]
 }
 
 trait GenPicklers extends RuntimePicklersUnpicklers {
