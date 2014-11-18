@@ -66,7 +66,6 @@ object MyBuild extends Build {
     "scala-pickling",
     file("core"),
     settings = buildSettings ++ Seq(
-      scalacOptions ++= Seq("-optimise"),
       libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
       libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _), // for ToolBox
       libraryDependencies += "org.scalatest" %% "scalatest" % "2.1.7" % "test",
