@@ -183,7 +183,7 @@ trait FastTypeTagMacros extends Macro {
     import c.universe._
     val T = weakTypeOf[T]
     if (T.typeSymbol.isParameter)
-      c.abort(c.enclosingPosition, "cannot generate FastTypeTag for type parameter")
+      c.abort(c.enclosingPosition, s"cannot generate FastTypeTag for type parameter $T, FastTypeTag can only be generated for concrete types")
 
     q"""
       new scala.pickling.FastTypeTag[$T] {
