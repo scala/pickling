@@ -69,6 +69,15 @@ object FastTypeTag {
   def apply(mirror: ru.Mirror, key: String): FastTypeTag[_] = apply(mirror, typeFromString(mirror, key), key)
   def apply(key: String): FastTypeTag[_] = macro Compat.FastTypeTagMacros_apply
 
+  def apply[T: ru.TypeTag]: FastTypeTag[T] = {
+    val ruTpe = implicitly[ru.TypeTag[T]].tpe
+    new FastTypeTag[T] {
+      def mirror = scala.reflect.runtime.currentMirror
+      lazy val tpe = ruTpe
+      def key = ruTpe.key
+    }
+  }
+
   def valueTypeName(tag: FastTypeTag[_]): String = {
     val clazz: Class[_] = tag match {
       case FastTypeTag.String => classOf[java.lang.String]
