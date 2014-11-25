@@ -268,6 +268,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro with UnpickleMacros {
           arrReader.endCollection()
           ${mkResult(q"buffer")}
         }
+        def tag: FastTypeTag[$tpe] = colltag
       }
       $picklerUnpicklerName
     """

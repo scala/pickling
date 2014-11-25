@@ -13,6 +13,8 @@ class MyClassPickler[A](implicit val format: PickleFormat, aTypeTag: FastTypeTag
 
   private val stringUnpickler = implicitly[Unpickler[String]]
 
+  def tag: FastTypeTag[MyClass[A]] = implicitly[FastTypeTag[MyClass[A]]]
+
   override def pickle(picklee: MyClass[A], builder: PBuilder) = {
     builder.beginEntry(picklee)
 

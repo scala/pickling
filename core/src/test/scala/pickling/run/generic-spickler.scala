@@ -7,6 +7,8 @@ import json._
 case class PersonY(name: String, age: Int)
 case class PersonX(name: String, age: Int, salary: Int)
 class CustomPersonXPickler(implicit val format: PickleFormat) extends SPickler[PersonX] {
+  def tag: FastTypeTag[PersonX] = implicitly[FastTypeTag[PersonX]]
+
   def pickle(picklee: PersonX, builder: PBuilder) = {
     builder.hintTag(implicitly[FastTypeTag[PersonX]])
     builder.beginEntry(picklee).putField("name", b => {
