@@ -25,6 +25,15 @@ class PicklerUnpicklerNotFound[T] extends SPickler[T] with Unpickler[T] with Gen
 
 trait LowPriorityPicklersUnpicklers {
 
+  // Any
+  implicit object anyUnpickler extends Unpickler[Any] {
+    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+      val actualUnpickler = Unpickler.genUnpickler(scala.reflect.runtime.currentMirror, tag)
+      actualUnpickler.unpickle(tag, reader)
+    }
+    def tag: FastTypeTag[Any] = FastTypeTag[Any]
+  }
+
   // collections
 
   implicit def iterablePickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[Iterable[T]], format: PickleFormat, cbf: CanBuildFrom[Iterable[T], T, Iterable[T]]): SPickler[Iterable[T]] with Unpickler[Iterable[T]] =
