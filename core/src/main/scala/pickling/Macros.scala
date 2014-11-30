@@ -695,16 +695,17 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
       if (sym.asType.isAbstractType) abstractTypeDispatch
       else if (sym.isEffectivelyFinal) finalDispatch
       else nonFinalDispatch
+
     val unpickleeCleanup = if (isTopLevel && shouldBotherAboutCleaning(tpe)) q"clearUnpicklees()" else q""
 
     val unpicklerName = newTermName("unpickler$unpickle$")
 
     q"""
+      val $unpicklerName = implicitly[scala.pickling.Unpickler[$tpe]]
       scala.pickling.internal.GRL.lock()
-      $readerName.hintTag(implicitly[scala.pickling.FastTypeTag[$tpe]])
+      $readerName.hintTag($unpicklerName.tag)
       $staticHint
       val typeString = $readerName.beginEntryNoTag()
-      val $unpicklerName = $dispatchLogic
       val result = $unpicklerName.unpickle({ scala.pickling.FastTypeTag(typeString) }, $readerName)
       $readerName.endEntry()
       $unpickleeCleanup
