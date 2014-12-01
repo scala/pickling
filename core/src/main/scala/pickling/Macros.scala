@@ -10,12 +10,23 @@ trait TypeAnalysis extends Macro {
   def isCaseClass(sym: TypeSymbol): Boolean =
     sym.isClass && sym.asClass.isCaseClass
 
-  def isClosed(sym: TypeSymbol): Boolean = {
-    sym.isEffectivelyFinal || isCaseClass(sym) || {
-      sym.isClass && {
-        val classSym = sym.asClass
-        classSym.isSealed && classSym.knownDirectSubclasses.forall(cl => isClosed(cl.asType))
+  def isClosed(sym: TypeSymbol): Boolean =
+    whyNotClosed(sym).isEmpty
+
+  def whyNotClosed(sym: TypeSymbol): Seq[String] = {
+    if (sym.isEffectivelyFinal)
+      Nil
+    else if (isCaseClass(sym))
+      Nil
+    else if (sym.isClass) {
+      val classSym = sym.asClass
+      if (classSym.isSealed) {
+        classSym.knownDirectSubclasses.toList.flatMap(cl => whyNotClosed(cl.asType))
+      } else {
+        List(s"'${sym.fullName}' allows unknown subclasses (it is not sealed or final isCaseClass=${isCaseClass(sym)} isEffectivelyFinal=${sym.isEffectivelyFinal} isSealed=${classSym.isSealed})")
       }
+    } else {
+      List(s"'${sym.fullName}' is not a class or trait")
     }
   }
 }
@@ -544,8 +555,9 @@ trait PickleMacros extends Macro with TypeAnalysis {
     // if (sym == ListClass) listDispatch else
 
     if (c.inferImplicitValue(typeOf[IsStaticOnly]) != EmptyTree) {
-      if (!isClosed(sym.asType))
-        c.abort(c.enclosingPosition, "cannot generate fully static pickler")
+      val notClosedReasons = whyNotClosed(sym.asType)
+      if (notClosedReasons.nonEmpty)
+        c.abort(c.enclosingPosition, s"cannot generate fully static pickler because: ${notClosedReasons.mkString(", ")}")
     }
 
     if (sym.asType.isAbstractType || sym.isEffectivelyFinal) createPickler(tpe, builder)
