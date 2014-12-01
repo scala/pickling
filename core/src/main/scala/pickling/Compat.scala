@@ -25,6 +25,12 @@ object Compat {
     c.Expr[Unpickler[T] with Generated](bundle.impl[T])
   }
 
+  def OpenSumUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context): c.Expr[Unpickler[T] with Generated] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with OpenSumUnpicklerMacro
+    c.Expr[Unpickler[T] with Generated](bundle.impl[T])
+  }
+
   def PickleMacros_pickle[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat], tag: c.Expr[FastTypeTag[T]]): c.Expr[format.value.PickleType] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PickleMacros

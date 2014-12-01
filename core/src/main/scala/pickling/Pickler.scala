@@ -82,7 +82,12 @@ trait Unpickler[T] {
   def tag: FastTypeTag[T]
 }
 
-trait GenUnpicklers extends RuntimePicklersUnpicklers {
+trait GenOpenSumUnpicklers {
+  // TODO: move
+  implicit def genOpenSumUnpickler[T]: Unpickler[T] with Generated = macro Compat.OpenSumUnpicklerMacro_impl[T]
+}
+
+trait GenUnpicklers extends GenOpenSumUnpicklers with RuntimePicklersUnpicklers {
 
   implicit def genUnpickler[T]: Unpickler[T] with Generated = macro Compat.UnpicklerMacros_impl[T]
 
