@@ -192,16 +192,12 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, fastTag: FastTypeTag[_])(impli
           c.getField("MODULE$").get(c)
         } else {
           val pendingFields =
-            if (tag.key.contains("anonfun$")) {
-              List[FieldIR]()
-            } else {
-              val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
-              (nonLoopyFields ++ loopyFields).filter(fir =>
-                fir.hasGetter || {
-                  // exists as Java field
-                  scala.util.Try(clazz.getDeclaredField(fir.name)).isSuccess
-                })
-            }
+            if (tag.key.contains("anonfun$")) List[FieldIR]()
+            else cir.fields.filter(fir =>
+              fir.hasGetter || {
+                // exists as Java field
+                scala.util.Try(clazz.getDeclaredField(fir.name)).isSuccess
+              })
 
           def fieldVals = pendingFields.map(fir => {
             val freader = reader.readField(fir.name)
