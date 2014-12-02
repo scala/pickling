@@ -49,7 +49,7 @@ object Compat {
     c.Expr[Unit](bundle.pickleTo[T](output.tree)(format.tree))
   }
 
-  def UnpickleMacros_pickleUnpickle[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[T] = {
+  def UnpickleMacros_pickleUnpickle[T: c.WeakTypeTag](c: Context)(unpickler: c.Expr[Unpickler[T]], format: c.Expr[PickleFormat]): c.Expr[T] = {
     import c.universe._
     val c0: c.type = c
     val tpe = c.universe.weakTypeOf[T]
