@@ -253,6 +253,9 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
 
 import HasCompat._
 
+/*
+ * This macro generates an unpickler for an _abstract_ type that is also an open sum.
+ */
 trait OpenSumUnpicklerMacro extends Macro with UnpicklerMacros with FastTypeTagMacros {
   override def impl[T: c.WeakTypeTag]: c.Tree = preferringAlternativeImplicits {
     import c.universe._
@@ -486,12 +489,22 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
             unpickler.asInstanceOf[scala.pickling.Unpickler[$tpe]].unpickle(tag, reader)
           """
         } else {
-          // if class is abstract return instance of `PicklerUnpicklerNotFound`.
-          // this triggers the generation of a dispatch based on the runtime class of the picklee.
-          // return q"new scala.pickling.PicklerUnpicklerNotFound[$tpe]"
           c.abort(c.enclosingPosition, s"cannot unpickle $tpe")
         }
-      case _ => unpickleObject
+      case _ =>
+        q"""
+          if (tag.key == scala.pickling.FastTypeTag.Null.key) {
+            null
+          } else if (tag.key == scala.pickling.FastTypeTag.Ref.key) {
+            val refUnpickler = ${createUnpickler(RefTpe)}
+            refUnpickler.unpickle(tag, reader)
+          } else if (tag.key == ${if (tpe <:< typeOf[Singleton]) sym.fullName + ".type" else tpe.key}) {
+            $unpickleObject
+          } else {
+            val rtUnpickler = scala.pickling.Unpickler.genUnpickler(reader.mirror, tag)
+            rtUnpickler.unpickle(tag, reader)
+          }
+        """
     }
 
     val createTagTree = super[FastTypeTagMacros].impl[T]
