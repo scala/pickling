@@ -726,57 +726,9 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
   }
 
   def readerUnpickleHelper(tpe: Type, readerName: TermName)(isTopLevel: Boolean = false): Tree = {
-    import definitions._
-
-    val sym = tpe.typeSymbol
-
-    def finalDispatch = {
-      if (sym.isNotNullable) createUnpickler(tpe)
-      else q"""
-        val tag = scala.pickling.FastTypeTag(typeString)
-        if (tag.key == scala.pickling.FastTypeTag.Null.key) ${createUnpickler(NullTpe)}
-        else if (tag.key == scala.pickling.FastTypeTag.Ref.key) ${createUnpickler(RefTpe)}
-        else ${createUnpickler(tpe)}
-      """
-    }
-
-    val customUnpicklerName = newTermName("customUnpickler$unpickle$")
-    val customDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"$customUnpicklerName")
-    val refDispatch = createRefDispatch()
-
-    def nonFinalDispatch = {
-      val compileTimeDispatch = createCompileTimeDispatch(tpe)
-      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""
-        val tag = scala.pickling.FastTypeTag(typeString)
-        scala.pickling.Unpickler.genUnpickler($readerName.mirror, tag)
-      """)
-
-      q"""
-        val $customUnpicklerName = implicitly[scala.pickling.Unpickler[$tpe]]
-        if ($customUnpicklerName.isInstanceOf[scala.pickling.PicklerUnpicklerNotFound[_]] || $customUnpicklerName.isInstanceOf[scala.pickling.Generated]) {
-          ${Match(q"typeString", compileTimeDispatch :+ refDispatch :+ runtimeDispatch)}
-        } else {
-          ${Match(q"typeString", List(refDispatch) :+ customDispatch)}
-        }
-      """
-    }
-
-    def abstractTypeDispatch =
-      q"""
-        val $customUnpicklerName = implicitly[scala.pickling.Unpickler[$tpe]]
-        ${Match(q"typeString", List(refDispatch) :+ customDispatch)}
-      """
-
-    val staticHint = if (sym.isEffectivelyFinal && !isTopLevel) (q"$readerName.hintStaticallyElidedType()": Tree) else q"";
-    val dispatchLogic =
-      if (sym.asType.isAbstractType) abstractTypeDispatch
-      else if (sym.isEffectivelyFinal) finalDispatch
-      else nonFinalDispatch
-
+    val staticHint       = if (tpe.typeSymbol.isEffectivelyFinal && !isTopLevel) q"$readerName.hintStaticallyElidedType()" else q""
     val unpickleeCleanup = if (isTopLevel && shouldBotherAboutCleaning(tpe)) q"clearUnpicklees()" else q""
-
-    val unpicklerName = c.fresh(newTermName("unpickler$unpickle$"))
-
+    val unpicklerName    = c.fresh(newTermName("unpickler$unpickle$"))
     q"""
       var $unpicklerName: scala.pickling.Unpickler[$tpe] = null
       $unpicklerName = implicitly[scala.pickling.Unpickler[$tpe]]

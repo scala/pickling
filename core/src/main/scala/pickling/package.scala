@@ -12,7 +12,7 @@ package object pickling {
   }
 
   implicit class UnpickleOps(val thePickle: Pickle) {
-    def unpickle[T](implicit format: PickleFormat): T = macro Compat.UnpickleMacros_pickleUnpickle[T]
+    def unpickle[T](implicit unpickler: Unpickler[T], format: PickleFormat): T = macro Compat.UnpickleMacros_pickleUnpickle[T]
   }
 
 }
