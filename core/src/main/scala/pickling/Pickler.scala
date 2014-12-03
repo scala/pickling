@@ -83,7 +83,6 @@ trait Unpickler[T] {
 }
 
 trait GenOpenSumUnpicklers {
-  // TODO: move
   implicit def genOpenSumUnpickler[T]: Unpickler[T] with Generated = macro Compat.OpenSumUnpicklerMacro_impl[T]
 }
 
