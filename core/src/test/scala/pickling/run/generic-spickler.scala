@@ -22,8 +22,8 @@ class CustomPersonXPickler(implicit val format: PickleFormat) extends SPickler[P
 
 class GenericSpickler extends FunSuite {
   test("stack-overflow-pickle-unpickle") {
-    def bar[T: SPickler: FastTypeTag](t: T) = t.pickle
-    def unbar[T: Unpickler: FastTypeTag](s: String) = JSONPickle(s).unpickle[T]
+    def bar[T: SPickler](t: T) = t.pickle
+    def unbar[T: Unpickler](s: String) = JSONPickle(s).unpickle[T]
 
     val p = PersonY("Philipp", 32)
     assert(bar(p).value == p.pickle.value)
@@ -35,7 +35,7 @@ class GenericSpickler extends FunSuite {
 
   test("issue-4") {
     implicit def genCustomPersonXPickler[T <: PersonX](implicit format: PickleFormat) = new CustomPersonXPickler
-    def fn[T <: PersonX:  SPickler: FastTypeTag](x: T) = x.pickle
+    def fn[T <: PersonX:  SPickler](x: T) = x.pickle
 
     val p = PersonX("Philipp", 32, 99999999)
     val jsn = """JSONPickle({
