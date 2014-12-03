@@ -65,10 +65,6 @@ object Compat {
         |Typically, this is caused by omitting an explicit type argument. Always invoke unpickle with a concrete
         |type argument, for example, unpickle[Int]""".stripMargin)
 
-    val tagTree = c.inferImplicitValue(appliedType(typeOf[FastTypeTag[_]].typeConstructor, List(tpe)))
-    if (tagTree == EmptyTree)
-      c.abort(c.enclosingPosition, s"could not find implicit FastTypeTag for type: $tpe")
-
     val bundle = new { val c: c0.type = c0 } with UnpickleMacros
     c.Expr[T](bundle.pickleUnpickle[T])
   }
