@@ -279,13 +279,13 @@ trait OpenSumUnpicklerMacro extends Macro with UnpicklerMacros with FastTypeTagM
     val cancel: () => Nothing =
       () => c.abort(c.enclosingPosition, s"cannot unpickle $tpe")
 
-    def nonFinalDispatch = {
+    def dispatchLogic = {
       val compileTimeDispatch = createCompileTimeDispatch(tpe)
-      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""
+      val refDispatch         = createRefDispatch()
+      val runtimeDispatch     = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""
         val tag = scala.pickling.FastTypeTag(typeString)
         scala.pickling.Unpickler.genUnpickler(reader.mirror, tag)
       """)
-      val refDispatch = createRefDispatch()
 
       q"""
         ${Match(q"typeString", compileTimeDispatch :+ refDispatch :+ runtimeDispatch)}
@@ -301,7 +301,6 @@ trait OpenSumUnpicklerMacro extends Macro with UnpicklerMacros with FastTypeTagM
           cancel()
         } else {
           // generate runtime dispatch
-          val dispatchLogic = nonFinalDispatch
           val dispUnpicklerName = newTermName("unpickler$dispatch$")
           q"""
             val typeString = tag.key
@@ -313,16 +312,12 @@ trait OpenSumUnpicklerMacro extends Macro with UnpicklerMacros with FastTypeTagM
     }
 
     val createTagTree = super[FastTypeTagMacros].impl[T]
-
     val unpicklerName = c.fresh(syntheticUnpicklerName(tpe).toTermName)
+
     q"""
       implicit object $unpicklerName extends scala.pickling.Unpickler[$tpe] with scala.pickling.Generated {
-        import scala.language.existentials
-        import scala.pickling._
-        import scala.pickling.ir._
-        import scala.pickling.internal._
         def unpickle(tag: => scala.pickling.FastTypeTag[_], reader: scala.pickling.PReader): Any = $unpickleLogic
-        def tag: FastTypeTag[$tpe] = $createTagTree
+        def tag: scala.pickling.FastTypeTag[$tpe] = $createTagTree
       }
       $unpicklerName
     """
