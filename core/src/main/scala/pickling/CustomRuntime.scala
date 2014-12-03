@@ -75,29 +75,6 @@ trait RuntimePicklersUnpicklers {
   GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcZZ$sp" -> (new Tuple2RTPickler(null)))
 
 
-  // def mkAnyRefArrayTravPickler[C <% Traversable[_]](mirror: ru.Mirror, classLoader: ClassLoader)(implicit cbf: CanBuildFrom[C, AnyRef, C]):
-  //   SPickler[C] /*with Unpickler[C]*/ = new SPickler[C] /*with Unpickler[C]*/ {
-
-  //   def pickle(coll: C, builder: PBuilder): Unit = {
-  //     builder.hintTag(FastTypeTag.ArrayAnyRef)
-  //     builder.beginEntry(coll)
-
-  //     builder.beginCollection(coll.size)
-  //     (coll: Traversable[_]).asInstanceOf[Traversable[AnyRef]].foreach { (elem: AnyRef) =>
-  //       builder putElement { b =>
-  //         val elemClass = elem.getClass
-  //         val elemTag = FastTypeTag.mkRaw(elemClass, mirror) // slow: `mkRaw` is called for each element
-  //         b.hintTag(elemTag)
-  //         val pickler = SPickler.genPickler(classLoader, elemClass, elemTag).asInstanceOf[SPickler[AnyRef]]
-  //         pickler.pickle(elem, b)
-  //       }
-  //     }
-  //     builder.endCollection()
-
-  //     builder.endEntry()
-  //   }
-  // }
-
   def mkRuntimeTravPickler[C <% Traversable[_]](elemClass: Class[_], elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
                                                 elemPickler0: SPickler[_], elemUnpickler0: Unpickler[_]):
     SPickler[C] with Unpickler[C] = new SPickler[C] with Unpickler[C] {
