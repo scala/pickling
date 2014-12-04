@@ -36,6 +36,7 @@ class CombinatorPickleIntoTest extends FunSuite {
 
     implicit def personp(implicit intp: SPickler[Int]): SPickler[Person] =
       new SPickler[Person] {
+        def tag: FastTypeTag[Person] = implicitly[FastTypeTag[Person]]
         def pickle(p: Person, builder: PBuilder): Unit = {
           // let's say we only want to pickle id, since we can look up name and age based on id
           // then we can make use of a size hint, so that a fixed-size array can be used for pickling
@@ -53,6 +54,7 @@ class CombinatorPickleIntoTest extends FunSuite {
 
     implicit def personup(implicit intup: Unpickler[Int]): Unpickler[Person] =
       new Unpickler[Person] {
+        def tag: FastTypeTag[Person] = implicitly[FastTypeTag[Person]]
         def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
           reader.hintTag(FastTypeTag.Int)
           reader.hintStaticallyElidedType()

@@ -19,6 +19,7 @@ import internal._
 @implicitNotFound(msg = "Cannot generate a pickler for ${T}. Recompile with -Xlog-implicits for details")
 trait SPickler[T] {
   def pickle(picklee: T, builder: PBuilder): Unit
+  def tag: FastTypeTag[T]
 }
 
 /** A dynamic pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
@@ -57,7 +58,7 @@ trait GenPicklers extends RuntimePicklersUnpicklers {
 
           mkRuntimeTravPickler[Array[AnyRef]](elemClass, elemTag, tag, elemPickler, null)
         } else {
-          val runtime = new RuntimePickler(classLoader, clazz)
+          val runtime = new RuntimePickler(classLoader, clazz, tag)
           runtime.mkPickler
         }
         GlobalRegistry.picklerMap += (className -> (x => pickler))
@@ -78,9 +79,14 @@ object SPickler extends CorePicklersUnpicklers with RuntimePicklersUnpicklers
 @implicitNotFound(msg = "Cannot generate an unpickler for ${T}. Recompile with -Xlog-implicits for details")
 trait Unpickler[T] {
   def unpickle(tag: => FastTypeTag[_], reader: PReader): Any
+  def tag: FastTypeTag[T]
 }
 
-trait GenUnpicklers extends RuntimePicklersUnpicklers {
+trait GenOpenSumUnpicklers {
+  implicit def genOpenSumUnpickler[T]: Unpickler[T] with Generated = macro Compat.OpenSumUnpicklerMacro_impl[T]
+}
+
+trait GenUnpicklers extends GenOpenSumUnpicklers with RuntimePicklersUnpicklers {
 
   implicit def genUnpickler[T]: Unpickler[T] with Generated = macro Compat.UnpicklerMacros_impl[T]
 
