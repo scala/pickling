@@ -53,6 +53,7 @@ class BinaryListIntCustomTest extends FunSuite {
         arrReader.endCollection()
         buffer.toList
       }
+      def tag: FastTypeTag[::[Int]] = implicitly[FastTypeTag[::[Int]]]
     }
 
     val pickle = lst.pickle

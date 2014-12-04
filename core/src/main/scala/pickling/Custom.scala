@@ -20,9 +20,19 @@ import mutable.ArrayBuffer
 class PicklerUnpicklerNotFound[T] extends SPickler[T] with Unpickler[T] with Generated {
   def pickle(picklee: T, builder: PBuilder): Unit = ???
   def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = ???
+  def tag: FastTypeTag[T] = ???
 }
 
 trait LowPriorityPicklersUnpicklers {
+
+  // Any
+  implicit object anyUnpickler extends Unpickler[Any] {
+    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+      val actualUnpickler = Unpickler.genUnpickler(scala.reflect.runtime.currentMirror, tag)
+      actualUnpickler.unpickle(tag, reader)
+    }
+    def tag: FastTypeTag[Any] = FastTypeTag[Any]
+  }
 
   // collections
 
@@ -81,13 +91,15 @@ trait LowPriorityPicklersUnpicklers {
     mkMapPickler[K, V, mutable.Map]
 
 
-  def mkTravPickler[T: FastTypeTag, C <% Traversable[_]: FastTypeTag]
+  def mkTravPickler[T: FastTypeTag, C <% Traversable[_]]
     (implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T],
               cbf: CanBuildFrom[C, T, C], collTag: FastTypeTag[C]): SPickler[C] with Unpickler[C] =
     new SPickler[C] with Unpickler[C] {
 
     val elemTag  = implicitly[FastTypeTag[T]]
     val isPrimitive = elemTag.tpe.isEffectivelyPrimitive
+
+    def tag: FastTypeTag[C] = collTag
 
     def pickle(coll: C, builder: PBuilder): Unit = {
       if (elemTag == FastTypeTag.Int) builder.hintKnownSize(coll.size * 4 + 100)
@@ -265,6 +277,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro with UnpickleMacros {
           arrReader.endCollection()
           ${mkResult(q"buffer")}
         }
+        def tag: FastTypeTag[$tpe] = colltag
       }
       $picklerUnpicklerName
     """
@@ -277,6 +290,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   import java.text.SimpleDateFormat
 
   implicit object BigDecimalPicklerUnpickler extends SPickler[BigDecimal] with Unpickler[BigDecimal] {
+    def tag = FastTypeTag[BigDecimal]
     def pickle(picklee: BigDecimal, builder: PBuilder): Unit = {
       builder.beginEntry(picklee)
 
@@ -302,6 +316,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
   }
 
   implicit object BigIntPicklerUnpickler extends SPickler[BigInteger] with Unpickler[BigInteger] {
+    def tag = FastTypeTag[BigInteger]
     def pickle(picklee: BigInteger, builder: PBuilder): Unit = {
       builder.beginEntry(picklee)
 
@@ -335,6 +350,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
     }
     private def dateFormat = dateFormatTemplate.clone.asInstanceOf[SimpleDateFormat]
 
+    def tag = FastTypeTag[Date]
     def pickle(picklee: Date, builder: PBuilder): Unit = {
       builder.beginEntry(picklee)
 

@@ -47,7 +47,7 @@ class RuntimeTypeInfo(classLoader: ClassLoader, clazz: Class[_], share: refs.Sha
   def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
 }
 
-class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit share: refs.Share) extends RuntimeTypeInfo(classLoader, clazz, share) {
+class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTypeTag[_])(implicit share: refs.Share) extends RuntimeTypeInfo(classLoader, clazz, share) {
   import ru._
 
   sealed abstract class Logic(fir: irs.FieldIR, isEffFinal: Boolean) {
@@ -196,6 +196,8 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit share: 
         val im = mirror.reflect(picklee)
         fields.foreach(_.run(builder, picklee, im))
       }
+
+      def tag: FastTypeTag[Any] = fastTag.asInstanceOf[FastTypeTag[Any]]
 
       def pickle(picklee: Any, builder: PBuilder): Unit = {
         //debug(s"pickling object of type: ${tag.key}")

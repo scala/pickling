@@ -18,6 +18,8 @@ class WrappedArrayTest extends FunSuite {
 
     val mirror = scala.reflect.runtime.currentMirror
 
+    def tag: FastTypeTag[WrappedArray.ofRef[AnyRef]] = implicitly[FastTypeTag[WrappedArray.ofRef[AnyRef]]]
+
     def pickle(coll: WrappedArray.ofRef[AnyRef], builder: PBuilder): Unit = {
       builder.hintTag(implicitly[FastTypeTag[WrappedArray.ofRef[AnyRef]]])
       builder.beginEntry(coll)
