@@ -744,8 +744,8 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
   }
 
   def readerUnpickleHelper(tpe: Type, readerName: TermName)(isTopLevel: Boolean = false): Tree = {
-    val staticHint       = if (tpe.typeSymbol.isEffectivelyFinal && !isTopLevel) q"$readerName.hintStaticallyElidedType()" else q""
-    val unpickleeCleanup = if (isTopLevel && shouldBotherAboutCleaning(tpe)) q"clearUnpicklees()" else q""
+    val staticHint       = if (tpe.typeSymbol.isEffectivelyFinal && !isTopLevel) q"$readerName.hintStaticallyElidedType()" else q"";
+    val unpickleeCleanup = if (isTopLevel && shouldBotherAboutCleaning(tpe)) q"clearUnpicklees()" else q"";
     val unpicklerName    = c.fresh(newTermName("unpickler$unpickle$"))
     q"""
       var $unpicklerName: scala.pickling.Unpickler[$tpe] = null
