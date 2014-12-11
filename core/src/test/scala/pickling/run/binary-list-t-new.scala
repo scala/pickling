@@ -12,7 +12,7 @@ class BinaryListTNewTest extends FunSuite {
     val result = pickle.toString
     //Console.err.println("expected " + expected)
     //Console.err.println("result   " + result)
-    assert(result === expected)
+    assert(result === expected0)
     assert(pickle.unpickle[List[Int]] === List(1, 2, 3))
   }
 }

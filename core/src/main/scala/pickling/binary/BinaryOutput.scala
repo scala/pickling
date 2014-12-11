@@ -113,6 +113,79 @@ class ByteArrayOutput(buffer: java.io.ByteArrayOutputStream) extends StreamOutpu
   override def result = buffer.toByteArray
 }
 
+class FixedByteArrayOutput(capacity: Int) extends BinaryOutput {
+
+  private val head = Array.ofDim[Byte](capacity)
+  private var pos = 0
+
+  override def result = head
+
+  def ensureCapacity(capacity: Int): Unit = { }
+
+  def putByte(value: Byte) {
+    head(pos) = value
+    pos += 1
+  }
+
+  def putChar(value: Char) {
+    head(pos)   = (value >>> 8 & 0xff).asInstanceOf[Byte]
+    head(pos+1) = (value & 0xff).asInstanceOf[Byte]
+    pos += 2
+  }
+
+  def putShort(value: Short) {
+    head(pos)   = (value >>> 8 & 0xff).asInstanceOf[Byte]
+    head(pos+1) = (value & 0xff).asInstanceOf[Byte]
+    pos += 2
+  }
+
+  def putInt(value: Int) {
+    head(pos)   = (value >>> 24 & 0xff).asInstanceOf[Byte]
+    head(pos+1) = (value >>> 16 & 0xff).asInstanceOf[Byte]
+    head(pos+2) = (value >>>  8 & 0xff).asInstanceOf[Byte]
+    head(pos+3) = (value        & 0xff).asInstanceOf[Byte]
+    pos += 4
+  }
+
+  def putLong(value: Long) {
+    head(pos)   = (value >>> 56 & 0xff).asInstanceOf[Byte]
+    head(pos+1) = (value >>> 48 & 0xff).asInstanceOf[Byte]
+    head(pos+2) = (value >>> 40 & 0xff).asInstanceOf[Byte]
+    head(pos+3) = (value >>> 32 & 0xff).asInstanceOf[Byte]
+    head(pos+4) = (value >>> 24 & 0xff).asInstanceOf[Byte]
+    head(pos+5) = (value >>> 16 & 0xff).asInstanceOf[Byte]
+    head(pos+6) = (value >>>  8 & 0xff).asInstanceOf[Byte]
+    head(pos+7) = (value        & 0xff).asInstanceOf[Byte]
+    pos += 8
+  }
+
+  def putFloat(value: Float) {
+    val intValue = java.lang.Float.floatToRawIntBits(value)
+    putInt(intValue)
+  }
+
+  def putDouble(value: Double) {
+    val longValue = java.lang.Double.doubleToRawLongBits(value)
+    putLong(longValue)
+  }
+
+  def putBytes(value: Array[Byte], len: Int): Unit = {
+    val off = UnsafeMemory.byteArrayOffset
+    UnsafeMemory.unsafe.copyMemory(value, off, head, off + pos, len)
+    pos += len
+  }
+
+  //a single chunk
+  override protected def putArrayByChunk[T <: AnyVal](arr: Array[T], offset: Long, eltSize: Int) {
+    val nbrElt = arr.length
+    var byteLen = nbrElt * eltSize
+    putInt(nbrElt)
+    UnsafeMemory.unsafe.copyMemory(arr, offset, head, UnsafeMemory.byteArrayOffset + pos, byteLen)
+    pos += byteLen
+  }
+
+}
+
 //TODO as a pool rather than a single array
 //TODO that might be dangerous in terms of security (exfiltrate data through the preAlloc array)
 object FastByteArrayOutput {
