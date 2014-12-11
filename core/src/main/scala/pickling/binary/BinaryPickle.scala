@@ -50,7 +50,7 @@ class BinaryPickleBuilder(format: BinaryPickleFormat, out: BinaryOutput) extends
 
   @inline private[this] def mkOutput(knownSize: Int): Unit = {
     if (output == null)
-      output = if (knownSize != -1) new ByteArrayOutput(knownSize)
+      output = if (knownSize != -1) new FixedByteArrayOutput(knownSize)
                else new ByteArrayOutput
     else
       output.ensureCapacity(knownSize)
