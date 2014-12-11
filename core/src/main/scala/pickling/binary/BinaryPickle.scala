@@ -197,7 +197,7 @@ class BinaryPickleReader(in: BinaryInput, mirror: Mirror, format: BinaryPickleFo
             val res = try {
               in.getStringWithLookahead(lookahead)
             } catch {
-              case PicklingException(msg) =>
+              case PicklingException(msg, cause) =>
                 val primInfo = if (hints.tag == null) ""
                   else s"\nnullable prim: ${nullablePrimitives.contains(hints.tag.key)}\nprim: ${primitives.contains(hints.tag.key)}"
                 throw PicklingException(s"error decoding type string. debug info: $hints$primInfo\ncause:$msg")
