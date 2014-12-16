@@ -508,6 +508,18 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
           c.abort(c.enclosingPosition, s"cannot unpickle $tpe")
         }
       case _ =>
+        // check for static-only import: in this case do not emit runtime unpickling logic
+        val tagNotKnownStatically =
+          if (c.inferImplicitValue(typeOf[IsStaticOnly]) != EmptyTree)
+            q"""
+              throw scala.pickling.PicklingException("Tag " + tag.key + " not recognized while unpickling " + ${tpe.key})
+            """
+          else
+            q"""
+              val rtUnpickler = scala.pickling.Unpickler.genUnpickler(reader.mirror, tag)
+              rtUnpickler.unpickle(tag, reader)
+            """
+
         q"""
           if (tag.key == scala.pickling.FastTypeTag.Null.key) {
             null
@@ -517,8 +529,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
           } else if (tag.key == ${if (tpe <:< typeOf[Singleton]) sym.fullName + ".type" else tpe.key}) {
             $unpickleObject
           } else {
-            val rtUnpickler = scala.pickling.Unpickler.genUnpickler(reader.mirror, tag)
-            rtUnpickler.unpickle(tag, reader)
+            $tagNotKnownStatically
           }
         """
     }
@@ -737,10 +748,20 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
     CaseDef(Literal(Constant(FastTypeTag.Ref.key)), EmptyTree, createUnpickler(typeOf[refs.Ref]))
 
   def createCompileTimeDispatch(tpe: Type): List[CaseDef] = {
-    compileTimeDispatchees(tpe) map (subtpe => {
+    val dispatchees = compileTimeDispatchees(tpe)
+    val dispatcheeNames = dispatchees.map(_.key).mkString(", ")
+    val unknownTagCase =
+      if (isClosed(tpe.typeSymbol.asType)) {
+        val otherTermName = newTermName("other")
+        val throwUnknownTag = q"""throw scala.pickling.PicklingException("Tag " + other + " not recognized, looking for one of: " + $dispatcheeNames)"""
+        List(CaseDef(Bind(otherTermName, Ident(nme.WILDCARD)), throwUnknownTag))
+      } else {
+        List()
+      }
+    (dispatchees map { subtpe: Type =>
       // TODO: do we still want to use something like HasPicklerDispatch (for unpicklers it would be routed throw tpe's companion)?
       CaseDef(Literal(Constant(subtpe.key)), EmptyTree, createUnpickler(subtpe))
-    })
+    }) ++ unknownTagCase
   }
 
   def readerUnpickleHelper(tpe: Type, readerName: TermName)(isTopLevel: Boolean = false): Tree = {
