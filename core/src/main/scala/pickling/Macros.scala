@@ -508,6 +508,18 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
           c.abort(c.enclosingPosition, s"cannot unpickle $tpe")
         }
       case _ =>
+        // check for static-only import: in this case do not emit runtime unpickling logic
+        val tagNotKnownStatically =
+          if (c.inferImplicitValue(typeOf[IsStaticOnly]) != EmptyTree)
+            q"""
+              throw scala.pickling.PicklingException("Tag " + tag.key + " not recognized while unpickling " + ${tpe.key})
+            """
+          else
+            q"""
+              val rtUnpickler = scala.pickling.Unpickler.genUnpickler(reader.mirror, tag)
+              rtUnpickler.unpickle(tag, reader)
+            """
+
         q"""
           if (tag.key == scala.pickling.FastTypeTag.Null.key) {
             null
@@ -517,8 +529,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
           } else if (tag.key == ${if (tpe <:< typeOf[Singleton]) sym.fullName + ".type" else tpe.key}) {
             $unpickleObject
           } else {
-            val rtUnpickler = scala.pickling.Unpickler.genUnpickler(reader.mirror, tag)
-            rtUnpickler.unpickle(tag, reader)
+            $tagNotKnownStatically
           }
         """
     }
