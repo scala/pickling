@@ -8,6 +8,13 @@ import org.scalatest.FunSuite
 
 sealed trait Fruit
 
+sealed trait RedOrOrangeFruit extends Fruit
+final case class Apple(kind: String) extends RedOrOrangeFruit
+final case class Orange(ripeness: String) extends RedOrOrangeFruit
+final case class Banana(something: Int) extends Fruit
+
+final case class Cucumber(something: Int) // does not extend Fruit
+
 // TODO
 // This is a workaround; with this companion object,
 // static pickler/unpickler seem to be used, while
@@ -17,13 +24,6 @@ object Fruit {
   implicit val pickler = SPickler.genPickler[Fruit]
   implicit val unpickler = Unpickler.genUnpickler[Fruit]
 }
-
-sealed trait RedOrOrangeFruit extends Fruit
-final case class Apple(kind: String) extends RedOrOrangeFruit
-final case class Orange(ripeness: String) extends RedOrOrangeFruit
-final case class Banana(something: Int) extends Fruit
-
-final case class Cucumber(something: Int) // does not extend Fruit
 
 class SealedTraitStaticTest extends FunSuite {
 
