@@ -750,13 +750,18 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
   def createCompileTimeDispatch(tpe: Type): List[CaseDef] = {
     val dispatchees = compileTimeDispatchees(tpe)
     val dispatcheeNames = dispatchees.map(_.key).mkString(", ")
-    val otherTermName = newTermName("other")
-    val throwUnknownTag = q"""throw scala.pickling.PicklingException("Tag " + other + " not recognized, looking for one of: " + $dispatcheeNames)"""
-    val unknownTagCase = CaseDef(Bind(otherTermName, Ident(nme.WILDCARD)), throwUnknownTag)
+    val unknownTagCase =
+      if (isClosed(tpe.typeSymbol.asType)) {
+        val otherTermName = newTermName("other")
+        val throwUnknownTag = q"""throw scala.pickling.PicklingException("Tag " + other + " not recognized, looking for one of: " + $dispatcheeNames)"""
+        List(CaseDef(Bind(otherTermName, Ident(nme.WILDCARD)), throwUnknownTag))
+      } else {
+        List()
+      }
     (dispatchees map { subtpe: Type =>
       // TODO: do we still want to use something like HasPicklerDispatch (for unpicklers it would be routed throw tpe's companion)?
       CaseDef(Literal(Constant(subtpe.key)), EmptyTree, createUnpickler(subtpe))
-    }) :+ unknownTagCase
+    }) ++ unknownTagCase
   }
 
   def readerUnpickleHelper(tpe: Type, readerName: TermName)(isTopLevel: Boolean = false): Tree = {
