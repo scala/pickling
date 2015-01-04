@@ -1,4 +1,5 @@
 package scala.pickling
+package runtime
 
 import scala.collection.mutable
 import scala.collection.concurrent.TrieMap

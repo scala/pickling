@@ -1,5 +1,6 @@
 package scala.pickling
 
+import scala.pickling.runtime.GlobalRegistry
 import scala.pickling.internal._
 
 import scala.language.experimental.macros

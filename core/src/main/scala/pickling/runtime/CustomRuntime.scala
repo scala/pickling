@@ -1,10 +1,7 @@
 package scala.pickling
+package runtime
 
-import scala.reflect.runtime
-import runtime.{universe => ru}
-
-import scala.collection.generic.CanBuildFrom
-
+import scala.reflect.{runtime => reflectRuntime}
 import internal._
 
 trait RuntimePicklersUnpicklers {
@@ -163,7 +160,7 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unp
       (FastTypeTag.Null.asInstanceOf[FastTypeTag[Any]], SPickler.nullPicklerUnpickler.asInstanceOf[SPickler[Any]])
     } else {
       val clazz = value.getClass
-      val tag = FastTypeTag.mkRaw(clazz, runtime.currentMirror).asInstanceOf[FastTypeTag[Any]]
+      val tag = FastTypeTag.mkRaw(clazz, reflectRuntime.currentMirror).asInstanceOf[FastTypeTag[Any]]
       val pickler = SPickler.genPickler(clazz.getClassLoader, clazz, tag).asInstanceOf[SPickler[Any]]
       (tag, pickler)
     }
@@ -199,7 +196,7 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unp
       if (reader1.atPrimitive) {
         reader1.readPrimitive()
       } else {
-        val unpickler1 = Unpickler.genUnpickler(runtime.currentMirror, tag1)
+        val unpickler1 = Unpickler.genUnpickler(reflectRuntime.currentMirror, tag1)
         try {
           unpickler1.unpickle(tag1, reader1)
         } catch {
