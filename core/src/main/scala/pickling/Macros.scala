@@ -295,7 +295,7 @@ trait OpenSumUnpicklerMacro extends Macro with UnpicklerMacros with FastTypeTagM
       val refDispatch         = createRefDispatch()
       val runtimeDispatch     = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""
         val tag = scala.pickling.FastTypeTag(typeString)
-        scala.pickling.Unpickler.genUnpickler(reader.mirror, tag)
+        scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(reader.mirror, tag)
       """)
 
       q"""
@@ -516,7 +516,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
             """
           else
             q"""
-              val rtUnpickler = scala.pickling.Unpickler.genUnpickler(reader.mirror, tag)
+              val rtUnpickler = scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(reader.mirror, tag)
               rtUnpickler.unpickle(tag, reader)
             """
 
@@ -524,8 +524,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
           if (tag.key == scala.pickling.FastTypeTag.Null.key) {
             null
           } else if (tag.key == scala.pickling.FastTypeTag.Ref.key) {
-            val refUnpickler = ${createUnpickler(RefTpe)}
-            refUnpickler.unpickle(tag, reader)
+            scala.pickling.AllPicklers.refUnpickler.unpickle(tag, reader)
           } else if (tag.key == ${if (tpe <:< typeOf[Singleton]) sym.fullName + ".type" else tpe.key}) {
             $unpickleObject
           } else {
@@ -601,7 +600,7 @@ trait PickleMacros extends Macro with TypeAnalysis {
     val classLoader = this.getClass.getClassLoader
     val tag = scala.pickling.FastTypeTag.mkRaw(clazz, scala.reflect.runtime.universe.runtimeMirror(classLoader))
     $builder.hintTag(tag)
-    scala.pickling.SPickler.genPickler(classLoader, clazz, tag)
+    scala.pickling.runtime.RuntimePicklerLookup.genPickler(classLoader, clazz, tag)
   """
 
   def genDispatchLogic(tpe: c.Type, builder: c.Tree, pickleeName: c.TermName): c.Tree = {
@@ -692,7 +691,7 @@ trait PickleMacros extends Macro with TypeAnalysis {
         $picklerName.asInstanceOf[scala.pickling.SPickler[$tpe]].pickle($pickleeName, $builder)
       } else {
         $builder.hintTag(scala.pickling.FastTypeTag.Null)
-        scala.pickling.SPickler.nullPicklerUnpickler.pickle(null, $builder)
+        scala.pickling.AllPicklers.nullPicklerUnpickler.pickle(null, $builder)
       }
     """
 

@@ -3,6 +3,7 @@ package scala.pickling.nested.non.primitive.fields
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 case class Job(title: String)
 case class Person(name: String, age: Int, job: Job)

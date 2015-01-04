@@ -3,6 +3,7 @@ package scala.pickling.json.list.t.`new`
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 class JsonListTNewTest extends FunSuite {
   test("main") {
@@ -10,11 +11,18 @@ class JsonListTNewTest extends FunSuite {
     assert(pickle.toString === """
       |JSONPickle({
       |  "tpe": "scala.collection.immutable.$colon$colon[scala.Int]",
-      |  "elems": [
-      |    1,
-      |    2,
-      |    3
-      |  ]
+      |  "head": 1,
+      |  "tl": {
+      |    "tpe": "scala.collection.immutable.$colon$colon[scala.Int]",
+      |    "head": 2,
+      |    "tl": {
+      |      "tpe": "scala.collection.immutable.$colon$colon[scala.Int]",
+      |      "head": 3,
+      |      "tl": {
+      |        "tpe": "scala.collection.immutable.Nil.type"
+      |      }
+      |    }
+      |  }
       |})
     """.stripMargin.trim)
     assert(pickle.unpickle[List[Int]] === List(1, 2, 3))

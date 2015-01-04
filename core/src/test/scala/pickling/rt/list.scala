@@ -3,6 +3,7 @@ package test.rt
 
 import org.scalatest.FunSuite
 import json._
+import AllPicklers._
 
 case class Person(age: Int)
 

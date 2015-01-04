@@ -21,6 +21,7 @@ import org.scalatest.FunSuite
 
 import scala.pickling._
 import json._
+import AllPicklers._
 import runtime.GlobalRegistry
 
 import scala.reflect.{ClassTag, classTag}

@@ -3,6 +3,7 @@ package scala.pickling.tuple2.primitive
 import org.scalatest.FunSuite
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 class Tuple2PrimitiveTest extends FunSuite {
   test("main") {

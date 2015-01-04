@@ -3,6 +3,7 @@ package scala.pickling.non.public.weird
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 class Person(private val name: String, age: Int, val hobby: Hobby) {
   // NOTE: be careful not to reference age anywhere, so that it's elided by the "constructors" phase

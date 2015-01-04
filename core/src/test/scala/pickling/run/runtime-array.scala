@@ -4,6 +4,7 @@ import org.scalatest.FunSuite
 
 import scala.pickling._
 import json._
+import AllPicklers._
 
 class RuntimeArrayTest extends FunSuite {
 

@@ -3,6 +3,8 @@ package scala.pickling.binary.array.int
 import org.scalatest.FunSuite
 import scala.pickling._
 import binary._
+import AllPicklers._
+
 import scala.reflect.runtime.universe._
 
 class BinaryArrayIntTest extends FunSuite {

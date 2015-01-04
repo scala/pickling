@@ -3,6 +3,7 @@ package scala.pickling.primitive
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 class PrimitiveTest extends FunSuite {
   test("main") {

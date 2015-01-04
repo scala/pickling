@@ -3,6 +3,7 @@ package scala.pickling.`null`.json
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 class D
 final class E
