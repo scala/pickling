@@ -1,4 +1,5 @@
 package scala.pickling
+package runtime
 
 import java.lang.reflect.Field
 
