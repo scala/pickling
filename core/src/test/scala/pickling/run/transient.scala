@@ -4,6 +4,7 @@ import org.scalatest.FunSuite
 import scala.reflect.ClassTag
 import scala.pickling._
 import json._
+import AllPicklers._
 
 case class Person(val name: String , @transient val ssNumber: Int) {
   override def toString = s"Person($name)"

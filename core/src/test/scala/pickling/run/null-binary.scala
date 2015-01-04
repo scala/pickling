@@ -3,6 +3,7 @@ package scala.pickling.`null`.binary
 import org.scalatest.FunSuite
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 class D
 final class E

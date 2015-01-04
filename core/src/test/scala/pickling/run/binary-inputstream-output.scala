@@ -6,6 +6,7 @@ import java.io.ByteArrayInputStream
 
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 case class Employee(name: String, age: Int)
 

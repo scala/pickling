@@ -3,6 +3,7 @@ package scala.pickling.run.anonfun
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 class AnonfunJsonTest extends FunSuite {
   val fun: Int => Int = (x: Int) => x + 1

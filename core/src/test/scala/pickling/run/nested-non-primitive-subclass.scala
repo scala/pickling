@@ -3,6 +3,7 @@ package scala.pickling.nested.non.primitive.subclass
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 abstract class Tree
 case class Fork(left: Tree, right: Tree) extends Tree

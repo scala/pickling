@@ -3,6 +3,7 @@ package scala.pickling.inheritance.`private`
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 trait Person {
   val name: String

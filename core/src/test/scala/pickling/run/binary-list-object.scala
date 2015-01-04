@@ -4,6 +4,7 @@ import org.scalatest.FunSuite
 
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 case class Person(name: String)
 

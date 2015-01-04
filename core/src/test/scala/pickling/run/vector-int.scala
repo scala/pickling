@@ -3,6 +3,7 @@ package scala.pickling.vector.int
 import org.scalatest.FunSuite
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 class VectorIntTest extends FunSuite {
   test("main") {

@@ -3,6 +3,7 @@ package scala.pickling.inheritance2
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 abstract class Creature {
   var species: String

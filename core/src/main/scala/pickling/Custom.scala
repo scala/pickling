@@ -1,6 +1,6 @@
 package scala.pickling
 
-import scala.pickling.runtime.GlobalRegistry
+import scala.pickling.runtime.{GlobalRegistry, RuntimeUnpicklerLookup}
 import scala.pickling.internal._
 
 import scala.language.experimental.macros
@@ -15,7 +15,6 @@ import scala.collection.generic.CanBuildFrom
 
 import scala.collection.IndexedSeq
 import scala.collection.LinearSeq
-import immutable.:: //TODO: this should go away
 import mutable.ArrayBuffer
 
 class PicklerUnpicklerNotFound[T] extends SPickler[T] with Unpickler[T] with Generated {
@@ -29,7 +28,7 @@ trait LowPriorityPicklersUnpicklers {
   // Any
   implicit object anyUnpickler extends Unpickler[Any] {
     def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
-      val actualUnpickler = Unpickler.genUnpickler(scala.reflect.runtime.currentMirror, tag)
+      val actualUnpickler = RuntimeUnpicklerLookup.genUnpickler(scala.reflect.runtime.currentMirror, tag)
       actualUnpickler.unpickle(tag, reader)
     }
     def tag: FastTypeTag[Any] = FastTypeTag[Any]
@@ -53,10 +52,6 @@ trait LowPriorityPicklersUnpicklers {
 
   implicit def vectorPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[Vector[T]], format: PickleFormat, cbf: CanBuildFrom[Vector[T], T, Vector[T]]): SPickler[Vector[T]] with Unpickler[Vector[T]] =
     mkSeqSetPickler[T, Vector]
-
-  // TODO: use this instead of the genListPickler
-  // implicit def listPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[::[T]], format: PickleFormat, cbf: CanBuildFrom[::[T], T, ::[T]]): SPickler[::[T]] with Unpickler[::[T]] =
-  //   mkSeqSetPickler[T, ::]
 
   // mutable collections
 
@@ -429,9 +424,6 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
 
   implicit def refPickler: SPickler[refs.Ref] = throw new Error("cannot pickle refs") // TODO: make this a macro
   implicit val refUnpickler: Unpickler[refs.Ref] = mkPrimitivePicklerUnpickler[refs.Ref]
-
-  // TODO: remove this in favor of the implicit listPickler above
-  implicit def genListPickler[T](implicit format: PickleFormat): SPickler[::[T]] with Unpickler[::[T]] = macro Compat.ListPicklerUnpicklerMacro_impl[T]
 }
 
 trait ListPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {

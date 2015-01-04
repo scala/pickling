@@ -2,6 +2,7 @@ package scala.pickling.test.json.collection
 
 import scala.pickling._
 import json._
+import AllPicklers._
 import org.scalatest.FunSuite
 
 import scala.collection.mutable

@@ -3,6 +3,7 @@ package scala.pickling.singleton.hierarchy
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 sealed abstract class C(val x: Int)
 object D extends C(42) { override def toString = "D" }
