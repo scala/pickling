@@ -3,11 +3,7 @@ package scala.pickling
 import scala.language.experimental.macros
 
 import scala.annotation.implicitNotFound
-import scala.reflect.runtime.{universe => ru}
-import scala.reflect.runtime.universe._
 
-import runtime._
-import internal._
 
 /** A static pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
  *  static type `T`, and pickles it to an instance of `PBuilder`. In the process the object
