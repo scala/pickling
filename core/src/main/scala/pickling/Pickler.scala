@@ -6,6 +6,7 @@ import scala.annotation.implicitNotFound
 import scala.reflect.runtime.{universe => ru}
 import scala.reflect.runtime.universe._
 
+import runtime._
 import internal._
 
 /** A static pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of

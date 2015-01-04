@@ -4,6 +4,7 @@ import org.scalatest.FunSuite
 
 import scala.pickling._
 import json._
+import runtime.GlobalRegistry
 
 import scala.collection.mutable.WrappedArray
 
