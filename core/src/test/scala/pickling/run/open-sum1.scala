@@ -3,6 +3,7 @@ package scala.pickling.open.sum1
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 package outer {
   abstract class Person {

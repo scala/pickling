@@ -3,6 +3,7 @@ package scala.pickling.test.ctorparams
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 class Partitioner(numParts: Int) {
   def numPartitions = numParts

@@ -3,6 +3,7 @@ package scala.pickling.share.binary.any
 import org.scalatest.FunSuite
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 class C(val name: String, val desc: String, var c: C, val arr: Array[Int])
 

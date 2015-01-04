@@ -2,6 +2,7 @@ package scala.pickling.test.binary.collection
 
 import scala.pickling._
 import binary._
+import AllPicklers._
 import org.scalatest.FunSuite
 
 import scala.collection.mutable

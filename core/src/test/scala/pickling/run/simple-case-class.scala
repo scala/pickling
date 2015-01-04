@@ -3,6 +3,7 @@ package scala.pickling.simple.`case`.`class`
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 case class Person(name: String, age: Int)
 
