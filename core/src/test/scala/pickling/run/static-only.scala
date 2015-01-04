@@ -3,6 +3,7 @@ package scala.pickling.staticonly
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 import static.StaticOnly
 
 sealed abstract class C { val fld: Int }

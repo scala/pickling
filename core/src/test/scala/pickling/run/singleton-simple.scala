@@ -3,6 +3,7 @@ package scala.pickling.singleton.simple
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 object D {
   val shouldntSerializeMe = 42

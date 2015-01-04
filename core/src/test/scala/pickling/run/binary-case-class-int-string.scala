@@ -3,6 +3,7 @@ package scala.pickling.binary.`case`.`class`.int.string
 import org.scalatest.FunSuite
 import scala.pickling._
 import binary._
+import AllPicklers._
 import reflect.runtime.{universe => ru}
 import ru._
 

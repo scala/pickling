@@ -6,6 +6,7 @@ import java.io.{OutputStream, ByteArrayOutputStream, ByteArrayInputStream}
 
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 class BinaryOutputStreamTest extends FunSuite {
   test("pickle to OutputStream") {

@@ -3,6 +3,7 @@ package scala.pickling.binary.list.int.custom.pickler.implicitly.selection
 import org.scalatest.FunSuite
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 import scala.reflect.runtime.universe._
 import scala.collection.mutable.ListBuffer

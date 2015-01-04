@@ -3,6 +3,7 @@ package scala.pickling.array.json
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 case class C(arr: Array[Int]) { override def toString = s"""C(${arr.mkString("[", ",", "]")})""" }
 

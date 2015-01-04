@@ -3,6 +3,7 @@ package scala.pickling.generics.tough
 import org.scalatest.FunSuite
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 class C[T]
 case class D[T](x: T) extends C[T]

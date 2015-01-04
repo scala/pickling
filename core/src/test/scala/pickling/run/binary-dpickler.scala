@@ -5,6 +5,7 @@ import scala.language.existentials
 import org.scalatest.FunSuite
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 abstract class Person(name: String, age: Int)
 case class Firefighter(name: String, age: Int, salary: Int) extends Person(name, age)

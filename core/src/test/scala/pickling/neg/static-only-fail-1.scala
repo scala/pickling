@@ -1,6 +1,7 @@
 package scala.pickling.staticonlyfail1
 
 import scala.pickling._
+import AllPicklers._
 import NegativeCompilation._
 import org.scalatest.FunSuite
 

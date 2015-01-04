@@ -157,11 +157,11 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unp
 
   def pickleField(name: String, value: Any, builder: PBuilder): Unit = {
     val (tag1, pickler1) = if (value == null) {
-      (FastTypeTag.Null.asInstanceOf[FastTypeTag[Any]], SPickler.nullPicklerUnpickler.asInstanceOf[SPickler[Any]])
+      (FastTypeTag.Null.asInstanceOf[FastTypeTag[Any]], AllPicklers.nullPicklerUnpickler.asInstanceOf[SPickler[Any]])
     } else {
       val clazz = value.getClass
       val tag = FastTypeTag.mkRaw(clazz, reflectRuntime.currentMirror).asInstanceOf[FastTypeTag[Any]]
-      val pickler = SPickler.genPickler(clazz.getClassLoader, clazz, tag).asInstanceOf[SPickler[Any]]
+      val pickler = RuntimePicklerLookup.genPickler(clazz.getClassLoader, clazz, tag).asInstanceOf[SPickler[Any]]
       (tag, pickler)
     }
 
@@ -196,7 +196,7 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unp
       if (reader1.atPrimitive) {
         reader1.readPrimitive()
       } else {
-        val unpickler1 = Unpickler.genUnpickler(reflectRuntime.currentMirror, tag1)
+        val unpickler1 = RuntimeUnpicklerLookup.genUnpickler(reflectRuntime.currentMirror, tag1)
         try {
           unpickler1.unpickle(tag1, reader1)
         } catch {

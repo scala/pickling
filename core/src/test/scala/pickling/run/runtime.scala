@@ -3,6 +3,7 @@ package scala.pickling.runtime
 import org.scalatest.FunSuite
 import scala.pickling._
 import json._
+import AllPicklers._
 
 class Person(val name: String, val age: Int)
 

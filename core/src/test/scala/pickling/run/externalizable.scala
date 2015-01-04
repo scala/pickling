@@ -2,6 +2,7 @@ package scala.pickling.externalizable
 
 import org.scalatest.FunSuite
 import scala.pickling._
+import AllPicklers._
 import java.io.{Externalizable, IOException, ObjectInput, ObjectOutput}
 import java.nio.ByteBuffer
 

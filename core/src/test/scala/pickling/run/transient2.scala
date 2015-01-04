@@ -5,6 +5,7 @@ import org.scalatest.FunSuite
 import scala.reflect.ClassTag
 import scala.pickling._
 import json._
+import AllPicklers._
 
 /**
  * Base class for dependencies.

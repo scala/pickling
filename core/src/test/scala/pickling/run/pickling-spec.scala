@@ -1,6 +1,7 @@
 package scala.pickling.spec
 
 import scala.pickling._
+import AllPicklers._
 
 import org.scalacheck.{Properties, Prop, Arbitrary, Gen}
 import org.scalacheck.Prop.forAll
