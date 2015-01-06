@@ -7,7 +7,7 @@ import org.scalatest.FunSuite
 
 class RefinedTypeFailTest extends FunSuite {
   test("main") {
-    expectError("could not find implicit pickler for refined type") {
+    expectError("Cannot generate") {
       """import _root_.scala.pickling._
         |import _root_.scala.pickling.json._
         |

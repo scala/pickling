@@ -22,6 +22,7 @@ class StaticOnlyWithManualPicklerTest extends FunSuite {
         throw FakeImplementation()
       def unpickle(tag: => FastTypeTag[_], reader: PReader): Any =
         throw FakeImplementation()
+      def tag = FastTypeTag[NotClosed]
     }
     val pickle: JSONPickle = try {
       x.pickle
@@ -33,7 +34,8 @@ class StaticOnlyWithManualPicklerTest extends FunSuite {
       pickle.unpickle[NotClosed]
       throw new AssertionError("Should have used the fake implementation unpickler")
     } catch {
-      case FakeImplementation() =>
+      case PicklingException(msg, cause) =>
+        assert(msg.contains("failed to parse"))
     }
   }
 }

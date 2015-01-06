@@ -38,6 +38,13 @@ trait TypeAnalysis extends Macro {
 trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
   import c.universe._
 
+  def createRuntimePickler(builder: c.Tree): c.Tree = q"""
+    val classLoader = this.getClass.getClassLoader
+    val tag = scala.pickling.FastTypeTag.mkRaw(clazz, scala.reflect.runtime.universe.runtimeMirror(classLoader))
+    $builder.hintTag(tag)
+    scala.pickling.runtime.RuntimePicklerLookup.genPickler(classLoader, clazz, tag)
+  """
+
   override def impl[T: c.WeakTypeTag]: c.Tree = preferringAlternativeImplicits {
     import definitions._
     val tpe = weakTypeOf[T]
@@ -201,15 +208,23 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
 
     //println("trying to generate pickler for type " + tpe.toString)
 
-    def genClosedDispatch: Tree = {
+    def genDispatch(finalCases: List[CaseDef]): Tree = {
       val clazzName = newTermName("clazz")
       val compileTimeDispatch = compileTimeDispatchees(tpe) filter (_ != NullTpe) map { subtpe =>
         CaseDef(Bind(clazzName, Ident(nme.WILDCARD)), q"clazz == classOf[$subtpe]", createPickler(subtpe, q"builder"))
       }
       q"""
         val clazz = if (picklee != null) picklee.getClass else null
-        ${Match(q"clazz", compileTimeDispatch)}
+        ${Match(q"clazz", compileTimeDispatch ++ finalCases)}
       """
+    }
+
+    def genClosedDispatch: Tree = genDispatch(List())
+
+    def nonFinalDispatch: Tree = {
+      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, createRuntimePickler(q"builder"))
+      // TODO: do we still want to use something like HasPicklerDispatch?
+      genDispatch(List(runtimeDispatch))
     }
 
     val pickleLogic: Tree = tpe.normalize match {
@@ -227,14 +242,30 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
           pickler.asInstanceOf[scala.pickling.SPickler[$tpe1]].pickle(picklee, builder)
         """
 
-      case _ if sym.isClass =>
-        // if class is abstract return instance of `PicklerUnpicklerNotFound`.
-        // this triggers the generation of a dispatch based on the runtime class of the picklee.
-        if (sym.asClass.isAbstractClass) {
-          //println("abstract class, returning PicklerUnpicklerNotFound")
-          return q"new scala.pickling.PicklerUnpicklerNotFound[$tpe]"
-        } else
-          unifiedPickle
+      case tpe1 if sym.isClass =>
+        val pickleAfterDispatch = {
+          val dispatchTree = if (c.inferImplicitValue(typeOf[IsStaticOnly]) != EmptyTree) { // StaticOnly *imported*
+            val notClosedReasons = whyNotClosed(sym.asType)
+            if (notClosedReasons.nonEmpty)
+              c.abort(c.enclosingPosition, s"cannot generate fully static pickler because: ${notClosedReasons.mkString(", ")}")
+            else
+              genClosedDispatch
+          } else
+            nonFinalDispatch
+
+          q"""
+            val pickler: scala.pickling.SPickler[_] = $dispatchTree
+            pickler.asInstanceOf[scala.pickling.SPickler[$tpe1]].pickle(picklee, builder)
+          """
+        }
+
+        if (sym.asClass.isAbstractClass)
+          pickleAfterDispatch
+        else
+          q"""
+            if (picklee.getClass == classOf[$tpe]) $unifiedPickle
+            else $pickleAfterDispatch
+          """
 
       case _ =>
         c.abort(c.enclosingPosition, s"cannot generate pickler for type $tpe")
@@ -499,7 +530,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
       case _ if tpe.isEffectivelyPrimitive || sym == StringClass => unpicklePrimitive
       case _ if sym.isAbstractClass =>
         if (isClosed(sym)) {
-          val dispatchLogic = Match(q"tag.key", createCompileTimeDispatch(tpe) :+ createRefDispatch())
+          val dispatchLogic = Match(q"tag.key", List(createRefDispatch()) ++ createCompileTimeDispatch(tpe))
           q"""
             val unpickler: scala.pickling.Unpickler[_] = $dispatchLogic
             unpickler.asInstanceOf[scala.pickling.Unpickler[$tpe]].unpickle(tag, reader)
@@ -596,77 +627,6 @@ trait PickleMacros extends Macro with TypeAnalysis {
     pickler
   """
 
-  def createRuntimePickler(builder: c.Tree): c.Tree = q"""
-    val classLoader = this.getClass.getClassLoader
-    val tag = scala.pickling.FastTypeTag.mkRaw(clazz, scala.reflect.runtime.universe.runtimeMirror(classLoader))
-    $builder.hintTag(tag)
-    scala.pickling.runtime.RuntimePicklerLookup.genPickler(classLoader, clazz, tag)
-  """
-
-  def genDispatchLogic(tpe: c.Type, builder: c.Tree, pickleeName: c.TermName): c.Tree = {
-    val sym = tpe.typeSymbol
-
-    def nonFinalDispatch = {
-      val clazzName = newTermName("clazz")
-      val compileTimeDispatch = compileTimeDispatchees(tpe) filter (_ != NullTpe) map (subtpe =>
-        CaseDef(Bind(clazzName, Ident(nme.WILDCARD)), q"clazz == classOf[$subtpe]", createPickler(subtpe, builder))
-      )
-      //TODO OPTIMIZE: do getClass.getClassLoader only once
-      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, createRuntimePickler(builder))
-      // TODO: do we still want to use something like HasPicklerDispatch?
-      q"""
-        val customPickler = implicitly[scala.pickling.SPickler[$tpe]]
-        if (customPickler.isInstanceOf[scala.pickling.PicklerUnpicklerNotFound[_]] || customPickler.isInstanceOf[scala.pickling.Generated]) {
-          val clazz = if ($pickleeName != null) $pickleeName.getClass else null
-          ${Match(q"clazz", compileTimeDispatch :+ runtimeDispatch)}
-        } else {
-          // without Generated we would arrive here in two cases:
-          // 1. we have found a custom pickler that can handle the abstract type tpe
-          // 2. we have generated a pickler for a concrete superclass!
-          // in the 2nd case we still have to do the dispatch!
-          $builder.hintTag(customPickler.tag)
-          customPickler
-        }
-      """
-    }
-
-    def refinedDispatch(parentTpe: Type) = {
-      val inferred = c.inferImplicitValue(appliedType(typeOf[SPickler[_]].typeConstructor, List(tpe)))
-      if (inferred == EmptyTree) {
-        c.abort(c.enclosingPosition, s"could not find implicit pickler for refined type: $tpe")
-      } else {
-        q"""
-          $builder.hintTag($inferred.tag)
-          $inferred
-        """
-      }
-    }
-
-    // NOTE: this has zero effect on performance...
-    // def listDispatch = {
-    //   val List(nullTpe, consTpe, nilTpe) = compileTimeDispatchees(tpe)
-    //   q"""
-    //     import scala.language.existentials
-    //     if (picklee eq Nil) ${createPickler(nilTpe, builder)}
-    //     else if (picklee eq null) ${createPickler(nullTpe, builder)}
-    //     else ${createPickler(consTpe, builder)}
-    //   """
-    // }
-    // if (sym == ListClass) listDispatch else
-
-    if (c.inferImplicitValue(typeOf[IsStaticOnly]) != EmptyTree) {
-      val notClosedReasons = whyNotClosed(sym.asType)
-      if (notClosedReasons.nonEmpty)
-        c.abort(c.enclosingPosition, s"cannot generate fully static pickler because: ${notClosedReasons.mkString(", ")}")
-    }
-
-    if (sym.asType.isAbstractType || sym.isEffectivelyFinal) createPickler(tpe, builder)
-    else tpe.normalize match {
-      case RefinedType(parents, _) => refinedDispatch(parents.head)
-      case _ => nonFinalDispatch
-    }
-  }
-
   /** Used by the main `pickle` macro. Its purpose is to pickle the object that it's called on *into* the
    *  the `builder` which is passed to it as an argument.
    */
@@ -687,7 +647,7 @@ trait PickleMacros extends Macro with TypeAnalysis {
       $picklerName.pickle($pickleeName, $builder)
     """ else q"""
       if ($pickleeName != null) {
-        val $picklerName = ${genDispatchLogic(tpe, builder, pickleeName)}
+        val $picklerName = ${createPickler(tpe, builder)}
         $picklerName.asInstanceOf[scala.pickling.SPickler[$tpe]].pickle($pickleeName, $builder)
       } else {
         $builder.hintTag(scala.pickling.FastTypeTag.Null)
