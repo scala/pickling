@@ -36,54 +36,54 @@ trait LowPriorityPicklersUnpicklers {
 
   // collections
 
-  implicit def iterablePickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[Iterable[T]], format: PickleFormat, cbf: CanBuildFrom[Iterable[T], T, Iterable[T]]): SPickler[Iterable[T]] with Unpickler[Iterable[T]] =
+  implicit def iterablePickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[Iterable[T]], cbf: CanBuildFrom[Iterable[T], T, Iterable[T]]): SPickler[Iterable[T]] with Unpickler[Iterable[T]] =
     mkTravPickler[T, Iterable[T]]
 
-  implicit def seqPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[Seq[T]], format: PickleFormat, cbf: CanBuildFrom[Seq[T], T, Seq[T]]): SPickler[Seq[T]] with Unpickler[Seq[T]] =
+  implicit def seqPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[Seq[T]], cbf: CanBuildFrom[Seq[T], T, Seq[T]]): SPickler[Seq[T]] with Unpickler[Seq[T]] =
     mkSeqSetPickler[T, Seq]
 
-  implicit def indexedSeqPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[IndexedSeq[T]], format: PickleFormat, cbf: CanBuildFrom[IndexedSeq[T], T, IndexedSeq[T]]): SPickler[IndexedSeq[T]] with Unpickler[IndexedSeq[T]] =
+  implicit def indexedSeqPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[IndexedSeq[T]], cbf: CanBuildFrom[IndexedSeq[T], T, IndexedSeq[T]]): SPickler[IndexedSeq[T]] with Unpickler[IndexedSeq[T]] =
     mkSeqSetPickler[T, IndexedSeq]
 
-  implicit def linearSeqPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[LinearSeq[T]], format: PickleFormat, cbf: CanBuildFrom[LinearSeq[T], T, LinearSeq[T]]): SPickler[LinearSeq[T]] with Unpickler[LinearSeq[T]] =
+  implicit def linearSeqPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[LinearSeq[T]], cbf: CanBuildFrom[LinearSeq[T], T, LinearSeq[T]]): SPickler[LinearSeq[T]] with Unpickler[LinearSeq[T]] =
     mkSeqSetPickler[T, LinearSeq]
 
   // immutable collections
 
-  implicit def vectorPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[Vector[T]], format: PickleFormat, cbf: CanBuildFrom[Vector[T], T, Vector[T]]): SPickler[Vector[T]] with Unpickler[Vector[T]] =
+  implicit def vectorPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[Vector[T]], cbf: CanBuildFrom[Vector[T], T, Vector[T]]): SPickler[Vector[T]] with Unpickler[Vector[T]] =
     mkSeqSetPickler[T, Vector]
 
   // mutable collections
 
-  implicit def arrayPickler[T >: Null: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[Array[T]], format: PickleFormat, cbf: CanBuildFrom[Array[T], T, Array[T]]): SPickler[Array[T]] with Unpickler[Array[T]] =
+  implicit def arrayPickler[T >: Null: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[Array[T]], cbf: CanBuildFrom[Array[T], T, Array[T]]): SPickler[Array[T]] with Unpickler[Array[T]] =
     mkTravPickler[T, Array[T]]
 
-  implicit def arrayBufferPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[ArrayBuffer[T]], format: PickleFormat, cbf: CanBuildFrom[ArrayBuffer[T], T, ArrayBuffer[T]]): SPickler[ArrayBuffer[T]] with Unpickler[ArrayBuffer[T]] =
+  implicit def arrayBufferPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[ArrayBuffer[T]], cbf: CanBuildFrom[ArrayBuffer[T], T, ArrayBuffer[T]]): SPickler[ArrayBuffer[T]] with Unpickler[ArrayBuffer[T]] =
     mkSeqSetPickler[T, ArrayBuffer]
 
   // sets
 
-  implicit def immSetPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[Set[T]], format: PickleFormat, cbf: CanBuildFrom[Set[T], T, Set[T]]): SPickler[Set[T]] with Unpickler[Set[T]] =
+  implicit def immSetPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[Set[T]], cbf: CanBuildFrom[Set[T], T, Set[T]]): SPickler[Set[T]] with Unpickler[Set[T]] =
     mkSeqSetPickler[T, Set]
 
-  implicit def immSortedSetPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[immutable.SortedSet[T]], format: PickleFormat, cbf: CanBuildFrom[immutable.SortedSet[T], T, immutable.SortedSet[T]]): SPickler[immutable.SortedSet[T]] with Unpickler[immutable.SortedSet[T]] =
+  implicit def immSortedSetPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[immutable.SortedSet[T]], cbf: CanBuildFrom[immutable.SortedSet[T], T, immutable.SortedSet[T]]): SPickler[immutable.SortedSet[T]] with Unpickler[immutable.SortedSet[T]] =
     mkSeqSetPickler[T, immutable.SortedSet]
 
-  implicit def mutSetPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[mutable.Set[T]], format: PickleFormat, cbf: CanBuildFrom[mutable.Set[T], T, mutable.Set[T]]): SPickler[mutable.Set[T]] with Unpickler[mutable.Set[T]] =
+  implicit def mutSetPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[mutable.Set[T]], cbf: CanBuildFrom[mutable.Set[T], T, mutable.Set[T]]): SPickler[mutable.Set[T]] with Unpickler[mutable.Set[T]] =
     mkSeqSetPickler[T, mutable.Set]
 
-  implicit def mutSortedSetPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[mutable.SortedSet[T]], format: PickleFormat, cbf: CanBuildFrom[mutable.SortedSet[T], T, mutable.SortedSet[T]]): SPickler[mutable.SortedSet[T]] with Unpickler[mutable.SortedSet[T]] =
+  implicit def mutSortedSetPickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T], collTag: FastTypeTag[mutable.SortedSet[T]], cbf: CanBuildFrom[mutable.SortedSet[T], T, mutable.SortedSet[T]]): SPickler[mutable.SortedSet[T]] with Unpickler[mutable.SortedSet[T]] =
     mkSeqSetPickler[T, mutable.SortedSet]
 
   // maps
 
-  implicit def immMapPickler[K: FastTypeTag, V: FastTypeTag](implicit elemPickler: SPickler[(K, V)], elemUnpickler: Unpickler[(K, V)], pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[Map[K, V]], format: PickleFormat, cbf: CanBuildFrom[Map[K, V], (K, V), Map[K, V]]): SPickler[Map[K, V]] with Unpickler[Map[K, V]] =
+  implicit def immMapPickler[K: FastTypeTag, V: FastTypeTag](implicit elemPickler: SPickler[(K, V)], elemUnpickler: Unpickler[(K, V)], pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[Map[K, V]], cbf: CanBuildFrom[Map[K, V], (K, V), Map[K, V]]): SPickler[Map[K, V]] with Unpickler[Map[K, V]] =
     mkMapPickler[K, V, Map]
 
-  implicit def immSortedMapPickler[K: FastTypeTag, V: FastTypeTag](implicit elemPickler: SPickler[(K, V)], elemUnpickler: Unpickler[(K, V)], pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[immutable.SortedMap[K, V]], format: PickleFormat, cbf: CanBuildFrom[immutable.SortedMap[K, V], (K, V), immutable.SortedMap[K, V]]): SPickler[immutable.SortedMap[K, V]] with Unpickler[immutable.SortedMap[K, V]] =
+  implicit def immSortedMapPickler[K: FastTypeTag, V: FastTypeTag](implicit elemPickler: SPickler[(K, V)], elemUnpickler: Unpickler[(K, V)], pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[immutable.SortedMap[K, V]], cbf: CanBuildFrom[immutable.SortedMap[K, V], (K, V), immutable.SortedMap[K, V]]): SPickler[immutable.SortedMap[K, V]] with Unpickler[immutable.SortedMap[K, V]] =
     mkMapPickler[K, V, immutable.SortedMap]
 
-  implicit def mutMapPickler[K: FastTypeTag, V: FastTypeTag](implicit elemPickler: SPickler[(K, V)], elemUnpickler: Unpickler[(K, V)], pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[mutable.Map[K, V]], format: PickleFormat, cbf: CanBuildFrom[mutable.Map[K, V], (K, V), mutable.Map[K, V]]): SPickler[mutable.Map[K, V]] with Unpickler[mutable.Map[K, V]] =
+  implicit def mutMapPickler[K: FastTypeTag, V: FastTypeTag](implicit elemPickler: SPickler[(K, V)], elemUnpickler: Unpickler[(K, V)], pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[mutable.Map[K, V]], cbf: CanBuildFrom[mutable.Map[K, V], (K, V), mutable.Map[K, V]]): SPickler[mutable.Map[K, V]] with Unpickler[mutable.Map[K, V]] =
     mkMapPickler[K, V, mutable.Map]
 
 
@@ -151,13 +151,13 @@ trait LowPriorityPicklersUnpicklers {
 
   def mkMapPickler[K: FastTypeTag, V: FastTypeTag, M[_, _] <: collection.Map[_, _]]
     (implicit elemPickler: SPickler[(K, V)], elemUnpickler: Unpickler[(K, V)],
-              pf: PickleFormat, cbf: CanBuildFrom[M[K, V], (K, V), M[K, V]],
+              cbf: CanBuildFrom[M[K, V], (K, V), M[K, V]],
               pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[M[K, V]]): SPickler[M[K, V]] with Unpickler[M[K, V]] =
     mkTravPickler[(K, V), M[K, V]]
 
   def mkSeqSetPickler[T: FastTypeTag, Coll[_] <: Traversable[_]]
     (implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T],
-              pf: PickleFormat, cbf: CanBuildFrom[Coll[T], T, Coll[T]],
+              cbf: CanBuildFrom[Coll[T], T, Coll[T]],
               collTag: FastTypeTag[Coll[T]]): SPickler[Coll[T]] with Unpickler[Coll[T]] =
     mkTravPickler[T, Coll[T]]
 }
