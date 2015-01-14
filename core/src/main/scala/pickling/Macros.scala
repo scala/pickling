@@ -208,31 +208,33 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
 
     //println("trying to generate pickler for type " + tpe.toString)
 
-    def genDispatch(finalCases: List[CaseDef]): Tree = {
-      val dispatchees = compileTimeDispatchees(tpe)
-      val dispatcheeNames = dispatchees.map(_.key).mkString(", ")
-      val unknownClassCase = {
-          val otherTermName = newTermName("other")
-          val throwUnknownTag = q"""throw scala.pickling.PicklingException("Class " + other + " not recognized by pickler, looking for one of: " + $dispatcheeNames)"""
-          List(CaseDef(Bind(otherTermName, Ident(nme.WILDCARD)), throwUnknownTag))
-      }
-
+    def genDispatch(compileTimeDispatchees: List[Type], finalCases: List[CaseDef]): Tree = {
       val clazzName = newTermName("clazz")
-      val compileTimeDispatch = dispatchees filter (_ != NullTpe) map { subtpe =>
+      val compileTimeDispatch = compileTimeDispatchees filter (_ != NullTpe) map { subtpe =>
         CaseDef(Bind(clazzName, Ident(nme.WILDCARD)), q"clazz == classOf[$subtpe]", createPickler(subtpe, q"builder"))
       }
       q"""
         val clazz = if (picklee != null) picklee.getClass else null
-        ${Match(q"clazz", compileTimeDispatch ++ finalCases ++ unknownClassCase)}
+        ${Match(q"clazz", compileTimeDispatch ++ finalCases)}
       """
     }
 
-    def genClosedDispatch: Tree = genDispatch(List())
+    def genClosedDispatch: Tree = {
+      val dispatchees = compileTimeDispatchees(tpe)
+      val unknownClassCase = {
+        val dispatcheeNames = dispatchees.map(_.key).mkString(", ")
+        val otherTermName = newTermName("other")
+        val throwUnknownTag = q"""throw scala.pickling.PicklingException("Class " + other + " not recognized by pickler, looking for one of: " + $dispatcheeNames)"""
+        CaseDef(Bind(otherTermName, Ident(nme.WILDCARD)), throwUnknownTag)
+      }
+
+      genDispatch(dispatchees, List(unknownClassCase))
+    }
 
     def nonFinalDispatch: Tree = {
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, createRuntimePickler(q"builder"))
       // TODO: do we still want to use something like HasPicklerDispatch?
-      genDispatch(List(runtimeDispatch))
+      genDispatch(compileTimeDispatchees(tpe), List(runtimeDispatch))
     }
 
     val pickleLogic: Tree = tpe.normalize match {
