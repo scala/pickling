@@ -17,11 +17,6 @@ import scala.collection.IndexedSeq
 import scala.collection.LinearSeq
 import mutable.ArrayBuffer
 
-class PicklerUnpicklerNotFound[T] extends SPickler[T] with Unpickler[T] with Generated {
-  def pickle(picklee: T, builder: PBuilder): Unit = ???
-  def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = ???
-  def tag: FastTypeTag[T] = ???
-}
 
 trait LowPriorityPicklersUnpicklers {
 

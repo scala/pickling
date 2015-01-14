@@ -1,11 +1,10 @@
-package scala.pickling.staticonlyfail1
+package scala.pickling.staticonlyfail3
 
 import scala.pickling._
-import AllPicklers._
 import NegativeCompilation._
 import org.scalatest.FunSuite
 
-class StaticOnlyFail1Test extends FunSuite {
+class StaticOnlyFail3Test extends FunSuite {
   test("main") {
     expectError("Cannot generate") {
       """
@@ -13,9 +12,12 @@ class StaticOnlyFail1Test extends FunSuite {
         | import _root_.scala.pickling.json._
         | import _root_.scala.pickling.static.StaticOnly
         |
-        | class C(val fld: Any)
+        | // this case has a type parameter on a
+        | // subtype in the hierarchy
+        | sealed trait C
+        | final case class D[T](fld: T) extends C
         |
-        | val x: C = new C(1)
+        | val x: C = D(1)
         | val pickle: JSONPickle = x.pickle
       """.stripMargin
     }
