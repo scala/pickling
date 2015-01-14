@@ -20,10 +20,10 @@ trait TypeAnalysis extends Macro {
       Nil
     else if (sym.isClass) {
       val classSym = sym.asClass
-      if (classSym.isSealed) {
-        classSym.knownDirectSubclasses.toList.flatMap(cl => whyNotClosed(cl.asType))
+      if (tools.treatAsSealed(classSym)) {
+        tools.directSubclasses(classSym).flatMap(cl => whyNotClosed(cl.asType))
       } else {
-        List(s"'${sym.fullName}' allows unknown subclasses (it is not sealed or final isCaseClass=${isCaseClass(sym)} isEffectivelyFinal=${sym.isEffectivelyFinal} isSealed=${classSym.isSealed})")
+        List(s"'${sym.fullName}' allows unknown subclasses (it is not sealed or final isCaseClass=${isCaseClass(sym)} isEffectivelyFinal=${sym.isEffectivelyFinal} isSealed=${classSym.isSealed} directSubclasses=${tools.directSubclasses(classSym)})")
       }
     } else {
       List(s"'${sym.fullName}' is not a class or trait")
@@ -209,13 +209,21 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
     //println("trying to generate pickler for type " + tpe.toString)
 
     def genDispatch(finalCases: List[CaseDef]): Tree = {
+      val dispatchees = compileTimeDispatchees(tpe)
+      val dispatcheeNames = dispatchees.map(_.key).mkString(", ")
+      val unknownClassCase = {
+          val otherTermName = newTermName("other")
+          val throwUnknownTag = q"""throw scala.pickling.PicklingException("Class " + other + " not recognized by pickler, looking for one of: " + $dispatcheeNames)"""
+          List(CaseDef(Bind(otherTermName, Ident(nme.WILDCARD)), throwUnknownTag))
+      }
+
       val clazzName = newTermName("clazz")
-      val compileTimeDispatch = compileTimeDispatchees(tpe) filter (_ != NullTpe) map { subtpe =>
+      val compileTimeDispatch = dispatchees filter (_ != NullTpe) map { subtpe =>
         CaseDef(Bind(clazzName, Ident(nme.WILDCARD)), q"clazz == classOf[$subtpe]", createPickler(subtpe, q"builder"))
       }
       q"""
         val clazz = if (picklee != null) picklee.getClass else null
-        ${Match(q"clazz", compileTimeDispatch ++ finalCases)}
+        ${Match(q"clazz", compileTimeDispatch ++ finalCases ++ unknownClassCase)}
       """
     }
 

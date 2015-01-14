@@ -43,6 +43,36 @@ class Tools[C <: Context](val c: C) {
   import compat._
   import definitions._
 
+  private def directSubclassesAnnotation(sym: TypeSymbol): Option[Seq[TypeSymbol]] = {
+    val annotatedSubclasses = sym.annotations.collect({
+      case annotation if annotation.tpe == typeOf[scala.pickling.directSubclasses] =>
+        annotation
+    }).headOption map {
+      annotation =>
+        annotation.javaArgs(newTermName("value")) match {
+          case ArrayArgument(klasses) => klasses.toList map {
+            case LiteralArgument(constant) =>
+              constant.value.asInstanceOf[Type].typeSymbol.asType
+          }
+        }
+    }
+
+    annotatedSubclasses
+  }
+
+  /** Find direct subclasses, preferring the directSubclasses annotation
+   * over knownDirectSubclasses.
+   */
+  def directSubclasses(sym: ClassSymbol): Seq[Symbol] = {
+    directSubclassesAnnotation(sym).getOrElse(sym.knownDirectSubclasses.toList)
+  }
+
+  /** Treat as a sealed type because it either is sealed, or specifies
+   * directSubclasses annotation.
+   */
+  def treatAsSealed(sym: ClassSymbol): Boolean =
+    sym.isSealed || directSubclassesAnnotation(sym).isDefined
+
   def blackList(sym: Symbol) = sym == AnyClass || sym == AnyRefClass || sym == AnyValClass || sym == ObjectClass
 
   def isRelevantSubclass(baseSym: Symbol, subSym: Symbol) = {
@@ -92,13 +122,13 @@ class Tools[C <: Context](val c: C) {
           val initialize = sym.typeSignature
           if (sym.isFinal || sym.isModuleClass) {
             Nil
-          } else if (sym.isSealed) {
+          } else if (treatAsSealed(sym)) {
             val syms: List[ClassSymbol] =
-              sym.knownDirectSubclasses.toList.map {
+              directSubclasses(sym).map {
                 case csym: ClassSymbol => csym
                 case msym: ModuleSymbol => msym.moduleClass.asClass
                 case osym => throw new Exception(s"unexpected known direct subclass: $osym <: $sym")
-              }.flatMap(loop)
+              }.toList.flatMap(loop)
             syms
           } else {
             hierarchyIsSealed = false
@@ -153,7 +183,7 @@ class Tools[C <: Context](val c: C) {
     else if (blackList(baseSym)) Nil
     else {
       var unsorted = {
-        if (baseSym.isClass && baseSym.asClass.isSealed) sealedHierarchyScan()
+        if (baseSym.isClass && treatAsSealed(baseSym.asClass)) sealedHierarchyScan()
         else sourcepathScan() // sourcepathAndClasspathScan()
       }
       // NOTE: need to order the list: children first, parents last
