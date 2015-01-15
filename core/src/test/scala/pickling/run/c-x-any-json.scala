@@ -1,9 +1,7 @@
 package scala.pickling.c.x.any.json
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
-import AllPicklers._
+import scala.pickling._, all._, json._
 
 case class C(x: Any)
 

@@ -2,8 +2,7 @@ package scala.pickling
 package test.rt
 
 import org.scalatest.FunSuite
-import json._
-import AllPicklers._
+import scala.pickling._, all._, json._
 
 case class Person(age: Int)
 

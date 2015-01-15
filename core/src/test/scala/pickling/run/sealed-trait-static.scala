@@ -1,9 +1,10 @@
 package scala.pickling.test.sealedtraitstatic
 
-import scala.pickling.{PickleOps, UnpickleOps, PicklingException}
+import scala.pickling.PicklingException
+import scala.pickling.ops._
 import scala.pickling.static._
 import scala.pickling.json._
-import scala.pickling.AllPicklers._
+import scala.pickling.allPicklers._
 
 import org.scalatest.FunSuite
 
@@ -18,8 +19,8 @@ final case class Banana(something: Int) extends Fruit
 final case class Cucumber(something: Int) // does not extend Fruit
 
 object Fruit {
-  implicit val pickler = scala.pickling.AllPicklers.genPickler[Fruit]
-  implicit val unpickler = scala.pickling.AllPicklers.genUnpickler[Fruit]
+  implicit val pickler = scala.pickling.allPicklers.genPickler[Fruit]
+  implicit val unpickler = scala.pickling.allPicklers.genUnpickler[Fruit]
 }
 
 class SealedTraitStaticTest extends FunSuite {

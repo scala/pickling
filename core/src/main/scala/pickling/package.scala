@@ -1,6 +1,7 @@
 package scala
 
 import scala.language.experimental.macros
+import scala.language.implicitConversions
 
 
 package object pickling {
@@ -32,7 +33,7 @@ package object pickling {
   	try { 
   	  if(null == picklee) {
   	    builder.hintTag(FastTypeTag.Null)
-  	    all.nullPicklerUnpickler.pickle(null, builder)
+  	    allPicklers.nullPicklerUnpickler.pickle(null, builder)
   	  } else {
   	    builder.hintTag(pickler.tag)
   	    pickler.pickle(picklee, builder)
@@ -50,7 +51,7 @@ package object pickling {
   }
 
   /** Appends the pickle/pickleTo/pickleInto operations onto any type, assuming implicits picklers are available. */
-  implicit class PickleOps[T](picklee: T) {
+  final class PickleOps[T](picklee: T) {
     def pickle(implicit format: PickleFormat, pickler: SPickler[T]): format.PickleType =
       scala.pickling.pickle[T](picklee)(format, pickler)
     def pickleInto(builder: PBuilder)(implicit pickler: SPickler[T]): Unit =
@@ -62,10 +63,27 @@ package object pickling {
     //  scala.pickling.pickleTo(picklee, output)(pickler, format)
   }
 
-  implicit class UnpickleOps(val thePickle: Pickle) {
+  final class UnpickleOps(val thePickle: Pickle) {
     def unpickle[T](implicit unpickler: Unpickler[T], format: PickleFormat): T =
        // TODO - Ideally we get a compiler error if pickle type doesn't match.
        scala.pickling.unpickle(thePickle.asInstanceOf[format.PickleType])(unpickler, format)
   }
 
+  /** Import `ops._` to introduce `pickle` and `unpickle` methods.
+   */
+  val ops: Ops = new Ops {}
+  val allPicklers: CorePicklersUnpicklers = new CorePicklersUnpicklers {}
+
+  /** Import `all._` to introduce all picklers and ops.
+   */
+  val all: CorePicklersUnpicklers with Ops =
+    new CorePicklersUnpicklers with Ops {}
+
+  trait Ops extends ToPickleOps with ToUnpickleOps {}
+  trait ToPickleOps {
+    implicit def toPickleOps[T](picklee: T): PickleOps[T] = new PickleOps(picklee)
+  }
+  trait ToUnpickleOps {
+    implicit def pickleToUnpickleOps(thePickle: Pickle): UnpickleOps = new UnpickleOps(thePickle)    
+  }
 }

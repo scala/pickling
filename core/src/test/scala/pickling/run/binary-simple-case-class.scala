@@ -1,9 +1,7 @@
 package scala.pickling.binary.simple.`case`.`class`
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import binary._
-import AllPicklers._
+import scala.pickling._, all._, binary._
 import reflect.runtime.{universe => ru}
 import ru._
 

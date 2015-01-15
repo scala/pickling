@@ -1,9 +1,7 @@
 package scala.pickling.test.generic.spickler
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
-import AllPicklers._
+import scala.pickling._, all._, json._
 
 case class PersonY(name: String, age: Int)
 case class PersonX(name: String, age: Int, salary: Int)

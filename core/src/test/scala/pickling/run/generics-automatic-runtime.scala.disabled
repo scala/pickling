@@ -1,6 +1,4 @@
-import scala.pickling._
-import binary._
-
+import scala.pickling._, all._, binary._
 import reflect.runtime.universe._
 
 class Base

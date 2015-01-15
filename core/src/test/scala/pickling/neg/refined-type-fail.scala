@@ -1,7 +1,6 @@
 package scala.pickling.refinedtypefail
 
 import scala.pickling._
-import AllPicklers._
 import NegativeCompilation._
 import org.scalatest.FunSuite
 
@@ -9,6 +8,7 @@ class RefinedTypeFailTest extends FunSuite {
   test("main") {
     expectError("Cannot generate") {
       """import _root_.scala.pickling._
+        |import _root_.scala.pickling.ops._
         |import _root_.scala.pickling.json._
         |
         |class C { type Cap }

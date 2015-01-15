@@ -1,8 +1,7 @@
 package scala.pickling.staticonlywithmanualpickler
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, ops._, json._
 import static.StaticOnly
 
 // NOT sealed so StaticOnly should block generating
