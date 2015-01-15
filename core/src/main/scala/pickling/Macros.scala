@@ -661,8 +661,11 @@ trait PickleMacros extends Macro with TypeAnalysis {
       import scala.pickling.internal._
       val $pickleeName: $tpe = $picklee
       scala.pickling.internal.GRL.lock()
-      $picklingLogic
-      scala.pickling.internal.GRL.unlock()
+      try {
+        $picklingLogic
+      } finally {
+        scala.pickling.internal.GRL.unlock()
+      }
     """
   }
 }
@@ -731,14 +734,17 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
       var $unpicklerName: scala.pickling.Unpickler[$tpe] = null
       $unpicklerName = implicitly[scala.pickling.Unpickler[$tpe]]
       scala.pickling.internal.GRL.lock()
-      $readerName.hintTag($unpicklerName.tag)
-      $staticHint
-      val typeString = $readerName.beginEntryNoTag()
-      val result = $unpicklerName.unpickle({ scala.pickling.FastTypeTag(typeString) }, $readerName)
-      $readerName.endEntry()
-      $unpickleeCleanup
-      scala.pickling.internal.GRL.unlock()
-      result.asInstanceOf[$tpe]
+      try {
+        $readerName.hintTag($unpicklerName.tag)
+        $staticHint
+        val typeString = $readerName.beginEntryNoTag()
+        val result = $unpicklerName.unpickle({ scala.pickling.FastTypeTag(typeString) }, $readerName)
+        $readerName.endEntry()
+        $unpickleeCleanup
+        result.asInstanceOf[$tpe]
+      } finally {
+        scala.pickling.internal.GRL.unlock()
+      }
     """
   }
 }
