@@ -1,9 +1,7 @@
 package scala.pickling.inheritance3
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
-import AllPicklers._
+import scala.pickling._, all._, json._
 
 trait Person {
   val name: String

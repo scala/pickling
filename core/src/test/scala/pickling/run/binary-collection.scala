@@ -1,8 +1,6 @@
 package scala.pickling.test.binary.collection
 
-import scala.pickling._
-import binary._
-import AllPicklers._
+import scala.pickling._, all._, binary._
 import org.scalatest.FunSuite
 
 import scala.collection.mutable

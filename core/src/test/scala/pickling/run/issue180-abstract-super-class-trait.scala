@@ -1,9 +1,7 @@
 package scala.pickling.test.issue180.abstractsuper
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
-import AllPicklers._
+import scala.pickling._, all._, json._
 
 trait TheTrait {
   val name : String

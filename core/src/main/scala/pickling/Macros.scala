@@ -575,7 +575,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
           if (tagKey == scala.pickling.FastTypeTag.Null.key) {
             null
           } else if (tagKey == scala.pickling.FastTypeTag.Ref.key) {
-            scala.pickling.AllPicklers.refUnpickler.unpickle(tagKey, reader)
+            scala.pickling.allPicklers.refUnpickler.unpickle(tagKey, reader)
           } else if (tagKey == ${if (tpe <:< typeOf[Singleton]) sym.fullName + ".type" else tpe.key}) {
             $unpickleObject
           } else {
@@ -648,7 +648,7 @@ trait PickleMacros extends Macro with TypeAnalysis {
         $picklerName.asInstanceOf[scala.pickling.SPickler[$tpe]].pickle($pickleeName, $builder)
       } else {
         $builder.hintTag(scala.pickling.FastTypeTag.Null)
-        scala.pickling.AllPicklers.nullPicklerUnpickler.pickle(null, $builder)
+        scala.pickling.allPicklers.nullPicklerUnpickler.pickle(null, $builder)
       }
     """
 

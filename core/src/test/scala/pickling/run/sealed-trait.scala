@@ -1,8 +1,6 @@
 package scala.pickling.test
 
-import scala.pickling._
-import AllPicklers._
-
+import scala.pickling._, all._
 import org.scalatest.FunSuite
 
 

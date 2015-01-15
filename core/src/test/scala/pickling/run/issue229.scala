@@ -1,10 +1,7 @@
 package scala.pickling.test.issue229
 
 import org.scalatest.FunSuite
-
-import scala.pickling._
-import json._
-import AllPicklers._
+import scala.pickling._, all._, json._
 
 case class Dim(width: Double, height: Double)
 
