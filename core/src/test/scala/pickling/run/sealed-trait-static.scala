@@ -1,10 +1,9 @@
 package scala.pickling.test.sealedtraitstatic
 
 import scala.pickling.PicklingException
-import scala.pickling.ops._
 import scala.pickling.static._
 import scala.pickling.json._
-import scala.pickling.allPicklers._
+import scala.pickling.all._
 
 import org.scalatest.FunSuite
 

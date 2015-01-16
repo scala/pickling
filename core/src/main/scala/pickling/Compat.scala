@@ -5,6 +5,7 @@ import scala.language.existentials
 
 import scala.reflect.macros.Context
 import scala.reflect.runtime.{universe => ru}
+import pickler.ListPicklerUnpicklerMacro
 
 // this is only necessary because 2.10.x doesn't support macro bundles
 object Compat {

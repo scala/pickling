@@ -648,7 +648,7 @@ trait PickleMacros extends Macro with TypeAnalysis {
         $picklerName.asInstanceOf[scala.pickling.SPickler[$tpe]].pickle($pickleeName, $builder)
       } else {
         $builder.hintTag(scala.pickling.FastTypeTag.Null)
-        scala.pickling.allPicklers.nullPicklerUnpickler.pickle(null, $builder)
+        scala.pickling.allPicklers.nullPickler.pickle(null, $builder)
       }
     """
 
