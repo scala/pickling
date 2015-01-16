@@ -10,11 +10,10 @@ trait AllPicklers extends PrimitivePicklers
   with RefPicklers
   with GenPicklers
   with GenUnpicklers
-  with LowPriorityPicklers {
-}
+  with LowPriorityPicklers {}
 object AllPicklers extends AllPicklers {} 
 
-trait LowPriorityPicklers extends MutableMapPicklers
+trait CollectionPicklers extends MutableMapPicklers
   with ImmutableSortedMapPicklers
   with MapPicklers
   with MutableSortedSetPicklers
@@ -27,5 +26,7 @@ trait LowPriorityPicklers extends MutableMapPicklers
   with LinearSeqPicklers
   with IndexedSeqPicklers
   with SeqPicklers
-  with IterablePicklers
+  with IterablePicklers {}
+
+trait LowPriorityPicklers extends CollectionPicklers
   with AnyUnpicklers {}
