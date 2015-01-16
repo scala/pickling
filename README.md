@@ -7,11 +7,19 @@ scala/pickling
 
 **Scala Pickling** is an automatic serialization framework made for Scala. It's fast, boilerplate-free, and allows users to easily swap in/out different serialization formats (such as binary, or JSON), or even to provide their own custom serialization format.
 
-Basic usage:
+### Basic usage (0.9.0)
 
 ```scala
-import scala.pickling._
-import json._
+import scala.pickling._, json._
+
+val pckl = List(1, 2, 3, 4).pickle
+val lst = pckl.unpickle[List[Int]]
+```
+
+### Basic usage (0.10.0)
+
+```scala
+import scala.pickling._, all._, json._
 
 val pckl = List(1, 2, 3, 4).pickle
 val lst = pckl.unpickle[List[Int]]
@@ -68,6 +76,29 @@ Scala Pickling...
 - gives you more **Typesafety**. No more errors from serialization/deserialization propagating to arbitrary points in your program. Unlike Java Serialization, errors either manifest themselves as compile-time errors, or runtime errors only at the point of unpickling.
 - has **Robust Support For Object-Orientation**. While Scala Pickling is based on the elegant notion of pickler combinators from functional programming, it goes on to extend the traditional form of pickler combinators to be able to handle open class hierarchies. That means that if you pickle an instance of a subclass, and then try to unpickle as a superclass, you will still get back an instance of the original subclass.
 - **Happens At Compile-Time**. That means that it’s super-performant because serialization-related code is typically generated at compile-time and inlined where it is needed in your code. Scala Pickling is essentially fully-static, reflection is only used as a fallback when static (compile-time) generation fails.
+
+## A la carte import (0.10.0)
+
+If you want, Pickling lets you import specific parts (ops, picklers, and format) so you can customize each part.
+
+```scala
+import scala.pickling._ // This imports names only
+import json._           // Imports PickleFormat
+import static._         // Avoid runtime pickler
+import ops._            // Inject pickle and unpicke methods
+// Import picklers for specific types
+import allPicklers.{ stringPickler, intPickler, refUnpickler, nullPickler }
+
+case class Pumpkin(kind: String)
+// Manually generate a pickler using macro
+implicit val pumpkinPickler = SPickler.generate[Pumpkin]
+implicit val pumpkinUnpickler = Unpickler.generate[Pumpkin]
+
+val pckl = Pumpkin("Kabocha").pickle
+val pump = pckl.unpickle[Pumpkin]
+```
+
+There are also traits available for picklers to mix and match your own convenience object to import from.
 
 <!-- This project aims to turn [a custom build of macro paradise](https://github.com/heathermiller/scala-pickling/tree/topic/scala-pickling) that we used in
 [Object-Oriented Pickler Combinators and an Extensible Generation Framework](http://lampwww.epfl.ch/~hmiller/files/pickling.pdf)

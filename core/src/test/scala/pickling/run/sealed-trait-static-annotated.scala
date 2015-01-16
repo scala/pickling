@@ -1,10 +1,10 @@
 package scala.pickling.test.sealedtraitstaticannotated
 
-import scala.pickling.{PicklingException, directSubclasses}
+import scala.pickling.{PicklingException, directSubclasses, SPickler, Unpickler}
 import scala.pickling.ops._
 import scala.pickling.static._
 import scala.pickling.json._
-import scala.pickling.allPicklers.{ stringPicklerUnpickler, intPicklerUnpickler, refUnpickler, nullPicklerUnpickler }
+import scala.pickling.allPicklers.{ stringPickler, intPickler, refUnpickler, nullPickler }
 
 import org.scalatest.FunSuite
 
@@ -30,6 +30,8 @@ final case class Orange(ripeness: String) extends RedOrOrangeFruit
 final case class Banana(something: Int) extends Fruit
 
 final case class Cucumber(something: Int) // does not extend Fruit
+
+final case class Pumpkin(kind: String)
 
 class SealedTraitStaticAnnotatedTest extends FunSuite {
 
@@ -69,5 +71,13 @@ class SealedTraitStaticAnnotatedTest extends FunSuite {
       case PicklingException(message, cause) =>
         assert(message.contains("Apple not recognized"))
     }
+  }
+
+  test("manually generate") {
+    implicit val pumpkinPickler = SPickler.generate[Pumpkin]
+    implicit val pumpkinUnpickler = Unpickler.generate[Pumpkin]
+    val pumpkin = Pumpkin("Kabocha")
+    val pumpkinString = pumpkin.pickle.value
+    assert(JSONPickle(pumpkinString).unpickle[Pumpkin] == pumpkin)
   }
 }

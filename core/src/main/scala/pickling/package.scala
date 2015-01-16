@@ -2,7 +2,7 @@ package scala
 
 import scala.language.experimental.macros
 import scala.language.implicitConversions
-
+import scala.pickling.pickler.AllPicklers
 
 package object pickling {
 
@@ -33,7 +33,7 @@ package object pickling {
   	try { 
   	  if(null == picklee) {
   	    builder.hintTag(FastTypeTag.Null)
-  	    allPicklers.nullPicklerUnpickler.pickle(null, builder)
+  	    allPicklers.nullPickler.pickle(null, builder)
   	  } else {
   	    builder.hintTag(pickler.tag)
   	    pickler.pickle(picklee, builder)
@@ -69,15 +69,16 @@ package object pickling {
        scala.pickling.unpickle(thePickle.asInstanceOf[format.PickleType])(unpickler, format)
   }
 
+  val allPicklers = AllPicklers
+
   /** Import `ops._` to introduce `pickle` and `unpickle` methods.
    */
   val ops: Ops = new Ops {}
-  val allPicklers: CorePicklersUnpicklers = new CorePicklersUnpicklers {}
 
   /** Import `all._` to introduce all picklers and ops.
    */
-  val all: CorePicklersUnpicklers with Ops =
-    new CorePicklersUnpicklers with Ops {}
+  val all: AllPicklers with Ops =
+    new AllPicklers with Ops {}
 
   trait Ops extends ToPickleOps with ToUnpickleOps {}
   trait ToPickleOps {
