@@ -137,6 +137,9 @@ package json {
       pickler(this)
       this
     }
+    override def putDynamicFieldNames(names: List[String])(implicit namesPickler: SPickler[List[String]]): PBuilder =
+      // in JSON, field names are always written
+      this
     def endEntry(): Unit = {
       unindent()
       if (primitives.contains(tags.pop().key)) () // do nothing
@@ -246,6 +249,10 @@ package json {
       datum match {
         case JSONObject(fields) => mkNestedReader(fields(name))
       }
+    }
+    override def readDynamicFieldNames()(implicit namesUnpickler: Unpickler[List[String]], namesTag: FastTypeTag[List[String]]): List[String] = datum match {
+      case JSONObject(fields) => fields.keys.toList.filterNot(_ == "tpe")
+      case _ => throw PicklingException("cannot read fields of JSON object")
     }
     def endEntry(): Unit = {}
     def beginCollection(): PReader = readField("elems")
