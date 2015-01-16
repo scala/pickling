@@ -19,6 +19,10 @@ trait Hintable {
 trait PBuilder extends Hintable {
   def beginEntry(picklee: Any): PBuilder
   def putField(name: String, pickler: PBuilder => Unit): PBuilder
+  def putDynamicFieldNames(names: List[String])(implicit namesPickler: SPickler[List[String]]): PBuilder =
+    this.putField("$keys", { b =>
+      namesPickler.pickle(names, b)
+    })
   def endEntry(): Unit
   def beginCollection(length: Int): PBuilder
   def putElement(pickler: PBuilder => Unit): PBuilder
@@ -35,6 +39,13 @@ trait PReader extends Hintable {
   def readPrimitive(): Any
   def atObject: Boolean
   def readField(name: String): PReader
+  def readDynamicFieldNames()(implicit namesUnpickler: Unpickler[List[String]], namesTag: FastTypeTag[List[String]]): List[String] = {
+    val nested = this.readField("$keys")
+    nested.beginEntry()
+    val result = namesUnpickler.unpickle(namesTag, nested).asInstanceOf[List[String]]
+    nested.endEntry()
+    result
+  }
   def endEntry(): Unit
   def beginCollection(): PReader
   def readLength(): Int
