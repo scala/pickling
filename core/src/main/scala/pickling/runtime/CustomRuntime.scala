@@ -106,7 +106,7 @@ trait RuntimePicklersUnpicklers {
       builder.endEntry()
     }
 
-    def unpickle(tag: => FastTypeTag[_], preader: PReader): Any = {
+    def unpickle(tag: String, preader: PReader): Any = {
       val reader = preader.beginCollection()
 
       preader.pushHints()
@@ -123,9 +123,7 @@ trait RuntimePicklersUnpicklers {
       while (i < length) {
         try {
           val r = reader.readElement()
-          r.beginEntryNoTag()
-          val elem = elemUnpickler.unpickle(elemTag, r)
-          r.endEntry()
+          val elem = elemUnpickler.unpickleEntry(r)
           newArray(i) = elem.asInstanceOf[AnyRef]
           i = i + 1
         } catch {
@@ -203,7 +201,7 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unp
           case PicklingException(msg, cause) =>
             throw PicklingException(s"""error in unpickle of '${this.getClass.getName}':
                                        |field name: '$name'
-                                       |field tag: '${tag1.key}'
+                                       |field tag: '${tag1}'
                                        |message:
                                        |$msg""".stripMargin, cause)
         }
@@ -213,7 +211,7 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unp
     value
   }
 
-  def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+  def unpickle(tag: String, reader: PReader): Any = {
     val fld1 = unpickleField("_1", reader)
     val fld2 = unpickleField("_2", reader)
     (fld1, fld2)

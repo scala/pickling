@@ -111,7 +111,7 @@ trait PBuilder extends Hintable {
  *
  * Here are a few static rules that all picklers must follow when using this interface.
  *
- * 1. There must be a typeHint() before any beginEntry*() call.
+ * 1. There must be a typeHint() before any beginEntry() call.
  * 2. There will be one endEntry() for every beginEntry() call.
  * 3. There will be one endCollection() for every beginCollection() call.
  * 4. Every beginCollection()/endCollection() pair will be inside a beginEntry()/endEntry() pair.
@@ -150,15 +150,11 @@ trait PBuilder extends Hintable {
 trait PReader extends Hintable {
   /** The scala reflection mirror used when we need to do any runtime-reflection based unpickling. */
   def mirror: Mirror
-  /** start reading a pickled value, returning the serialized FastTypeTag[_], or our static type "hint" */
-  def beginEntry(): FastTypeTag[_]
-  /** Start reading a pickled value, ignoring any type tag. */
-  def beginEntryNoTag(): String
-  /** Start reading a pickler ignoring any TypeTag hints.
-    * @param debugOn  Whether or not to debug this usage.
-    * @return  A string representing the FastTypeTag.key,
-    */
-  def beginEntryNoTagDebug(debugOn: Boolean): String
+  /** Start reading a pickled value.  
+   *  This will return any serialized type tag key string.   This string can be used
+   *  to reconstitute a FastTypeTag w/ a mirror, but is intended for use as fast string-matching.
+   */
+  def beginEntry(): String
   /** returns true if the reader is currently looking at a pickled primitive. */
   def atPrimitive: Boolean
   /** Reads one of the supported primitive types from the pickler. */

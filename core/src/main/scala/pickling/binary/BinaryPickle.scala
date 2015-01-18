@@ -168,9 +168,7 @@ abstract class AbstractBinaryReader(val mirror: Mirror) {
 class BinaryPickleReader(in: BinaryInput, mirror: Mirror, format: BinaryPickleFormat) extends AbstractBinaryReader(mirror) with PReader with PickleTools {
   import format._
   
-  def beginEntryNoTagDebug(debug: Boolean): String = beginEntryNoTag
-
-  def beginEntryNoTag: String = {
+  def beginEntry: String = {
     val res: Any = withHints { hints =>
 
       if (hints.isElidedType && nullablePrimitives.contains(hints.tag.key)) {
@@ -216,10 +214,10 @@ class BinaryPickleReader(in: BinaryInput, mirror: Mirror, format: BinaryPickleFo
     }
   }
 
-  def beginEntry(): FastTypeTag[_] = {
-    beginEntryNoTag()
-    lastTagRead
-  }
+  //def beginEntry(): FastTypeTag[_] = {
+  //  beginEntryNoTag()
+  //  lastTagRead
+  //}
 
   def atPrimitive: Boolean = primitives.contains(lastTagRead.key)
 
