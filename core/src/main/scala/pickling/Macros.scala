@@ -334,10 +334,9 @@ trait OpenSumUnpicklerMacro extends Macro with UnpicklerMacros with FastTypeTagM
     def dispatchLogic = {
       val compileTimeDispatch = createCompileTimeDispatch(tpe)
       val refDispatch         = createRefDispatch()
-      // TODO - here we should summon up the reader from a pickling thread-local, or
-      //        some other magic location rather than forcing the reader to remember.
+      // TODO - for now we're using "currentMirror" macro.  That may not be ok.
       val runtimeDispatch     = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""
-        scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(reader.mirror, tagKey)
+        scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(scala.pickling.internal.`package`.currentMirror, tagKey)
       """)
 
       q"""
@@ -557,8 +556,9 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
               throw scala.pickling.PicklingException("Tag " + tagKey + " not recognized while unpickling " + ${tpe.key})
             """
           else
+            // FOR now we summon up a mirror using the currentMirror macro.
             q"""
-              val rtUnpickler = scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(reader.mirror, tagKey)
+              val rtUnpickler = scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(scala.pickling.internal.`package`.currentMirror, tagKey)
               rtUnpickler.unpickle(tagKey, reader)
             """
 
@@ -703,7 +703,7 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
       import scala.pickling.internal._
       val $formatName = implicitly[scala.pickling.PickleFormat]
       val $pickleName = $pickleArg.thePickle.asInstanceOf[$formatName.PickleType]
-      val $readerName = $formatName.createReader($pickleName, scala.pickling.internal.`package`.currentMirror)
+      val $readerName = $formatName.createReader($pickleName)
       $readerUnpickleTree
     """
   }

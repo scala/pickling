@@ -15,5 +15,5 @@ trait PickleFormat {
 
   def createBuilder(): PBuilder
   def createBuilder(out: OutputType): PBuilder
-  def createReader(pickle: PickleType, mirror: Mirror): PReader
+  def createReader(pickle: PickleType): PReader
 }
