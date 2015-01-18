@@ -370,11 +370,15 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
 
   class PrimitivePicklerUnpickler[T: FastTypeTag](name: String) extends AutoRegister[T](name) {
     def pickle(picklee: T, builder: PBuilder): Unit = {
+      // TODO - figure out this is the right thing to do, and if
+      // we should denote it's statically elidable...
+      builder.hintTag(tag)
       builder.beginEntry(picklee)
       builder.endEntry()
     }
     def unpickle(tag: String, reader: PReader): Any = {
       try {
+        reader.hintTag(this.tag)
         reader.readPrimitive()
       } catch {
         case PicklingException(msg, cause) =>
