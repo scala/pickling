@@ -1,5 +1,6 @@
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 import org.evactor.model.events.DataEvent
 import scala.util.Random

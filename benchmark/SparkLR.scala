@@ -1,5 +1,6 @@
 import scala.pickling._
 import binary._
+import AllPicklers._
 import java.io._
 import scala.util.Random
 
