@@ -624,37 +624,13 @@ trait PickleMacros extends Macro with TypeAnalysis {
     """
   }
 
-  def pickle[T: c.WeakTypeTag](format: c.Tree): c.Tree = {
-    val tpe = weakTypeOf[T]
-    val q"${_}($pickleeArg)" = c.prefix.tree
-    val endPickle = if (shouldBotherAboutCleaning(tpe)) q"clearPicklees()" else q"";
-    val pickleeName = newTermName("picklee$pickle$")
-    val builderName = newTermName("builder$pickle$")
-    q"""
-      import scala.pickling._
-      import scala.pickling.internal._
-      val $pickleeName: $tpe = $pickleeArg
-      val $builderName = $format.createBuilder()
-      $pickleeName.pickleInto($builderName)
-      $endPickle
-      $builderName.result()
-    """
-  }
-
   def createPickler(tpe: c.Type, builder: c.Tree): c.Tree = q"""
     val pickler = implicitly[scala.pickling.SPickler[$tpe]]
     $builder.hintTag(pickler.tag)
     pickler
   """
 
-  /** Used by the main `pickle` macro. Its purpose is to pickle the object that it's called on *into* the
-   *  the `builder` which is passed to it as an argument.
-   */
-  def pickleInto[T: c.WeakTypeTag](builder: c.Tree): c.Tree = {
-    val q"${_}($pickleeArg)" = c.prefix.tree
-    pickleWithTagInto(pickleeArg, builder)
-  }
-
+  // used by dpickler.
   def pickleWithTagInto[T: c.WeakTypeTag](picklee: c.Tree, builder: c.Tree): c.Tree = {
     val origTpe = weakTypeOf[T]
     val tpe = origTpe.widen // to make module classes work
@@ -691,32 +667,11 @@ trait PickleMacros extends Macro with TypeAnalysis {
   }
 }
 
-// purpose of this macro: implementation of unpickle method of class UnpickleOps, which:
+// purpose of this macro: implementation of nested unpickle methods in other unpicklers, which:
 // 1) dispatches to the correct unpickler based on the type of the input;
 // 2) inserts a call in the generated code to the genUnpickler macro (described above)
 trait UnpickleMacros extends Macro with TypeAnalysis {
   import c.universe._
-
-  // TODO: currently this works with an assumption that sharing settings for unpickling are the same as for pickling
-  // of course this might not be the case, so we should be able to read settings from the pickle itself
-  // this is not going to be particularly pretty. unlike the fix for the runtime interpreter, this fix will be a bit of a shotgun one
-  def pickleUnpickle[T: c.WeakTypeTag]: Tree = {
-    val tpe = weakTypeOf[T]
-    val pickleArg = c.prefix.tree
-    val readerName = newTermName("reader$unpickle$")
-    val readerUnpickleTree = readerUnpickleTopLevel(tpe, readerName)
-    val formatName = newTermName("format$unpickle$")
-    val pickleName = newTermName("pickle$unpickle$")
-    q"""
-      import scala.language.existentials
-      import scala.pickling._
-      import scala.pickling.internal._
-      val $formatName = implicitly[scala.pickling.PickleFormat]
-      val $pickleName = $pickleArg.thePickle.asInstanceOf[$formatName.PickleType]
-      val $readerName = $formatName.createReader($pickleName)
-      $readerUnpickleTree
-    """
-  }
 
   def readerUnpickle(tpe: Type, readerName: TermName): Tree =
     readerUnpickleHelper(tpe, readerName)(false)
@@ -730,6 +685,7 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
   def createRefDispatch(): CaseDef =
     CaseDef(Literal(Constant(FastTypeTag.Ref.key)), EmptyTree, createUnpickler(typeOf[refs.Ref]))
 
+  // used elsewhere
   def createCompileTimeDispatch(tpe: Type): List[CaseDef] = {
     val dispatchees = compileTimeDispatchees(tpe)
     val dispatcheeNames = dispatchees.map(_.key).mkString(", ")
