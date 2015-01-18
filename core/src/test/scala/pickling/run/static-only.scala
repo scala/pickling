@@ -39,4 +39,9 @@ class StaticOnlyTest extends FunSuite {
     val pickle: JSONPickle = x.pickle
     assert(pickle.unpickle[C].fld == 1)
   }
+  test("static-methods") {
+  	val x: C = new D
+    val pickle: JSONPickle = scala.pickling.pickle(x)
+    assert(unpickle[C](pickle).fld == 1)
+  }
 }
