@@ -20,6 +20,7 @@ class FileIOTest extends FunSuite {
     val tmpFile = File.createTempFile("pickling", "fileoutput")
     val fileOut = new TextFileOutput(tmpFile)
 
+    // We use the implicitly added OPS here to ensure they work.
     p.pickleTo(fileOut)
     fileOut.close()
 
@@ -34,7 +35,8 @@ class FileIOTest extends FunSuite {
     val tmpFile = File.createTempFile("pickling", "fileoutput")
     val fileOut = new TextFileOutput(tmpFile)
 
-    p.pickleTo(fileOut)
+    // We use the static method here just to make sure it works
+    scala.pickling.pickleTo(json.pickleFormat)(p, fileOut)
     fileOut.close()
 
     val fileContents = Source.fromFile(tmpFile).getLines.mkString("\n")

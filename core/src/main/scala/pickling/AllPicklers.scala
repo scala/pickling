@@ -7,27 +7,11 @@ object AllPicklers extends CorePicklersUnpicklers
 
 object all extends CorePicklersUnpicklers {
 
-  implicit class PickleOps[T: SPickler](picklee: T) {
-    def pickle(implicit format: PickleFormat): format.PickleType = {
-      val builder = format.createBuilder()
-      pickleInto(builder)
-      // TODO - clear picklees()?  Check with Heather/Phillip on when this should be done.
-      builder.result.asInstanceOf[format.PickleType]
-    }
-    def pickleInto(builder: PBuilder): Unit = {
-      if(picklee != null) {
-        // TODO - grab pickler
-        val pickler = implicitly[scala.pickling.SPickler[T]]
-        builder.hintTag(pickler.tag)
-        pickler.pickle(picklee, builder)
-      } else {
-        builder.hintTag(scala.pickling.FastTypeTag.Null)
-        scala.pickling.AllPicklers.nullPicklerUnpickler.pickle(null, builder)
-      }
-    }
-    // NOTE: We leave this as a macro in the hopes that the type system will figure out if
-    // PickleFormat.OutputType <:< S
-    // We could possibly directly encode this via another mechanism.
+  // TODO - why is this here and a duplicate of package.scala in pickling?
+  // TODO - should we delegate to raw-methods in scala.pickling package object?
+  implicit class PickleOps[T](picklee: T) {
+    def pickle(implicit format: PickleFormat): format.PickleType = macro Compat.PickleMacros_pickle[T]
+    def pickleInto(builder: PBuilder): Unit = macro Compat.PickleMacros_pickleInto[T]
     def pickleTo[S](output: S)(implicit format: PickleFormat): Unit = macro Compat.PickleMacros_pickleTo[T,S]
   }
 
