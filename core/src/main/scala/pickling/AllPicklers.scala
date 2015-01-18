@@ -7,6 +7,8 @@ object AllPicklers extends CorePicklersUnpicklers
 
 object all extends CorePicklersUnpicklers {
 
+  // TODO - why is this here and a duplicate of package.scala in pickling?
+  // TODO - should we delegate to raw-methods in scala.pickling package object?
   implicit class PickleOps[T](picklee: T) {
     def pickle(implicit format: PickleFormat): format.PickleType = macro Compat.PickleMacros_pickle[T]
     def pickleInto(builder: PBuilder): Unit = macro Compat.PickleMacros_pickleInto[T]
