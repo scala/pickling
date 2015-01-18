@@ -48,7 +48,14 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
 
   override def impl[T: c.WeakTypeTag]: c.Tree = preferringAlternativeImplicits {
     import definitions._
-    val tpe = weakTypeOf[T]
+    val originalTpe = weakTypeOf[T]
+    // Note: this makes it so modules work, things like foo.type.
+    //       For some reason we get an issue with not having == defined on Class[_] otherwise.
+    val tpe = {
+      // TODO - fix this for certain primitive types, like Null, etc.
+      if(originalTpe.termSymbol.isModule) originalTpe.widen
+      else originalTpe
+    }
     val sym = tpe.typeSymbol.asClass
     import irs._
 
@@ -649,7 +656,8 @@ trait PickleMacros extends Macro with TypeAnalysis {
   }
 
   def pickleWithTagInto[T: c.WeakTypeTag](picklee: c.Tree, builder: c.Tree): c.Tree = {
-    val tpe = weakTypeOf[T].widen // to make module classes work
+    val origTpe = weakTypeOf[T]
+    val tpe = origTpe.widen // to make module classes work
     val sym = tpe.typeSymbol
 
     val pickleeName = newTermName("picklee$pickleInto$")

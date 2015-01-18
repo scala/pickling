@@ -8,8 +8,12 @@ object AllPicklers extends CorePicklersUnpicklers
 object all extends CorePicklersUnpicklers {
 
   implicit class PickleOps[T](picklee: T) {
-    def pickle(implicit format: PickleFormat): format.PickleType = macro Compat.PickleMacros_pickle[T]
-    def pickleInto(builder: PBuilder): Unit = macro Compat.PickleMacros_pickleInto[T]
+    //def pickle(implicit format: PickleFormat): format.PickleType = macro Compat.PickleMacros_pickle[T]
+    def pickle(implicit format: PickleFormat, pickler: SPickler[T]): format.PickleType =
+      scala.pickling.pickle[T](picklee)(format, pickler)
+    //def pickleInto(builder: PBuilder): Unit = macro Compat.PickleMacros_pickleInto[T]
+    def pickleInto(builder: PBuilder)(implicit pickler: SPickler[T]): Unit =
+      scala.pickling.pickleInto(picklee, builder)(pickler)
     def pickleTo[S](output: S)(implicit format: PickleFormat): Unit = macro Compat.PickleMacros_pickleTo[T,S]
   }
 
