@@ -3,6 +3,7 @@ import scala.util.Random
 
 import scala.pickling._
 import binary._
+import AllPicklers._
 import java.lang.{Runtime => JRuntime}
 
 // for Java Serialization:
