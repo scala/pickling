@@ -200,6 +200,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
 
       def tag: FastTypeTag[Any] = fastTag.asInstanceOf[FastTypeTag[Any]]
 
+      // TODO - We should use the GRL here
       def pickle(picklee: Any, builder: PBuilder): Unit = {
         //debug(s"pickling object of type: ${tag.key}")
         builder.beginEntry(picklee)

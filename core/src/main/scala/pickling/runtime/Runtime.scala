@@ -22,7 +22,6 @@ object Runtime {
 }
 
 import HasCompat._
-
 abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_], share: refs.Share) {
   import scala.reflect.runtime.universe._
   import definitions._
@@ -68,6 +67,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
   debug("InterpretedPicklerRuntime: preclazz = " + preclazz)
   debug("InterpretedPicklerRuntime: clazz    = " + clazz)
 
+  //  TODO - this pickler should know to lock the GRL before running itself, or any mirror code.
   def genPickler: SPickler[_] = {
     // build "interpreted" runtime pickler
     new SPickler[Any] with PickleTools {
@@ -174,6 +174,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(implicit shar
   def shouldBotherAboutSharing(tpe: Type) = shareAnalyzer.shouldBotherAboutSharing(tpe)
   def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
 
+  // TODO - This method should lock the GRL before running any unpickle logic.
   def genUnpickler: Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
       def tag: FastTypeTag[Any] = fastTag.asInstanceOf[FastTypeTag[Any]]
@@ -273,6 +274,7 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(i
   val cir = newClassIR(tpe)
   // debug("UnpicklerRuntime: cir = " + cir)
 
+  // TODO - This method should lock the GRL before running any unpickle logic
   def genUnpickler: Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
       def tag: FastTypeTag[Any] = fastTag.asInstanceOf[FastTypeTag[Any]]
