@@ -25,9 +25,9 @@ package json {
     type OutputType = Output[String]
     def createBuilder() = new JSONPickleBuilder(this, new StringOutput)
     def createBuilder(out: Output[String]): PBuilder = new JSONPickleBuilder(this, out)
-    def createReader(pickle: JSONPickle, mirror: Mirror) = {
+    def createReader(pickle: JSONPickle) = {
       JSON.parseRaw(pickle.value) match {
-        case Some(raw) => new JSONPickleReader(raw, mirror, this)
+        case Some(raw) => new JSONPickleReader(raw, this)
         case None => throw new PicklingException("failed to parse \"" + pickle.value + "\" as JSON")
       }
     }
@@ -164,7 +164,7 @@ package json {
     }
   }
 
-  class JSONPickleReader(var datum: Any, val mirror: Mirror, format: JSONPickleFormat) extends PReader with PickleTools {
+  class JSONPickleReader(var datum: Any, format: JSONPickleFormat) extends PReader with PickleTools {
     private var lastReadTag: String = null
     private val primitives = Map[String, () => Any](
       FastTypeTag.Unit.key -> (() => ()),
@@ -189,7 +189,7 @@ package json {
       FastTypeTag.ArrayDouble.key -> (() => datum.asInstanceOf[JSONArray].list.map(el => el.asInstanceOf[Double]).toArray)
     )
     private def mkNestedReader(datum: Any) = {
-      val nested = new JSONPickleReader(datum, mirror, format)
+      val nested = new JSONPickleReader(datum, format)
       if (this.areHintsPinned) {
         nested.pinHints()
         nested.hints = hints

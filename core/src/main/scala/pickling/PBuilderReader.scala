@@ -148,8 +148,6 @@ trait PBuilder extends Hintable {
  *   - ArrayDouble
  */
 trait PReader extends Hintable {
-  /** The scala reflection mirror used when we need to do any runtime-reflection based unpickling. */
-  def mirror: Mirror
   /** Start reading a pickled value.  
    *  This will return any serialized type tag key string.   This string can be used
    *  to reconstitute a FastTypeTag w/ a mirror, but is intended for use as fast string-matching.
