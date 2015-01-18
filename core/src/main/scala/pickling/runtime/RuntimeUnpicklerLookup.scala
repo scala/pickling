@@ -8,7 +8,7 @@ import internal.Classes
 object RuntimeUnpicklerLookup extends RuntimePicklersUnpicklers {
   // Note: parameter `tag` may be `null`.
   // TODO - This method is one which would need the GRL, if we try to avoid using it in every
-  //        pickle/unpickle scenario.
+  //        unpickle scenario.
   def genUnpickler(mirror: Mirror, tagKey: String)(implicit share: refs.Share): Unpickler[_] = {
     // println(s"generating runtime unpickler for ${tagKey}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
     GlobalRegistry.unpicklerMap.get(tagKey) match {

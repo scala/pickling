@@ -418,6 +418,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
 trait ListPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
   import c.universe._
   import definitions._
+  // TODO - Lock this by GRL
   lazy val ConsClass = c.mirror.staticClass("scala.collection.immutable.$colon$colon")
   def mkType(eltpe: c.Type) = appliedType(ConsClass.toTypeConstructor, List(eltpe))
   def mkArray(picklee: c.Tree) = q"$picklee.toArray"

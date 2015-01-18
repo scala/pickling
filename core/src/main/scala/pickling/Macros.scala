@@ -38,6 +38,7 @@ trait TypeAnalysis extends Macro {
 trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
   import c.universe._
 
+  // TODO - We should use the GRL to lock the reflection in the TypeTag + Runtime lookup.
   def createRuntimePickler(builder: c.Tree): c.Tree = q"""
     val classLoader = this.getClass.getClassLoader
     val tag = scala.pickling.FastTypeTag.mkRaw(clazz, scala.reflect.runtime.universe.runtimeMirror(classLoader))
@@ -557,6 +558,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
             """
           else
             // FOR now we summon up a mirror using the currentMirror macro.
+            // TODO - we may need a more robust mechanism  of grabbing the currentMirror
             q"""
               val rtUnpickler = scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(scala.pickling.internal.`package`.currentMirror, tagKey)
               rtUnpickler.unpickle(tagKey, reader)
