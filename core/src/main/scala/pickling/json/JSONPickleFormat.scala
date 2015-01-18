@@ -165,7 +165,7 @@ package json {
   }
 
   class JSONPickleReader(var datum: Any, val mirror: Mirror, format: JSONPickleFormat) extends PReader with PickleTools {
-    private var lastReadTag: FastTypeTag[_] = null
+    private var lastReadTag: String = null
     private val primitives = Map[String, () => Any](
       FastTypeTag.Unit.key -> (() => ()),
       FastTypeTag.Null.key -> (() => null),
@@ -197,48 +197,43 @@ package json {
       }
       nested
     }
-
-    def beginEntryNoTag(): String =
-      beginEntryNoTagDebug(false)
-
-    def beginEntryNoTagDebug(debugOn: Boolean): String = beginEntry().key
-    def beginEntry(): FastTypeTag[_] = withHints { hints =>
+    def beginEntry(): String = withHints { hints =>
       lastReadTag = {
-        if (datum == null) FastTypeTag.Null
+        if (datum == null) FastTypeTag.Null.key
         else if (hints.isElidedType) {
           datum match {
-            case JSONObject(fields) if fields.contains("$ref") => FastTypeTag.Ref
-            case _ => hints.tag
+            case JSONObject(fields) if fields.contains("$ref") => FastTypeTag.Ref.key
+            case _ => hints.tag.key
           }
         } else {
           datum match {
-            case JSONObject(fields) if fields.contains("$ref") => FastTypeTag.Ref
-            case JSONObject(fields) if fields.contains("tpe") => FastTypeTag(mirror, fields("tpe").asInstanceOf[String])
-            case JSONObject(fields) => hints.tag
+            case JSONObject(fields) if fields.contains("$ref") => FastTypeTag.Ref.key
+            case JSONObject(fields) if fields.contains("tpe") => fields("tpe").asInstanceOf[String]
+            case JSONObject(fields) => hints.tag.key
           }
         }
       }
       lastReadTag
     }
-    def atPrimitive: Boolean = primitives.contains(lastReadTag.key)
+    def atPrimitive: Boolean = primitives.contains(lastReadTag)
     def readPrimitive(): Any = {
       datum match {
-        case JSONArray(list) if lastReadTag.key != FastTypeTag.ArrayByte.key &&
-                                lastReadTag.key != FastTypeTag.ArrayShort.key &&
-                                lastReadTag.key != FastTypeTag.ArrayChar.key &&
-                                lastReadTag.key != FastTypeTag.ArrayInt.key &&
-                                lastReadTag.key != FastTypeTag.ArrayLong.key &&
-                                lastReadTag.key != FastTypeTag.ArrayBoolean.key &&
-                                lastReadTag.key != FastTypeTag.ArrayFloat.key &&
-                                lastReadTag.key != FastTypeTag.ArrayDouble.key =>
+        case JSONArray(list) if lastReadTag != FastTypeTag.ArrayByte.key &&
+                                lastReadTag != FastTypeTag.ArrayShort.key &&
+                                lastReadTag != FastTypeTag.ArrayChar.key &&
+                                lastReadTag != FastTypeTag.ArrayInt.key &&
+                                lastReadTag != FastTypeTag.ArrayLong.key &&
+                                lastReadTag != FastTypeTag.ArrayBoolean.key &&
+                                lastReadTag != FastTypeTag.ArrayFloat.key &&
+                                lastReadTag != FastTypeTag.ArrayDouble.key =>
           // now this is a hack!
-          val value = mkNestedReader(list.head).primitives(lastReadTag.key)()
+          val value = mkNestedReader(list.head).primitives(lastReadTag)()
           datum = JSONArray(list.tail)
           value
-        case JSONObject(fields) if lastReadTag.key != FastTypeTag.Ref.key =>
-          mkNestedReader(fields("value")).primitives(lastReadTag.key)()
+        case JSONObject(fields) if lastReadTag != FastTypeTag.Ref.key =>
+          mkNestedReader(fields("value")).primitives(lastReadTag)()
         case _ =>
-          primitives(lastReadTag.key)()
+          primitives(lastReadTag)()
       }
     }
     def atObject: Boolean = datum.isInstanceOf[JSONObject]

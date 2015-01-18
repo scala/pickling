@@ -7,32 +7,34 @@ import internal.Classes
 
 object RuntimeUnpicklerLookup extends RuntimePicklersUnpicklers {
   // Note: parameter `tag` may be `null`.
-  def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit share: refs.Share): Unpickler[_] = {
-    // println(s"generating runtime unpickler for ${tag.key}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
-    val className = tag.key
-    GlobalRegistry.unpicklerMap.get(className) match {
+  // TODO - This method is one which would need the GRL, if we try to avoid using it in every
+  //        pickle/unpickle scenario.
+  def genUnpickler(mirror: Mirror, tagKey: String)(implicit share: refs.Share): Unpickler[_] = {
+    // println(s"generating runtime unpickler for ${tagKey}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
+    GlobalRegistry.unpicklerMap.get(tagKey) match {
       case None =>
-        // debug(s"!!! could not find registered unpickler for class $className !!!")
-        val unpickler = if (className.startsWith("scala.Array")) {
-          // debug(s"runtime unpickling of an array: $className")
-          val elemTypeString = className.substring(12, className.length - 1)
+        // debug(s"!!! could not find registered unpickler for class $tagKey !!!")
+        val unpickler = if (tagKey.startsWith("scala.Array")) {
+          // debug(s"runtime unpickling of an array: $tagKey")
+          val elemTypeString = tagKey.substring(12, tagKey.length - 1)
           // debug(s"creating tag for element type: $elemTypeString")
           val elemTag = FastTypeTag(mirror, elemTypeString)
           val elemClass = Classes.classFromString(elemTypeString)
-          val elemUnpickler = genUnpickler(mirror, elemTag)
+          val elemUnpickler = genUnpickler(mirror, elemTypeString)
+          val tag = FastTypeTag(mirror, tagKey)
 
           mkRuntimeTravPickler[Array[AnyRef]](elemClass, elemTag, tag, null, elemUnpickler)
         } else {
           val runtime = if (share.isInstanceOf[refs.ShareNothing]) {
-              // debug(s"@@@ creating ShareNothingInterpretedUnpicklerRuntime for type $className")
-              new ShareNothingInterpretedUnpicklerRuntime(mirror, tag)
+              // debug(s"@@@ creating ShareNothingInterpretedUnpicklerRuntime for type $tagKey")
+              new ShareNothingInterpretedUnpicklerRuntime(mirror, tagKey)
             } else {
-              // debug(s"@@@ creating InterpretedUnpicklerRuntime for type $className")
-              new InterpretedUnpicklerRuntime(mirror, tag)
+              // debug(s"@@@ creating InterpretedUnpicklerRuntime for type $tagKey")
+              new InterpretedUnpicklerRuntime(mirror, tagKey)
             }
           runtime.genUnpickler
         }
-        GlobalRegistry.unpicklerMap += (className -> unpickler)
+        GlobalRegistry.unpicklerMap += (tagKey -> unpickler)
         unpickler
       case Some(existingUnpickler) =>
         existingUnpickler
