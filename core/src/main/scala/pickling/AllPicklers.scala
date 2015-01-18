@@ -14,7 +14,10 @@ object all extends CorePicklersUnpicklers {
   }
 
   implicit class UnpickleOps(val thePickle: Pickle) {
-    def unpickle[T](implicit unpickler: Unpickler[T], format: PickleFormat): T = macro Compat.UnpickleMacros_pickleUnpickle[T]
+    //def unpickle[T](implicit unpickler: Unpickler[T], format: PickleFormat): T = macro Compat.UnpickleMacros_pickleUnpickle[T]
+    def unpickle[T](implicit unpickler: Unpickler[T], format: PickleFormat): T =
+       // TODO - Ideally we get a compiler error if pickle type doesn't match.
+       scala.pickling.unpickle(thePickle.asInstanceOf[format.PickleType])(unpickler, format)
   }
 
 }
