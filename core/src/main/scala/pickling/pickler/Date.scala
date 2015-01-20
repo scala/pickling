@@ -4,9 +4,9 @@ package pickler
 import java.util.{Date, TimeZone}
 import java.text.SimpleDateFormat
 
-trait DatePicklers {
-  implicit def datePickler(implicit sp: SPickler[String] with Unpickler[String]):
-    SPickler[Date] with Unpickler[Date] = new SPickler[Date] with Unpickler[Date] {
+trait DatePicklers { self: PrimitivePicklers =>
+  implicit val datePickler: SPickler[Date] with Unpickler[Date] =
+  new SPickler[Date] with Unpickler[Date] {
     private val dateFormatTemplate = {
       val format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") //use ISO_8601 format
       format.setLenient(false)
@@ -22,7 +22,7 @@ trait DatePicklers {
       builder.putField("value", b => {
         b.hintTag(implicitly[FastTypeTag[String]])
         b.hintStaticallyElidedType()
-        sp.pickle(dateFormat.format(picklee), b)
+        stringPickler.pickle(dateFormat.format(picklee), b)
       })
 
       builder.endEntry()
@@ -33,12 +33,10 @@ trait DatePicklers {
       reader1.hintStaticallyElidedType()
 
       val tag = reader1.beginEntry()
-      val result = sp.unpickle(tag, reader1)
+      val result = stringPickler.unpickle(tag, reader1)
       reader1.endEntry()
 
       dateFormat.parse(result.asInstanceOf[String])
     }
   }
 }
-
-object DatePicklers extends DatePicklers {}
