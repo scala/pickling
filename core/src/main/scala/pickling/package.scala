@@ -77,14 +77,12 @@ package object pickling {
 
   /** Import `all._` to introduce all picklers and ops.
    */
-  val all: AllPicklers with Ops =
-    new AllPicklers with Ops {}
+  val all: Ops with AllPicklers  =
+    new Ops with AllPicklers {}
 
-  trait Ops extends ToPickleOps with ToUnpickleOps {}
-  trait ToPickleOps {
+  abstract class Ops {
     implicit def toPickleOps[T](picklee: T): PickleOps[T] = new PickleOps(picklee)
+    implicit def pickleToUnpickleOps(thePickle: Pickle): UnpickleOps = new UnpickleOps(thePickle)
   }
-  trait ToUnpickleOps {
-    implicit def pickleToUnpickleOps(thePickle: Pickle): UnpickleOps = new UnpickleOps(thePickle)    
-  }
+
 }

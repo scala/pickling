@@ -11,7 +11,7 @@ trait AllPicklers extends PrimitivePicklers
   with GenPicklers
   with GenUnpicklers
   with LowPriorityPicklers {}
-object AllPicklers extends AllPicklers {} 
+object AllPicklers extends AllPicklers {}
 
 trait CollectionPicklers extends MutableMapPicklers
   with ImmutableSortedMapPicklers

@@ -111,7 +111,7 @@ trait PBuilder extends Hintable {
  *
  * Here are a few static rules that all picklers must follow when using this interface.
  *
- * 1. There must be a typeHint() before any beginEntry() call.
+ * 1. There must be a hintTag() before any beginEntry() call.
  * 2. There will be one endEntry() for every beginEntry() call.
  * 3. There will be one endCollection() for every beginCollection() call.
  * 4. Every beginCollection()/endCollection() pair will be inside a beginEntry()/endEntry() pair.

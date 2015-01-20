@@ -9,18 +9,12 @@ trait MapPicklers {
     MapPickler[K, V, Map]
 }
 
-object MapPicklers extends MapPicklers {}
-
 trait ImmutableSortedMapPicklers {
   implicit def immutableSortedMapPickler[K: FastTypeTag, V: FastTypeTag](implicit elemPickler: SPickler[(K, V)], elemUnpickler: Unpickler[(K, V)], pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[immutable.SortedMap[K, V]], cbf: CanBuildFrom[immutable.SortedMap[K, V], (K, V), immutable.SortedMap[K, V]]): SPickler[immutable.SortedMap[K, V]] with Unpickler[immutable.SortedMap[K, V]] =
     MapPickler[K, V, immutable.SortedMap]
 }
 
-object ImmutableSortedMapPicklers extends ImmutableSortedMapPicklers {}
-
 trait MutableMapPicklers {
   implicit def mutableMapPickler[K: FastTypeTag, V: FastTypeTag](implicit elemPickler: SPickler[(K, V)], elemUnpickler: Unpickler[(K, V)], pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[mutable.Map[K, V]], cbf: CanBuildFrom[mutable.Map[K, V], (K, V), mutable.Map[K, V]]): SPickler[mutable.Map[K, V]] with Unpickler[mutable.Map[K, V]] =
     MapPickler[K, V, mutable.Map]
 }
-
-object MutableMapPicklers extends MutableMapPicklers {}
