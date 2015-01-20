@@ -1,6 +1,5 @@
-package scala.pickling.pickler
-
-import scala.pickling._
+package scala.pickling
+package pickler
 
 trait AllPicklers extends PrimitivePicklers
   with DatePicklers

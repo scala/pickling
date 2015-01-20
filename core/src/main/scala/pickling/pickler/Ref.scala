@@ -1,6 +1,5 @@
-package scala.pickling.pickler
-
-import scala.pickling._
+package scala.pickling
+package pickler
 
 trait RefPicklers {
   implicit def refPickler: SPickler[refs.Ref] = throw new Error("cannot pickle refs") // TODO: make this a macro

@@ -1,6 +1,6 @@
-package scala.pickling.pickler
+package scala.pickling
+package pickler
 
-import scala.pickling._
 import java.util.{Date, TimeZone}
 import java.text.SimpleDateFormat
 
