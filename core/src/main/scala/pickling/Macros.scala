@@ -228,7 +228,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
     }
 
     def genClosedDispatch: Tree = {
-      val dispatchees = compileTimeDispatchees(tpe)
+      val dispatchees = compileTimeDispatcheesNotEmpty(tpe)
       val unknownClassCase = {
         val dispatcheeNames = dispatchees.map(_.key).mkString(", ")
         val otherTermName = newTermName("other")
@@ -690,10 +690,11 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
 
   // used elsewhere
   def createCompileTimeDispatch(tpe: Type): List[CaseDef] = {
-    val dispatchees = compileTimeDispatchees(tpe)
-    val dispatcheeNames = dispatchees.map(_.key).mkString(", ")
+    val closed = isClosed(tpe.typeSymbol.asType)
+    val dispatchees = if (closed) compileTimeDispatcheesNotEmpty(tpe) else compileTimeDispatchees(tpe)
     val unknownTagCase =
-      if (isClosed(tpe.typeSymbol.asType)) {
+      if (closed) {
+        val dispatcheeNames = dispatchees.map(_.key).mkString(", ")
         val otherTermName = newTermName("other")
         val throwUnknownTag = q"""throw scala.pickling.PicklingException("Tag " + other + " not recognized, looking for one of: " + $dispatcheeNames)"""
         List(CaseDef(Bind(otherTermName, Ident(nme.WILDCARD)), throwUnknownTag))
