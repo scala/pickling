@@ -1,9 +1,12 @@
 package scala.pickling
+package pickler
 
 import java.math.BigInteger
 
-trait JavaBigIntegerPicklers {
-  implicit def javaBigIntegerPickler(implicit sp: SPickler[String] with Unpickler[String]):
+
+/** This contains implicits which can serialize java.math.BigInteger values. */
+trait JavaBigIntegerPicklers extends PrimitivePicklers {
+  implicit val javaBigIntegerPickler:
     SPickler[BigInteger] with Unpickler[BigInteger] = new SPickler[BigInteger] with Unpickler[BigInteger] {
     def tag = FastTypeTag[BigInteger]
     def pickle(picklee: BigInteger, builder: PBuilder): Unit = {
@@ -12,7 +15,7 @@ trait JavaBigIntegerPicklers {
       builder.putField("value", b => {
         b.hintTag(implicitly[FastTypeTag[String]])
         b.hintStaticallyElidedType()
-        sp.pickle(picklee.toString, b)
+        stringPickler.pickle(picklee.toString, b)
       })
 
       builder.endEntry()
@@ -23,12 +26,10 @@ trait JavaBigIntegerPicklers {
       reader1.hintStaticallyElidedType()
 
       val tag = reader1.beginEntry()
-      val result = sp.unpickle(tag, reader1)
+      val result = stringPickler.unpickle(tag, reader1)
       reader1.endEntry()
 
       new BigInteger(result.asInstanceOf[String])
     }
   } 
 }
-
-object JavaBigIntegerPicklers extends JavaBigIntegerPicklers {}

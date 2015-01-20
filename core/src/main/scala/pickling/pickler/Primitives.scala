@@ -16,7 +16,6 @@ trait PrimitivePicklers {
   implicit val stringPickler: SPickler[String] with Unpickler[String] = PrimitivePickler[String]
   implicit val unitPickler: SPickler[Unit] with Unpickler[Unit] = PrimitivePickler[Unit]
 }
-object PrimitivePicklers extends PrimitivePicklers {}
 
 class PrimitivePickler[T: FastTypeTag](name: String) extends AutoRegister[T](name) {
   def pickle(picklee: T, builder: PBuilder): Unit = {
@@ -35,7 +34,6 @@ class PrimitivePickler[T: FastTypeTag](name: String) extends AutoRegister[T](nam
     }
   }
 }
-
 object PrimitivePickler {
   def apply[A: FastTypeTag]: SPickler[A] with Unpickler[A] =
     new PrimitivePickler[A](FastTypeTag.valueTypeName(implicitly[FastTypeTag[A]]))

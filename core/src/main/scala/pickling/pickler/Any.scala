@@ -13,5 +13,3 @@ trait AnyUnpicklers {
     def tag: FastTypeTag[Any] = FastTypeTag[Any]
   }
 }
-
-object AnyUnpicklers extends AnyUnpicklers {}

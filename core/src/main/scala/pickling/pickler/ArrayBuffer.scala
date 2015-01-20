@@ -10,5 +10,3 @@ trait ArrayBufferPicklers {
     SPickler[ArrayBuffer[T]] with Unpickler[ArrayBuffer[T]] =
     SeqSetPickler[T, ArrayBuffer]
 }
-
-object ArrayBufferPicklers extends ArrayBufferPicklers {}

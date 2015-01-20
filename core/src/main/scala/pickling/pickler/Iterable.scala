@@ -11,8 +11,6 @@ trait IterablePicklers {
     SPickler[Iterable[T]] with Unpickler[Iterable[T]] = TravPickler[T, Iterable[T]]
 }
 
-object IterablePicklers extends IterablePicklers {}
-
 object TravPickler {
   def apply[T: FastTypeTag, C <% Traversable[_]]
     (implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T],
