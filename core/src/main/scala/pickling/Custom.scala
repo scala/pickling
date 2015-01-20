@@ -22,7 +22,7 @@ trait LowPriorityPicklersUnpicklers {
 
   // Any
   implicit object anyUnpickler extends Unpickler[Any] {
-    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+    def unpickle(tag: String, reader: PReader): Any = {
       val actualUnpickler = RuntimeUnpicklerLookup.genUnpickler(scala.reflect.runtime.currentMirror, tag)
       actualUnpickler.unpickle(tag, reader)
     }
@@ -116,7 +116,7 @@ trait LowPriorityPicklersUnpicklers {
       builder.endEntry()
     }
 
-    def unpickle(tpe: => FastTypeTag[_], preader: PReader): Any = {
+    def unpickle(tpe: String, preader: PReader): Any = {
       val reader = preader.beginCollection()
 
       preader.pushHints()
@@ -131,9 +131,7 @@ trait LowPriorityPicklersUnpicklers {
       var i = 0
       while (i < length) {
         val r = reader.readElement()
-        r.beginEntryNoTag()
-        val elem = elemUnpickler.unpickle(elemTag, r)
-        r.endEntry()
+        val elem = elemUnpickler.unpickleEntry(r)
         builder += elem.asInstanceOf[T]
         i = i + 1
       }
@@ -234,7 +232,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro with UnpickleMacros {
           builder.endCollection()
           builder.endEntry()
         }
-        def unpickle(tag: => scala.pickling.FastTypeTag[_], reader: PReader): Any = {
+        def unpickle(tag: String, reader: PReader): Any = {
           val arrReader = reader.beginCollection()
           ${
             if (isPrimitive) q"arrReader.hintStaticallyElidedType(); arrReader.hintTag(eltag); arrReader.pinHints()".asInstanceOf[Tree]
@@ -247,7 +245,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro with UnpickleMacros {
             val r = arrReader.readElement()
             ${
               if (isPrimitive) q"""
-                r.beginEntryNoTag()
+                r.beginEntry()
                 val elem = elunpickler.unpickle(eltag, r).asInstanceOf[$eltpe]
                 r.endEntry()
                 buffer += elem
@@ -293,15 +291,11 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
 
       builder.endEntry()
     }
-    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+    def unpickle(tag: String, reader: PReader): Any = {
       val reader1 = reader.readField("value")
       reader1.hintTag(implicitly[FastTypeTag[String]])
       reader1.hintStaticallyElidedType()
-
-      val tag = reader1.beginEntry()
-      val result = stringPicklerUnpickler.unpickle(tag, reader1)
-      reader1.endEntry()
-
+      val result = stringPicklerUnpickler.unpickleEntry(reader1)
       new BigDecimal(result.asInstanceOf[String])
     }
   }
@@ -319,7 +313,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
 
       builder.endEntry()
     }
-    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+    def unpickle(tag: String, reader: PReader): Any = {
       val reader1 = reader.readField("value")
       reader1.hintTag(implicitly[FastTypeTag[String]])
       reader1.hintStaticallyElidedType()
@@ -353,7 +347,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
 
       builder.endEntry()
     }
-    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+    def unpickle(tag: String, reader: PReader): Any = {
       val reader1 = reader.readField("value")
       reader1.hintTag(implicitly[FastTypeTag[String]])
       reader1.hintStaticallyElidedType()
@@ -376,16 +370,20 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
 
   class PrimitivePicklerUnpickler[T: FastTypeTag](name: String) extends AutoRegister[T](name) {
     def pickle(picklee: T, builder: PBuilder): Unit = {
+      // TODO - figure out this is the right thing to do, and if
+      // we should denote it's statically elidable...
+      builder.hintTag(tag)
       builder.beginEntry(picklee)
       builder.endEntry()
     }
-    def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+    def unpickle(tag: String, reader: PReader): Any = {
       try {
+        reader.hintTag(this.tag)
         reader.readPrimitive()
       } catch {
         case PicklingException(msg, cause) =>
           throw PicklingException(s"""error in unpickle of primitive unpickler '$name':
-                                     |tag in unpickle: '${tag.key}'
+                                     |tag in unpickle: '${tag}'
                                      |message:
                                      |$msg""".stripMargin, cause)
       }
@@ -424,6 +422,7 @@ trait CorePicklersUnpicklers extends GenPicklers with GenUnpicklers with LowPrio
 trait ListPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
   import c.universe._
   import definitions._
+  // TODO - Lock this by GRL
   lazy val ConsClass = c.mirror.staticClass("scala.collection.immutable.$colon$colon")
   def mkType(eltpe: c.Type) = appliedType(ConsClass.toTypeConstructor, List(eltpe))
   def mkArray(picklee: c.Tree) = q"$picklee.toArray"

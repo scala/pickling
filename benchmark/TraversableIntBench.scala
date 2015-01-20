@@ -3,6 +3,7 @@ import scala.util.Random
 
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 // for Java Serialization:
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream, ObjectInputStream}

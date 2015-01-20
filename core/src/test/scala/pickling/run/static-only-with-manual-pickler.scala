@@ -20,7 +20,7 @@ class StaticOnlyWithManualPicklerTest extends FunSuite {
     implicit val picklerUnpickler: SPickler[NotClosed] with Unpickler[NotClosed] = new SPickler[NotClosed] with Unpickler[NotClosed] {
       def pickle(picklee: NotClosed, builder: PBuilder): Unit =
         throw FakeImplementation()
-      def unpickle(tag: => FastTypeTag[_], reader: PReader): Any =
+      def unpickle(tag: String, reader: PReader): Any =
         throw FakeImplementation()
       def tag = FastTypeTag[NotClosed]
     }
