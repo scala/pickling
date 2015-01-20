@@ -16,7 +16,7 @@ class BinaryPickleFormat extends PickleFormat with Constants {
   def createBuilder(out: BinaryOutput): BinaryPBuilder = new BinaryPickleBuilder(this, out)
   def createBuilder(out: java.nio.ByteBuffer): BinaryPBuilder = createBuilder(new ByteBufferOutput(out))
   def createBuilder(out: java.io.OutputStream): BinaryPBuilder = createBuilder(new StreamOutput(out))
-  def createReader(pickle: PickleType, mirror: Mirror) = pickle.createReader(mirror, this)
+  def createReader(pickle: PickleType) = pickle.createReader(this)
 }
 
 trait Constants {

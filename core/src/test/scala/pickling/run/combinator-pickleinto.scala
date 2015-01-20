@@ -56,7 +56,7 @@ class CombinatorPickleIntoTest extends FunSuite {
     implicit def personup(implicit intup: Unpickler[Int]): Unpickler[Person] =
       new Unpickler[Person] {
         def tag: FastTypeTag[Person] = implicitly[FastTypeTag[Person]]
-        def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+        def unpickle(tag: String, reader: PReader): Any = {
           reader.hintTag(FastTypeTag.Int)
           reader.hintStaticallyElidedType()
           val tag = reader.beginEntry()

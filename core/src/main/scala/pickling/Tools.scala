@@ -417,6 +417,7 @@ abstract class Macro extends RichTypes { self =>
     val prologue = {
       if (!reflectivePrologueEmitted) {
         reflectivePrologueEmitted = true
+        // TODO - Do we need the GRL for this?
         val initMirror = q"""
           val mirror = scala.reflect.runtime.universe.runtimeMirror(this.getClass.getClassLoader)
           val im = mirror.reflect($target)

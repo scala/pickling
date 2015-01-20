@@ -38,6 +38,7 @@ trait TypeAnalysis extends Macro {
 trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
   import c.universe._
 
+  // TODO - We should use the GRL to lock the reflection in the TypeTag + Runtime lookup.
   def createRuntimePickler(builder: c.Tree): c.Tree = q"""
     val classLoader = this.getClass.getClassLoader
     val tag = scala.pickling.FastTypeTag.mkRaw(clazz, scala.reflect.runtime.universe.runtimeMirror(classLoader))
@@ -47,7 +48,14 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
 
   override def impl[T: c.WeakTypeTag]: c.Tree = preferringAlternativeImplicits {
     import definitions._
-    val tpe = weakTypeOf[T]
+    val originalTpe = weakTypeOf[T]
+    // Note: this makes it so modules work, things like foo.type.
+    //       For some reason we get an issue with not having == defined on Class[_] otherwise.
+    val tpe = {
+      // TODO - fix this for certain primitive types, like Null, etc.
+      if(originalTpe.termSymbol.isModule) originalTpe.widen
+      else originalTpe
+    }
     val sym = tpe.typeSymbol.asClass
     import irs._
 
@@ -334,9 +342,9 @@ trait OpenSumUnpicklerMacro extends Macro with UnpicklerMacros with FastTypeTagM
     def dispatchLogic = {
       val compileTimeDispatch = createCompileTimeDispatch(tpe)
       val refDispatch         = createRefDispatch()
+      // TODO - for now we're using "currentMirror" macro.  That may not be ok.
       val runtimeDispatch     = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""
-        val tag = scala.pickling.FastTypeTag(typeString)
-        scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(reader.mirror, tag)
+        scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(scala.pickling.internal.`package`.currentMirror, tagKey)
       """)
 
       q"""
@@ -355,9 +363,9 @@ trait OpenSumUnpicklerMacro extends Macro with UnpicklerMacros with FastTypeTagM
           // generate runtime dispatch
           val dispUnpicklerName = newTermName("unpickler$dispatch$")
           q"""
-            val typeString = tag.key
+            val typeString = tagKey
             val $dispUnpicklerName = $dispatchLogic
-            $dispUnpicklerName.unpickle(tag, reader)
+            $dispUnpicklerName.unpickle(tagKey, reader)
           """
         }
       case _ => cancel()
@@ -368,7 +376,7 @@ trait OpenSumUnpicklerMacro extends Macro with UnpicklerMacros with FastTypeTagM
 
     q"""
       implicit object $unpicklerName extends scala.pickling.Unpickler[$tpe] with scala.pickling.Generated {
-        def unpickle(tag: => scala.pickling.FastTypeTag[_], reader: scala.pickling.PReader): Any = $unpickleLogic
+        def unpickle(tagKey: String, reader: scala.pickling.PReader): Any = $unpickleLogic
         def tag: scala.pickling.FastTypeTag[$tpe] = $createTagTree
       }
       $unpicklerName
@@ -540,10 +548,10 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
       case _ if tpe.isEffectivelyPrimitive || sym == StringClass => unpicklePrimitive
       case _ if sym.isAbstractClass =>
         if (isClosed(sym)) {
-          val dispatchLogic = Match(q"tag.key", List(createRefDispatch()) ++ createCompileTimeDispatch(tpe))
+          val dispatchLogic = Match(q"tagKey", List(createRefDispatch()) ++ createCompileTimeDispatch(tpe))
           q"""
             val unpickler: scala.pickling.Unpickler[_] = $dispatchLogic
-            unpickler.asInstanceOf[scala.pickling.Unpickler[$tpe]].unpickle(tag, reader)
+            unpickler.asInstanceOf[scala.pickling.Unpickler[$tpe]].unpickle(tagKey, reader)
           """
         } else {
           c.abort(c.enclosingPosition, s"cannot unpickle $tpe")
@@ -553,20 +561,22 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
         val tagNotKnownStatically =
           if (c.inferImplicitValue(typeOf[IsStaticOnly]) != EmptyTree)
             q"""
-              throw scala.pickling.PicklingException("Tag " + tag.key + " not recognized while unpickling " + ${tpe.key})
+              throw scala.pickling.PicklingException("Tag " + tagKey + " not recognized while unpickling " + ${tpe.key})
             """
           else
+            // FOR now we summon up a mirror using the currentMirror macro.
+            // TODO - we may need a more robust mechanism  of grabbing the currentMirror
             q"""
-              val rtUnpickler = scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(reader.mirror, tag)
-              rtUnpickler.unpickle(tag, reader)
+              val rtUnpickler = scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(scala.pickling.internal.`package`.currentMirror, tagKey)
+              rtUnpickler.unpickle(tagKey, reader)
             """
 
         q"""
-          if (tag.key == scala.pickling.FastTypeTag.Null.key) {
+          if (tagKey == scala.pickling.FastTypeTag.Null.key) {
             null
-          } else if (tag.key == scala.pickling.FastTypeTag.Ref.key) {
-            scala.pickling.AllPicklers.refUnpickler.unpickle(tag, reader)
-          } else if (tag.key == ${if (tpe <:< typeOf[Singleton]) sym.fullName + ".type" else tpe.key}) {
+          } else if (tagKey == scala.pickling.FastTypeTag.Ref.key) {
+            scala.pickling.AllPicklers.refUnpickler.unpickle(tagKey, reader)
+          } else if (tagKey == ${if (tpe <:< typeOf[Singleton]) sym.fullName + ".type" else tpe.key}) {
             $unpickleObject
           } else {
             $tagNotKnownStatically
@@ -583,7 +593,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
         import scala.pickling._
         import scala.pickling.ir._
         import scala.pickling.internal._
-        def unpickle(tag: => scala.pickling.FastTypeTag[_], reader: scala.pickling.PReader): Any = $unpickleLogic
+        def unpickle(tagKey: String, reader: scala.pickling.PReader): Any = $unpickleLogic
         def tag: FastTypeTag[$tpe] = $createTagTree
       }
       $unpicklerName
@@ -614,39 +624,16 @@ trait PickleMacros extends Macro with TypeAnalysis {
     """
   }
 
-  def pickle[T: c.WeakTypeTag](format: c.Tree): c.Tree = {
-    val tpe = weakTypeOf[T]
-    val q"${_}($pickleeArg)" = c.prefix.tree
-    val endPickle = if (shouldBotherAboutCleaning(tpe)) q"clearPicklees()" else q"";
-    val pickleeName = newTermName("picklee$pickle$")
-    val builderName = newTermName("builder$pickle$")
-    q"""
-      import scala.pickling._
-      import scala.pickling.internal._
-      val $pickleeName: $tpe = $pickleeArg
-      val $builderName = $format.createBuilder()
-      $pickleeName.pickleInto($builderName)
-      $endPickle
-      $builderName.result()
-    """
-  }
-
   def createPickler(tpe: c.Type, builder: c.Tree): c.Tree = q"""
     val pickler = implicitly[scala.pickling.SPickler[$tpe]]
     $builder.hintTag(pickler.tag)
     pickler
   """
 
-  /** Used by the main `pickle` macro. Its purpose is to pickle the object that it's called on *into* the
-   *  the `builder` which is passed to it as an argument.
-   */
-  def pickleInto[T: c.WeakTypeTag](builder: c.Tree): c.Tree = {
-    val q"${_}($pickleeArg)" = c.prefix.tree
-    pickleWithTagInto(pickleeArg, builder)
-  }
-
+  // used by dpickler.
   def pickleWithTagInto[T: c.WeakTypeTag](picklee: c.Tree, builder: c.Tree): c.Tree = {
-    val tpe = weakTypeOf[T].widen // to make module classes work
+    val origTpe = weakTypeOf[T]
+    val tpe = origTpe.widen // to make module classes work
     val sym = tpe.typeSymbol
 
     val pickleeName = newTermName("picklee$pickleInto$")
@@ -680,32 +667,11 @@ trait PickleMacros extends Macro with TypeAnalysis {
   }
 }
 
-// purpose of this macro: implementation of unpickle method of class UnpickleOps, which:
+// purpose of this macro: implementation of nested unpickle methods in other unpicklers, which:
 // 1) dispatches to the correct unpickler based on the type of the input;
 // 2) inserts a call in the generated code to the genUnpickler macro (described above)
 trait UnpickleMacros extends Macro with TypeAnalysis {
   import c.universe._
-
-  // TODO: currently this works with an assumption that sharing settings for unpickling are the same as for pickling
-  // of course this might not be the case, so we should be able to read settings from the pickle itself
-  // this is not going to be particularly pretty. unlike the fix for the runtime interpreter, this fix will be a bit of a shotgun one
-  def pickleUnpickle[T: c.WeakTypeTag]: Tree = {
-    val tpe = weakTypeOf[T]
-    val pickleArg = c.prefix.tree
-    val readerName = newTermName("reader$unpickle$")
-    val readerUnpickleTree = readerUnpickleTopLevel(tpe, readerName)
-    val formatName = newTermName("format$unpickle$")
-    val pickleName = newTermName("pickle$unpickle$")
-    q"""
-      import scala.language.existentials
-      import scala.pickling._
-      import scala.pickling.internal._
-      val $formatName = implicitly[scala.pickling.PickleFormat]
-      val $pickleName = $pickleArg.thePickle.asInstanceOf[$formatName.PickleType]
-      val $readerName = $formatName.createReader($pickleName, scala.pickling.internal.`package`.currentMirror)
-      $readerUnpickleTree
-    """
-  }
 
   def readerUnpickle(tpe: Type, readerName: TermName): Tree =
     readerUnpickleHelper(tpe, readerName)(false)
@@ -719,6 +685,7 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
   def createRefDispatch(): CaseDef =
     CaseDef(Literal(Constant(FastTypeTag.Ref.key)), EmptyTree, createUnpickler(typeOf[refs.Ref]))
 
+  // used elsewhere
   def createCompileTimeDispatch(tpe: Type): List[CaseDef] = {
     val dispatchees = compileTimeDispatchees(tpe)
     val dispatcheeNames = dispatchees.map(_.key).mkString(", ")
@@ -740,6 +707,9 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
     val staticHint       = if (tpe.typeSymbol.isEffectivelyFinal && !isTopLevel) q"$readerName.hintStaticallyElidedType()" else q"";
     val unpickleeCleanup = if (isTopLevel && shouldBotherAboutCleaning(tpe)) q"clearUnpicklees()" else q"";
     val unpicklerName    = c.fresh(newTermName("unpickler$unpickle$"))
+    // TODO - We want to limit the GRL locking to *only* those picklers which touch a mirror.
+    // It may make sense ot have a "withMirror" macro that such picklers would make use of,
+    // which ensures the mirror is locked during usage.
     q"""
       var $unpicklerName: scala.pickling.Unpickler[$tpe] = null
       $unpicklerName = implicitly[scala.pickling.Unpickler[$tpe]]
@@ -747,8 +717,8 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
       try {
         $readerName.hintTag($unpicklerName.tag)
         $staticHint
-        val typeString = $readerName.beginEntryNoTag()
-        val result = $unpicklerName.unpickle({ scala.pickling.FastTypeTag(typeString) }, $readerName)
+        val typeString = $readerName.beginEntry()
+        val result = $unpicklerName.unpickle(typeString, $readerName)
         $readerName.endEntry()
         $unpickleeCleanup
         result.asInstanceOf[$tpe]

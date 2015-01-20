@@ -1,5 +1,6 @@
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 object ArrayIntBench extends scala.pickling.testing.PicklingBenchmark {
   val coll = (1 to size).toArray

@@ -14,14 +14,14 @@ abstract class BinaryPickle extends Pickle {
 
   val value: Array[Byte]
 
-  def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader
+  def createReader(format: BinaryPickleFormat): PReader
 }
 
 case class BinaryPickleArray(data: Array[Byte]) extends BinaryPickle {
   val value: Array[Byte] = data
 
-  def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader =
-    new BinaryPickleReader(new ByteArrayInput(data), mirror, format)
+  def createReader(format: BinaryPickleFormat): PReader =
+    new BinaryPickleReader(new ByteArrayInput(data), format)
     //new BinaryPickleReader(data, mirror, format)
 
   override def toString = s"""BinaryPickle(${value.mkString("[", ",", "]")})"""
@@ -30,8 +30,8 @@ case class BinaryPickleArray(data: Array[Byte]) extends BinaryPickle {
 case class BinaryInputPickle(input: BinaryInput) extends BinaryPickle {
   val value: Array[Byte] = Array.ofDim[Byte](0)
 
-  def createReader(mirror: Mirror, format: BinaryPickleFormat): PReader =
-    new BinaryPickleReader(input, mirror, format)
+  def createReader(format: BinaryPickleFormat): PReader =
+    new BinaryPickleReader(input, format)
 
   /* Do not override def toString to avoid traversing the input stream. */
 }
@@ -151,26 +151,16 @@ class BinaryPickleBuilder(format: BinaryPickleFormat, out: BinaryOutput) extends
 
 }
 
-abstract class AbstractBinaryReader(val mirror: Mirror) {
-  protected var _lastTagRead: FastTypeTag[_] = null
+abstract class AbstractBinaryReader() {
   protected var _lastTypeStringRead: String  = null
-
-  protected def lastTagRead: FastTypeTag[_] =
-    if (_lastTagRead != null)
-      _lastTagRead
-    else {
-      // assume _lastTypeStringRead != null
-      _lastTagRead = FastTypeTag(mirror, _lastTypeStringRead)
-      _lastTagRead
-    }
+  // TODO - ok to hack this?
+  def lastTagRead: String = _lastTypeStringRead
 }
 
-class BinaryPickleReader(in: BinaryInput, mirror: Mirror, format: BinaryPickleFormat) extends AbstractBinaryReader(mirror) with PReader with PickleTools {
+class BinaryPickleReader(in: BinaryInput, format: BinaryPickleFormat) extends AbstractBinaryReader() with PReader with PickleTools {
   import format._
   
-  def beginEntryNoTagDebug(debug: Boolean): String = beginEntryNoTag
-
-  def beginEntryNoTag: String = {
+  def beginEntry: String = {
     val res: Any = withHints { hints =>
 
       if (hints.isElidedType && nullablePrimitives.contains(hints.tag.key)) {
@@ -207,24 +197,23 @@ class BinaryPickleReader(in: BinaryInput, mirror: Mirror, format: BinaryPickleFo
       }
     }
     if (res.isInstanceOf[String]) {
-      _lastTagRead = null
       _lastTypeStringRead = res.asInstanceOf[String]
       _lastTypeStringRead
     } else {
-      _lastTagRead = res.asInstanceOf[FastTypeTag[_]]
-      _lastTagRead.key
+      _lastTypeStringRead = res.asInstanceOf[FastTypeTag[_]].key
+      _lastTypeStringRead
     }
   }
 
-  def beginEntry(): FastTypeTag[_] = {
-    beginEntryNoTag()
-    lastTagRead
-  }
+  //def beginEntry(): FastTypeTag[_] = {
+  //  beginEntryNoTag()
+  //  lastTagRead
+  //}
 
-  def atPrimitive: Boolean = primitives.contains(lastTagRead.key)
+  def atPrimitive: Boolean = primitives.contains(lastTagRead)
 
   def readPrimitive(): Any = {
-    val res = lastTagRead.key match {
+    val res = lastTagRead match {
       case KEY_NULL    => null
       case KEY_REF     => lookupUnpicklee(in.getInt)
       case KEY_BYTE    => in.getByte

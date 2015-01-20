@@ -43,7 +43,7 @@ class WrappedArrayTest extends FunSuite {
       builder.endEntry()
     }
 
-    def unpickle(tpe: => FastTypeTag[_], preader: PReader): Any = {
+    def unpickle(tpe: String, preader: PReader): Any = {
       val reader = preader.beginCollection()
 
       val length = reader.readLength()

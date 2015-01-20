@@ -31,42 +31,10 @@ object Compat {
     c.Expr[Unpickler[T] with Generated](bundle.impl[T])
   }
 
-  def PickleMacros_pickle[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[format.value.PickleType] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with PickleMacros
-    c.Expr[format.value.PickleType](bundle.pickle[T](format.tree))
-  }
-
-  def PickleMacros_pickleInto[T: c.WeakTypeTag](c: Context)(builder: c.Expr[PBuilder]): c.Expr[Unit] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with PickleMacros
-    c.Expr[Unit](bundle.pickleInto[T](builder.tree))
-  }
-
   def PickleMacros_pickleTo[T: c.WeakTypeTag, S](c: Context)(output: c.Expr[S])(format: c.Expr[PickleFormat]): c.Expr[Unit] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PickleMacros
     c.Expr[Unit](bundle.pickleTo[T](output.tree)(format.tree))
-  }
-
-  def UnpickleMacros_pickleUnpickle[T: c.WeakTypeTag](c: Context)(unpickler: c.Expr[Unpickler[T]], format: c.Expr[PickleFormat]): c.Expr[T] = {
-    import c.universe._
-    val c0: c.type = c
-    val tpe = c.universe.weakTypeOf[T]
-    // abort if someone forgets to pass a type parameter to the unpickle method
-    val isNothing = tpe =:= definitions.NothingTpe
-    val unpickleSym = c.mirror.staticClass("scala.pickling.UnpickleOps").asType.toType.member(newTermName("unpickle"))
-    val typeArgMissing = tpe match {
-      case t: TypeRef => t.typeSymbol.owner == unpickleSym || isNothing
-      case _ => false
-    }
-    if (typeArgMissing)
-      c.abort(c.enclosingPosition, """cannot unpickle because the (inferred) type argument of unpickle is abstract.
-        |Typically, this is caused by omitting an explicit type argument. Always invoke unpickle with a concrete
-        |type argument, for example, unpickle[Int]""".stripMargin)
-
-    val bundle = new { val c: c0.type = c0 } with UnpickleMacros
-    c.Expr[T](bundle.pickleUnpickle[T])
   }
 
   def ListPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
