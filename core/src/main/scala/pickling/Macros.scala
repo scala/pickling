@@ -218,7 +218,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
 
     def genDispatch(compileTimeDispatchees: List[Type], finalCases: List[CaseDef]): Tree = {
       val clazzName = newTermName("clazz")
-      val compileTimeDispatch = compileTimeDispatchees filter (_ != NullTpe) map { subtpe =>
+      val compileTimeDispatch = compileTimeDispatchees map { subtpe =>
         CaseDef(Bind(clazzName, Ident(nme.WILDCARD)), q"clazz == classOf[$subtpe]", createPickler(subtpe, q"builder"))
       }
       q"""
