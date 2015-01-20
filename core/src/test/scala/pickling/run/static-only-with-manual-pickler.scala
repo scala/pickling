@@ -43,8 +43,10 @@ class StaticOnlyWithManualPicklerTest extends FunSuite {
   // Test that you can generate SPickler without having ops._ imported on the callsite.
   test ("manually generated pickler") {
     import scala.pickling.Defaults.intPickler
+    import scala.pickling.Defaults.refPickler
+    import scala.pickling.Defaults.refUnpickler
     implicit val applePickler: SPickler[Apple] = SPickler.generate[Apple]
-    implicit val appleUnpciker: Unpickler[Apple] = Unpickler.generate[Apple]
+    implicit val appleUnpickler: Unpickler[Apple] = Unpickler.generate[Apple]
     val pkl: JSONPickle = pickle(Apple(1))
   }
 }

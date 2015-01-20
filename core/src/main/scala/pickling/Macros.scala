@@ -546,42 +546,63 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
       case NullTpe => q"null"
       case NothingTpe => c.abort(c.enclosingPosition, "cannot unpickle Nothing") // TODO: report the deserialization path that brought us here
       case _ if tpe.isEffectivelyPrimitive || sym == StringClass => unpicklePrimitive
-      case _ if sym.isAbstractClass =>
-        if (isClosed(sym)) {
-          val dispatchLogic = Match(q"tagKey", List(createRefDispatch()) ++ createCompileTimeDispatch(tpe))
+      case _ if sym.isAbstractClass && isClosed(sym) =>
+        // abstract type with a closed set of subtypes: we generate a
+        // dispatch with the tag key sending us to the correct concrete
+        // unpickler. No fallback to runtime unpickler here.
+        val dispatchLogic =
+          Match(q"tagKey", List(createNullDispatch()) ++ List(createRefDispatch()) ++ createCompileTimeDispatch(tpe))
           q"""
             val unpickler: scala.pickling.Unpickler[_] = $dispatchLogic
             unpickler.asInstanceOf[scala.pickling.Unpickler[$tpe]].unpickle(tagKey, reader)
-          """
-        } else {
-          c.abort(c.enclosingPosition, s"cannot unpickle $tpe")
-        }
+           """
       case _ =>
-        // check for static-only import: in this case do not emit runtime unpickling logic
-        val tagNotKnownStatically =
-          if (c.inferImplicitValue(typeOf[IsStaticOnly]) != EmptyTree)
-            q"""
-              throw scala.pickling.PicklingException("Tag " + tagKey + " not recognized while unpickling " + ${tpe.key})
-            """
-          else
-            // FOR now we summon up a mirror using the currentMirror macro.
-            // TODO - we may need a more robust mechanism  of grabbing the currentMirror
-            q"""
-              val rtUnpickler = scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(scala.pickling.internal.`package`.currentMirror, tagKey)
-              rtUnpickler.unpickle(tagKey, reader)
-            """
+        val closed = isClosed(sym)
+        if (!closed && c.inferImplicitValue(typeOf[IsStaticOnly]) != EmptyTree) {
+          // StaticOnly was imported and type is not closed
+          val notClosedReasons = whyNotClosed(sym.asType)
+          if (notClosedReasons.nonEmpty)
+            c.abort(c.enclosingPosition, s"cannot generate fully static unpickler because: ${notClosedReasons.mkString(", ")}")
+        }
 
-        q"""
-          if (tagKey == scala.pickling.FastTypeTag.Null.key) {
-            null
-          } else if (tagKey == scala.pickling.FastTypeTag.Ref.key) {
-            scala.pickling.Defaults.refUnpickler.unpickle(tagKey, reader)
-          } else if (tagKey == ${if (tpe <:< typeOf[Singleton]) sym.fullName + ".type" else tpe.key}) {
-            $unpickleObject
-          } else {
-            $tagNotKnownStatically
-          }
-        """
+        if (sym.isAbstractClass)
+          c.abort(c.enclosingPosition, s"cannot generate an unpickler for $tpe because it is an abstract unsealed class; genOpenSumUnpickler may be able to generate this unpickler")
+
+        if (closed) {
+          // In this case it's critical that we do NOT look at the tagKey,
+          // because we want to "duck type" in order to be more resilient
+          // against protocol changes. Also, we never ever fall back to
+          // the runtime unpickler if the type is closed, because there's
+          // no reason we should ever need to.
+          q"""
+            if (tagKey == scala.pickling.FastTypeTag.Null.key) {
+              null
+            } else if (tagKey == scala.pickling.FastTypeTag.Ref.key) {
+              implicitly[Unpickler[refs.Ref]].unpickle(tagKey, reader)
+            } else {
+              $unpickleObject
+            }
+           """
+        } else {
+          // FOR now we summon up a mirror using the currentMirror macro.
+          // TODO - we may need a more robust mechanism  of grabbing the currentMirror
+          val runtimeUnpickle = q"""
+            val rtUnpickler = scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(scala.pickling.internal.`package`.currentMirror, tagKey)
+            rtUnpickler.unpickle(tagKey, reader)
+          """
+
+          q"""
+            if (tagKey == scala.pickling.FastTypeTag.Null.key) {
+              null
+            } else if (tagKey == scala.pickling.FastTypeTag.Ref.key) {
+              scala.pickling.Defaults.refUnpickler.unpickle(tagKey, reader)
+            } else if (tagKey == ${if (tpe <:< typeOf[Singleton]) sym.fullName + ".type" else tpe.key}) {
+              $unpickleObject
+            } else {
+              $runtimeUnpickle
+            }
+           """
+        }
     }
 
     val createTagTree = super[FastTypeTagMacros].impl[T]
@@ -688,10 +709,14 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
   def createRefDispatch(): CaseDef =
     CaseDef(Literal(Constant(FastTypeTag.Ref.key)), EmptyTree, createUnpickler(typeOf[refs.Ref]))
 
+  def createNullDispatch(): CaseDef =
+    CaseDef(Literal(Constant(FastTypeTag.Null.key)), EmptyTree, createUnpickler(typeOf[Null]))
+
   // used elsewhere
   def createCompileTimeDispatch(tpe: Type): List[CaseDef] = {
     val closed = isClosed(tpe.typeSymbol.asType)
     val dispatchees = if (closed) compileTimeDispatcheesNotEmpty(tpe) else compileTimeDispatchees(tpe)
+
     val unknownTagCase =
       if (closed) {
         val dispatcheeNames = dispatchees.map(_.key).mkString(", ")
