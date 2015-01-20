@@ -1,6 +1,6 @@
-package scala.pickling.pickler
+package scala.pickling
+package pickler
 
-import scala.pickling._
 import scala.language.experimental.macros
 
 /** Mix-in trait to generate `SPickler`s.

@@ -1,6 +1,6 @@
-package scala.pickling.pickler
+package scala.pickling
+package pickler
 
-import scala.pickling._
 import scala.pickling.runtime.RuntimeUnpicklerLookup
 
 trait AnyUnpicklers {

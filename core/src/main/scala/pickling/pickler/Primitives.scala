@@ -1,6 +1,5 @@
-package scala.pickling.pickler
-
-import scala.pickling._
+package scala.pickling
+package pickler
 
 trait PrimitivePicklers {
   // TODO: figure out why removing these pickler/unpicklers slows down evactor1
