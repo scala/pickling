@@ -2,7 +2,7 @@ package scala.pickling.transienttest
 
 import org.scalatest.FunSuite
 import scala.reflect.ClassTag
-import scala.pickling._, all._, json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 case class Person(val name: String , @transient val ssNumber: Int) {
   override def toString = s"Person($name)"

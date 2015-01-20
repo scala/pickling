@@ -1,7 +1,7 @@
 package scala.pickling.privatepublicctorstest
 
 import org.scalatest.FunSuite
-import scala.pickling._, all._
+import scala.pickling._, scala.pickling.Defaults._
 
 trait Command
 

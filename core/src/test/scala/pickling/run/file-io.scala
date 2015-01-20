@@ -4,7 +4,7 @@ import org.scalatest.FunSuite
 import java.io.File
 
 import scala.io.Source
-import scala.pickling._, all._, json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 import scala.pickling.internal._
 import scala.pickling.io.TextFileOutput
 

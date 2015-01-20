@@ -1,7 +1,7 @@
 package scala.pickling.binary.list.t.`new`
 
 import org.scalatest.FunSuite
-import scala.pickling._, all._, binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 class BinaryListTNewTest extends FunSuite {
   test("main") {

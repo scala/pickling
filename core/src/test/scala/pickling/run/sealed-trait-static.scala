@@ -3,7 +3,7 @@ package scala.pickling.test.sealedtraitstatic
 import scala.pickling.PicklingException
 import scala.pickling.static._
 import scala.pickling.json._
-import scala.pickling.all._
+import scala.pickling.Defaults._
 
 import org.scalatest.FunSuite
 

@@ -1,7 +1,7 @@
 package scala.pickling.run.anonfun
 
 import org.scalatest.FunSuite
-import scala.pickling.all._
+import scala.pickling.Defaults._
 import scala.pickling.json._
 
 class AnonfunJsonTest extends FunSuite {

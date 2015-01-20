@@ -1,7 +1,7 @@
 package scala.pickling.combinator.pickleinto
 
 import org.scalatest.FunSuite
-import scala.pickling._, all._, binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 import scala.reflect.runtime.universe._
 
 // CUSTOM PICKLERS

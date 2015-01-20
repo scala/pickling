@@ -8,7 +8,7 @@ import static.StaticOnly
          if the primitive picklers are *not* imported at the same time!
          (e.g., the *generated* pickler for type `Int` is nonsense)
  */
-import all._
+import scala.pickling.Defaults._
 
 sealed trait F { val fld: Int }
 

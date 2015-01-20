@@ -1,6 +1,6 @@
 package scala.pickling.bytebuffers
 
-import scala.pickling._, all._, binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 import java.nio.ByteBuffer
 import org.scalacheck.{Properties, Prop, Gen}
 import org.scalatest.FunSuite

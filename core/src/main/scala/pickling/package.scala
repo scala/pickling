@@ -75,9 +75,9 @@ package object pickling {
    */
   val ops: Ops = new Ops {}
 
-  /** Import `all._` to introduce all picklers and ops.
+  /** Import `scala.pickling.Defaults._` to introduce all picklers and ops.
    */
-  val all: Ops with AllPicklers  =
+  val Defaults: Ops with AllPicklers  =
     new Ops with AllPicklers {}
 
   abstract class Ops {

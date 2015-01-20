@@ -1,7 +1,7 @@
 package scala.pickling.vector.int
 
 import org.scalatest.FunSuite
-import scala.pickling._, all._, binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 class VectorIntTest extends FunSuite {
   test("main") {
