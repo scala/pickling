@@ -19,7 +19,7 @@ val lst = pckl.unpickle[List[Int]]
 ### Basic usage (0.10.0)
 
 ```scala
-import scala.pickling._, all._, json._
+import scala.pickling._, scala.pickling.Defaults._, scala.pickling.json._
 
 val pckl = List(1, 2, 3, 4).pickle
 val lst = pckl.unpickle[List[Int]]
@@ -83,11 +83,11 @@ If you want, Pickling lets you import specific parts (ops, picklers, and format)
 
 ```scala
 import scala.pickling._ // This imports names only
-import json._           // Imports PickleFormat
-import static._         // Avoid runtime pickler
-import ops._            // Inject pickle and unpicke methods
+import scala.pickling.json._           // Imports PickleFormat
+import scala.pickling.static._         // Avoid runtime pickler
+import scala.pickling.ops._            // Inject pickle and unpicke methods
 // Import picklers for specific types
-import allPicklers.{ stringPickler, intPickler, refUnpickler, nullPickler }
+import scala.pickling.allPicklers.{ stringPickler, intPickler, refUnpickler, nullPickler }
 
 case class Pumpkin(kind: String)
 // Manually generate a pickler using macro

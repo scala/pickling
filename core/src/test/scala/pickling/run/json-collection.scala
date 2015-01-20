@@ -1,6 +1,6 @@
 package scala.pickling.test.json.collection
 
-import scala.pickling._, all._, json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 import org.scalatest.FunSuite
 
 import scala.collection.mutable

@@ -155,7 +155,7 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unp
 
   def pickleField(name: String, value: Any, builder: PBuilder): Unit = {
     val (tag1, pickler1) = if (value == null) {
-      (FastTypeTag.Null.asInstanceOf[FastTypeTag[Any]], all.nullPickler.asInstanceOf[SPickler[Any]])
+      (FastTypeTag.Null.asInstanceOf[FastTypeTag[Any]], Defaults.nullPickler.asInstanceOf[SPickler[Any]])
     } else {
       val clazz = value.getClass
       val tag = FastTypeTag.mkRaw(clazz, reflectRuntime.currentMirror).asInstanceOf[FastTypeTag[Any]]

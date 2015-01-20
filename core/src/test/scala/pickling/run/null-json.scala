@@ -1,7 +1,7 @@
 package scala.pickling.`null`.json
 
 import org.scalatest.FunSuite
-import scala.pickling._, all._, json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 class D
 final class E

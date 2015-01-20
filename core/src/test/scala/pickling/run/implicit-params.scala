@@ -1,7 +1,7 @@
 package scala.pickling.implicitparams
 
 import org.scalatest.FunSuite
-import scala.pickling._, all._, binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 
 case class Person(implicit name: String, age: Int)

@@ -2,7 +2,7 @@ package scala.pickling.test.collection
 
 import org.scalatest.FunSuite
 
-import scala.pickling._, all._, json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 import runtime.GlobalRegistry
 
 import scala.collection.mutable.WrappedArray

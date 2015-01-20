@@ -1,7 +1,7 @@
 package scala.pickling.singleton.hierarchy
 
 import org.scalatest.FunSuite
-import scala.pickling._, all._, json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 sealed abstract class C(val x: Int)
 object D extends C(42) { override def toString = "D" }

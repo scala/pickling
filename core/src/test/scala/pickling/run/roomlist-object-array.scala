@@ -1,7 +1,7 @@
 package scala.pickling.test.roomlist.objectarray
 
 import org.scalatest.FunSuite
-import scala.pickling._, all._, json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 case class Room(val name: String)
 case class RoomList(val rooms: Array[Room])

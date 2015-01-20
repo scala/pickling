@@ -1,7 +1,7 @@
 package scala.pickling.c.x.any.binary
 
 import org.scalatest.FunSuite
-import scala.pickling._, all._, binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 case class C(x: Any)
 

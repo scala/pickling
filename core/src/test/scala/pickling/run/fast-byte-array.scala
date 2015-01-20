@@ -4,7 +4,7 @@ package test
 import org.scalatest.FunSuite
 import org.scalacheck.{Properties, Prop, Gen}
 
-import scala.pickling._, all._, binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 import org.scalatest.FunSuite
 

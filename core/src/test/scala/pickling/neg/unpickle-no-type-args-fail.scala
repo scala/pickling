@@ -10,7 +10,7 @@ class UnpickleNoTypeArgsFailTest extends FunSuite {
       """
         | import _root_.scala.pickling._
         | import _root_.scala.pickling.json._
-        | import _root_.scala.pickling.all._
+        | import _root_.scala.pickling.Defaults._
         |
         | Array(1, 2, 3).pickle.unpickle
       """.stripMargin

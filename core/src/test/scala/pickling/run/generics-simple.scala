@@ -1,7 +1,7 @@
 package scala.pickling.generics.simple
 
 import org.scalatest.FunSuite
-import scala.pickling._, all._, json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 case class C[T](x: T)
 

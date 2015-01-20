@@ -1,7 +1,7 @@
 package scala.pickling.share.json
 
 import org.scalatest.FunSuite
-import scala.pickling._, all._, json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 class C(val name: String, val desc: String, var c: C, val arr: Array[Int])
 

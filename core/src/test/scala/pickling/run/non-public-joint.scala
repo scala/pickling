@@ -1,7 +1,7 @@
 package scala.pickling.non.public.joint
 
 import org.scalatest.FunSuite
-import scala.pickling._, all._, json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 class Person(private val name: String, age: Int, val hobby: Hobby) {
   // NOTE: be careful not to reference age anywhere, so that it's elided by the "constructors" phase

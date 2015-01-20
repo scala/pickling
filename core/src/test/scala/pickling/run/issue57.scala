@@ -1,6 +1,6 @@
 package scala.pickling.test.issue57
 
-import scala.pickling._, all._, json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 import org.scalatest.FunSuite
 
 abstract class SimpleAbstract(val stringWrapper: SimpleProp) {}
