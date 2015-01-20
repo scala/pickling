@@ -10,5 +10,3 @@ trait GenOpenSumUnpicklers {
 trait GenUnpicklers extends GenOpenSumUnpicklers {
   implicit def genUnpickler[T]: Unpickler[T] with Generated = macro Compat.UnpicklerMacros_impl[T]
 }
-
-object GenUnpicklers extends GenUnpicklers {}

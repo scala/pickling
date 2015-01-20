@@ -9,5 +9,3 @@ trait VectorPicklers {
     SPickler[Vector[T]] with Unpickler[Vector[T]] =
     SeqSetPickler[T, Vector]
 }
-
-object VectorPicklers extends VectorPicklers {}

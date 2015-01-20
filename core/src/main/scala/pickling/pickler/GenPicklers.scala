@@ -9,5 +9,3 @@ import scala.language.experimental.macros
 trait GenPicklers {
   implicit def genPickler[T]: SPickler[T] = macro Compat.PicklerMacros_impl[T]
 }
-
-object GenPicklers extends GenPicklers {}
