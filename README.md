@@ -86,6 +86,9 @@ import scala.pickling._ // This imports names only
 import scala.pickling.json._           // Imports PickleFormat
 import scala.pickling.static._         // Avoid runtime pickler
 import scala.pickling.ops._            // Inject pickle and unpicke methods
+// Alternatively import pickle function
+// import scala.pickling.functions._ 
+
 // Import picklers for specific types
 import scala.pickling.allPicklers.{ stringPickler, intPickler, refUnpickler, nullPickler }
 

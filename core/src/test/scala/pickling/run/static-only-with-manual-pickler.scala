@@ -1,7 +1,7 @@
 package scala.pickling.staticonlywithmanualpickler
 
 import org.scalatest.FunSuite
-import scala.pickling._, ops._, json._
+import scala.pickling._, functions._, json._
 import static.StaticOnly
 
 // NOT sealed so StaticOnly should block generating
@@ -9,6 +9,7 @@ import static.StaticOnly
 class NotClosed(fld: Int)
 
 case class FakeImplementation() extends Exception("Not a real implementation")
+case class Apple(x: Int)
 
 class StaticOnlyWithManualPicklerTest extends FunSuite {
   test("main") {
@@ -24,18 +25,26 @@ class StaticOnlyWithManualPicklerTest extends FunSuite {
           throw FakeImplementation()
         def tag = FastTypeTag[NotClosed]
       }
-    val pickle: JSONPickle = try {
-      x.pickle
+    val pkl: JSONPickle = try {
+      pickle(x)
       throw new AssertionError("Should have used the fake implementation pickler")
     } catch {
       case FakeImplementation() => JSONPickle("")
     }
     try {
-      pickle.unpickle[NotClosed]
+      unpickle[NotClosed](pkl)
       throw new AssertionError("Should have used the fake implementation unpickler")
     } catch {
       case PicklingException(msg, cause) =>
         assert(msg.contains("failed to parse"))
     }
+  }
+
+  // Test that you can generate SPickler without having ops._ imported on the callsite.
+  test ("manually generated pickler") {
+    import scala.pickling.allPicklers.intPickler
+    implicit val applePickler: SPickler[Apple] = SPickler.generate[Apple]
+    implicit val appleUnpciker: Unpickler[Apple] = Unpickler.generate[Apple]
+    val pkl: JSONPickle = pickle(Apple(1))
   }
 }

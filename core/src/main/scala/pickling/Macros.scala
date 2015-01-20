@@ -295,6 +295,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
     q"""
       implicit object $picklerName extends scala.pickling.SPickler[$tpe] with scala.pickling.Generated {
         import scala.pickling._
+        import scala.pickling.ops._
         import scala.pickling.internal._
         import scala.pickling.`package`.PickleOps
         def pickle(picklee: $tpe, builder: scala.pickling.PBuilder): Unit = $pickleLogic
@@ -312,6 +313,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
     q"""
       implicit object $picklerName extends scala.pickling.DPickler[$tpe] {
         import scala.pickling._
+        import scala.pickling.ops._
         import scala.pickling.internal._
         import scala.pickling.`package`.PickleOps
         def pickle(picklee0: $tpe, builder: scala.pickling.PBuilder): Unit = $dpicklerPickleImpl
@@ -591,6 +593,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
       implicit object $unpicklerName extends scala.pickling.Unpickler[$tpe] with scala.pickling.Generated {
         import scala.language.existentials
         import scala.pickling._
+        import scala.pickling.ops._
         import scala.pickling.ir._
         import scala.pickling.internal._
         def unpickle(tagKey: String, reader: scala.pickling.PReader): Any = $unpickleLogic
@@ -616,6 +619,7 @@ trait PickleMacros extends Macro with TypeAnalysis {
     val builderName = newTermName("builder$pickleTo$")
     q"""
       import scala.pickling._
+      import scala.pickling.ops._
       import scala.pickling.internal._
       val $pickleeName: $tpe = $pickleeArg
       val $builderName = $format.createBuilder($output)
@@ -655,6 +659,7 @@ trait PickleMacros extends Macro with TypeAnalysis {
     q"""
       import scala.language.existentials
       import scala.pickling._
+      import scala.pickling.ops._
       import scala.pickling.internal._
       val $pickleeName: $tpe = $picklee
       scala.pickling.internal.GRL.lock()
