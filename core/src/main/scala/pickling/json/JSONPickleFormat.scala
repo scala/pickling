@@ -242,7 +242,7 @@ package json {
     def atObject: Boolean = datum.isInstanceOf[JSONObject]
     def readField(name: String): JSONPickleReader = {
       datum match {
-        case JSONObject(fields) => mkNestedReader(fields(name))
+        case JSONObject(fields) => mkNestedReader(fields.get(name).getOrElse(throw PicklingException(s"No field '$name' when unpickling, tag $lastReadTag, fields were $fields")))
       }
     }
     def endEntry(): Unit = {}
