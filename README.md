@@ -1,7 +1,7 @@
 scala/pickling
 ==============
 
-[![Build Status](https://travis-ci.org/scala/pickling.svg?branch=0.9.x)](https://travis-ci.org/scala/pickling/)
+[![Build Status](https://travis-ci.org/scala/pickling.svg?branch=0.10.x)](https://travis-ci.org/scala/pickling/)
 [![Stories in Ready](https://badge.waffle.io/scala/pickling.png?label=ready&title=Ready)](http://waffle.io/scala/pickling)
 
 
