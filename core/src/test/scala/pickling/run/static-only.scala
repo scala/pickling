@@ -1,9 +1,7 @@
 package scala.pickling.staticonly
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
-import AllPicklers._
+import scala.pickling._, scala.pickling.Defaults._, json._
 import static.StaticOnly
 
 sealed trait A
@@ -36,12 +34,13 @@ object J {
 class StaticOnlyTest extends FunSuite {
   test("main") {
     val x: C = new D
-    val pickle: JSONPickle = x.pickle
-    assert(pickle.unpickle[C].fld == 1)
+    val pkl: JSONPickle = x.pickle
+    assert(pkl.unpickle[C].fld == 1)
   }
   test("static-methods") {
+    import scala.pickling.functions._
   	val x: C = new D
-    val pickle: JSONPickle = scala.pickling.pickle(x)
-    assert(unpickle[C](pickle).fld == 1)
+    val pkl: JSONPickle = pickle(x)
+    assert(unpickle[C](pkl).fld == 1)
   }
 }

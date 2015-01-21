@@ -3,10 +3,7 @@ package scala.pickling
 import scala.pickling.internal._
 import scala.language.implicitConversions
 
-package object json {
-  implicit val pickleFormat: JSONPickleFormat = new JSONPickleFormat
-  implicit def toJSONPickle(value: String): JSONPickle = JSONPickle(value)
-  implicit def toUnpickleOps(value: String): UnpickleOps = new UnpickleOps(JSONPickle(value))
+package object json extends JsonFormats {
 }
 
 package json {
@@ -14,6 +11,12 @@ package json {
   import definitions._
   import scala.util.parsing.json._
   import scala.collection.mutable.{StringBuilder, Stack}
+
+  trait JsonFormats {
+    implicit val pickleFormat: JSONPickleFormat = new JSONPickleFormat
+    implicit def toJSONPickle(value: String): JSONPickle = JSONPickle(value)
+    implicit def jsonPickleToUnpickleOps(value: String): UnpickleOps = new UnpickleOps(JSONPickle(value))   
+  }
 
   case class JSONPickle(value: String) extends Pickle {
     type ValueType = String

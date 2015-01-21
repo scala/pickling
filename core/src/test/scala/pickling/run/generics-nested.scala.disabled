@@ -1,5 +1,4 @@
-import scala.pickling._
-import binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 import reflect.runtime.universe._
 

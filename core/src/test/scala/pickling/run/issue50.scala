@@ -1,9 +1,6 @@
 package scala.pickling.test.issue50
 
-import scala.pickling._
-import scala.pickling.json._
-import scala.pickling.AllPicklers._
-
+import scala.pickling._, scala.pickling.Defaults._, json._
 import org.scalatest.FunSuite
 
 case class TestA(x: Option[Int])

@@ -151,7 +151,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
             val out = new scala.pickling.util.GenObjectOutput
             picklee.writeExternal(out)
             builder.putField($fieldName, b =>
-              out.pickleInto(b)
+              scala.pickling.PickleOps(out).pickleInto(b)
             )
           """)
         } else (nonLoopyFields ++ loopyFields).flatMap(fir => {
@@ -161,11 +161,11 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
         def pickleLogic(fieldValue: Tree): Tree =
           if (fir.tpe.typeSymbol.isEffectivelyFinal) q"""
             b.hintStaticallyElidedType()
-            $fieldValue.pickleInto(b)
+            scala.pickling.PickleOps($fieldValue).pickleInto(b)
           """ else q"""
             val subPicklee: ${fir.tpe} = $fieldValue
             if (subPicklee == null || subPicklee.getClass == classOf[${fir.tpe}]) b.hintDynamicallyElidedType()
-            subPicklee.pickleInto(b)
+            scala.pickling.PickleOps(subPicklee).pickleInto(b)
           """
 
         def putField(getterLogic: Tree) =
@@ -296,7 +296,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
       implicit object $picklerName extends scala.pickling.SPickler[$tpe] with scala.pickling.Generated {
         import scala.pickling._
         import scala.pickling.internal._
-        import scala.pickling.`package`.PickleOps
+        import scala.pickling.PickleOps
         def pickle(picklee: $tpe, builder: scala.pickling.PBuilder): Unit = $pickleLogic
         def tag: FastTypeTag[$tpe] = $createTagTree
       }
@@ -313,7 +313,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
       implicit object $picklerName extends scala.pickling.DPickler[$tpe] {
         import scala.pickling._
         import scala.pickling.internal._
-        import scala.pickling.`package`.PickleOps
+        import scala.pickling.PickleOps
         def pickle(picklee0: $tpe, builder: scala.pickling.PBuilder): Unit = $dpicklerPickleImpl
       }
       $picklerName
@@ -575,7 +575,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
           if (tagKey == scala.pickling.FastTypeTag.Null.key) {
             null
           } else if (tagKey == scala.pickling.FastTypeTag.Ref.key) {
-            scala.pickling.AllPicklers.refUnpickler.unpickle(tagKey, reader)
+            scala.pickling.Defaults.refUnpickler.unpickle(tagKey, reader)
           } else if (tagKey == ${if (tpe <:< typeOf[Singleton]) sym.fullName + ".type" else tpe.key}) {
             $unpickleObject
           } else {
@@ -591,6 +591,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
       implicit object $unpicklerName extends scala.pickling.Unpickler[$tpe] with scala.pickling.Generated {
         import scala.language.existentials
         import scala.pickling._
+        import scala.pickling.PickleOps
         import scala.pickling.ir._
         import scala.pickling.internal._
         def unpickle(tagKey: String, reader: scala.pickling.PReader): Any = $unpickleLogic
@@ -616,10 +617,11 @@ trait PickleMacros extends Macro with TypeAnalysis {
     val builderName = newTermName("builder$pickleTo$")
     q"""
       import scala.pickling._
+      import scala.pickling.PickleOps
       import scala.pickling.internal._
       val $pickleeName: $tpe = $pickleeArg
       val $builderName = $format.createBuilder($output)
-      $pickleeName.pickleInto($builderName)
+      scala.pickling.PickleOps($pickleeName).pickleInto($builderName)
       $endPickle
     """
   }
@@ -648,13 +650,14 @@ trait PickleMacros extends Macro with TypeAnalysis {
         $picklerName.asInstanceOf[scala.pickling.SPickler[$tpe]].pickle($pickleeName, $builder)
       } else {
         $builder.hintTag(scala.pickling.FastTypeTag.Null)
-        scala.pickling.AllPicklers.nullPicklerUnpickler.pickle(null, $builder)
+        scala.pickling.Defaults.nullPickler.pickle(null, $builder)
       }
     """
 
     q"""
       import scala.language.existentials
       import scala.pickling._
+      import scala.pickling.PickleOps
       import scala.pickling.internal._
       val $pickleeName: $tpe = $picklee
       scala.pickling.internal.GRL.lock()

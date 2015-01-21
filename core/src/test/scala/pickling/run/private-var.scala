@@ -1,9 +1,7 @@
 package scala.pickling.`private`.`var`
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
-import AllPicklers._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 case class Person(val name: String, val age: Int) {
   private var ssn: Int = 0

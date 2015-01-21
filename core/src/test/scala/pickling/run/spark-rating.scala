@@ -2,8 +2,7 @@ package scala.pickling.transienttest
 
 import org.scalatest.FunSuite
 import scala.reflect.ClassTag
-import scala.pickling._
-import AllPicklers._
+import scala.pickling._, Defaults._
 
 // class Dependency[T]
 // class SparkContext(config: SparkConf)
