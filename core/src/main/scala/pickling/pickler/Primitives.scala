@@ -1,6 +1,8 @@
 package scala.pickling
 package pickler
 
+/** Picklers for primitive types.
+ */
 trait PrimitivePicklers {
   // TODO: figure out why removing these pickler/unpicklers slows down evactor1
   implicit val bytePickler: SPickler[Byte] with Unpickler[Byte] = PrimitivePickler[Byte]
