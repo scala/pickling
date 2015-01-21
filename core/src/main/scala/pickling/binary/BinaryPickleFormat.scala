@@ -5,6 +5,12 @@ import scala.pickling.internal._
 import scala.language.implicitConversions
 import scala.reflect.runtime.universe.Mirror
 
+trait BinaryFormats {
+  implicit val pickleFormat = new BinaryPickleFormat
+  implicit def toBinaryPickle(value: Array[Byte]): BinaryPickle = BinaryPickle(value)
+  implicit def binaryPickleToUnpickleOps(value: Array[Byte]): UnpickleOps = new UnpickleOps(BinaryPickle(value))
+}
+
 trait BinaryPBuilder extends PBuilder {
   def result(): BinaryPickle
 }
