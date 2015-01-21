@@ -33,7 +33,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro with UnpickleMacros {
         import scala.reflect.runtime.universe._
         import scala.pickling._
         import scala.pickling.internal._
-        import scala.pickling.`package`.PickleOps
+        import scala.pickling.PickleOps
 
         val elpickler: SPickler[$eltpe] = {
           val elpickler = "bam!"

@@ -297,7 +297,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
         import scala.pickling._
         import scala.pickling.Defaults.{ pickleOps, unpickleOps }
         import scala.pickling.internal._
-        import scala.pickling.`package`.PickleOps
+        import scala.pickling.PickleOps
         def pickle(picklee: $tpe, builder: scala.pickling.PBuilder): Unit = $pickleLogic
         def tag: FastTypeTag[$tpe] = $createTagTree
       }
@@ -315,7 +315,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
         import scala.pickling._
         import scala.pickling.Defaults.{ pickleOps, unpickleOps }
         import scala.pickling.internal._
-        import scala.pickling.`package`.PickleOps
+        import scala.pickling.PickleOps
         def pickle(picklee0: $tpe, builder: scala.pickling.PBuilder): Unit = $dpicklerPickleImpl
       }
       $picklerName
