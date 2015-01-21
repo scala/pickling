@@ -4,7 +4,7 @@ package pickler
 import java.util.{Date, TimeZone}
 import java.text.SimpleDateFormat
 
-trait DatePicklers { self: PrimitivePicklers =>
+trait DatePicklers extends PrimitivePicklers {
   implicit val datePickler: SPickler[Date] with Unpickler[Date] =
   new SPickler[Date] with Unpickler[Date] {
     private val dateFormatTemplate = {

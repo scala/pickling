@@ -6,7 +6,7 @@ import java.math.BigDecimal
 /** Contains picklers which serialize java.math.BigDecimal.
   * Note; This currently serialzies as a string.
   */
-trait JavaBigDecimalPicklers { self: PrimitivePicklers =>
+trait JavaBigDecimalPicklers extends PrimitivePicklers {
   implicit val javaBigDecimalPickler:
     SPickler[BigDecimal] with Unpickler[BigDecimal] = new SPickler[BigDecimal] with Unpickler[BigDecimal]{
     def tag = FastTypeTag[BigDecimal]
