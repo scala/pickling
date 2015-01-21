@@ -72,11 +72,11 @@ trait CollectionPicklerUnpicklerMacro extends Macro with UnpickleMacros {
               ${
                 if (!isPrimitive && !isFinal) q"""
                   b.hintTag(eltag)
-                  arr(i).pickleInto(b)
+                  PickleOps(arr(i)).pickleInto(b)
                 """.asInstanceOf[Tree] else if (!isPrimitive && isFinal) q"""
                   b.hintTag(eltag)
                   b.hintStaticallyElidedType()
-                  arr(i).pickleInto(b)
+                  PickleOps(arr(i)).pickleInto(b)
                 """.asInstanceOf[Tree] else q"""
                   elpickler.pickle(arr(i), b)
                 """.asInstanceOf[Tree]

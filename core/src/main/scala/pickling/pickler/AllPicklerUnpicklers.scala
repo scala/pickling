@@ -1,6 +1,8 @@
 package scala.pickling
 package pickler
 
+/** All pickler instances.
+ */
 trait AllPicklers extends PrimitivePicklers
   with DatePicklers
   with JavaBigDecimalPicklers
@@ -12,6 +14,8 @@ trait AllPicklers extends PrimitivePicklers
   with LowPriorityPicklers {}
 object AllPicklers extends AllPicklers {}
 
+/** All picklers for collections with exception of List which is handled by macro.
+ */
 trait CollectionPicklers extends MutableMapPicklers
   with ImmutableSortedMapPicklers
   with MapPicklers

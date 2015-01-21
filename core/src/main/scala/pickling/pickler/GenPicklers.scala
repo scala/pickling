@@ -3,7 +3,7 @@ package pickler
 
 import scala.language.experimental.macros
 
-/** Mix-in trait to generate `SPickler`s.
+/** Mix-in trait to generate `SPickler`s implicitly.
  * See also `SPickler.generate`.
  */
 trait GenPicklers {

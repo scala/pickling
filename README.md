@@ -79,12 +79,12 @@ Scala Pickling...
 
 ## A la carte import (0.10.0)
 
-If you want, Pickling lets you import specific parts (ops, picklers, and format) so you can customize each part.
+If you want, Pickling lets you import specific parts (functions, ops, picklers, and format) so you can customize each part.
 
 ```scala
-import scala.pickling._ // This imports names only
-import scala.pickling.json._           // Imports PickleFormat
-import scala.pickling.static._         // Avoid runtime pickler
+import scala.pickling._         // This imports names only
+import scala.pickling.json._    // Imports PickleFormat
+import scala.pickling.static._  // Avoid runtime pickler
 
 // Import pickle ops
 import scala.pickling.Defaults.{ pickleOps, unpickleOps } 
@@ -103,7 +103,42 @@ val pckl = Pumpkin("Kabocha").pickle
 val pump = pckl.unpickle[Pumpkin]
 ```
 
+## DYI protocol stack (0.10.0)
+
 There are also traits available for picklers to mix and match your own convenience object to import from.
+If you're a library author, you can provide the convenience object as your protocol stack that some or all of the pickling parts:
+
+- ops
+- functions
+- picklers
+- format
+
+```scala
+scala> case class Pumpkin(kind: String)
+defined class Pumpkin
+
+scala> val pumpkinJsonProtocol = new scala.pickling.pickler.PrimitivePicklers with
+     |   scala.pickling.json.JsonFormats with scala.pickling.Ops {
+     |     import scala.pickling.{ SPickler, Unpickler }
+     |     implicit val pumpkinPickler = SPickler.generate[Pumpkin]
+     |     implicit val pumpkinUnpickler = Unpickler.generate[Pumpkin]
+     |   }
+pumpkinJsonProtocol: scala.pickling.pickler.PrimitivePicklers with scala.pickling.json.JsonFormats with scala.pickling.Ops{implicit val pumpkinPickler: scala.pickling.SPickler[Pumpkin] with scala.pickling.Generated; implicit val pumpkinUnpickler: scala.pickling.Unpickler[Pumpkin] with scala.pickling.Generated} = $anon$1@500cd8e3
+```
+
+Now your library user can import `pumpkinJsonProtocol` as follows:
+
+```
+scala> import pumpkinJsonProtocol._
+import pumpkinJsonProtocol._
+
+scala> Pumpkin("kabocha").pickle
+res0: pumpkinJsonProtocol.pickleFormat.PickleType =
+JSONPickle({
+  "tpe": "Pumpkin",
+  "kind": "kabocha"
+})
+```
 
 <!-- This project aims to turn [a custom build of macro paradise](https://github.com/heathermiller/scala-pickling/tree/topic/scala-pickling) that we used in
 [Object-Oriented Pickler Combinators and an Extensible Generation Framework](http://lampwww.epfl.ch/~hmiller/files/pickling.pdf)

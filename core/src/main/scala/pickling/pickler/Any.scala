@@ -3,6 +3,8 @@ package pickler
 
 import scala.pickling.runtime.RuntimeUnpicklerLookup
 
+/** Attempts to unpickle Any by looking up registered unpicklers using `currentMirror`.
+ */
 trait AnyUnpicklers {
   // Any
   implicit val anyUnpickler: Unpickler[Any] = new Unpickler[Any] {

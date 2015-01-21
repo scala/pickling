@@ -1,6 +1,8 @@
 package scala.pickling
 package pickler
 
+/** Picklers for primitive arrays.
+ */
 trait PrimitiveArrayPicklers {
   implicit val byteArrayPickler: SPickler[Array[Byte]] with Unpickler[Array[Byte]] = PrimitivePickler[Array[Byte]]
   implicit val shortArrayPickler: SPickler[Array[Short]] with Unpickler[Array[Short]] = PrimitivePickler[Array[Short]]
