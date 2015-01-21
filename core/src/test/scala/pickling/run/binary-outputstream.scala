@@ -4,9 +4,7 @@ import org.scalatest.FunSuite
 
 import java.io.{OutputStream, ByteArrayOutputStream, ByteArrayInputStream}
 
-import scala.pickling._
-import binary._
-import AllPicklers._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 class BinaryOutputStreamTest extends FunSuite {
   test("pickle to OutputStream") {

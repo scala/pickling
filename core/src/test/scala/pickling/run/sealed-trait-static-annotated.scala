@@ -1,9 +1,10 @@
 package scala.pickling.test.sealedtraitstaticannotated
 
-import scala.pickling.{PickleOps, UnpickleOps, PicklingException, directSubclasses}
+import scala.pickling.{PicklingException, directSubclasses, SPickler, Unpickler, Defaults }
 import scala.pickling.static._
 import scala.pickling.json._
-import scala.pickling.AllPicklers.{ stringPicklerUnpickler, intPicklerUnpickler, refUnpickler, nullPicklerUnpickler }
+import Defaults.{ stringPickler, intPickler, refUnpickler, nullPickler }
+import Defaults.{ pickleOps, unpickleOps }
 
 import org.scalatest.FunSuite
 
@@ -12,15 +13,15 @@ import org.scalatest.FunSuite
 trait Fruit
 
 object Banana {
-  implicit val pickler = scala.pickling.AllPicklers.genPickler[Banana]
-  implicit val unpickler = scala.pickling.AllPicklers.genUnpickler[Banana]
+  implicit val pickler = Defaults.genPickler[Banana]
+  implicit val unpickler = Defaults.genUnpickler[Banana]
 }
 
 // this is BEFORE the subtypes below so directKnownSubclasses probably
 // won't work and this would break without the directSubclasses annotation.
 object Fruit {
-  implicit val pickler = scala.pickling.AllPicklers.genPickler[Fruit]
-  implicit val unpickler = scala.pickling.AllPicklers.genUnpickler[Fruit]
+  implicit val pickler = Defaults.genPickler[Fruit]
+  implicit val unpickler = Defaults.genUnpickler[Fruit]
 }
 
 sealed trait RedOrOrangeFruit extends Fruit
@@ -29,6 +30,8 @@ final case class Orange(ripeness: String) extends RedOrOrangeFruit
 final case class Banana(something: Int) extends Fruit
 
 final case class Cucumber(something: Int) // does not extend Fruit
+
+final case class Pumpkin(kind: String)
 
 class SealedTraitStaticAnnotatedTest extends FunSuite {
 
@@ -68,5 +71,13 @@ class SealedTraitStaticAnnotatedTest extends FunSuite {
       case PicklingException(message, cause) =>
         assert(message.contains("Apple not recognized"))
     }
+  }
+
+  test("manually generate") {
+    implicit val pumpkinPickler = SPickler.generate[Pumpkin]
+    implicit val pumpkinUnpickler = Unpickler.generate[Pumpkin]
+    val pumpkin = Pumpkin("Kabocha")
+    val pumpkinString = pumpkin.pickle.value
+    assert(JSONPickle(pumpkinString).unpickle[Pumpkin] == pumpkin)
   }
 }

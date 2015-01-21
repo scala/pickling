@@ -1,15 +1,14 @@
 package scala.pickling.forwardedpickler
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, json._
 import static.StaticOnly
 
-/* Note: importing AllPicklers.{genPickler, genUnpickler} leads to issues
+/* Note: importing pickler.{genPickler, genUnpickler} leads to issues
          if the primitive picklers are *not* imported at the same time!
          (e.g., the *generated* pickler for type `Int` is nonsense)
  */
-import AllPicklers._
+import scala.pickling.Defaults._
 
 sealed trait F { val fld: Int }
 

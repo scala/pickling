@@ -2,8 +2,8 @@ package scala.pickling.base
 
 import org.scalatest.FunSuite
 import scala.pickling._
+import scala.pickling.Defaults._
 import json._
-import AllPicklers._
 
 sealed abstract class Base
 final class C extends Base { override def toString = "C" }

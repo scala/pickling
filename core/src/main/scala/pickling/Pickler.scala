@@ -3,7 +3,8 @@ package scala.pickling
 import scala.language.experimental.macros
 
 import scala.annotation.implicitNotFound
-
+import scala.pickling.runtime.GlobalRegistry
+import scala.pickling.internal._
 
 /** A static pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
  *  static type `T`, and pickles it to an instance of `PBuilder`. In the process the object
@@ -23,6 +24,10 @@ trait SPickler[T] {
   def tag: FastTypeTag[T]
 }
 
+object SPickler {
+  def generate[T]: SPickler[T] = macro Compat.PicklerMacros_impl[T]
+}
+
 /** A dynamic pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
  *  static type `T`, and pickles it to an instance of `PBuilder`. In the process the object
  *  is turned into some external representation like a byte array. The particular external
@@ -38,10 +43,6 @@ trait DPickler[T] {
 
 object DPickler {
   implicit def genDPickler[T]: DPickler[T] = macro Compat.PicklerMacros_dpicklerImpl[T]
-}
-
-trait GenPicklers {
-  implicit def genPickler[T]: SPickler[T] = macro Compat.PicklerMacros_impl[T]
 }
 
 // marker trait to indicate a generated pickler
@@ -81,32 +82,14 @@ trait Unpickler[T] {
   /** The fast type tag associated with this unpickler. */
   def tag: FastTypeTag[T]
 }
-
-/** Open sum pickler methods.
- *
- *  Open-sum means that we don't have a "closed" object hierarchy, and we need to resort
- *  to runtime reflection to handle classes which we didn't know about when we compiled
- *  the unpicler.
- */
-trait GenOpenSumUnpicklers {
-  /** Generates an unpickler which can use runtime reflection to unpickle classes
-   * which were not known when this Unpickler was created.
-   *
-   * The unpickler will attempt to use as much static information as possible.
-   * While the [[GenUnpicklers.genUnpickler]] macro is able to be run in static-only mode,
-   * this macro *must* always resort to runtime reflection.
-   */
-  implicit def genOpenSumUnpickler[T]: Unpickler[T] with Generated = macro Compat.OpenSumUnpicklerMacro_impl[T]
+object Unpickler {
+  def generate[T]: Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
 }
 
-trait GenUnpicklers extends GenOpenSumUnpicklers {
-  /** Generates an unpickler which can rematerialize the given type.
-   *
-   *  Note: If this unpickler encounters a type the compiler does not know about, it will
-   *        resort to runtim reflection.  This can be disabled by ensuring you:
-   *        {{{ import scala.pickling.static.StaticOnly}}}
-   *        everywhere this macro is used.
-   *
-   */
-  implicit def genUnpickler[T]: Unpickler[T] with Generated = macro Compat.UnpicklerMacros_impl[T]
+abstract class AutoRegister[T: FastTypeTag](name: String) extends SPickler[T] with Unpickler[T] {
+  debug(s"autoregistering pickler $this under key '$name'")
+  GlobalRegistry.picklerMap += (name -> (x => this))
+  val tag = implicitly[FastTypeTag[T]]
+  debug(s"autoregistering unpickler $this under key '${tag.key}'")
+  GlobalRegistry.unpicklerMap += (tag.key -> this)
 }

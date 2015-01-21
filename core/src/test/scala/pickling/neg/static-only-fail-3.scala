@@ -9,6 +9,7 @@ class StaticOnlyFail3Test extends FunSuite {
     expectError("Cannot generate") {
       """
         | import _root_.scala.pickling._
+        | import _root_.scala.pickling.Defaults.{ pickleOps, unpickleOps }
         | import _root_.scala.pickling.json._
         | import _root_.scala.pickling.static.StaticOnly
         |

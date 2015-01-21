@@ -1,9 +1,7 @@
 package scala.pickling.non.primitive.field
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
-import AllPicklers._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 case class Person(name: String, age: Int)
 case class Philipp(mother: Person)
