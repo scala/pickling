@@ -5,8 +5,6 @@ import scala.language.implicitConversions
 import scala.pickling.pickler.AllPicklers
 
 package object pickling {
-  val functions: PickleFunctions = new PickleFunctions {}
-
   /** Appends the pickle/pickleTo/pickleInto operations onto any type, assuming implicits picklers are available. */
   final class PickleOps[T](picklee: T) {
     def pickle(implicit format: PickleFormat, pickler: SPickler[T]): format.PickleType =

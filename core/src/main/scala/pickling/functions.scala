@@ -2,7 +2,7 @@ package scala.pickling
 
 import scala.language.experimental.macros
 
-trait PickleFunctions {
+object functions {
   def unpickle[T](thePickle: Pickle)(implicit unpickler: Unpickler[T], format: PickleFormat): T = {
     // TODO - move GRL locking code into just the runtime unpickler code + generators.
     internal.GRL.lock()
