@@ -5,7 +5,7 @@ import java.math.BigInteger
 
 
 /** This contains implicits which can serialize java.math.BigInteger values. */
-trait JavaBigIntegerPicklers { self: PrimitivePicklers =>
+trait JavaBigIntegerPicklers extends PrimitivePicklers {
   implicit val javaBigIntegerPickler:
     SPickler[BigInteger] with Unpickler[BigInteger] = new SPickler[BigInteger] with Unpickler[BigInteger] {
     def tag = FastTypeTag[BigInteger]
