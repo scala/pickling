@@ -1,10 +1,10 @@
 package scala.pickling.test.sealedtraitstaticannotated
 
-import scala.pickling.{PicklingException, directSubclasses, SPickler, Unpickler}
-import scala.pickling.ops._
+import scala.pickling.{PicklingException, directSubclasses, SPickler, Unpickler, Defaults }
 import scala.pickling.static._
 import scala.pickling.json._
-import scala.pickling.allPicklers.{ stringPickler, intPickler, refUnpickler, nullPickler }
+import Defaults.{ stringPickler, intPickler, refUnpickler, nullPickler }
+import Defaults.{ pickleOps, unpickleOps }
 
 import org.scalatest.FunSuite
 
@@ -13,15 +13,15 @@ import org.scalatest.FunSuite
 trait Fruit
 
 object Banana {
-  implicit val pickler = scala.pickling.allPicklers.genPickler[Banana]
-  implicit val unpickler = scala.pickling.allPicklers.genUnpickler[Banana]
+  implicit val pickler = Defaults.genPickler[Banana]
+  implicit val unpickler = Defaults.genUnpickler[Banana]
 }
 
 // this is BEFORE the subtypes below so directKnownSubclasses probably
 // won't work and this would break without the directSubclasses annotation.
 object Fruit {
-  implicit val pickler = scala.pickling.allPicklers.genPickler[Fruit]
-  implicit val unpickler = scala.pickling.allPicklers.genUnpickler[Fruit]
+  implicit val pickler = Defaults.genPickler[Fruit]
+  implicit val unpickler = Defaults.genUnpickler[Fruit]
 }
 
 sealed trait RedOrOrangeFruit extends Fruit

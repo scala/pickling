@@ -30,7 +30,7 @@ object functions {
     try { 
       if(null == picklee) {
         builder.hintTag(FastTypeTag.Null)
-        allPicklers.nullPickler.pickle(null, builder)
+        Defaults.nullPickler.pickle(null, builder)
       } else {
         builder.hintTag(pickler.tag)
         pickler.pickle(picklee, builder)
