@@ -85,12 +85,14 @@ If you want, Pickling lets you import specific parts (ops, picklers, and format)
 import scala.pickling._ // This imports names only
 import scala.pickling.json._           // Imports PickleFormat
 import scala.pickling.static._         // Avoid runtime pickler
-import scala.pickling.ops._            // Inject pickle and unpicke methods
+
+// Import pickle ops
+import scala.pickling.Defaults.{ pickleOps, unpickleOps } 
 // Alternatively import pickle function
-// import scala.pickling.functions._ 
+// import scala.pickling.functions._
 
 // Import picklers for specific types
-import scala.pickling.allPicklers.{ stringPickler, intPickler, refUnpickler, nullPickler }
+import scala.pickling.Defaults.{ stringPickler, intPickler, refUnpickler, nullPickler }
 
 case class Pumpkin(kind: String)
 // Manually generate a pickler using macro

@@ -2,7 +2,6 @@ package scala
 
 import scala.language.experimental.macros
 import scala.language.implicitConversions
-import scala.pickling.pickler.AllPicklers
 
 package object pickling {
   /** Appends the pickle/pickleTo/pickleInto operations onto any type, assuming implicits picklers are available. */
@@ -25,20 +24,8 @@ package object pickling {
       functions.unpickle(thePickle.asInstanceOf[format.PickleType])(unpickler, format)
   }
 
-  val allPicklers = AllPicklers
-
-  /** Import `scala.pickling.ops._` to introduce `pickle` and `unpickle` methods.
-   */
-  val ops: Ops = new Ops {}
-
-  /** Import `scala.pickling.Defaults._` to introduce all picklers and ops.
-   */
-  val Defaults: Ops with AllPicklers  =
-    new Ops with AllPicklers {}
-
   abstract class Ops {
-    implicit def toPickleOps[T](picklee: T): PickleOps[T] = new PickleOps(picklee)
-    implicit def pickleToUnpickleOps(thePickle: Pickle): UnpickleOps = new UnpickleOps(thePickle)
+    implicit def pickleOps[T](picklee: T): PickleOps[T] = new PickleOps(picklee)
+    implicit def unpickleOps(thePickle: Pickle): UnpickleOps = new UnpickleOps(thePickle)
   }
-
 }
