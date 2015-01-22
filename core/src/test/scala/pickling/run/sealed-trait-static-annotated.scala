@@ -46,30 +46,42 @@ class SealedTraitStaticAnnotatedTest extends FunSuite {
     // we did not list apple in directSubclasses so it should be
     // as if Apple doesn't exist
     val apple = Apple("Fuji")
-    val appleString = try {
-      (apple: Fruit).pickle.value
-      assert(false) // should not be reached, we should throw
+    try {
+      val pickled = (apple: Fruit).pickle.value
+      throw new Exception(s"We should have failed to pickle Apple but we pickled as: $pickled")
     } catch {
       case PicklingException(message, cause) =>
-        assert(message.contains("Apple not recognized"))
+        if (!message.contains("Apple not recognized"))
+          throw new Exception(s"Not the expected exception: $message")
     }
 
     // if we are only using static (un)picklers, then the Banana
-    // unpickler should not know a thing about Cucumber.
+    // unpickler should not know a thing about Cucumber, but duck typing
+    // should work anyhow.
+    val b = JSONPickle(bananaString.replace("Banana", "Cucumber")).unpickle[Banana]
+    assert(b == banana)
+
+    // the Fruit unpickler should not know anything about Cucumber, and
+    // it should fail because it doesn't know to duck-type into Banana
     try {
-      JSONPickle(bananaString.replace("Banana", "Cucumber")).unpickle[Banana]
+      val f = JSONPickle(bananaString.replace("Banana", "Cucumber")).unpickle[Fruit]
+      throw new Exception(s"Should have thrown on unpickle but instead parsed $f")
     } catch {
       case PicklingException(message, cause) =>
-        assert(message.contains("Cucumber not recognized"))
+        if (!message.contains("Cucumber not recognized"))
+          throw new Exception(s"Not the expected exception: $message")
     }
 
-    // due to the annotation, the Banana
-    // unpickler should not know a thing about Apple.
+    // due to the annotation, the Fruit unpickler should not know
+    // a thing about Apple either, even though it's a subtype of
+    // Fruit.
     try {
-      JSONPickle(bananaString.replace("Banana", "Apple")).unpickle[Banana]
+      val f = JSONPickle(bananaString.replace("Banana", "Apple")).unpickle[Fruit]
+      throw new Exception(s"Should have thrown on unpickle but instead parsed $f")
     } catch {
       case PicklingException(message, cause) =>
-        assert(message.contains("Apple not recognized"))
+        if (!message.contains("Apple not recognized"))
+          throw new Exception(s"Not the expected exception: $message")
     }
   }
 

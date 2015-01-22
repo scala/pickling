@@ -83,11 +83,9 @@ class Tools[C <: Context](val c: C) {
   }
 
   def compileTimeDispatchees(tpe: Type, mirror: Mirror): List[Type] = {
-    // TODO: why do we need nullTpe?
-    val nullTpe = if (tpe.baseClasses.contains(ObjectClass)) List(NullTpe) else Nil
     val subtypes = allStaticallyKnownConcreteSubclasses(tpe, mirror).filter(subtpe => subtpe.typeSymbol != tpe.typeSymbol)
     val selfTpe = if (isRelevantSubclass(tpe.typeSymbol, tpe.typeSymbol)) List(tpe) else Nil
-    val result = nullTpe ++ subtypes ++ selfTpe
+    val result = subtypes ++ selfTpe
     // println(s"$tpe => $result")
     result
   }
@@ -335,6 +333,16 @@ abstract class Macro extends RichTypes { self =>
   }
 
   def compileTimeDispatchees(tpe: Type): List[Type] = tools.compileTimeDispatchees(tpe, rootMirror)
+
+  def compileTimeDispatcheesNotEmpty(tpe: Type): List[Type] = {
+    val dispatchees = compileTimeDispatchees(tpe)
+    // this will catch at compile time a total failure of
+    // knownDirectSubclasses to find subtypes, though it won't
+    // catch a partial failure of knownDirectSubclasses
+    if (dispatchees.isEmpty)
+      throw new Exception(s"Didn't find any concrete subtypes of abstract $tpe, this may mean you need to use the @directSubclasses annotation to manually tell the compiler about subtypes")
+    dispatchees
+  }
 
   def syntheticPackageName: String = "scala.pickling.synthetic"
   def syntheticBaseName(tpe: Type): TypeName = {
