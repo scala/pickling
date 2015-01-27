@@ -36,14 +36,7 @@ trait PicklerUnpicklerMacros extends Macro {
   import c.universe._
 
   def impl[T: c.WeakTypeTag]: c.Tree = preferringAlternativeImplicits {
-    val originalTpe = weakTypeOf[T]
-    // Note: this makes it so modules work, things like foo.type.
-    //       For some reason we get an issue with not having == defined on Class[_] otherwise.
-    val tpe = {
-      // TODO - fix this for certain primitive types, like Null, etc.
-      if(originalTpe.termSymbol.isModule) originalTpe.widen
-      else originalTpe
-    }
+    val tpe = weakTypeOf[T]
     q"""
       SPicklerUnpickler[$tpe](SPickler.generate[$tpe], Unpickler.generate[$tpe])
     """
