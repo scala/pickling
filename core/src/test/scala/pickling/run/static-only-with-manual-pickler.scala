@@ -49,4 +49,13 @@ class StaticOnlyWithManualPicklerTest extends FunSuite {
     implicit val appleUnpickler: Unpickler[Apple] = Unpickler.generate[Apple]
     val pkl: JSONPickle = pickle(Apple(1))
   }
+
+  // Test that you can generate SPicklerUnpickler
+  test ("manually generated picklerunpickler") {
+    import scala.pickling.Defaults.intPickler
+    import scala.pickling.Defaults.refPickler
+    import scala.pickling.Defaults.refUnpickler
+    implicit val applePicklerUnpickler: SPicklerUnpickler[Apple] = SPicklerUnpickler.generate
+    val pkl: JSONPickle = pickle(Apple(1))
+  }
 }
