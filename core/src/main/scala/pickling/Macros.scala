@@ -38,7 +38,7 @@ trait PicklerUnpicklerMacros extends Macro {
   def impl[T: c.WeakTypeTag]: c.Tree = preferringAlternativeImplicits {
     val tpe = weakTypeOf[T]
     q"""
-      SPicklerUnpickler[$tpe](SPickler.generate[$tpe], Unpickler.generate[$tpe])
+      _root_.scala.pickling.SPicklerUnpickler[$tpe](_root_.scala.pickling.SPickler.generate[$tpe], _root_.scala.pickling.Unpickler.generate[$tpe])
     """
   }
 }
