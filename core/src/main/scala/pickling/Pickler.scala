@@ -27,7 +27,6 @@ trait SPickler[T] {
 
 object SPickler {
   def generate[T]: SPickler[T] = macro Compat.PicklerMacros_impl[T]
-  implicit def spuToSp[T: SPicklerUnpickler]: SPickler[T] = implicitly[SPicklerUnpickler[T]].pickler
 }
 
 /** A dynamic pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
@@ -86,22 +85,24 @@ trait Unpickler[T] {
 }
 object Unpickler {
   def generate[T]: Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
-  implicit def spuToU[T: SPicklerUnpickler]: Unpickler[T] = implicitly[SPicklerUnpickler[T]].unpickler
 }
 
 /** A combination of a static pickler and an unpickler for type `T`.
  */
-trait SPicklerUnpickler[T] {
-  def pickler: SPickler[T]
-  def unpickler: Unpickler[T]
+trait SPicklerUnpickler[T] extends SPickler[T] with Unpickler[T] {
 }
 object SPicklerUnpickler {
-  def apply[T](p: SPickler[T], u: Unpickler[T]): SPicklerUnpickler[T] =
-    new SPicklerUnpickler[T] {
-      def pickler = p
-      def unpickler = u
-    }
+  def apply[T](p: SPickler[T], u: Unpickler[T]): SPicklerUnpickler[T] = new SPicklerUnpicklerImpl(p, u)
   def generate[T]: SPicklerUnpickler[T] = macro Compat.SpicklerUnpicklerMacros_impl[T]
+  /** This is a private implementation of SPicklerUnpickler that delegates pickle and unpickle to underlying. */
+  private[pickling] class SPicklerUnpicklerImpl[T](p: SPickler[T], u: Unpickler[T]) extends SPicklerUnpickler[T] {
+    // From SPickler
+    override def pickle(picklee: T, builder: PBuilder): Unit = p.pickle(picklee, builder)
+    // From SPickler and Unpickler
+    override def tag: FastTypeTag[T] = p.tag
+    // From Unpickler
+    override def unpickle(tag: String, reader: PReader): Any = u.unpickle(tag, reader)
+  }
 }
 
 abstract class AutoRegister[T: FastTypeTag](name: String) extends SPickler[T] with Unpickler[T] {
