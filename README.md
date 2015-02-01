@@ -1,6 +1,8 @@
 scala/pickling
 ==============
 
+[![Join the chat at https://gitter.im/scala/pickling](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/scala/pickling?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 [![Build Status](https://travis-ci.org/scala/pickling.svg?branch=0.10.x)](https://travis-ci.org/scala/pickling/)
 [![Stories in Ready](https://badge.waffle.io/scala/pickling.png?label=ready&title=Ready)](http://waffle.io/scala/pickling)
 
