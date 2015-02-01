@@ -1,11 +1,9 @@
 scala/pickling
 ==============
 
-[![Join the chat at https://gitter.im/scala/pickling](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/scala/pickling?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
 [![Build Status](https://travis-ci.org/scala/pickling.svg?branch=0.10.x)](https://travis-ci.org/scala/pickling/)
 [![Stories in Ready](https://badge.waffle.io/scala/pickling.png?label=ready&title=Ready)](http://waffle.io/scala/pickling)
-
+[![Join the chat at https://gitter.im/scala/pickling](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/scala/pickling?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 **Scala Pickling** is an automatic serialization framework made for Scala. It's fast, boilerplate-free, and allows users to easily swap in/out different serialization formats (such as binary, or JSON), or even to provide their own custom serialization format.
 
