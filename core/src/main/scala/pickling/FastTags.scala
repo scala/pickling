@@ -60,7 +60,7 @@ trait FastTypeTag[T] extends Equals {
     this.key == x.asInstanceOf[FastTypeTag[_]].key
     //this.mirror == x.asInstanceOf[FastTypeTag[_]].mirror && this.tpe == x.asInstanceOf[FastTypeTag[_]].tpe
   override def hashCode = key.hashCode
-  override def toString = "FastTypeTag[" + tpe + "]"
+  override def toString = "FastTypeTag[" + key + "]"
 }
 
 object FastTypeTag {
