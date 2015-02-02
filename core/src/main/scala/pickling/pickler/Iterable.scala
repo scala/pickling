@@ -18,7 +18,7 @@ object TravPickler {
     new SPickler[C] with Unpickler[C] {
 
     val elemTag  = implicitly[FastTypeTag[T]]
-    val isPrimitive = elemTag.tpe.isEffectivelyPrimitive
+    val isPrimitive = elemTag.isEffectivelyPrimitive
 
     def tag: FastTypeTag[C] = collTag
 
