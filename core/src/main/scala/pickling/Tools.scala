@@ -82,10 +82,10 @@ class Tools[C <: Context](val c: C) {
     }
   }
 
-  def compileTimeDispatchees(tpe: Type, mirror: Mirror): List[Type] = {
+  def compileTimeDispatchees(tpe: Type, mirror: Mirror, excludeSelf: Boolean): List[Type] = {
     val subtypes = allStaticallyKnownConcreteSubclasses(tpe, mirror).filter(subtpe => subtpe.typeSymbol != tpe.typeSymbol)
     val selfTpe = if (isRelevantSubclass(tpe.typeSymbol, tpe.typeSymbol)) List(tpe) else Nil
-    val result = subtypes ++ selfTpe
+    val result = if (excludeSelf) subtypes else subtypes ++ selfTpe
     // println(s"$tpe => $result")
     result
   }
@@ -332,7 +332,9 @@ abstract class Macro extends RichTypes { self =>
     shareNothing
   }
 
-  def compileTimeDispatchees(tpe: Type): List[Type] = tools.compileTimeDispatchees(tpe, rootMirror)
+  def compileTimeDispatcheesNotSelf(tpe: Type): List[Type] = tools.compileTimeDispatchees(tpe, rootMirror, true)
+
+  def compileTimeDispatchees(tpe: Type): List[Type] = tools.compileTimeDispatchees(tpe, rootMirror, false)
 
   def compileTimeDispatcheesNotEmpty(tpe: Type): List[Type] = {
     val dispatchees = compileTimeDispatchees(tpe)

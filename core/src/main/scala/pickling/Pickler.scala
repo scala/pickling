@@ -1,6 +1,7 @@
 package scala.pickling
 
 import scala.language.experimental.macros
+import scala.language.implicitConversions
 
 import scala.annotation.implicitNotFound
 import scala.pickling.runtime.GlobalRegistry
@@ -84,6 +85,24 @@ trait Unpickler[T] {
 }
 object Unpickler {
   def generate[T]: Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
+}
+
+/** A combination of a static pickler and an unpickler for type `T`.
+ */
+trait SPicklerUnpickler[T] extends SPickler[T] with Unpickler[T] {
+}
+object SPicklerUnpickler {
+  def apply[T](p: SPickler[T], u: Unpickler[T]): SPicklerUnpickler[T] = new SPicklerUnpicklerImpl(p, u)
+  def generate[T]: SPicklerUnpickler[T] = macro Compat.SpicklerUnpicklerMacros_impl[T]
+  /** This is a private implementation of SPicklerUnpickler that delegates pickle and unpickle to underlying. */
+  private[pickling] class SPicklerUnpicklerImpl[T](p: SPickler[T], u: Unpickler[T]) extends SPicklerUnpickler[T] {
+    // From SPickler
+    override def pickle(picklee: T, builder: PBuilder): Unit = p.pickle(picklee, builder)
+    // From SPickler and Unpickler
+    override def tag: FastTypeTag[T] = p.tag
+    // From Unpickler
+    override def unpickle(tag: String, reader: PReader): Any = u.unpickle(tag, reader)
+  }
 }
 
 abstract class AutoRegister[T: FastTypeTag](name: String) extends SPickler[T] with Unpickler[T] {
