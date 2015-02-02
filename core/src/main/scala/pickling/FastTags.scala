@@ -3,18 +3,72 @@ package scala.pickling
 import scala.language.experimental.macros
 
 import scala.pickling.internal._
+import scala.reflect.api.Mirror
 
 import scala.reflect.runtime.{universe => ru}
 import scala.reflect.ClassTag
 
+/**
+ * A "tag" denoting information about a runtime type.
+ * This tag is meant to be extermely efficient for simple runtime checks, avoiding a full reflection overhead, while
+ * also *allowing* full runtime checks.
+ *
+ * Notes:
+ *
+ * 1. Currently the equals method does "stringy" comparison of types.  For a full equality comparison, you'll need to
+ *    fully reify the Type (tpe).
+ * 2. Calling `mirror` or `tpe` may cause runtime reflection to be used.
+ *
+ *
+ * @tparam T
+ */
 trait FastTypeTag[T] extends Equals {
+  /** @return The mirror known to be in use when this FastTypeTag was created.
+    *
+    * It is not guaranteed to be the correct mirror to reify the type against.
+    */
   def mirror: ru.Mirror
+
+  /**
+   * @return The full Type of T.   This method may need to use runtime reflection to reconstruct the full type.
+   */
   def tpe: ru.Type
+
+  /** A stringified key that can be used to denote this type.   This key should be unique for types within scala,
+    * although the key will *not* determine uniqueness between types loaded on different classloaders.
+    *
+    * @return  A stringy type key.
+    */
   def key: String
+
+  /**
+   * @param otherMirror The mirror where we should reconsititute the Type inside.
+   * @return  A new Type instance that has reconstructed the full Type.
+   */
+  def reflectType(otherMirror: ru.Mirror): ru.Type = typeFromString(otherMirror, key)
+
+  /**
+   * Tests whether this tag is effectively a primitive type.  Note: We duplicate logic
+   * out of regular runtime reflection here to avoid the burden of requiring runtime reflection.
+   */
+  def isEffectivelyPrimitive: Boolean =
+    FastTypeTag.EffectivePrimitiveTags.contains(key)
+
   override def canEqual(x: Any) = x.isInstanceOf[FastTypeTag[_]]
-  override def equals(x: Any) = x.isInstanceOf[FastTypeTag[_]] && this.mirror == x.asInstanceOf[FastTypeTag[_]].mirror && this.tpe == x.asInstanceOf[FastTypeTag[_]].tpe
-  override def hashCode = mirror.hashCode * 31 + tpe.hashCode
-  override def toString = "FastTypeTag[" + tpe + "]"
+  // equals skips runtime reflection because it's potentially
+  // expensive and unthreadsafe to force the lazy Type field, and
+  // since we typeFromString(key) to get the Type anyhow there's
+  // no downside to just using the string (the string has to
+  // contain all the information).
+  override def equals(x: Any) = canEqual(x) && {
+    x match {
+      case null => false
+      case other: FastTypeTag[_] => this.key == other.key
+      case _ => false
+    }
+  }
+  override def hashCode = key.hashCode
+  override def toString = "FastTypeTag[" + key + "]"
 }
 
 object FastTypeTag {
@@ -46,6 +100,7 @@ object FastTypeTag {
   implicit val ArrayBoolean = stdTag[Array[Boolean]]
   implicit val ArrayFloat = stdTag[Array[Float]]
   implicit val ArrayDouble = stdTag[Array[Double]]
+  implicit val ArrayUnit = stdTag[Array[Unit]]
 
   implicit val ArrayAnyRef: FastTypeTag[Array[AnyRef]] = {
     val mirror = scala.reflect.runtime.currentMirror
@@ -58,6 +113,19 @@ object FastTypeTag {
 
   implicit val Ref = stdTag[refs.Ref]
 
+  // NOTE; This is a bit of a hack, copied from [[Symbols.isPrimitive]]
+  private val EffectivePrimitiveTags: Set[String] = {
+    val primitives = Seq(
+      Double, Float, Long, Int, Char, Short, Byte, Unit, Boolean
+    )
+    // TODO - create array primitives out of the above seq
+    val arrayPrimitives = Seq(
+      ArrayDouble, ArrayFloat, ArrayLong, ArrayInt, ArrayChar, ArrayShort, ArrayByte, ArrayUnit, ArrayBoolean
+    )
+    (primitives ++ arrayPrimitives).map(_.key).toSet
+  }
+
+  /** Construct a new FastTypeTag where all members are known. */
   def apply(mirror0: ru.Mirror, tpe0: ru.Type, key0: String): FastTypeTag[_] = {
     new FastTypeTag[Nothing] {
       def mirror = mirror0
@@ -65,8 +133,14 @@ object FastTypeTag {
       def key = key0
     }
   }
-
-  def apply(mirror: ru.Mirror, key: String): FastTypeTag[_] = apply(mirror, typeFromString(mirror, key), key)
+  /** Construct a new fast type tag that will lazily instantiate the Type. */
+  def apply(mirror0: ru.Mirror, key0: String): FastTypeTag[_] =
+    new FastTypeTag[Nothing] {
+      val mirror = mirror0
+      val key = key0
+      lazy val tpe = typeFromString(mirror, key)
+    }
+  /** Construct  anew fast type tage using the currently active pickling Mirror and lazily instantiate the Type. */
   def apply(key: String): FastTypeTag[_] = macro Compat.FastTypeTagMacros_apply
 
   def apply[T: ru.TypeTag]: FastTypeTag[T] = {
