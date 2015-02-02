@@ -55,10 +55,18 @@ trait FastTypeTag[T] extends Equals {
     FastTypeTag.EffectivePrimitiveTags.contains(key)
 
   override def canEqual(x: Any) = x.isInstanceOf[FastTypeTag[_]]
-  // TODO - For now we alter equals to ignore runtime reflection.
-  override def equals(x: Any) = x.isInstanceOf[FastTypeTag[_]] &&
-    this.key == x.asInstanceOf[FastTypeTag[_]].key
-    //this.mirror == x.asInstanceOf[FastTypeTag[_]].mirror && this.tpe == x.asInstanceOf[FastTypeTag[_]].tpe
+  // equals skips runtime reflection because it's potentially
+  // expensive and unthreadsafe to force the lazy Type field, and
+  // since we typeFromString(key) to get the Type anyhow there's
+  // no downside to just using the string (the string has to
+  // contain all the information).
+  override def equals(x: Any) = canEqual(x) && {
+    x match {
+      case null => false
+      case other: FastTypeTag[_] => this.key == other.key
+      case _ => false
+    }
+  }
   override def hashCode = key.hashCode
   override def toString = "FastTypeTag[" + key + "]"
 }
