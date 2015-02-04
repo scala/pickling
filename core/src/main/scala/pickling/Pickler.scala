@@ -87,15 +87,11 @@ object Unpickler {
   def generate[T]: Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
 }
 
-/** A combination of a static pickler and an unpickler for type `T`.
- */
-trait SPicklerUnpickler[T] extends SPickler[T] with Unpickler[T] {
-}
 object SPicklerUnpickler {
-  def apply[T](p: SPickler[T], u: Unpickler[T]): SPicklerUnpickler[T] = new SPicklerUnpicklerImpl(p, u)
-  def generate[T]: SPicklerUnpickler[T] = macro Compat.SpicklerUnpicklerMacros_impl[T]
+  def apply[T](p: SPickler[T], u: Unpickler[T]): SPickler[T] with Unpickler[T] = new DelegatingSPicklerUnpickler(p, u)
+  def generate[T]: SPickler[T] with Unpickler[T] = macro Compat.SpicklerUnpicklerMacros_impl[T]
   /** This is a private implementation of SPicklerUnpickler that delegates pickle and unpickle to underlying. */
-  private[pickling] class SPicklerUnpicklerImpl[T](p: SPickler[T], u: Unpickler[T]) extends SPicklerUnpickler[T] {
+  private class DelegatingSPicklerUnpickler[T](p: SPickler[T], u: Unpickler[T]) extends SPickler[T] with Unpickler[T] {
     // From SPickler
     override def pickle(picklee: T, builder: PBuilder): Unit = p.pickle(picklee, builder)
     // From SPickler and Unpickler

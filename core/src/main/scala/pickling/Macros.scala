@@ -47,7 +47,7 @@ trait PicklerUnpicklerMacros extends Macro
     val createTagTree = super[FastTypeTagMacros].impl[T]
 
     q"""
-      implicit object $picklerUnpicklerName extends scala.pickling.SPicklerUnpickler[$tpe] with scala.pickling.Generated
+      implicit object $picklerUnpicklerName extends _root_.scala.pickling.SPickler[$tpe] with _root_.scala.pickling.Unpickler[$tpe] with _root_.scala.pickling.Generated
       {
         import _root_.scala.language.existentials
         import _root_.scala.pickling._
