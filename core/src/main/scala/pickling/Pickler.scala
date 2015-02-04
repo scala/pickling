@@ -87,6 +87,20 @@ object Unpickler {
   def generate[T]: Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
 }
 
+object SPicklerUnpickler {
+  def apply[T](p: SPickler[T], u: Unpickler[T]): SPickler[T] with Unpickler[T] = new DelegatingSPicklerUnpickler(p, u)
+  def generate[T]: SPickler[T] with Unpickler[T] = macro Compat.SpicklerUnpicklerMacros_impl[T]
+  /** This is a private implementation of SPicklerUnpickler that delegates pickle and unpickle to underlying. */
+  private class DelegatingSPicklerUnpickler[T](p: SPickler[T], u: Unpickler[T]) extends SPickler[T] with Unpickler[T] {
+    // From SPickler
+    override def pickle(picklee: T, builder: PBuilder): Unit = p.pickle(picklee, builder)
+    // From SPickler and Unpickler
+    override def tag: FastTypeTag[T] = p.tag
+    // From Unpickler
+    override def unpickle(tag: String, reader: PReader): Any = u.unpickle(tag, reader)
+  }
+}
+
 abstract class AutoRegister[T: FastTypeTag](name: String) extends SPickler[T] with Unpickler[T] {
   debug(s"autoregistering pickler $this under key '$name'")
   GlobalRegistry.picklerMap += (name -> (x => this))
