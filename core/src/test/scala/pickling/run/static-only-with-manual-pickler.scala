@@ -58,7 +58,7 @@ class StaticOnlyWithManualPicklerTest extends FunSuite {
     import scala.pickling.Defaults.intPickler
     import scala.pickling.Defaults.refPickler
     import scala.pickling.Defaults.refUnpickler
-    implicit val applePicklerUnpickler: SPicklerUnpickler[Apple] = SPicklerUnpickler.generate
+    implicit val applePicklerUnpickler = SPicklerUnpickler.generate[Apple]
     val pkl: JSONPickle = pickle(Apple(1))
     val unpickled = unpickle[Apple](pkl)
     assert(Apple(1) == unpickled)
