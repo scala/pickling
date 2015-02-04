@@ -7,7 +7,7 @@ import org.scalatest.FunSuite
 
 object Primitives extends Properties("bytebuffer primitive tests") {
   
-  def roundTrip[T: SPickler: Unpickler: FastTypeTag](obj: T): Boolean = {
+  def roundTrip[T: Pickler: Unpickler: FastTypeTag](obj: T): Boolean = {
     try {
       val buf = ByteBuffer.allocate(1024)
       obj.pickleTo(buf)

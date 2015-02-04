@@ -6,8 +6,8 @@ import org.scalatest.FunSuite
 case class MyClass[A](myString: String, a: A)
 
 class MyClassPickler[A](implicit val format: PickleFormat, aTypeTag: FastTypeTag[A],
-                                     aPickler: SPickler[A], aUnpickler: Unpickler[A])
-  extends SPickler[MyClass[A]] with Unpickler[MyClass[A]] {
+                                     aPickler: Pickler[A], aUnpickler: Unpickler[A])
+  extends Pickler[MyClass[A]] with Unpickler[MyClass[A]] {
 
   private val stringUnpickler = implicitly[Unpickler[String]]
 
@@ -49,7 +49,7 @@ class MyClassPickler[A](implicit val format: PickleFormat, aTypeTag: FastTypeTag
 
 class CustomGenericPicklerTest extends FunSuite {
 
-  implicit def myClassPickler[A: SPickler: Unpickler: FastTypeTag](implicit pf: PickleFormat) =
+  implicit def myClassPickler[A: Pickler: Unpickler: FastTypeTag](implicit pf: PickleFormat) =
     new MyClassPickler
 
   test("main") {

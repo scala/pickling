@@ -21,7 +21,7 @@ class PicklerCanBeForwarded extends FunSuite {
   // rather than trying to generate one, this allows people
   // to call pickle/unpickle in a different place from the
   // spot where they generate the pickler.
-  private def doPickle[T](t: T)(implicit pickler1: SPickler[T]): JSONPickle =
+  private def doPickle[T](t: T)(implicit pickler1: Pickler[T]): JSONPickle =
     t.pickle
 
   private def doUnpickle[T](p: JSONPickle)(implicit unpickler1: Unpickler[T]): T =

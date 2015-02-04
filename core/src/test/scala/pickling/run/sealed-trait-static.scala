@@ -1,6 +1,6 @@
 package scala.pickling.test.sealedtraitstatic
 
-import scala.pickling.{ SPickler, Unpickler, PicklingException }
+import scala.pickling.{ Pickler, Unpickler, PicklingException }
 import scala.pickling.static._
 import scala.pickling.json._
 import scala.pickling.Defaults._
@@ -18,7 +18,7 @@ final case class Banana(something: Int) extends Fruit
 final case class Cucumber(something: Int) // does not extend Fruit but same shape as Banana
 
 object Fruit {
-  implicit val pickler = SPickler.generate[Fruit]
+  implicit val pickler = Pickler.generate[Fruit]
   implicit val unpickler = Unpickler.generate[Fruit]
 }
 

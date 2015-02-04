@@ -3,9 +3,9 @@ package pickler
 
 import scala.language.experimental.macros
 
-/** Mix-in trait to generate `SPickler`s implicitly.
- * See also `SPickler.generate`.
+/** Mix-in trait to generate `Pickler`s implicitly.
+ * See also `Pickler.generate`.
  */
 trait GenPicklers {
-  implicit def genPickler[T]: SPickler[T] = macro Compat.PicklerMacros_impl[T]
+  implicit def genPickler[T]: Pickler[T] = macro Compat.PicklerMacros_impl[T]
 }
