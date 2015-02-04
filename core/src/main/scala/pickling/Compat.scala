@@ -26,10 +26,10 @@ object Compat {
     c.Expr[Unpickler[T] with Generated](bundle.impl[T])
   }
 
-  def SpicklerUnpicklerMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[SPicklerUnpickler[T]] = {
+  def SpicklerUnpicklerMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[SPickler[T] with Unpickler[T]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PicklerUnpicklerMacros
-    c.Expr[SPicklerUnpickler[T]](bundle.impl[T])
+    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T])
   }
 
   def OpenSumUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context): c.Expr[Unpickler[T] with Generated] = {
