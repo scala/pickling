@@ -169,16 +169,16 @@ object WikiGraphPicklingBench extends WikiGraphBenchmark {
   // TODO - why does this no longer compile?
   implicit val picklerNil = DPickler.genDPickler[Nil.type] 
   implicit val unpicklerNil = implicitly[Unpickler[Nil.type]]
-  implicit lazy val picklerVertex: SPickler[Vertex] = {
+  implicit lazy val picklerVertex: Pickler[Vertex] = {
     val picklerVertex = "boom!"
-    implicitly[SPickler[Vertex]]
+    implicitly[Pickler[Vertex]]
   }
   implicit lazy val unpicklerVertex: Unpickler[Vertex] = {
     val unpicklerVertex = "boom!"
     implicitly[Unpickler[Vertex]]
   }
   // NOTE: doesn't work well either
-  // implicit object PicklerUnpicklerColonColonVertex extends scala.pickling.SPickler[::[Vertex]] with scala.pickling.Unpickler[::[Vertex]] {
+  // implicit object PicklerUnpicklerColonColonVertex extends scala.pickling.Pickler[::[Vertex]] with scala.pickling.Unpickler[::[Vertex]] {
   //   import scala.reflect.runtime.universe._
   //   import scala.pickling._
   //   import scala.pickling.`package`.PickleOps
@@ -222,9 +222,9 @@ object WikiGraphPicklingBench extends WikiGraphBenchmark {
   //     }
   //   }
   // }
-  implicit lazy val picklerUnpicklerColonColonVertex: SPickler[::[Vertex]] with Unpickler[::[Vertex]] = implicitly
-  implicit lazy val picklerUnpicklerVectorVertex: SPickler[Vector[Vertex]] with Unpickler[Vector[Vertex]] = all.vectorPickler[Vertex]
-  implicit val picklerGraph = implicitly[SPickler[Graph]]
+  implicit lazy val picklerUnpicklerColonColonVertex: Pickler[::[Vertex]] with Unpickler[::[Vertex]] = implicitly
+  implicit lazy val picklerUnpicklerVectorVertex: Pickler[Vector[Vertex]] with Unpickler[Vector[Vertex]] = all.vectorPickler[Vertex]
+  implicit val picklerGraph = implicitly[Pickler[Graph]]
   implicit val unpicklerGraph = implicitly[Unpickler[Graph]]
 
   override def run(): Unit = {

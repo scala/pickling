@@ -29,15 +29,15 @@ trait CollectionPicklerUnpicklerMacro extends Macro with UnpickleMacros {
     val isFinal = eltpe.isEffectivelyFinal
     val picklerUnpicklerName = c.fresh(syntheticPicklerUnpicklerName(tpe).toTermName)
     q"""
-      implicit object $picklerUnpicklerName extends scala.pickling.SPickler[$tpe] with scala.pickling.Unpickler[$tpe] {
+      implicit object $picklerUnpicklerName extends scala.pickling.Pickler[$tpe] with scala.pickling.Unpickler[$tpe] {
         import scala.reflect.runtime.universe._
         import scala.pickling._
         import scala.pickling.internal._
         import scala.pickling.PickleOps
 
-        val elpickler: SPickler[$eltpe] = {
+        val elpickler: Pickler[$eltpe] = {
           val elpickler = "bam!"
-          implicitly[SPickler[$eltpe]]
+          implicitly[Pickler[$eltpe]]
         }
         val elunpickler: Unpickler[$eltpe] = {
           val elunpickler = "bam!"

@@ -16,7 +16,7 @@ import scala.pickling.internal._
  *  the erasure of its static type `T`.
  */
 @implicitNotFound(msg = "Cannot generate a pickler for ${T}. Recompile with -Xlog-implicits for details")
-trait SPickler[T] {
+trait Pickler[T] {
   /** Uses the given builder to place 'primitive' values, or collections/structures, into the
    *  builder.
    */
@@ -25,8 +25,8 @@ trait SPickler[T] {
   def tag: FastTypeTag[T]
 }
 
-object SPickler {
-  def generate[T]: SPickler[T] = macro Compat.PicklerMacros_impl[T]
+object Pickler {
+  def generate[T]: Pickler[T] = macro Compat.PicklerMacros_impl[T]
 }
 
 /** A dynamic pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
@@ -34,7 +34,7 @@ object SPickler {
  *  is turned into some external representation like a byte array. The particular external
  *  representation (the "pickle format") is defined by the `builder`.
  *
- *  In contrast to static picklers (instances of type `SPickler[T]`), a dynamic pickler of
+ *  In contrast to static picklers (instances of type `Pickler[T]`), a dynamic pickler of
  *  type `DPickler[T]` pickles any object of type `T`.
  */
 @implicitNotFound(msg = "Cannot generate a DPickler for ${T}. Recompile with -Xlog-implicits for details")
@@ -87,21 +87,21 @@ object Unpickler {
   def generate[T]: Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
 }
 
-object SPicklerUnpickler {
-  def apply[T](p: SPickler[T], u: Unpickler[T]): SPickler[T] with Unpickler[T] = new DelegatingSPicklerUnpickler(p, u)
-  def generate[T]: SPickler[T] with Unpickler[T] = macro Compat.SpicklerUnpicklerMacros_impl[T]
-  /** This is a private implementation of SPicklerUnpickler that delegates pickle and unpickle to underlying. */
-  private class DelegatingSPicklerUnpickler[T](p: SPickler[T], u: Unpickler[T]) extends SPickler[T] with Unpickler[T] {
-    // From SPickler
+object PicklerUnpickler {
+  def apply[T](p: Pickler[T], u: Unpickler[T]): Pickler[T] with Unpickler[T] = new DelegatingPicklerUnpickler(p, u)
+  def generate[T]: Pickler[T] with Unpickler[T] = macro Compat.PicklerUnpicklerMacros_impl[T]
+  /** This is a private implementation of PicklerUnpickler that delegates pickle and unpickle to underlying. */
+  private class DelegatingPicklerUnpickler[T](p: Pickler[T], u: Unpickler[T]) extends Pickler[T] with Unpickler[T] {
+    // From Pickler
     override def pickle(picklee: T, builder: PBuilder): Unit = p.pickle(picklee, builder)
-    // From SPickler and Unpickler
+    // From Pickler and Unpickler
     override def tag: FastTypeTag[T] = p.tag
     // From Unpickler
     override def unpickle(tag: String, reader: PReader): Any = u.unpickle(tag, reader)
   }
 }
 
-abstract class AutoRegister[T: FastTypeTag](name: String) extends SPickler[T] with Unpickler[T] {
+abstract class AutoRegister[T: FastTypeTag](name: String) extends Pickler[T] with Unpickler[T] {
   debug(s"autoregistering pickler $this under key '$name'")
   GlobalRegistry.picklerMap += (name -> (x => this))
   val tag = implicitly[FastTypeTag[T]]

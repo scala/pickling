@@ -6,16 +6,16 @@ import scala.collection.generic.CanBuildFrom
 import scala.language.higherKinds
 
 trait IterablePicklers {
-  implicit def iterablePickler[T: FastTypeTag](implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T],
+  implicit def iterablePickler[T: FastTypeTag](implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T],
     collTag: FastTypeTag[Iterable[T]], cbf: CanBuildFrom[Iterable[T], T, Iterable[T]]):
-    SPickler[Iterable[T]] with Unpickler[Iterable[T]] = TravPickler[T, Iterable[T]]
+    Pickler[Iterable[T]] with Unpickler[Iterable[T]] = TravPickler[T, Iterable[T]]
 }
 
 object TravPickler {
   def apply[T: FastTypeTag, C <% Traversable[_]]
-    (implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T],
-              cbf: CanBuildFrom[C, T, C], collTag: FastTypeTag[C]): SPickler[C] with Unpickler[C] =
-    new SPickler[C] with Unpickler[C] {
+    (implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T],
+              cbf: CanBuildFrom[C, T, C], collTag: FastTypeTag[C]): Pickler[C] with Unpickler[C] =
+    new Pickler[C] with Unpickler[C] {
 
     val elemTag  = implicitly[FastTypeTag[T]]
     val isPrimitive = elemTag.isEffectivelyPrimitive
@@ -77,16 +77,16 @@ object TravPickler {
 
 object SeqSetPickler {
   def apply[T: FastTypeTag, Coll[_] <: Traversable[_]]
-    (implicit elemPickler: SPickler[T], elemUnpickler: Unpickler[T],
+    (implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T],
               cbf: CanBuildFrom[Coll[T], T, Coll[T]],
-              collTag: FastTypeTag[Coll[T]]): SPickler[Coll[T]] with Unpickler[Coll[T]] =
+              collTag: FastTypeTag[Coll[T]]): Pickler[Coll[T]] with Unpickler[Coll[T]] =
     TravPickler[T, Coll[T]]
 }
 
 object MapPickler {
   def apply[K: FastTypeTag, V: FastTypeTag, M[_, _] <: collection.Map[_, _]]
-    (implicit elemPickler: SPickler[(K, V)], elemUnpickler: Unpickler[(K, V)],
+    (implicit elemPickler: Pickler[(K, V)], elemUnpickler: Unpickler[(K, V)],
               cbf: CanBuildFrom[M[K, V], (K, V), M[K, V]],
-              pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[M[K, V]]): SPickler[M[K, V]] with Unpickler[M[K, V]] =
+              pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[M[K, V]]): Pickler[M[K, V]] with Unpickler[M[K, V]] =
     TravPickler[(K, V), M[K, V]]
 }

@@ -14,10 +14,10 @@ object Compat {
     def pt: A = t._1
   }
 
-  def PicklerMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[SPickler[T]] = {
+  def PicklerMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[Pickler[T]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PicklerMacros
-    c.Expr[SPickler[T]](bundle.impl[T])
+    c.Expr[Pickler[T]](bundle.impl[T])
   }
 
   def UnpicklerMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[Unpickler[T] with Generated] = {
@@ -26,10 +26,10 @@ object Compat {
     c.Expr[Unpickler[T] with Generated](bundle.impl[T])
   }
 
-  def SpicklerUnpicklerMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[SPickler[T] with Unpickler[T]] = {
+  def PicklerUnpicklerMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[Pickler[T] with Unpickler[T]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PicklerUnpicklerMacros
-    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T])
+    c.Expr[Pickler[T] with Unpickler[T]](bundle.impl[T])
   }
 
   def OpenSumUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context): c.Expr[Unpickler[T] with Generated] = {
@@ -44,10 +44,10 @@ object Compat {
     c.Expr[Unit](bundle.pickleTo[T](output.tree)(format.tree))
   }
 
-  def ListPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[SPickler[T] with Unpickler[T]] = {
+  def ListPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[Pickler[T] with Unpickler[T]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with ListPicklerUnpicklerMacro
-    c.Expr[SPickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
+    c.Expr[Pickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
   }
 
   def PicklerMacros_dpicklerImpl[T: c.WeakTypeTag](c: Context): c.Expr[DPickler[T]] = {

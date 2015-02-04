@@ -11,8 +11,8 @@ case class Rating(x: Int)
 
 class WrappedArrayTest extends FunSuite {
   def mkAnyRefWrappedArrayPickler(implicit pf: PickleFormat):
-    SPickler[WrappedArray.ofRef[AnyRef]] with Unpickler[WrappedArray.ofRef[AnyRef]] =
-      new SPickler[WrappedArray.ofRef[AnyRef]] with Unpickler[WrappedArray.ofRef[AnyRef]] {
+    Pickler[WrappedArray.ofRef[AnyRef]] with Unpickler[WrappedArray.ofRef[AnyRef]] =
+      new Pickler[WrappedArray.ofRef[AnyRef]] with Unpickler[WrappedArray.ofRef[AnyRef]] {
 
     val format: PickleFormat = pf
 
@@ -32,7 +32,7 @@ class WrappedArrayTest extends FunSuite {
           val classLoader: ClassLoader = elemClass.getClassLoader
           val elemTag = FastTypeTag.mkRaw(elemClass, mirror) // slow: `mkRaw` is called for each element
           b.hintTag(elemTag)
-          val pickler = runtime.RuntimePicklerLookup.genPickler(classLoader, elemClass, elemTag).asInstanceOf[SPickler[AnyRef]]
+          val pickler = runtime.RuntimePicklerLookup.genPickler(classLoader, elemClass, elemTag).asInstanceOf[Pickler[AnyRef]]
           pickler.pickle(elem, b)
         }
       }

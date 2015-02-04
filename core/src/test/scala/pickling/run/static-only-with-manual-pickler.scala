@@ -17,8 +17,8 @@ class StaticOnlyWithManualPicklerTest extends FunSuite {
     // StaticOnly should be happy with us, because
     // we define this pickler. If we remove this, then
     // this file should not compile.
-    implicit val picklerUnpickler: SPickler[NotClosed] with Unpickler[NotClosed] =
-      new SPickler[NotClosed] with Unpickler[NotClosed] {
+    implicit val picklerUnpickler: Pickler[NotClosed] with Unpickler[NotClosed] =
+      new Pickler[NotClosed] with Unpickler[NotClosed] {
         def pickle(picklee: NotClosed, builder: PBuilder): Unit =
           throw FakeImplementation()
         def unpickle(tag: String, reader: PReader): Any =
@@ -40,25 +40,25 @@ class StaticOnlyWithManualPicklerTest extends FunSuite {
     }
   }
 
-  // Test that you can generate SPickler without having ops._ imported on the callsite.
+  // Test that you can generate Pickler without having ops._ imported on the callsite.
   test ("manually generated pickler") {
     import scala.pickling.Defaults.intPickler
     import scala.pickling.Defaults.refPickler
     import scala.pickling.Defaults.refUnpickler
-    implicit val applePickler: SPickler[Apple] = SPickler.generate[Apple]
+    implicit val applePickler: Pickler[Apple] = Pickler.generate[Apple]
     implicit val appleUnpickler: Unpickler[Apple] = Unpickler.generate[Apple]
     val pkl: JSONPickle = pickle(Apple(1))
     val unpickled = unpickle[Apple](pkl)
     assert(Apple(1) == unpickled)
   }
 
-  // Test that you can generate SPicklerUnpickler and use it to both  pickle
+  // Test that you can generate PicklerUnpickler and use it to both  pickle
   // and unpickle
   test ("manually generated picklerunpickler") {
     import scala.pickling.Defaults.intPickler
     import scala.pickling.Defaults.refPickler
     import scala.pickling.Defaults.refUnpickler
-    implicit val applePicklerUnpickler = SPicklerUnpickler.generate[Apple]
+    implicit val applePicklerUnpickler = PicklerUnpickler.generate[Apple]
     val pkl: JSONPickle = pickle(Apple(1))
     val unpickled = unpickle[Apple](pkl)
     assert(Apple(1) == unpickled)

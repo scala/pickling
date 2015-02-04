@@ -149,9 +149,9 @@ class MapStatus(var location: BlockManagerId, var compressedSizes: Array[Byte])
 }
 
 class MapStatusTest extends FunSuite {
-  def register[T: ClassTag: SPickler: Unpickler](): Unit = {
+  def register[T: ClassTag: Pickler: Unpickler](): Unit = {
     val clazz = classTag[T].runtimeClass
-    val p = implicitly[SPickler[T]]
+    val p = implicitly[Pickler[T]]
     val up = implicitly[Unpickler[T]]
     GlobalRegistry.picklerMap += (clazz.getName() -> (x => p))
     GlobalRegistry.unpicklerMap += (clazz.getName() -> up)

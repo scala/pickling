@@ -68,18 +68,18 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
   debug("InterpretedPicklerRuntime: clazz    = " + clazz)
 
   //  TODO - this pickler should know to lock the GRL before running itself, or any mirror code.
-  def genPickler: SPickler[_] = {
+  def genPickler: Pickler[_] = {
     // build "interpreted" runtime pickler
-    new SPickler[Any] with PickleTools {
+    new Pickler[Any] with PickleTools {
       val fields: List[(irs.FieldIR, Boolean)] =
         cir.fields.filter(_.hasGetter).map(fir => (fir, fir.tpe.typeSymbol.isEffectivelyFinal))
 
       def tag: FastTypeTag[Any] = FastTypeTag.mkRaw(clazz, mirror).asInstanceOf[FastTypeTag[Any]]
 
-      def pickleInto(fieldTpe: Type, picklee: Any, builder: PBuilder, pickler: SPickler[Any]): Unit = {
+      def pickleInto(fieldTpe: Type, picklee: Any, builder: PBuilder, pickler: Pickler[Any]): Unit = {
         if (shouldBotherAboutSharing(fieldTpe))
           picklee match {
-            case null => pickler.asInstanceOf[SPickler[Null]].pickle(null, builder)
+            case null => pickler.asInstanceOf[Pickler[Null]].pickle(null, builder)
             case _ =>
               val oid = scala.pickling.internal.lookupPicklee(picklee)
               builder.hintOid(oid)
@@ -109,7 +109,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
               // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
               //val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
               val fldTag = FastTypeTag.mkRaw(fldClass, mirror)
-              val fldPickler = RuntimePicklerLookup.genPickler(classLoader, fldClass, fldTag).asInstanceOf[SPickler[Any]]
+              val fldPickler = RuntimePicklerLookup.genPickler(classLoader, fldClass, fldTag).asInstanceOf[Pickler[Any]]
 
               builder.putField(fir.name, b => {
                 if (isEffFinal) {
