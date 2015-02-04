@@ -5,17 +5,17 @@ package pickler
  */
 trait PrimitivePicklers {
   // TODO: figure out why removing these pickler/unpicklers slows down evactor1
-  implicit val bytePickler: SPickler[Byte] with Unpickler[Byte] = PrimitivePickler[Byte]
-  implicit val shortPickler: SPickler[Short] with Unpickler[Short] = PrimitivePickler[Short]
-  implicit val charPickler: SPickler[Char] with Unpickler[Char] = PrimitivePickler[Char]
-  implicit val intPickler: SPickler[Int] with Unpickler[Int] = PrimitivePickler[Int]
-  implicit val longPickler: SPickler[Long] with Unpickler[Long] = PrimitivePickler[Long]
-  implicit val booleanPickler: SPickler[Boolean] with Unpickler[Boolean] = PrimitivePickler[Boolean]
-  implicit val floatPickler: SPickler[Float] with Unpickler[Float] = PrimitivePickler[Float]
-  implicit val doublePickler: SPickler[Double] with Unpickler[Double] = PrimitivePickler[Double]
-  implicit val nullPickler: SPickler[Null] with Unpickler[Null] = PrimitivePickler[Null]
-  implicit val stringPickler: SPickler[String] with Unpickler[String] = PrimitivePickler[String]
-  implicit val unitPickler: SPickler[Unit] with Unpickler[Unit] = PrimitivePickler[Unit]
+  implicit val bytePickler: Pickler[Byte] with Unpickler[Byte] = PrimitivePickler[Byte]
+  implicit val shortPickler: Pickler[Short] with Unpickler[Short] = PrimitivePickler[Short]
+  implicit val charPickler: Pickler[Char] with Unpickler[Char] = PrimitivePickler[Char]
+  implicit val intPickler: Pickler[Int] with Unpickler[Int] = PrimitivePickler[Int]
+  implicit val longPickler: Pickler[Long] with Unpickler[Long] = PrimitivePickler[Long]
+  implicit val booleanPickler: Pickler[Boolean] with Unpickler[Boolean] = PrimitivePickler[Boolean]
+  implicit val floatPickler: Pickler[Float] with Unpickler[Float] = PrimitivePickler[Float]
+  implicit val doublePickler: Pickler[Double] with Unpickler[Double] = PrimitivePickler[Double]
+  implicit val nullPickler: Pickler[Null] with Unpickler[Null] = PrimitivePickler[Null]
+  implicit val stringPickler: Pickler[String] with Unpickler[String] = PrimitivePickler[String]
+  implicit val unitPickler: Pickler[Unit] with Unpickler[Unit] = PrimitivePickler[Unit]
 }
 
 class PrimitivePickler[T: FastTypeTag](name: String) extends AutoRegister[T](name) {
@@ -36,6 +36,6 @@ class PrimitivePickler[T: FastTypeTag](name: String) extends AutoRegister[T](nam
   }
 }
 object PrimitivePickler {
-  def apply[A: FastTypeTag]: SPickler[A] with Unpickler[A] =
+  def apply[A: FastTypeTag]: Pickler[A] with Unpickler[A] =
     new PrimitivePickler[A](FastTypeTag.valueTypeName(implicitly[FastTypeTag[A]]))
 }

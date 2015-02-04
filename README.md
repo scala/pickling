@@ -96,7 +96,7 @@ import scala.pickling.Defaults.{ stringPickler, intPickler, refUnpickler, nullPi
 
 case class Pumpkin(kind: String)
 // Manually generate a pickler using macro
-implicit val pumpkinPickler = SPickler.generate[Pumpkin]
+implicit val pumpkinPickler = Pickler.generate[Pumpkin]
 implicit val pumpkinUnpickler = Unpickler.generate[Pumpkin]
 
 val pckl = Pumpkin("Kabocha").pickle
@@ -119,11 +119,11 @@ defined class Pumpkin
 
 scala> val pumpkinJsonProtocol = new scala.pickling.pickler.PrimitivePicklers with
      |   scala.pickling.json.JsonFormats with scala.pickling.Ops {
-     |     import scala.pickling.{ SPickler, Unpickler }
-     |     implicit val pumpkinPickler = SPickler.generate[Pumpkin]
+     |     import scala.pickling.{ Pickler, Unpickler }
+     |     implicit val pumpkinPickler = Pickler.generate[Pumpkin]
      |     implicit val pumpkinUnpickler = Unpickler.generate[Pumpkin]
      |   }
-pumpkinJsonProtocol: scala.pickling.pickler.PrimitivePicklers with scala.pickling.json.JsonFormats with scala.pickling.Ops{implicit val pumpkinPickler: scala.pickling.SPickler[Pumpkin] with scala.pickling.Generated; implicit val pumpkinUnpickler: scala.pickling.Unpickler[Pumpkin] with scala.pickling.Generated} = $anon$1@500cd8e3
+pumpkinJsonProtocol: scala.pickling.pickler.PrimitivePicklers with scala.pickling.json.JsonFormats with scala.pickling.Ops{implicit val pumpkinPickler: scala.pickling.Pickler[Pumpkin] with scala.pickling.Generated; implicit val pumpkinUnpickler: scala.pickling.Unpickler[Pumpkin] with scala.pickling.Generated} = $anon$1@500cd8e3
 ```
 
 Now your library user can import `pumpkinJsonProtocol` as follows:

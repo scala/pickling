@@ -1,6 +1,6 @@
 package scala.pickling.test.sealedtraitstaticannotated
 
-import scala.pickling.{PicklingException, directSubclasses, SPickler, Unpickler, Defaults }
+import scala.pickling.{PicklingException, directSubclasses, Pickler, Unpickler, Defaults }
 import scala.pickling.static._
 import scala.pickling.json._
 import Defaults.{ stringPickler, intPickler, refUnpickler, nullPickler }
@@ -86,7 +86,7 @@ class SealedTraitStaticAnnotatedTest extends FunSuite {
   }
 
   test("manually generate") {
-    implicit val pumpkinPickler = SPickler.generate[Pumpkin]
+    implicit val pumpkinPickler = Pickler.generate[Pumpkin]
     implicit val pumpkinUnpickler = Unpickler.generate[Pumpkin]
     val pumpkin = Pumpkin("Kabocha")
     val pumpkinString = pumpkin.pickle.value

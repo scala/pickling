@@ -16,7 +16,7 @@ class SealedTraitHierarchyTest extends FunSuite {
     JSONPickle(s).unpickle[T]
   }
 
-  def pickleWrapper[T](s: T)(implicit pickler1: SPickler[T], tag1: FastTypeTag[T]): String = {
+  def pickleWrapper[T](s: T)(implicit pickler1: Pickler[T], tag1: FastTypeTag[T]): String = {
     import scala.pickling.json._
     s.pickle.value
   }

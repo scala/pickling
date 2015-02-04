@@ -33,8 +33,8 @@ class CombinatorPickleIntoTest extends FunSuite {
   test("main") {
     val data = Map(1 -> ("Jim", 30), 2 -> ("Bart", 45))
 
-    implicit def personp(implicit intp: SPickler[Int]): SPickler[Person] =
-      new SPickler[Person] {
+    implicit def personp(implicit intp: Pickler[Int]): Pickler[Person] =
+      new Pickler[Person] {
         def tag: FastTypeTag[Person] = implicitly[FastTypeTag[Person]]
         def pickle(p: Person, builder: PBuilder): Unit = {
           // let's say we only want to pickle id, since we can look up name and age based on id

@@ -47,7 +47,7 @@ trait PicklerUnpicklerMacros extends Macro
     val createTagTree = super[FastTypeTagMacros].impl[T]
 
     q"""
-      implicit object $picklerUnpicklerName extends _root_.scala.pickling.SPickler[$tpe] with _root_.scala.pickling.Unpickler[$tpe] with _root_.scala.pickling.Generated
+      implicit object $picklerUnpicklerName extends _root_.scala.pickling.Pickler[$tpe] with _root_.scala.pickling.Unpickler[$tpe] with _root_.scala.pickling.Generated
       {
         import _root_.scala.language.existentials
         import _root_.scala.pickling._
@@ -292,8 +292,8 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
       // do not abort, but generate dispatch
       case tpe1 if sym.isAbstractClass && isClosed(sym) =>
         q"""
-          val pickler: scala.pickling.SPickler[_] = $genClosedDispatch
-          pickler.asInstanceOf[scala.pickling.SPickler[$tpe1]].pickle(picklee, builder)
+          val pickler: scala.pickling.Pickler[_] = $genClosedDispatch
+          pickler.asInstanceOf[scala.pickling.Pickler[$tpe1]].pickle(picklee, builder)
         """
 
       case tpe1 if sym.isClass =>
@@ -308,8 +308,8 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
             nonFinalDispatch(excludeSelf)
 
           q"""
-            val pickler: scala.pickling.SPickler[_] = $dispatchTree
-            pickler.asInstanceOf[scala.pickling.SPickler[$tpe1]].pickle(picklee, builder)
+            val pickler: scala.pickling.Pickler[_] = $dispatchTree
+            pickler.asInstanceOf[scala.pickling.Pickler[$tpe1]].pickle(picklee, builder)
           """
         }
 
@@ -336,7 +336,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
     // Used to generate implicit object here
     q"""
       locally {
-        implicit object $picklerName extends scala.pickling.SPickler[$tpe] with scala.pickling.Generated {
+        implicit object $picklerName extends scala.pickling.Pickler[$tpe] with scala.pickling.Generated {
           import _root_.scala.pickling._
           import _root_.scala.pickling.internal._
           import _root_.scala.pickling.PickleOps
@@ -698,7 +698,7 @@ trait PickleMacros extends Macro with TypeAnalysis {
   }
 
   def createPickler(tpe: c.Type, builder: c.Tree): c.Tree = q"""
-    val pickler = implicitly[scala.pickling.SPickler[$tpe]]
+    val pickler = implicitly[scala.pickling.Pickler[$tpe]]
     $builder.hintTag(pickler.tag)
     pickler
   """
@@ -718,7 +718,7 @@ trait PickleMacros extends Macro with TypeAnalysis {
     """ else q"""
       if ($pickleeName != null) {
         val $picklerName = ${createPickler(tpe, builder)}
-        $picklerName.asInstanceOf[scala.pickling.SPickler[$tpe]].pickle($pickleeName, $builder)
+        $picklerName.asInstanceOf[scala.pickling.Pickler[$tpe]].pickle($pickleeName, $builder)
       } else {
         $builder.hintTag(scala.pickling.FastTypeTag.Null)
         scala.pickling.Defaults.nullPickler.pickle(null, $builder)
