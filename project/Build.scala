@@ -3,7 +3,7 @@ import Keys._
 import java.net.URL
 
 object BuildSettings {
-  val buildVersion = "0.10.0-SNAPSHOT"
+  val buildVersion = "0.10.0-M4"
   val buildScalaVersion = System.getProperty("scala.version", "2.11.4")
   val buildSettings = Defaults.defaultSettings ++ Seq(
     version := buildVersion,
