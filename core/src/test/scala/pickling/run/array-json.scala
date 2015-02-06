@@ -1,8 +1,8 @@
 package scala.pickling.array.json
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling.Defaults._
+import scala.pickling.json._
 
 case class C(arr: Array[Int]) { override def toString = s"""C(${arr.mkString("[", ",", "]")})""" }
 
@@ -12,7 +12,7 @@ class ArrayJsonTest extends FunSuite {
   test("main") {
     val expectedPickle = """
     |JSONPickle({
-    |  "tpe": "scala.pickling.array.json.C",
+    |  "$type": "scala.pickling.array.json.C",
     |  "arr": [
     |    1,
     |    2,

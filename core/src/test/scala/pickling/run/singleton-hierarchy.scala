@@ -1,8 +1,7 @@
 package scala.pickling.singleton.hierarchy
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 sealed abstract class C(val x: Int)
 object D extends C(42) { override def toString = "D" }
@@ -17,12 +16,12 @@ class SingletonHierarchyTest extends FunSuite {
     }
     test(D, """
       |JSONPickle({
-      |  "tpe": "scala.pickling.singleton.hierarchy.D.type"
+      |  "$type": "scala.pickling.singleton.hierarchy.D.type"
       |})
     """.stripMargin.trim)
     test(E(2), """
       |JSONPickle({
-      |  "tpe": "scala.pickling.singleton.hierarchy.E",
+      |  "$type": "scala.pickling.singleton.hierarchy.E",
       |  "x": 2
       |})
     """.stripMargin.trim)

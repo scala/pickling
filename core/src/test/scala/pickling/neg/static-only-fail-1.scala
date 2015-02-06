@@ -6,9 +6,10 @@ import org.scalatest.FunSuite
 
 class StaticOnlyFail1Test extends FunSuite {
   test("main") {
-    expectError("cannot generate fully static pickler") {
+    expectError("Cannot generate") {
       """
         | import _root_.scala.pickling._
+        | import _root_.scala.pickling.Defaults.{ pickleOps, unpickleOps }
         | import _root_.scala.pickling.json._
         | import _root_.scala.pickling.static.StaticOnly
         |

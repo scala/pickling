@@ -4,8 +4,7 @@ import org.scalatest.FunSuite
 
 class NullRuntimeTest extends FunSuite {
   test("json") {
-    import scala.pickling._
-    import json._
+    import scala.pickling._, scala.pickling.Defaults._, json._
     val n: Any = null
     val p: JSONPickle = n.pickle
     val up = p.unpickle[Any]
@@ -13,8 +12,7 @@ class NullRuntimeTest extends FunSuite {
   }
 
   test("binary") {
-    import scala.pickling._
-    import binary._
+    import scala.pickling._, scala.pickling.Defaults._, binary._
     val n: Any = null
     val p: BinaryPickle = n.pickle
     val up = p.unpickle[Any]

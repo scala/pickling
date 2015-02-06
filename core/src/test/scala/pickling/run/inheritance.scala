@@ -1,8 +1,7 @@
 package scala.pickling.inheritance
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 abstract class Creature {
   val species: String
@@ -23,7 +22,7 @@ class InheritanceTest extends FunSuite {
     val pickleF = (f: Firefighter).pickle
     assert(pickleF.value === """
       |{
-      |  "tpe": "scala.pickling.inheritance.Firefighter",
+      |  "$type": "scala.pickling.inheritance.Firefighter",
       |  "name": "Josephine",
       |  "age": 48,
       |  "salary": 40000
@@ -34,7 +33,7 @@ class InheritanceTest extends FunSuite {
     val pickleP = (f: Person).pickle
     assert(pickleP.value === """
       |{
-      |  "tpe": "scala.pickling.inheritance.Firefighter",
+      |  "$type": "scala.pickling.inheritance.Firefighter",
       |  "name": "Josephine",
       |  "age": 48,
       |  "salary": 40000
@@ -45,7 +44,7 @@ class InheritanceTest extends FunSuite {
     val pickleC = (f: Creature).pickle
     assert(pickleC.value === """
       |{
-      |  "tpe": "scala.pickling.inheritance.Firefighter",
+      |  "$type": "scala.pickling.inheritance.Firefighter",
       |  "name": "Josephine",
       |  "age": 48,
       |  "salary": 40000

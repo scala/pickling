@@ -2,8 +2,7 @@ package scala.pickling.graph.json
 
 import org.scalatest.FunSuite
 
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 class Vertex(val label: String) {
   var neighbors: List[Vertex] = List()

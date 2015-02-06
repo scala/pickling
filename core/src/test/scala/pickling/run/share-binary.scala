@@ -1,8 +1,7 @@
 package scala.pickling.share.binary
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 import java.io.ByteArrayInputStream
 
@@ -23,7 +22,9 @@ class ShareBinaryTest extends FunSuite {
   test("loop-share-nonprimitives") {
     c1.c = c3
     val pickle = c1.pickle
-    assert(pickle.toString === "BinaryPickle([0,0,0,29,115,99,97,108,97,46,112,105,99,107,108,105,110,103,46,115,104,97,114,101,46,98,105,110,97,114,121,46,67,0,0,0,2,99,49,0,0,0,4,100,101,115,99,0,0,0,1,1,0,0,0,-5,0,0,0,2,99,51,0,0,0,4,100,101,115,99,0,0,0,1,1,0,0,0,-5,0,0,0,2,99,50,0,0,0,4,100,101,115,99,0,0,0,1,1,0,0,0,-3,0,0,0,0])")
+    val expected = "BinaryPickle([0,0,0,29,115,99,97,108,97,46,112,105,99,107,108,105,110,103,46,115,104,97,114,101,46,98,105,110,97,114,121,46,67,0,0,0,2,99,49,0,0,0,4,100,101,115,99,0,0,0,1,1,0,0,0,-5,0,0,0,2,99,51,0,0,0,4,100,101,115,99,0,0,0,1,1,0,0,0,-5,0,0,0,2,99,50,0,0,0,4,100,101,115,99,0,0,0,1,1,0,0,0,-3,0,0,0,0])"
+    val found = pickle.toString
+    assert(found === expected)
 
     val c11 = pickle.unpickle[C]
     val c13 = c11.c
@@ -90,7 +91,7 @@ class ShareBinaryTest extends FunSuite {
   }
 
   test("register many unpicklees") {
-    val output = new ByteArrayBufferOutput
+    val output = new ByteArrayOutput
     val arr = Array.ofDim[Simple](66000)
 
     for (i <- 0 until 66000) {
@@ -102,7 +103,7 @@ class ShareBinaryTest extends FunSuite {
 
     o.pickleTo(output)
 
-    val streamPickle = BinaryPickleStream(new ByteArrayInputStream(output.result))
+    val streamPickle = BinaryPickle(new ByteArrayInputStream(output.result))
     streamPickle.unpickle[Outer]
   }
 }

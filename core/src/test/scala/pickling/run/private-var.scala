@@ -1,8 +1,7 @@
 package scala.pickling.`private`.`var`
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 case class Person(val name: String, val age: Int) {
   private var ssn: Int = 0
@@ -14,7 +13,7 @@ class PrivateVarTest extends FunSuite {
     val pickle = p.pickle
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.pickling.private.var.Person",
+      |  "$type": "scala.pickling.private.var.Person",
       |  "name": "Bob",
       |  "age": 42,
       |  "ssn": 0

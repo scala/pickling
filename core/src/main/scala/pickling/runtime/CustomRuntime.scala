@@ -1,10 +1,7 @@
 package scala.pickling
+package runtime
 
-import scala.reflect.runtime
-import runtime.{universe => ru}
-
-import scala.collection.generic.CanBuildFrom
-
+import scala.reflect.{runtime => reflectRuntime}
 import internal._
 
 trait RuntimePicklersUnpicklers {
@@ -75,37 +72,16 @@ trait RuntimePicklersUnpicklers {
   GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcZZ$sp" -> (new Tuple2RTPickler(null)))
 
 
-  def mkAnyRefArrayTravPickler[C <% Traversable[_]](mirror: ru.Mirror, classLoader: ClassLoader)(implicit cbf: CanBuildFrom[C, AnyRef, C]):
-    SPickler[C] /*with Unpickler[C]*/ = new SPickler[C] /*with Unpickler[C]*/ {
-
-    def pickle(coll: C, builder: PBuilder): Unit = {
-      builder.hintTag(FastTypeTag.ArrayAnyRef)
-      builder.beginEntry(coll)
-
-      builder.beginCollection(coll.size)
-      (coll: Traversable[_]).asInstanceOf[Traversable[AnyRef]].foreach { (elem: AnyRef) =>
-        builder putElement { b =>
-          val elemClass = elem.getClass
-          val elemTag = FastTypeTag.mkRaw(elemClass, mirror) // slow: `mkRaw` is called for each element
-          b.hintTag(elemTag)
-          val pickler = SPickler.genPickler(classLoader, elemClass, elemTag).asInstanceOf[SPickler[AnyRef]]
-          pickler.pickle(elem, b)
-        }
-      }
-      builder.endCollection()
-
-      builder.endEntry()
-    }
-  }
-
   def mkRuntimeTravPickler[C <% Traversable[_]](elemClass: Class[_], elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
-                                                elemPickler0: SPickler[_], elemUnpickler0: Unpickler[_]):
-    SPickler[C] with Unpickler[C] = new SPickler[C] with Unpickler[C] {
+                                                elemPickler0: Pickler[_], elemUnpickler0: Unpickler[_]):
+    Pickler[C] with Unpickler[C] = new Pickler[C] with Unpickler[C] {
 
-    val elemPickler   = elemPickler0.asInstanceOf[SPickler[AnyRef]]
+    val elemPickler   = elemPickler0.asInstanceOf[Pickler[AnyRef]]
     val elemUnpickler = elemUnpickler0.asInstanceOf[Unpickler[AnyRef]]
 
     val isPrimitive = elemTag.tpe.isEffectivelyPrimitive
+
+    def tag: FastTypeTag[C] = collTag.asInstanceOf[FastTypeTag[C]]
 
     def pickle(coll: C, builder: PBuilder): Unit = {
       builder.beginEntry(coll)
@@ -130,7 +106,7 @@ trait RuntimePicklersUnpicklers {
       builder.endEntry()
     }
 
-    def unpickle(tag: => FastTypeTag[_], preader: PReader): Any = {
+    def unpickle(tag: String, preader: PReader): Any = {
       val reader = preader.beginCollection()
 
       preader.pushHints()
@@ -147,9 +123,7 @@ trait RuntimePicklersUnpicklers {
       while (i < length) {
         try {
           val r = reader.readElement()
-          r.beginEntryNoTag()
-          val elem = elemUnpickler.unpickle(elemTag, r)
-          r.endEntry()
+          val elem = elemUnpickler.unpickleEntry(r)
           newArray(i) = elem.asInstanceOf[AnyRef]
           i = i + 1
         } catch {
@@ -176,14 +150,16 @@ trait RuntimePicklersUnpicklers {
 }
 
 
-class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unpickler[(Any, Any)] {
+class Tuple2RTPickler(tag: FastTypeTag[_]) extends Pickler[(Any, Any)] with Unpickler[(Any, Any)] {
+  def tag = FastTypeTag[(Any, Any)]
+
   def pickleField(name: String, value: Any, builder: PBuilder): Unit = {
     val (tag1, pickler1) = if (value == null) {
-      (FastTypeTag.Null.asInstanceOf[FastTypeTag[Any]], SPickler.nullPicklerUnpickler.asInstanceOf[SPickler[Any]])
+      (FastTypeTag.Null.asInstanceOf[FastTypeTag[Any]], Defaults.nullPickler.asInstanceOf[Pickler[Any]])
     } else {
       val clazz = value.getClass
-      val tag = FastTypeTag.mkRaw(clazz, runtime.currentMirror).asInstanceOf[FastTypeTag[Any]]
-      val pickler = SPickler.genPickler(clazz.getClassLoader, clazz, tag).asInstanceOf[SPickler[Any]]
+      val tag = FastTypeTag.mkRaw(clazz, reflectRuntime.currentMirror).asInstanceOf[FastTypeTag[Any]]
+      val pickler = RuntimePicklerLookup.genPickler(clazz.getClassLoader, clazz, tag).asInstanceOf[Pickler[Any]]
       (tag, pickler)
     }
 
@@ -218,14 +194,14 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unp
       if (reader1.atPrimitive) {
         reader1.readPrimitive()
       } else {
-        val unpickler1 = Unpickler.genUnpickler(runtime.currentMirror, tag1)
+        val unpickler1 = RuntimeUnpicklerLookup.genUnpickler(reflectRuntime.currentMirror, tag1)
         try {
           unpickler1.unpickle(tag1, reader1)
         } catch {
           case PicklingException(msg, cause) =>
             throw PicklingException(s"""error in unpickle of '${this.getClass.getName}':
                                        |field name: '$name'
-                                       |field tag: '${tag1.key}'
+                                       |field tag: '${tag1}'
                                        |message:
                                        |$msg""".stripMargin, cause)
         }
@@ -235,7 +211,7 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends SPickler[(Any, Any)] with Unp
     value
   }
 
-  def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+  def unpickle(tag: String, reader: PReader): Any = {
     val fld1 = unpickleField("_1", reader)
     val fld2 = unpickleField("_2", reader)
     (fld1, fld2)

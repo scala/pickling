@@ -1,8 +1,8 @@
 package scala.pickling.run.anonfun
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import binary._
+import scala.pickling.Defaults._
+import scala.pickling.binary._
 
 class AnonfunBinaryTest extends FunSuite {
   val fun: Int => Int = (x: Int) => x + 1

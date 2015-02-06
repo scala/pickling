@@ -1,8 +1,7 @@
 package scala.pickling.simple.`case`.`class`
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 case class Person(name: String, age: Int)
 
@@ -10,7 +9,7 @@ class SimpleCaseClassTest extends FunSuite {
   test("main") {
     val expectedPickle = """
     |{
-    |  "tpe": "scala.pickling.simple.case.class.Person",
+    |  "$type": "scala.pickling.simple.case.class.Person",
     |  "name": "Bob",
     |  "age": 83
     |}

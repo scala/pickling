@@ -3,8 +3,7 @@ package scala.pickling.transienttest2
 import org.scalatest.FunSuite
 
 import scala.reflect.ClassTag
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 /**
  * Base class for dependencies.

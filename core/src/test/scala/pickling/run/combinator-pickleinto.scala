@@ -1,8 +1,7 @@
 package scala.pickling.combinator.pickleinto
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 import scala.reflect.runtime.universe._
 
 // CUSTOM PICKLERS
@@ -34,8 +33,9 @@ class CombinatorPickleIntoTest extends FunSuite {
   test("main") {
     val data = Map(1 -> ("Jim", 30), 2 -> ("Bart", 45))
 
-    implicit def personp(implicit intp: SPickler[Int]): SPickler[Person] =
-      new SPickler[Person] {
+    implicit def personp(implicit intp: Pickler[Int]): Pickler[Person] =
+      new Pickler[Person] {
+        def tag: FastTypeTag[Person] = implicitly[FastTypeTag[Person]]
         def pickle(p: Person, builder: PBuilder): Unit = {
           // let's say we only want to pickle id, since we can look up name and age based on id
           // then we can make use of a size hint, so that a fixed-size array can be used for pickling
@@ -53,7 +53,8 @@ class CombinatorPickleIntoTest extends FunSuite {
 
     implicit def personup(implicit intup: Unpickler[Int]): Unpickler[Person] =
       new Unpickler[Person] {
-        def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+        def tag: FastTypeTag[Person] = implicitly[FastTypeTag[Person]]
+        def unpickle(tag: String, reader: PReader): Any = {
           reader.hintTag(FastTypeTag.Int)
           reader.hintStaticallyElidedType()
           val tag = reader.beginEntry()
@@ -67,7 +68,9 @@ class CombinatorPickleIntoTest extends FunSuite {
 
     val bart = new Person(2)
     val pickle = bart.pickle
-    assert(pickle.value.mkString("[", ",", "]") === "[0,0,0,43,115,99,97,108,97,46,112,105,99,107,108,105,110,103,46,99,111,109,98,105,110,97,116,111,114,46,112,105,99,107,108,101,105,110,116,111,46,80,101,114,115,111,110,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]")
+    val expected0 = "[0,0,0,43,115,99,97,108,97,46,112,105,99,107,108,105,110,103,46,99,111,109,98,105,110,97,116,111,114,46,112,105,99,107,108,101,105,110,116,111,46,80,101,114,115,111,110,0,0,0,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]"
+    val expected = "[0,0,0,43,115,99,97,108,97,46,112,105,99,107,108,105,110,103,46,99,111,109,98,105,110,97,116,111,114,46,112,105,99,107,108,101,105,110,116,111,46,80,101,114,115,111,110,0,0,0,2]"
+    assert(pickle.value.mkString("[", ",", "]") === expected0)
 
     val p = pickle.unpickle[Person]
     assert(p.toString === "Person(Bart, 45)")

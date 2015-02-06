@@ -1,8 +1,7 @@
 package scala.pickling.privatepublicctorstest
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 class C private(private var x: Int, private var y: String) {
   // another private ctor

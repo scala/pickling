@@ -2,8 +2,7 @@ package scala.pickling.binary.list.obj
 
 import org.scalatest.FunSuite
 
-import scala.pickling._
-import binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 case class Person(name: String)
 

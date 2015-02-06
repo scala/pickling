@@ -2,8 +2,8 @@ package scala.pickling.test.collection
 
 import org.scalatest.FunSuite
 
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
+import runtime.GlobalRegistry
 
 import scala.collection.mutable.WrappedArray
 
@@ -11,12 +11,14 @@ case class Rating(x: Int)
 
 class WrappedArrayTest extends FunSuite {
   def mkAnyRefWrappedArrayPickler(implicit pf: PickleFormat):
-    SPickler[WrappedArray.ofRef[AnyRef]] with Unpickler[WrappedArray.ofRef[AnyRef]] =
-      new SPickler[WrappedArray.ofRef[AnyRef]] with Unpickler[WrappedArray.ofRef[AnyRef]] {
+    Pickler[WrappedArray.ofRef[AnyRef]] with Unpickler[WrappedArray.ofRef[AnyRef]] =
+      new Pickler[WrappedArray.ofRef[AnyRef]] with Unpickler[WrappedArray.ofRef[AnyRef]] {
 
     val format: PickleFormat = pf
 
     val mirror = scala.reflect.runtime.currentMirror
+
+    def tag: FastTypeTag[WrappedArray.ofRef[AnyRef]] = implicitly[FastTypeTag[WrappedArray.ofRef[AnyRef]]]
 
     def pickle(coll: WrappedArray.ofRef[AnyRef], builder: PBuilder): Unit = {
       builder.hintTag(implicitly[FastTypeTag[WrappedArray.ofRef[AnyRef]]])
@@ -30,7 +32,7 @@ class WrappedArrayTest extends FunSuite {
           val classLoader: ClassLoader = elemClass.getClassLoader
           val elemTag = FastTypeTag.mkRaw(elemClass, mirror) // slow: `mkRaw` is called for each element
           b.hintTag(elemTag)
-          val pickler = SPickler.genPickler(classLoader, elemClass, elemTag).asInstanceOf[SPickler[AnyRef]]
+          val pickler = runtime.RuntimePicklerLookup.genPickler(classLoader, elemClass, elemTag).asInstanceOf[Pickler[AnyRef]]
           pickler.pickle(elem, b)
         }
       }
@@ -39,7 +41,7 @@ class WrappedArrayTest extends FunSuite {
       builder.endEntry()
     }
 
-    def unpickle(tpe: => FastTypeTag[_], preader: PReader): Any = {
+    def unpickle(tpe: String, preader: PReader): Any = {
       val reader = preader.beginCollection()
 
       val length = reader.readLength()
@@ -50,7 +52,7 @@ class WrappedArrayTest extends FunSuite {
       while (i < length) {
         val r = reader.readElement()
         val elemTag = r.beginEntry()
-        val elemUnpickler = Unpickler.genUnpickler(mirror, elemTag)
+        val elemUnpickler = runtime.RuntimeUnpicklerLookup.genUnpickler(mirror, elemTag)
         val elem = elemUnpickler.unpickle(elemTag, r)
         r.endEntry()
         newArray(i) = elem.asInstanceOf[AnyRef]

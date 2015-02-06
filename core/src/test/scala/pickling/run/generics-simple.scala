@@ -1,8 +1,7 @@
 package scala.pickling.generics.simple
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 case class C[T](x: T)
 
@@ -12,7 +11,7 @@ class GenericsSimpleTest extends FunSuite {
     val p = c.pickle
     assert(p.toString === """
       |JSONPickle({
-      |  "tpe": "scala.pickling.generics.simple.C[scala.Int]",
+      |  "$type": "scala.pickling.generics.simple.C[scala.Int]",
       |  "x": 2
       |})
     """.trim.stripMargin)

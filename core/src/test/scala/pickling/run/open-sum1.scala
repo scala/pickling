@@ -1,8 +1,7 @@
 package scala.pickling.open.sum1
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 package outer {
   abstract class Person {
@@ -30,7 +29,7 @@ class OpenSum1Test extends FunSuite {
     val pickle = f.pickle
     assert(pickle.value.toString === """
       |{
-      |  "tpe": "scala.pickling.open.sum1.outer.Firefighter",
+      |  "$type": "scala.pickling.open.sum1.outer.Firefighter",
       |  "name": "Jeff",
       |  "age": 45,
       |  "since": 1990

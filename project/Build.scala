@@ -3,9 +3,9 @@ import Keys._
 import java.net.URL
 
 object BuildSettings {
-  val buildVersion = "0.9.2-SNAPSHOT"
+  val buildVersion      = "0.10.0-SNAPSHOT"
   val buildScalaVersion = System.getProperty("scala.version", "2.11.4")
-
+  val javaVersion       = System.getProperty("java.version")
   val buildSettings = Defaults.defaultSettings ++ Seq(
     version := buildVersion,
     scalaVersion := buildScalaVersion,
@@ -27,12 +27,11 @@ object MyBuild extends Build {
 
       for (len <- config) {
         import scala.sys.process._
-        var shellCommand = Seq(
-          "java", "-Dsize=" + len, "-cp", toolCP,
-          "-Xms1536M", "-Xmx4096M", "-Xss2M", "-XX:MaxPermSize=512M", "-XX:+UseParallelGC",
-          "scala.tools.nsc.MainGenericRunner", "-cp", libraryCP,
-          benchClass, "10")
-        // println(shellCommand)
+        val jdkOptions =
+          if (javaVersion.startsWith("1.8")) Seq("-XX:+UseParallelGC") else Seq("-XX:MaxPermSize=512M", "-XX:+UseParallelGC")
+        var shellCommand =
+          Seq("java", "-Dsize=" + len, "-cp", toolCP, "-Xms1536M", "-Xmx4096M", "-Xss2M") ++ jdkOptions ++
+          Seq("scala.tools.nsc.MainGenericRunner", "-cp", libraryCP, benchClass, "10")
         shellCommand.!
       }
     }
@@ -67,7 +66,6 @@ object MyBuild extends Build {
     "scala-pickling",
     file("core"),
     settings = buildSettings ++ Seq(
-      scalacOptions ++= Seq("-optimise"),
       libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-reflect" % _),
       libraryDependencies <+= (scalaVersion)("org.scala-lang" % "scala-compiler" % _), // for ToolBox
       libraryDependencies += "org.scalatest" %% "scalatest" % "2.1.7" % "test",
@@ -117,7 +115,7 @@ object MyBuild extends Build {
       InputKey[Unit]("graphpick")          <<= InputKey[Unit]("graphpick")          in Compile in benchmark,
       InputKey[Unit]("graphjava")          <<= InputKey[Unit]("graphjava")          in Compile in benchmark,
       InputKey[Unit]("graphkryo")          <<= InputKey[Unit]("graphkryo")          in Compile in benchmark,
-      organization := "org.scala-lang",
+      organization := "org.scala-lang.modules",
       organizationName := "LAMP/EPFL",
       organizationHomepage := Some(new URL("http://lamp.epfl.ch")),
       publishMavenStyle := true,

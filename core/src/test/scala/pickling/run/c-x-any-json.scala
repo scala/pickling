@@ -1,8 +1,7 @@
 package scala.pickling.c.x.any.json
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 case class C(x: Any)
 
@@ -12,9 +11,9 @@ class CXAnyJsonTest extends FunSuite {
     val pckl = c.pickle
     assert(pckl.toString === """
       |JSONPickle({
-      |  "tpe": "scala.pickling.c.x.any.json.C",
+      |  "$type": "scala.pickling.c.x.any.json.C",
       |  "x": {
-      |    "tpe": "scala.Int",
+      |    "$type": "scala.Int",
       |    "value": 2
       |  }
       |})

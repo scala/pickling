@@ -1,4 +1,5 @@
 package scala.pickling
+package runtime
 
 import java.lang.reflect.Field
 
@@ -47,7 +48,7 @@ class RuntimeTypeInfo(classLoader: ClassLoader, clazz: Class[_], share: refs.Sha
   def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
 }
 
-class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit share: refs.Share) extends RuntimeTypeInfo(classLoader, clazz, share) {
+class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTypeTag[_])(implicit share: refs.Share) extends RuntimeTypeInfo(classLoader, clazz, share) {
   import ru._
 
   sealed abstract class Logic(fir: irs.FieldIR, isEffFinal: Boolean) {
@@ -74,7 +75,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit share: 
       // println(s"creating runtime pickler to pickle $fldClass field of class ${picklee.getClass.getName}")
       val fldTag = FastTypeTag.mkRaw(fldClass, mirror)
       // debug(s"!!! finding pickler for field with class ${fldClass.getName}")
-      val fldPickler = SPickler.genPickler(classLoader, fldClass, fldTag).asInstanceOf[SPickler[Any]]
+      val fldPickler = RuntimePicklerLookup.genPickler(classLoader, fldClass, fldTag).asInstanceOf[Pickler[Any]]
       //debug(s"looked up field pickler: $fldPickler")
 
       builder.putField(fir.name, b => {
@@ -82,13 +83,13 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit share: 
       })
     }
 
-    def pickleLogic(fieldClass: Class[_], fieldValue: Any, builder: PBuilder, pickler: SPickler[Any], fieldTag: FastTypeTag[_]): Unit
+    def pickleLogic(fieldClass: Class[_], fieldValue: Any, builder: PBuilder, pickler: Pickler[Any], fieldTag: FastTypeTag[_]): Unit
   }
 
   final class DefaultLogic(fir: irs.FieldIR) extends Logic(fir, false) {
     // debug(s"creating DefaultLogic for ${fir.name}")
     val staticClass = mirror.runtimeClass(fir.tpe.erasure)
-    def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: SPickler[Any], fldTag: FastTypeTag[_]): Unit = {
+    def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: Pickler[Any], fldTag: FastTypeTag[_]): Unit = {
       if (fldValue == null || fldValue.getClass == staticClass) b.hintDynamicallyElidedType()
       pickleInto(fldClass, fldValue, b, fldPickler, fldTag)
     }
@@ -96,7 +97,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit share: 
 
   final class EffectivelyFinalLogic(fir: irs.FieldIR) extends Logic(fir, true) {
     // debug(s"creating EffectivelyFinalLogic for ${fir.name}")
-    def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: SPickler[Any], fldTag: FastTypeTag[_]): Unit = {
+    def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: Pickler[Any], fldTag: FastTypeTag[_]): Unit = {
       b.hintStaticallyElidedType()
       pickleInto(fldClass, fldValue, b, fldPickler, fldTag)
     }
@@ -104,7 +105,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit share: 
 
   final class AbstractLogic(fir: irs.FieldIR) extends Logic(fir, false) {
     // debug(s"creating AbstractLogic for ${fir.name}")
-    def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: SPickler[Any], fldTag: FastTypeTag[_]): Unit = {
+    def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: Pickler[Any], fldTag: FastTypeTag[_]): Unit = {
       pickleInto(fldClass, fldValue, b, fldPickler, fldTag)
     }
   }
@@ -127,7 +128,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit share: 
       // the same decision.
       // debug(s"creating tag for field of class ${fldClass.getName}")
       val fldTag = FastTypeTag.mkRaw(fldClass, mirror)
-      val fldPickler = SPickler.genPickler(classLoader, fldClass, fldTag).asInstanceOf[SPickler[Any]]
+      val fldPickler = RuntimePicklerLookup.genPickler(classLoader, fldClass, fldTag).asInstanceOf[Pickler[Any]]
       // debug(s"looked up field pickler: $fldPickler")
 
       builder.putField(field.getName, b => {
@@ -135,28 +136,28 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit share: 
       })
     }
 
-    def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: SPickler[Any], fldTag: FastTypeTag[_]): Unit = {
+    def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: Pickler[Any], fldTag: FastTypeTag[_]): Unit = {
       pickleInto(fldClass, fldValue, b, fldPickler, fldTag)
     }
   }
 
   final class PrivateEffectivelyFinalJavaFieldLogic(fir: irs.FieldIR, field: Field) extends PrivateJavaFieldLogic(fir, field) {
     // debug(s"creating PrivateEffectivelyFinalJavaFieldLogic for ${fir.name}")
-    override def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: SPickler[Any], fldTag: FastTypeTag[_]): Unit = {
+    override def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: Pickler[Any], fldTag: FastTypeTag[_]): Unit = {
       b.hintStaticallyElidedType()
       pickleInto(fldClass, fldValue, b, fldPickler, fldTag)
     }
   }
 
   // difference to old runtime pickler: create tag based on fieldClass instead of fir.tpe
-  def pickleInto(fieldClass: Class[_], fieldValue: Any, builder: PBuilder, pickler: SPickler[Any], fieldTag: FastTypeTag[_]): Unit = {
+  def pickleInto(fieldClass: Class[_], fieldValue: Any, builder: PBuilder, pickler: Pickler[Any], fieldTag: FastTypeTag[_]): Unit = {
     //debug(s"fieldTag for pickleInto: ${fieldTag.key}")
     builder.hintTag(fieldTag)
 
     val fieldTpe = fieldTag.tpe
     if (shouldBotherAboutSharing(fieldTpe))
       fieldValue match {
-        case null => pickler.asInstanceOf[SPickler[Null]].pickle(null, builder)
+        case null => pickler.asInstanceOf[Pickler[Null]].pickle(null, builder)
         case _ =>
           val oid = scala.pickling.internal.lookupPicklee(fieldValue)
           builder.hintOid(oid)
@@ -171,8 +172,8 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit share: 
       pickler.pickle(fieldValue, builder)
   }
 
-  def mkPickler: SPickler[_] = {
-    new SPickler[Any] {
+  def mkPickler: Pickler[_] = {
+    new Pickler[Any] {
       val fields: List[Logic] = cir.fields.flatMap { fir =>
         if (fir.accessor.nonEmpty)
           List(
@@ -197,6 +198,9 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_])(implicit share: 
         fields.foreach(_.run(builder, picklee, im))
       }
 
+      def tag: FastTypeTag[Any] = fastTag.asInstanceOf[FastTypeTag[Any]]
+
+      // TODO - We should use the GRL here
       def pickle(picklee: Any, builder: PBuilder): Unit = {
         //debug(s"pickling object of type: ${tag.key}")
         builder.beginEntry(picklee)

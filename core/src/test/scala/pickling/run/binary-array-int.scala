@@ -1,8 +1,8 @@
 package scala.pickling.binary.array.int
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
+
 import scala.reflect.runtime.universe._
 
 class BinaryArrayIntTest extends FunSuite {

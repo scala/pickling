@@ -1,8 +1,7 @@
 package scala.pickling.generics.tough
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 class C[T]
 case class D[T](x: T) extends C[T]

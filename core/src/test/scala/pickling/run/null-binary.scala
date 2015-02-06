@@ -1,8 +1,7 @@
 package scala.pickling.`null`.binary
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 class D
 final class E

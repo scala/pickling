@@ -1,8 +1,7 @@
 package scala.pickling.non.primitive.fields
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 case class Person(val name: String, val age: Int)
 case class Philipp(val nationality: String, val weird: Boolean, val mother: Person)
@@ -13,7 +12,7 @@ class NonPrimitiveFieldsTest extends FunSuite {
     val ppickle = ph.pickle
     assert(ppickle.value === """
       |{
-      |  "tpe": "scala.pickling.non.primitive.fields.Philipp",
+      |  "$type": "scala.pickling.non.primitive.fields.Philipp",
       |  "nationality": "German",
       |  "weird": true,
       |  "mother": {

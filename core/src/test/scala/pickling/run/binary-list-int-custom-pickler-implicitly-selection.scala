@@ -1,8 +1,7 @@
 package scala.pickling.binary.list.int.custom.pickler.implicitly.selection
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 import scala.reflect.runtime.universe._
 import scala.collection.mutable.ListBuffer
@@ -12,7 +11,7 @@ class BinaryListIntCustomTest extends FunSuite {
     val lst = (1 to 10).toList
 
     implicit def genListPickler[T](implicit format: PickleFormat): HandwrittenListIntPicklerUnpickler = new HandwrittenListIntPicklerUnpickler
-    class HandwrittenListIntPicklerUnpickler(implicit val format: PickleFormat) extends SPickler[::[Int]] with Unpickler[::[Int]] {
+    class HandwrittenListIntPicklerUnpickler(implicit val format: PickleFormat) extends Pickler[::[Int]] with Unpickler[::[Int]] {
       def pickle(picklee: ::[Int], builder: PBuilder): Unit = {
         builder.beginEntry()
         val arr = picklee.toArray
@@ -33,7 +32,7 @@ class BinaryListIntCustomTest extends FunSuite {
         builder.endCollection()
         builder.endEntry()
       }
-      def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+      def unpickle(tag: String, reader: PReader): Any = {
         val arrReader = reader.beginCollection()
         arrReader.hintStaticallyElidedType()
         arrReader.hintTag(FastTypeTag.Int)
@@ -53,6 +52,7 @@ class BinaryListIntCustomTest extends FunSuite {
         arrReader.endCollection()
         buffer.toList
       }
+      def tag: FastTypeTag[::[Int]] = implicitly[FastTypeTag[::[Int]]]
     }
 
     val pickle = lst.pickle

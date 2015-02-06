@@ -1,8 +1,7 @@
 package scala.pickling.non.public.joint
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 class Person(private val name: String, age: Int, val hobby: Hobby) {
   // NOTE: be careful not to reference age anywhere, so that it's elided by the "constructors" phase
@@ -18,7 +17,7 @@ class NonPublicJointTest extends FunSuite {
     val pickle = e.pickle
     assert(pickle.toString === """
       |JSONPickle({
-      |  "tpe": "scala.pickling.non.public.joint.Person",
+      |  "$type": "scala.pickling.non.public.joint.Person",
       |  "name": "Eugene",
       |  "hobby": {
       |    "name": "hacking",

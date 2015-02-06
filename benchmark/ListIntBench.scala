@@ -1,5 +1,6 @@
 import scala.pickling._
 import binary._
+import AllPicklers._
 
 object ListIntBench extends scala.pickling.testing.PicklingBenchmark {
   val lst = (1 to size).toList

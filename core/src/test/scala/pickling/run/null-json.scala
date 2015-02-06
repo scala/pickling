@@ -1,8 +1,7 @@
 package scala.pickling.`null`.json
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 class D
 final class E
@@ -14,7 +13,7 @@ class NullJsonTest extends FunSuite {
     val pickle = c.pickle
     assert(pickle.value === """
       |{
-      |  "tpe": "scala.pickling.null.json.C",
+      |  "$type": "scala.pickling.null.json.C",
       |  "x": null,
       |  "y": 0,
       |  "e": null,

@@ -43,6 +43,36 @@ class Tools[C <: Context](val c: C) {
   import compat._
   import definitions._
 
+  private def directSubclassesAnnotation(sym: TypeSymbol): Option[Seq[TypeSymbol]] = {
+    val annotatedSubclasses = sym.annotations.collect({
+      case annotation if annotation.tpe == typeOf[scala.pickling.directSubclasses] =>
+        annotation
+    }).headOption map {
+      annotation =>
+        annotation.javaArgs(newTermName("value")) match {
+          case ArrayArgument(klasses) => klasses.toList map {
+            case LiteralArgument(constant) =>
+              constant.value.asInstanceOf[Type].typeSymbol.asType
+          }
+        }
+    }
+
+    annotatedSubclasses
+  }
+
+  /** Find direct subclasses, preferring the directSubclasses annotation
+   * over knownDirectSubclasses.
+   */
+  def directSubclasses(sym: ClassSymbol): Seq[Symbol] = {
+    directSubclassesAnnotation(sym).getOrElse(sym.knownDirectSubclasses.toList)
+  }
+
+  /** Treat as a sealed type because it either is sealed, or specifies
+   * directSubclasses annotation.
+   */
+  def treatAsSealed(sym: ClassSymbol): Boolean =
+    sym.isSealed || directSubclassesAnnotation(sym).isDefined
+
   def blackList(sym: Symbol) = sym == AnyClass || sym == AnyRefClass || sym == AnyValClass || sym == ObjectClass
 
   def isRelevantSubclass(baseSym: Symbol, subSym: Symbol) = {
@@ -52,12 +82,10 @@ class Tools[C <: Context](val c: C) {
     }
   }
 
-  def compileTimeDispatchees(tpe: Type, mirror: Mirror): List[Type] = {
-    // TODO: why do we need nullTpe?
-    val nullTpe = if (tpe.baseClasses.contains(ObjectClass)) List(NullTpe) else Nil
+  def compileTimeDispatchees(tpe: Type, mirror: Mirror, excludeSelf: Boolean): List[Type] = {
     val subtypes = allStaticallyKnownConcreteSubclasses(tpe, mirror).filter(subtpe => subtpe.typeSymbol != tpe.typeSymbol)
     val selfTpe = if (isRelevantSubclass(tpe.typeSymbol, tpe.typeSymbol)) List(tpe) else Nil
-    val result = nullTpe ++ subtypes ++ selfTpe
+    val result = if (excludeSelf) subtypes else subtypes ++ selfTpe
     // println(s"$tpe => $result")
     result
   }
@@ -92,13 +120,13 @@ class Tools[C <: Context](val c: C) {
           val initialize = sym.typeSignature
           if (sym.isFinal || sym.isModuleClass) {
             Nil
-          } else if (sym.isSealed) {
+          } else if (treatAsSealed(sym)) {
             val syms: List[ClassSymbol] =
-              sym.knownDirectSubclasses.toList.map {
+              directSubclasses(sym).map {
                 case csym: ClassSymbol => csym
                 case msym: ModuleSymbol => msym.moduleClass.asClass
                 case osym => throw new Exception(s"unexpected known direct subclass: $osym <: $sym")
-              }.flatMap(loop)
+              }.toList.flatMap(loop)
             syms
           } else {
             hierarchyIsSealed = false
@@ -153,7 +181,7 @@ class Tools[C <: Context](val c: C) {
     else if (blackList(baseSym)) Nil
     else {
       var unsorted = {
-        if (baseSym.isClass && baseSym.asClass.isSealed) sealedHierarchyScan()
+        if (baseSym.isClass && treatAsSealed(baseSym.asClass)) sealedHierarchyScan()
         else sourcepathScan() // sourcepathAndClasspathScan()
       }
       // NOTE: need to order the list: children first, parents last
@@ -304,7 +332,19 @@ abstract class Macro extends RichTypes { self =>
     shareNothing
   }
 
-  def compileTimeDispatchees(tpe: Type): List[Type] = tools.compileTimeDispatchees(tpe, rootMirror)
+  def compileTimeDispatcheesNotSelf(tpe: Type): List[Type] = tools.compileTimeDispatchees(tpe, rootMirror, true)
+
+  def compileTimeDispatchees(tpe: Type): List[Type] = tools.compileTimeDispatchees(tpe, rootMirror, false)
+
+  def compileTimeDispatcheesNotEmpty(tpe: Type): List[Type] = {
+    val dispatchees = compileTimeDispatchees(tpe)
+    // this will catch at compile time a total failure of
+    // knownDirectSubclasses to find subtypes, though it won't
+    // catch a partial failure of knownDirectSubclasses
+    if (dispatchees.isEmpty)
+      throw new Exception(s"Didn't find any concrete subtypes of abstract $tpe, this may mean you need to use the @directSubclasses annotation to manually tell the compiler about subtypes")
+    dispatchees
+  }
 
   def syntheticPackageName: String = "scala.pickling.synthetic"
   def syntheticBaseName(tpe: Type): TypeName = {
@@ -387,6 +427,7 @@ abstract class Macro extends RichTypes { self =>
     val prologue = {
       if (!reflectivePrologueEmitted) {
         reflectivePrologueEmitted = true
+        // TODO - Do we need the GRL for this?
         val initMirror = q"""
           val mirror = scala.reflect.runtime.universe.runtimeMirror(this.getClass.getClassLoader)
           val im = mirror.reflect($target)

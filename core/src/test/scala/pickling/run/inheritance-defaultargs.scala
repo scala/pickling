@@ -1,8 +1,7 @@
 package scala.pickling.inheritance.defaultargs
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 abstract class Creature {
   val species: String
@@ -22,7 +21,7 @@ class InheritanceDefaultArgsTest extends FunSuite {
     val pickleF = (f: Firefighter).pickle
     assert(pickleF.value === """
       |{
-      |  "tpe": "scala.pickling.inheritance.defaultargs.Firefighter",
+      |  "$type": "scala.pickling.inheritance.defaultargs.Firefighter",
       |  "name": "Muriel",
       |  "age": 41,
       |  "salary": 30000,
@@ -34,7 +33,7 @@ class InheritanceDefaultArgsTest extends FunSuite {
     val pickleP = (f: Person).pickle
     assert(pickleP.value === """
       |{
-      |  "tpe": "scala.pickling.inheritance.defaultargs.Firefighter",
+      |  "$type": "scala.pickling.inheritance.defaultargs.Firefighter",
       |  "name": "Muriel",
       |  "age": 41,
       |  "salary": 30000,
@@ -46,7 +45,7 @@ class InheritanceDefaultArgsTest extends FunSuite {
     val pickleC = (f: Creature).pickle
     assert(pickleC.value === """
       |{
-      |  "tpe": "scala.pickling.inheritance.defaultargs.Firefighter",
+      |  "$type": "scala.pickling.inheritance.defaultargs.Firefighter",
       |  "name": "Muriel",
       |  "age": 41,
       |  "salary": 30000,

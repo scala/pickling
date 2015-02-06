@@ -3,8 +3,7 @@ package scala.pickling.binary.dpickler
 import scala.language.existentials
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 abstract class Person(name: String, age: Int)
 case class Firefighter(name: String, age: Int, salary: Int) extends Person(name, age)

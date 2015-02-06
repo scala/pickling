@@ -1,4 +1,5 @@
 package scala.pickling
+package runtime
 
 import scala.pickling.internal._
 
@@ -20,13 +21,7 @@ object Runtime {
   )
 }
 
-// provides a source compatibility stub
-// in Scala 2.10.x, it will make `import compat._` compile just fine,
-// even though `c.universe` doesn't have `compat`
-// in Scala 2.11.0, it will be ignored, becase `import c.universe._`
-// brings its own `compat` in scope and that one takes precedence
-private object HasCompat { val compat = ??? }; import HasCompat._
-
+import HasCompat._
 abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_], share: refs.Share) {
   import scala.reflect.runtime.universe._
   import definitions._
@@ -72,16 +67,19 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
   debug("InterpretedPicklerRuntime: preclazz = " + preclazz)
   debug("InterpretedPicklerRuntime: clazz    = " + clazz)
 
-  def genPickler: SPickler[_] = {
+  //  TODO - this pickler should know to lock the GRL before running itself, or any mirror code.
+  def genPickler: Pickler[_] = {
     // build "interpreted" runtime pickler
-    new SPickler[Any] with PickleTools {
+    new Pickler[Any] with PickleTools {
       val fields: List[(irs.FieldIR, Boolean)] =
         cir.fields.filter(_.hasGetter).map(fir => (fir, fir.tpe.typeSymbol.isEffectivelyFinal))
 
-      def pickleInto(fieldTpe: Type, picklee: Any, builder: PBuilder, pickler: SPickler[Any]): Unit = {
+      def tag: FastTypeTag[Any] = FastTypeTag.mkRaw(clazz, mirror).asInstanceOf[FastTypeTag[Any]]
+
+      def pickleInto(fieldTpe: Type, picklee: Any, builder: PBuilder, pickler: Pickler[Any]): Unit = {
         if (shouldBotherAboutSharing(fieldTpe))
           picklee match {
-            case null => pickler.asInstanceOf[SPickler[Null]].pickle(null, builder)
+            case null => pickler.asInstanceOf[Pickler[Null]].pickle(null, builder)
             case _ =>
               val oid = scala.pickling.internal.lookupPicklee(picklee)
               builder.hintOid(oid)
@@ -111,7 +109,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
               // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
               //val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
               val fldTag = FastTypeTag.mkRaw(fldClass, mirror)
-              val fldPickler = SPickler.genPickler(classLoader, fldClass, fldTag).asInstanceOf[SPickler[Any]]
+              val fldPickler = RuntimePicklerLookup.genPickler(classLoader, fldClass, fldTag).asInstanceOf[Pickler[Any]]
 
               builder.putField(fir.name, b => {
                 if (isEffFinal) {
@@ -153,13 +151,14 @@ trait UnpicklerRuntime {
 
 // TODO: currently this works with an assumption that sharing settings for unpickling are the same as for pickling
 // of course this might not be the case, so we should be able to read `share` from the pickle itself
-class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit share: refs.Share)
+class InterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(implicit share: refs.Share)
     extends UnpicklerRuntime {
   import scala.reflect.runtime.universe._
   import definitions._
   import scala.reflect.runtime.{universe => ru}
 
-  val tpe = tag.tpe
+  val fastTag = FastTypeTag(mirror, typeTag)
+  val tpe = fastTag.tpe
   val sym = tpe.typeSymbol.asType
   // debug("UnpicklerRuntime: tpe = " + tpe)
   val clazz = mirror.runtimeClass(tpe.erasure)
@@ -175,30 +174,28 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
   def shouldBotherAboutSharing(tpe: Type) = shareAnalyzer.shouldBotherAboutSharing(tpe)
   def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
 
+  // TODO - This method should lock the GRL before running any unpickle logic.
   def genUnpickler: Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
-      def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+      def tag: FastTypeTag[Any] = fastTag.asInstanceOf[FastTypeTag[Any]]
+      def unpickle(tagKey: String, reader: PReader): Any = {
         if (cir.javaGetInstance) {
           clazz.getDeclaredMethod("getInstance").invoke(null)
         } else if (reader.atPrimitive) {
           val result = reader.readPrimitive()
           if (shouldBotherAboutSharing(tpe)) registerUnpicklee(result, preregisterUnpicklee())
           result
-        } else if (tag.key.endsWith("$")) {
-          val c = Class.forName(tag.key)
+        } else if (tagKey.endsWith("$")) {
+          val c = Class.forName(tagKey)
           c.getField("MODULE$").get(c)
         } else {
           val pendingFields =
-            if (tag.key.contains("anonfun$")) {
-              List[FieldIR]()
-            } else {
-              val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
-              (nonLoopyFields ++ loopyFields).filter(fir =>
-                fir.hasGetter || {
-                  // exists as Java field
-                  scala.util.Try(clazz.getDeclaredField(fir.name)).isSuccess
-                })
-            }
+            if (tagKey.contains("anonfun$")) List[FieldIR]()
+            else cir.fields.filter(fir =>
+              fir.hasGetter || {
+                // exists as Java field
+                scala.util.Try(clazz.getDeclaredField(fir.name)).isSuccess
+              })
 
           def fieldVals = pendingFields.map(fir => {
             val freader = reader.readField(fir.name)
@@ -213,7 +210,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
               case e @ PicklingException(msg, cause) =>
                 debug(s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}':
                          |$msg
-                         |enclosing object has type: '${tag.key}'
+                         |enclosing object has type: '${tagKey}'
                          |static type of field: '${fir.tpe.key}'
                          |""".stripMargin)
                 throw e
@@ -224,7 +221,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
                 if (shouldBotherAboutSharing(fir.tpe)) registerUnpicklee(result, preregisterUnpicklee())
                 result
               } else {
-                val fieldUnpickler = Unpickler.genUnpickler(mirror, fdynamicTag)
+                val fieldUnpickler = RuntimeUnpicklerLookup.genUnpickler(mirror, fdynamicTag)
                 fieldUnpickler.unpickle(fdynamicTag, freader)
               }
             }
@@ -261,13 +258,14 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit 
   }
 }
 
-class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_])(implicit share: refs.Share)
+class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(implicit share: refs.Share)
     extends UnpicklerRuntime {
   import scala.reflect.runtime.universe._
   import definitions._
   import scala.reflect.runtime.{universe => ru}
 
-  val tpe = tag.tpe
+  val fastTag = FastTypeTag(mirror, typeTag)
+  val tpe = fastTag.tpe
   val sym = tpe.typeSymbol.asType
   // debug("UnpicklerRuntime: tpe = " + tpe)
   val clazz = mirror.runtimeClass(tpe.erasure)
@@ -276,17 +274,19 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_
   val cir = newClassIR(tpe)
   // debug("UnpicklerRuntime: cir = " + cir)
 
+  // TODO - This method should lock the GRL before running any unpickle logic
   def genUnpickler: Unpickler[Any] = {
     new Unpickler[Any] with PickleTools {
-      def unpickle(tag: => FastTypeTag[_], reader: PReader): Any = {
+      def tag: FastTypeTag[Any] = fastTag.asInstanceOf[FastTypeTag[Any]]
+      def unpickle(tagKey: String, reader: PReader): Any = {
         if (reader.atPrimitive) {
           reader.readPrimitive()
-        } else if (tag.key.endsWith("$")) {
-          val c = Class.forName(tag.key)
+        } else if (tagKey.endsWith("$")) {
+          val c = Class.forName(tagKey)
           c.getField("MODULE$").get(c)
         } else {
           val pendingFields =
-            if (tag.key.contains("anonfun$")) {
+            if (tagKey.contains("anonfun$")) {
               List[FieldIR]()
             } else {
               cir.fields.filter(fir =>
@@ -309,7 +309,7 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_
               case e @ PicklingException(msg, cause) =>
                 debug(s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}':
                          |$msg
-                         |enclosing object has type: '${tag.key}'
+                         |enclosing object has type: '${tagKey}'
                          |static type of field: '${fir.tpe.key}'
                          |""".stripMargin)
                 throw e
@@ -319,7 +319,7 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, tag: FastTypeTag[_
                 val result = freader.readPrimitive()
                 result
               } else {
-                val fieldUnpickler = Unpickler.genUnpickler(mirror, fdynamicTag)
+                val fieldUnpickler = RuntimeUnpicklerLookup.genUnpickler(mirror, fdynamicTag)
                 fieldUnpickler.unpickle(fdynamicTag, freader)
               }
             }

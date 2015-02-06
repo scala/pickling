@@ -1,8 +1,7 @@
 package scala.pickling.non.public.separate
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import json._
+import scala.pickling._, scala.pickling.Defaults._, json._
 
 class Person(private val name: String, age: Int, val hobby: Hobby) {
   // NOTE: be careful not to reference age anywhere, so that it's elided by the "constructors" phase
@@ -18,7 +17,7 @@ class NonPublicSeparateTest extends FunSuite {
     val anyPickle = (person: Any).pickle
     assert(anyPickle.toString === """
       |JSONPickle({
-      |  "tpe": "scala.pickling.non.public.separate.Person",
+      |  "$type": "scala.pickling.non.public.separate.Person",
       |  "name": "Eugene",
       |  "hobby": {
       |    "name": "hacking",

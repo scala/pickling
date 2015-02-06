@@ -2,8 +2,7 @@ package scala.pickling.test.binary
 
 import org.scalatest.FunSuite
 
-import scala.pickling._
-import binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 import java.io.ByteArrayInputStream
 
@@ -28,16 +27,16 @@ class BinaryInputStreamReaderTest extends FunSuite {
     val pickle: BinaryPickle = arr.pickle
     assert(pickle.value.mkString("[", ",", "]") === "[0,0,0,22,115,99,97,108,97,46,65,114,114,97,121,91,115,99,97,108,97,46,73,110,116,93,0,0,0,2,30,0,0,0,31,0,0,0]")
 
-    val streamPickle = BinaryPickleStream(new ByteArrayInputStream(pickle.value))
+    val streamPickle = BinaryPickle(new ByteArrayInputStream(pickle.value))
     val readArr = streamPickle.unpickle[Array[Int]]
     assert(readArr.mkString("[", ",", "]") === "[30,31]")
   }
 
   // Byte, Short, Char, Int, Long, Float, Double
 
-  def testPerson[T, U <: Person[T] : FastTypeTag](obj: U)(implicit p: SPickler[U], u: Unpickler[U]): Unit = {
+  def testPerson[T, U <: Person[T] : FastTypeTag](obj: U)(implicit p: Pickler[U], u: Unpickler[U]): Unit = {
     val pickle       = obj.pickle
-    val streamPickle = BinaryPickleStream(new ByteArrayInputStream(pickle.value))
+    val streamPickle = BinaryPickle(new ByteArrayInputStream(pickle.value))
     val readObj      = streamPickle.unpickle[U]
     assert(mkString(obj) == mkString(readObj))
   }
@@ -67,11 +66,11 @@ class BinaryInputStreamReaderTest extends FunSuite {
     val obj1 = Employee("James", 30)
     val obj2 = Employee("Jim", 40)
 
-    val output = new ByteArrayBufferOutput
+    val output = new ByteArrayOutput
     obj1.pickleTo(output)
     obj2.pickleTo(output)
 
-    val streamPickle = BinaryPickleStream(new ByteArrayInputStream(output.result))
+    val streamPickle = BinaryPickle(new ByteArrayInputStream(output.result))
     val readObj1     = streamPickle.unpickle[Employee]
     val readObj2     = streamPickle.unpickle[Employee]
     try {
@@ -79,6 +78,8 @@ class BinaryInputStreamReaderTest extends FunSuite {
       assert(false, "EndOfStreamException not thrown")
     } catch {
       case _: EndOfStreamException =>
+        /* expected */
+      case _: java.io.EOFException =>
         /* expected */
     } finally {
       assert(obj1.toString == readObj1.toString)

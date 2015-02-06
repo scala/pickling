@@ -2,6 +2,7 @@ package scala.pickling.base
 
 import org.scalatest.FunSuite
 import scala.pickling._
+import scala.pickling.Defaults._
 import json._
 
 sealed abstract class Base

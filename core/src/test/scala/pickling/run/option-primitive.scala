@@ -1,8 +1,7 @@
 package scala.pickling.option.primitive
 
 import org.scalatest.FunSuite
-import scala.pickling._
-import binary._
+import scala.pickling._, scala.pickling.Defaults._, binary._
 
 class OptionPrimitiveTest extends FunSuite {
   test("main") {

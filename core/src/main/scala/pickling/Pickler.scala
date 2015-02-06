@@ -1,12 +1,11 @@
 package scala.pickling
 
 import scala.language.experimental.macros
+import scala.language.implicitConversions
 
 import scala.annotation.implicitNotFound
-import scala.reflect.runtime.{universe => ru}
-import scala.reflect.runtime.universe._
-
-import internal._
+import scala.pickling.runtime.GlobalRegistry
+import scala.pickling.internal._
 
 /** A static pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
  *  static type `T`, and pickles it to an instance of `PBuilder`. In the process the object
@@ -17,8 +16,17 @@ import internal._
  *  the erasure of its static type `T`.
  */
 @implicitNotFound(msg = "Cannot generate a pickler for ${T}. Recompile with -Xlog-implicits for details")
-trait SPickler[T] {
+trait Pickler[T] {
+  /** Uses the given builder to place 'primitive' values, or collections/structures, into the
+   *  builder.
+   */
   def pickle(picklee: T, builder: PBuilder): Unit
+  /** The fast type tag associated with this pickler. */
+  def tag: FastTypeTag[T]
+}
+
+object Pickler {
+  def generate[T]: Pickler[T] = macro Compat.PicklerMacros_impl[T]
 }
 
 /** A dynamic pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
@@ -26,7 +34,7 @@ trait SPickler[T] {
  *  is turned into some external representation like a byte array. The particular external
  *  representation (the "pickle format") is defined by the `builder`.
  *
- *  In contrast to static picklers (instances of type `SPickler[T]`), a dynamic pickler of
+ *  In contrast to static picklers (instances of type `Pickler[T]`), a dynamic pickler of
  *  type `DPickler[T]` pickles any object of type `T`.
  */
 @implicitNotFound(msg = "Cannot generate a DPickler for ${T}. Recompile with -Xlog-implicits for details")
@@ -35,87 +43,68 @@ trait DPickler[T] {
 }
 
 object DPickler {
-  implicit def genDPickler[T](implicit format: PickleFormat): DPickler[T] = macro Compat.PicklerMacros_dpicklerImpl[T]
-}
-
-trait GenPicklers extends RuntimePicklersUnpicklers {
-
-  implicit def genPickler[T]: SPickler[T] = macro Compat.PicklerMacros_impl[T]
-  // TODO: the primitive pickler hack employed here is funny, but I think we should fix this one
-  // since people probably would also have to deal with the necessity to abstract over pickle formats
-  def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit share: refs.Share): SPickler[_] = {
-    // println(s"generating runtime pickler for $clazz") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
-    val className = if (clazz == null) "null" else clazz.getName
-    GlobalRegistry.picklerMap.get(className) match {
-      case None =>
-        // debug(s"!!! could not find registered pickler for class $className, tag ${tag.key} !!!")
-        val pickler: SPickler[_] = if (clazz.isArray) {
-          val mirror = ru.runtimeMirror(classLoader)
-          val elemClass = clazz.getComponentType()
-          val elemTag = FastTypeTag.mkRaw(elemClass, mirror)
-          val elemPickler = genPickler(classLoader, elemClass, elemTag)
-
-          mkRuntimeTravPickler[Array[AnyRef]](elemClass, elemTag, tag, elemPickler, null)
-        } else {
-          val runtime = new RuntimePickler(classLoader, clazz)
-          runtime.mkPickler
-        }
-        GlobalRegistry.picklerMap += (className -> (x => pickler))
-        pickler
-
-      case Some(existingPickler) =>
-        existingPickler(tag)
-    }
-  }
+  implicit def genDPickler[T]: DPickler[T] = macro Compat.PicklerMacros_dpicklerImpl[T]
 }
 
 // marker trait to indicate a generated pickler
 // this is important for the dispatch between custom and generated picklers
 trait Generated
 
-object SPickler extends CorePicklersUnpicklers with RuntimePicklersUnpicklers
-
+/** This is something which knowns how to reconstitute/materialize a type out of
+ *  a pickle reader.
+ */
 @implicitNotFound(msg = "Cannot generate an unpickler for ${T}. Recompile with -Xlog-implicits for details")
 trait Unpickler[T] {
-  def unpickle(tag: => FastTypeTag[_], reader: PReader): Any
+  // TODO - we'd like  to call this method unpickeRaw and the unpickleEntry method `unpickle`,
+  //        as there is some logic about how to use the reader encoded here.
+  /** Unpickles an entry out of hte reader.
+   *  
+   *  note:  This method ASSUMES beginEntry() has already been called and endEntry() will be
+   *         called immediately afterwards.
+   *
+   * @param tag  The FastTypeTag[_].key that was serialized with the entry *or* the type hint
+   *             which was provided when reading.  This is generally used by abstract type 
+   *             Unpicklers to delegate to the appropriate concrete unpickler.
+   * @param reader  The reader we can grab fields, primitives or collection items out of.
+   * @return Any an instance of the type we've unpickled.
+   */
+  def unpickle(tag: String, reader: PReader): Any
+  /** A mechanism of unpickling that also includes calling beginEntry()/endEntry(). 
+   *  Note: We assume anyone calling this will hint "staticallyElided" or "dynamicallyElided"
+   *        if needed.   Each Unpickler should make no assumptions about its own type.
+   */
+  def unpickleEntry(reader: PReader): Any = {
+    reader.hintTag(this.tag)
+    val tag = reader.beginEntry()
+    val result = unpickle(tag, reader)
+    reader.endEntry()
+    result
+  }
+  /** The fast type tag associated with this unpickler. */
+  def tag: FastTypeTag[T]
+}
+object Unpickler {
+  def generate[T]: Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
 }
 
-trait GenUnpicklers extends RuntimePicklersUnpicklers {
-
-  implicit def genUnpickler[T]: Unpickler[T] with Generated = macro Compat.UnpicklerMacros_impl[T]
-
-  // Note: parameter `tag` may be `null`.
-  def genUnpickler(mirror: Mirror, tag: FastTypeTag[_])(implicit share: refs.Share): Unpickler[_] = {
-    // println(s"generating runtime unpickler for ${tag.key}") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
-    val className = tag.key
-    GlobalRegistry.unpicklerMap.get(className) match {
-      case None =>
-        // debug(s"!!! could not find registered unpickler for class $className !!!")
-        val unpickler = if (className.startsWith("scala.Array")) {
-          // debug(s"runtime unpickling of an array: $className")
-          val elemTypeString = className.substring(12, className.length - 1)
-          // debug(s"creating tag for element type: $elemTypeString")
-          val elemTag = FastTypeTag(mirror, elemTypeString)
-          val elemClass = Classes.classFromString(elemTypeString)
-          val elemUnpickler = Unpickler.genUnpickler(mirror, elemTag)
-
-          mkRuntimeTravPickler[Array[AnyRef]](elemClass, elemTag, tag, null, elemUnpickler)
-        } else {
-          val runtime = if (share.isInstanceOf[refs.ShareNothing]) {
-              // debug(s"@@@ creating ShareNothingInterpretedUnpicklerRuntime for type $className")
-              new ShareNothingInterpretedUnpicklerRuntime(mirror, tag)
-            } else {
-              // debug(s"@@@ creating InterpretedUnpicklerRuntime for type $className")
-              new InterpretedUnpicklerRuntime(mirror, tag)
-            }
-          runtime.genUnpickler
-        }
-        GlobalRegistry.unpicklerMap += (className -> unpickler)
-        unpickler
-      case Some(existingUnpickler) =>
-        existingUnpickler
-    }
+object PicklerUnpickler {
+  def apply[T](p: Pickler[T], u: Unpickler[T]): Pickler[T] with Unpickler[T] = new DelegatingPicklerUnpickler(p, u)
+  def generate[T]: Pickler[T] with Unpickler[T] = macro Compat.PicklerUnpicklerMacros_impl[T]
+  /** This is a private implementation of PicklerUnpickler that delegates pickle and unpickle to underlying. */
+  private class DelegatingPicklerUnpickler[T](p: Pickler[T], u: Unpickler[T]) extends Pickler[T] with Unpickler[T] {
+    // From Pickler
+    override def pickle(picklee: T, builder: PBuilder): Unit = p.pickle(picklee, builder)
+    // From Pickler and Unpickler
+    override def tag: FastTypeTag[T] = p.tag
+    // From Unpickler
+    override def unpickle(tag: String, reader: PReader): Any = u.unpickle(tag, reader)
   }
 }
 
-object Unpickler extends CorePicklersUnpicklers with RuntimePicklersUnpicklers
+abstract class AutoRegister[T: FastTypeTag](name: String) extends Pickler[T] with Unpickler[T] {
+  debug(s"autoregistering pickler $this under key '$name'")
+  GlobalRegistry.picklerMap += (name -> (x => this))
+  val tag = implicitly[FastTypeTag[T]]
+  debug(s"autoregistering unpickler $this under key '${tag.key}'")
+  GlobalRegistry.unpicklerMap += (tag.key -> this)
+}
