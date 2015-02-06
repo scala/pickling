@@ -11,8 +11,8 @@ import scala.util.Random
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream, ObjectInputStream}
 
 import scala.pickling._
-import binary._
-import AllPicklers._
+import scala.pickling.Defaults._
+import scala.pickling.binary._
 
 // for invalid characters in source files
 import java.nio.charset.CodingErrorAction
@@ -223,7 +223,7 @@ object WikiGraphPicklingBench extends WikiGraphBenchmark {
   //   }
   // }
   implicit lazy val picklerUnpicklerColonColonVertex: Pickler[::[Vertex]] with Unpickler[::[Vertex]] = implicitly
-  implicit lazy val picklerUnpicklerVectorVertex: Pickler[Vector[Vertex]] with Unpickler[Vector[Vertex]] = all.vectorPickler[Vertex]
+  implicit lazy val picklerUnpicklerVectorVertex: Pickler[Vector[Vertex]] with Unpickler[Vector[Vertex]] = Defaults.vectorPickler[Vertex]
   implicit val picklerGraph = implicitly[Pickler[Graph]]
   implicit val unpicklerGraph = implicitly[Unpickler[Graph]]
 

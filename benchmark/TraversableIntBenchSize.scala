@@ -2,8 +2,8 @@ import scala.pickling.testing.PicklingBenchmark
 import scala.util.Random
 
 import scala.pickling._
-import binary._
-import AllPicklers._
+import scala.pickling.Defaults._
+import scala.pickling.binary._
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, ObjectOutputStream, ObjectInputStream}
 
