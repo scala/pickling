@@ -1,0 +1,74 @@
+This is the first stable release of Scala Pickling, an automatic serialization framework made for Scala.
+It's fast, boilerplate-free, and allows users to easily swap in/out different serialization formats (such as binary, or JSON). We will retain binary compatibility throughout the 0.10.x series. We'll also keep format compatibility during 0.10.x.
+
+## Pickling in a nutshell
+
+To pickle a value, let's say `Person("foo", 20)`, you need two things.
+A [pickler combinator][Kennedy] for the given type `Person`, and a pickle format.
+The `Pickler[A]` is responsible for breaking `A` down to abstract *entries*, *fields*, and *collections*.
+It's called a combinator, because complex pickler combinators can be composed from primitive picklers.
+The `PickleFormat` turns the abstract notions like *fields* into binary or text representation.
+
+## Defaults mode
+
+Here's a basic usage using `Defaults` mode.
+
+    scala> import scala.pickling.Defaults._, scala.pickling.json._
+    scala> case class Person(name: String, age: Int)
+    
+    scala> val pkl = Person("foo", 20).pickle
+    pkl: pickling.json.pickleFormat.PickleType =
+    JSONPickle({
+      "$type": "Person",
+      "name": "foo",
+      "age": 20
+    })
+
+    scala> val person = pkl.unpickle[Person]
+    person: Person = Person(foo,20)
+
+The `Defaults` mode automatically derives `Pickler[Person]` from the primitive picklers at compile-time!
+Because the code is statically generated, we can inline the string manipulations and make it fast.
+([Faster than Java serialization or Kryo][Miller], which also does not require schema)
+
+Note, because `Pickler[A]` is a typeclass, Pickling can be retrofitted to `Person`
+without modifying the class to inherit [Serializable][1] or something like that.
+
+## DIY protocol stack
+
+Pickling 0.10.0 offers picklers, ops, and formats as traits, which can be
+stacked together, so third-party libraries can provide custom modes.
+Suppose you only want to pickle primitive types and `Apple`, and don't want to automatically
+derive pickler combinators. Here's a custom mode:
+
+    scala> case class Apple(kind: String)
+    scala> val appleProtocol = {
+             import scala.pickling._
+             new pickler.PrimitivePicklers with pickler.RefPicklers
+                 with json.JsonFormats {
+               // Manually generate pickler for Apple
+               implicit val applePickler = PicklerUnpickler.generate[Apple]
+               // Don't fall back to runtime picklers
+               implicit val so = static.StaticOnly
+               // Provide custom functions
+               def toJsonString[A: Pickler](a: A): String =
+                 functions.pickle(a).value
+               def fromJsonString[A: Unpickler](s: String): A =
+                 functions.unpickle[A](json.JSONPickle(s))
+             }
+           }
+    scala> import appleProtocol._
+    
+    scala> toJsonString(Apple("honeycrisp"))
+    res0: String =
+    {
+      "$type": "Apple",
+      "kind": "honeycrisp"
+    }
+
+For more details see [Pickling][Pickling].
+
+  [Kennedy]: http://research.microsoft.com/pubs/64036/picklercombinators.pdf
+  [Miller]: http://infoscience.epfl.ch/record/187787/files/oopsla-pickling_1.pdf
+  [Pickling]: https://github.com/scala/pickling
+  [1]: http://docs.oracle.com/javase/7/docs/api/java/io/Serializable.html
