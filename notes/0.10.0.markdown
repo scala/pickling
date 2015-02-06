@@ -1,5 +1,5 @@
 This is the first stable release of Scala Pickling, an automatic serialization framework made for Scala.
-It's fast, boilerplate-free, and allows users to easily swap in/out different serialization formats (such as binary, or JSON).
+It's fast, boilerplate-free, and allows users to easily swap in/out different serialization formats (such as binary, or JSON). We will retain binary compatibility throughout the 0.10.x series. We'll also keep format compatibility during 0.10.x.
 
 ## Pickling in a nutshell
 
@@ -34,7 +34,7 @@ Because the code is statically generated, we can inline the string manipulations
 Note, because `Pickler[A]` is a typeclass, Pickling can be retrofitted to `Person`
 without modifying the class to inherit [Serializable][1] or something like that.
 
-## DYI protocol stack
+## DIY protocol stack
 
 Pickling 0.10.0 offers picklers, ops, and formats as traits, which can be
 stacked together, so third-party libraries can provide custom modes.
