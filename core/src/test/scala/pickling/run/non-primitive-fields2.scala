@@ -12,7 +12,7 @@ class NonPrimitiveFields2Test extends FunSuite {
     val pickle = p.pickle
     assert(pickle.value.toString === """
       |{
-      |  "tpe": "scala.pickling.non.primitive.fields2.Philipp",
+      |  "$type": "scala.pickling.non.primitive.fields2.Philipp",
       |  "nationality": "German",
       |  "weird": true,
       |  "mother": {

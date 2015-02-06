@@ -7,7 +7,7 @@ class PrimitiveTest extends FunSuite {
   test("main") {
     assert(12.pickle.value === """
       |{
-      |  "tpe": "scala.Int",
+      |  "$type": "scala.Int",
       |  "value": 12
       |}
     """.stripMargin.trim)
@@ -16,7 +16,7 @@ class PrimitiveTest extends FunSuite {
 
     assert("12".pickle.value === """
       |{
-      |  "tpe": "java.lang.String",
+      |  "$type": "java.lang.String",
       |  "value": "12"
       |}
     """.stripMargin.trim)
@@ -25,7 +25,7 @@ class PrimitiveTest extends FunSuite {
 
     assert(true.pickle.value === """
       |{
-      |  "tpe": "scala.Boolean",
+      |  "$type": "scala.Boolean",
       |  "value": true
       |}
     """.stripMargin.trim)

@@ -18,7 +18,7 @@ class NonPublicWeirdTest extends FunSuite {
     val personPickle = person.pickle
     assert(personPickle.toString === """
       |JSONPickle({
-      |  "tpe": "scala.pickling.non.public.weird.Person",
+      |  "$type": "scala.pickling.non.public.weird.Person",
       |  "name": "Eugene",
       |  "hobby": {
       |    "name": "hacking",
@@ -34,7 +34,7 @@ class NonPublicWeirdTest extends FunSuite {
     val anyPickle = (person: Any).pickle
     assert(anyPickle.toString === """
       |JSONPickle({
-      |  "tpe": "scala.pickling.non.public.weird.Person",
+      |  "$type": "scala.pickling.non.public.weird.Person",
       |  "name": "Eugene",
       |  "hobby": {
       |    "name": "hacking",

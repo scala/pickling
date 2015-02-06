@@ -18,7 +18,7 @@ class ThreadsafetyTest extends FunSuite {
           val pickle = c1.pickle
           assert(pickle.toString === """
             |JSONPickle({
-            |  "tpe": "scala.pickling.share.json.C",
+            |  "$type": "scala.pickling.share.json.C",
             |  "name": "c1",
             |  "desc": "desc",
             |  "arr": [

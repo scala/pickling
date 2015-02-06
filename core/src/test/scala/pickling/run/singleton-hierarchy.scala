@@ -16,12 +16,12 @@ class SingletonHierarchyTest extends FunSuite {
     }
     test(D, """
       |JSONPickle({
-      |  "tpe": "scala.pickling.singleton.hierarchy.D.type"
+      |  "$type": "scala.pickling.singleton.hierarchy.D.type"
       |})
     """.stripMargin.trim)
     test(E(2), """
       |JSONPickle({
-      |  "tpe": "scala.pickling.singleton.hierarchy.E",
+      |  "$type": "scala.pickling.singleton.hierarchy.E",
       |  "x": 2
       |})
     """.stripMargin.trim)
