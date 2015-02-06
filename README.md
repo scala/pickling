@@ -7,19 +7,28 @@ scala/pickling
 
 **Scala Pickling** is an automatic serialization framework made for Scala. It's fast, boilerplate-free, and allows users to easily swap in/out different serialization formats (such as binary, or JSON), or even to provide their own custom serialization format.
 
+### Defaults mode (0.10.0)
+
+```scala
+scala> import scala.pickling.Defaults._, scala.pickling.json._
+scala> case class Person(name: String, age: Int)
+
+scala> val pkl = Person("foo", 20).pickle
+pkl: pickling.json.pickleFormat.PickleType =
+JSONPickle({
+  "$type": "Person",
+  "name": "foo",
+  "age": 20
+})
+
+scala> val person = pkl.unpickle[Person]
+person: Person = Person(foo,20)
+```
+
 ### Basic usage (0.9.0)
 
 ```scala
 import scala.pickling._, json._
-
-val pckl = List(1, 2, 3, 4).pickle
-val lst = pckl.unpickle[List[Int]]
-```
-
-### Basic usage (0.10.0)
-
-```scala
-import scala.pickling._, scala.pickling.Defaults._, scala.pickling.json._
 
 val pckl = List(1, 2, 3, 4).pickle
 val lst = pckl.unpickle[List[Int]]
@@ -114,30 +123,42 @@ If you're a library author, you can provide the convenience object as your proto
 - format
 
 ```scala
-scala> case class Pumpkin(kind: String)
-defined class Pumpkin
+scala> case class Apple(kind: String)
+defined class Apple
 
-scala> val pumpkinJsonProtocol = new scala.pickling.pickler.PrimitivePicklers with
-     |   scala.pickling.json.JsonFormats with scala.pickling.Ops {
-     |     import scala.pickling.{ Pickler, Unpickler }
-     |     implicit val pumpkinPickler = Pickler.generate[Pumpkin]
-     |     implicit val pumpkinUnpickler = Unpickler.generate[Pumpkin]
-     |   }
-pumpkinJsonProtocol: scala.pickling.pickler.PrimitivePicklers with scala.pickling.json.JsonFormats with scala.pickling.Ops{implicit val pumpkinPickler: scala.pickling.Pickler[Pumpkin] with scala.pickling.Generated; implicit val pumpkinUnpickler: scala.pickling.Unpickler[Pumpkin] with scala.pickling.Generated} = $anon$1@500cd8e3
+scala> val appleProtocol = {
+     |              import scala.pickling._
+     |              new pickler.PrimitivePicklers with pickler.RefPicklers
+     |                  with json.JsonFormats {
+     |                // Manually generate pickler for Apple
+     |                implicit val applePickler = PicklerUnpickler.generate[Apple]
+     |                // Don't fall back to runtime picklers
+     |                implicit val so = static.StaticOnly
+     |                // Provide custom functions
+     |                def toJsonString[A: Pickler](a: A): String =
+     |                  functions.pickle(a).value
+     |                def fromJsonString[A: Unpickler](s: String): A =
+     |                  functions.unpickle[A](json.JSONPickle(s))
+     |              }
+     |            }
+appleProtocol: scala.pickling.pickler.PrimitivePicklers with scala.pickling.pickler.RefPicklers with scala.pickling.json.JsonFormats{implicit val applePickler: scala.pickling.Pickler[Apple] with scala.pickling.Unpickler[Apple] with scala.pickling.Generated; implicit val so: scala.pickling.static.StaticOnly.type; def toJsonString[A](a: A)(implicit evidence$1: scala.pickling.Pickler[A]): String; def fromJsonString[A](s: String)(implicit evidence$2: scala.pickling.Unpickler[A]): A} = $anon$1@2b033c35
 ```
 
-Now your library user can import `pumpkinJsonProtocol` as follows:
+Now your library user can import `appleProtocol` as follows:
 
 ```
-scala> import pumpkinJsonProtocol._
-import pumpkinJsonProtocol._
+scala> import appleProtocol._
+import appleProtocol._
 
-scala> Pumpkin("kabocha").pickle
-res0: pumpkinJsonProtocol.pickleFormat.PickleType =
-JSONPickle({
-  "tpe": "Pumpkin",
-  "kind": "kabocha"
-})
+scala>  toJsonString(Apple("honeycrisp"))
+res0: String =
+{
+  "$type": "Apple",
+  "kind": "honeycrisp"
+}
+
+scala> fromJsonString(res0)
+res1: Apple = Apple(honeycrisp)
 ```
 
 <!-- This project aims to turn [a custom build of macro paradise](https://github.com/heathermiller/scala-pickling/tree/topic/scala-pickling) that we used in
