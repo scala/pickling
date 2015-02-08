@@ -1,0 +1,43 @@
+package scala.pickling
+package pickler
+
+import java.util.UUID
+
+trait JavaUUIDPicklers extends PrimitivePicklers {
+  implicit val javaUUIDPickler:
+    Pickler[UUID] with Unpickler[UUID] = new Pickler[UUID] with Unpickler[UUID] {
+    def tag = FastTypeTag[UUID]
+    def pickle(picklee: java.util.UUID, builder: PBuilder):Unit = {
+      builder.beginEntry(picklee)
+      builder.hintStaticallyElidedType()
+
+      builder.putField("msb", { b =>
+        b.hintTag(FastTypeTag.Long)
+        b.hintStaticallyElidedType()
+        longPickler.pickle(picklee.getMostSignificantBits, b)
+      })
+      builder.putField("lsb", { b =>
+        b.hintTag(FastTypeTag.Long)
+        b.hintStaticallyElidedType()
+        longPickler.pickle(picklee.getLeastSignificantBits, b)
+      })
+      builder.endEntry()
+    }
+
+    def unpickle(tag: String, reader: PReader): Any = {
+      reader.hintStaticallyElidedType()
+      reader.hintTag(FastTypeTag.Long)
+      reader.pinHints()
+      val r1 = reader.readField("msb")
+      val tag1 = r1.beginEntry()
+      val msb = longPickler.unpickle(tag1, r1).asInstanceOf[Long]
+      r1.endEntry()
+      val r2 = reader.readField("lsb")
+      val tag2 = r2.beginEntry()
+      val lsb = longPickler.unpickle(tag2, r2).asInstanceOf[Long]
+      r2.endEntry()
+      reader.unpinHints()
+      new java.util.UUID(msb, lsb)
+    }
+  }
+}
