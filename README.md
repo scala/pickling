@@ -74,7 +74,7 @@ val pckl = Pumpkin("Kabocha").pickle
 val pump = pckl.unpickle[Pumpkin]
 ```
 
-## DYI protocol stack
+## DIY protocol stack
 
 There are also traits available for picklers to mix and match your own convenience object to import from.
 If you're a library author, you can provide the convenience object as your protocol stack that some or all of the pickling parts:
