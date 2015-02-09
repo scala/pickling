@@ -24,7 +24,6 @@ def commonSettings = Seq(
   resolvers += Resolver.sonatypeRepo("releases"),
   scalacOptions ++= Seq("-feature"),
   parallelExecution in Test := false, // hello, reflection sync!!
-  conflictWarning in ThisBuild := ConflictWarning.disable,
   publishMavenStyle in ThisBuild := true,
   publishArtifact in Test := false,
   publishTo := {
