@@ -7,6 +7,9 @@ import ir._
 trait TypeAnalysis extends Macro {
   import c.universe._
 
+  def isStaticOnly: Boolean =
+    c.inferImplicitValue(typeOf[IsStaticOnly]) != EmptyTree
+
   def isCaseClass(sym: TypeSymbol): Boolean =
     sym.isClass && sym.asClass.isCaseClass
 
@@ -188,7 +191,8 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
               scala.pickling.PickleOps(out).pickleInto(b)
             )
           """)
-        } else (nonLoopyFields ++ loopyFields).flatMap(fir => {
+        }
+        else (nonLoopyFields ++ loopyFields).flatMap(fir => {
         // for each field, compute a tree for pickling it
         // (or empty list, if impossible)
 
@@ -225,11 +229,16 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
           else reflectively("picklee", fir)(fm => putField(q"$fm.get.asInstanceOf[${fir.tpe}]"))
         } else if (fir.javaSetter.isDefined) {
           List(putField(getField(fir)))
-        } else {
+        } else if (fir.isParam) {
           reflectivelyWithoutGetter("picklee", fir)(fvalue =>
             tryPutField(q"$fvalue.asInstanceOf[scala.util.Try[${fir.tpe}]]"))
+        } else {
+          Nil
         }
       })
+      if (cir.fields.nonEmpty && putFields.isEmpty) {
+        throw PicklingException("No fields are captured. You need a custom pickler to handle this.")
+      }
       val endEntry = q"builder.endEntry()"
       if (shouldBotherAboutSharing(tpe)) {
         q"""
@@ -298,7 +307,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
 
       case tpe1 if sym.isClass =>
         def pickleAfterDispatch(excludeSelf: Boolean) = {
-          val dispatchTree = if (c.inferImplicitValue(typeOf[IsStaticOnly]) != EmptyTree) { // StaticOnly *imported*
+          val dispatchTree = if (isStaticOnly) { // StaticOnly *imported*
             val notClosedReasons = whyNotClosed(sym.asType)
             if (notClosedReasons.nonEmpty)
               c.abort(c.enclosingPosition, s"cannot generate fully static pickler because: ${notClosedReasons.mkString(", ")}")
