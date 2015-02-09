@@ -1,0 +1,13 @@
+
+  [@mauhiz]: https://github.com/mauhiz
+
+  [123]: https://github.com/scala/pickling/pull/123
+
+### Changes with compatibility implications
+
+
+### Improvements
+
+- Java UUID support. [#123][123] by [@mauhiz][@mauhiz]
+
+### Fixes
