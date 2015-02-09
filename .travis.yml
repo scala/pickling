@@ -33,7 +33,7 @@ notifications:
     - joshua.suereth@typesafe.com
 
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION clean test sparklrpick
+  - sbt ++$TRAVIS_SCALA_VERSION clean test sparklrPick
 
   # Tricks to avoid unnecessary cache updates
   - find $HOME/.sbt -name "*.lock" | xargs rm
