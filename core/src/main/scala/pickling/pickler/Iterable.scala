@@ -61,9 +61,7 @@ object TravPickler {
       var i = 0
       while (i < length) {
         val r = reader.readElement()
-        r.beginEntry()
-        val elem = elemUnpickler.unpickle(elemTag.key, r)
-        r.endEntry()
+        val elem = elemUnpickler.unpickleEntry(r)
         builder += elem.asInstanceOf[T]
         i = i + 1
       }
