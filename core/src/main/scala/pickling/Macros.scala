@@ -229,11 +229,11 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
           else reflectively("picklee", fir)(fm => putField(q"$fm.get.asInstanceOf[${fir.tpe}]"))
         } else if (fir.javaSetter.isDefined) {
           List(putField(getField(fir)))
-        } else if (fir.isParam) {
+        } else if (!fir.isParam && sym.isJava) {
+          Nil
+        } else {
           reflectivelyWithoutGetter("picklee", fir)(fvalue =>
             tryPutField(q"$fvalue.asInstanceOf[scala.util.Try[${fir.tpe}]]"))
-        } else {
-          Nil
         }
       })
       if (cir.fields.nonEmpty && putFields.isEmpty) {
