@@ -61,9 +61,12 @@ object NegativeCompilation {
   }
 
   def toolboxClasspath = {
-    val f = new java.io.File(s"core/target/scala-${scalaBinaryVersion}/classes")
-    if (!f.exists) sys.error(s"output directory ${f.getAbsolutePath} does not exist.")
-    f.getAbsolutePath
+    val f0 = new java.io.File(s"core/target/scala-${scalaBinaryVersion}/classes")
+    val f1 = new java.io.File(s"test-util/target/scala-${scalaBinaryVersion}/test-classes")
+    val fs = Vector(f0, f1)
+    fs foreach { f => if (!f.exists) sys.error(s"output directory ${f.getAbsolutePath} does not exist.") }
+    val sep = sys.props("file.separator")
+    fs.map(_.getAbsolutePath).mkString(sep)
   }
 
   def quasiquotesJar: String = {
