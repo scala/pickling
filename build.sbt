@@ -51,6 +51,7 @@ lazy val root: Project = (project in file(".")).
 
 /** Scala Pickling code */
 lazy val core: Project = (project in file("core")).
+  dependsOn(testUtil % "test->test").
   settings(commonSettings: _*).
   settings(
     name := "scala-pickling",
@@ -72,6 +73,9 @@ lazy val core: Project = (project in file("core")).
       baseDeps ++ additional
     }
   )
+
+lazy val testUtil: Project = (project in file("test-util")).
+  settings(commonSettings ++ noPublish: _*)
 
 lazy val sandbox: Project = (project in file("sandbox")).
   dependsOn(core).
