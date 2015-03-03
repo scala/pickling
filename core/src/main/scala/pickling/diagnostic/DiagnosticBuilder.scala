@@ -1,20 +1,20 @@
-package scala.pickling.debug
+package scala.pickling.diagnostic
 
 import scala.pickling._
 
 
-private[debug] sealed trait BuilderState {
+private[diagnostic] sealed trait BuilderState {
   def previous: BuilderState
   def underlying: PBuilder
 }
-private[debug] case class EmptyBuilderState(original: PBuilder) extends BuilderState {
+private[diagnostic] case class EmptyBuilderState(original: PBuilder) extends BuilderState {
   def previous = this
   def underlying = original
 }
 // The state which says we've returned a nested builder, and have not gotten a beginEntry/endEntry call yet.
-private[debug] case class CompletedBuilderState(previous: BuilderState, underlying: PBuilder) extends BuilderState {}
-private[debug] case class CollectionState(numElements: Int, previous: BuilderState, underlying: PBuilder) extends BuilderState {}
-private[debug] case class RawEntryState(hints: Hints, var wasCollectionOrMap: Boolean = false, previous: BuilderState, underlying: PBuilder) extends BuilderState {}
+private[diagnostic] case class CompletedBuilderState(previous: BuilderState, underlying: PBuilder) extends BuilderState {}
+private[diagnostic] case class CollectionState(numElements: Int, previous: BuilderState, underlying: PBuilder) extends BuilderState {}
+private[diagnostic] case class RawEntryState(hints: Hints, var wasCollectionOrMap: Boolean = false, previous: BuilderState, underlying: PBuilder) extends BuilderState {}
 
 /**
  * A PBuilder which will debug state-issues in generated SPicklers.  Can be used with any underlying builder.
@@ -22,7 +22,7 @@ private[debug] case class RawEntryState(hints: Hints, var wasCollectionOrMap: Bo
  * This will attempt to look for foul-play on the part of any pickler and ensure that all implicit rules of pickling are
  * met.
  */
-class DebugPBuilder(orig: PBuilder)  extends PBuilder with PickleTools {
+private[diagnostic] class DiagnosticBuilder(orig: PBuilder)  extends PBuilder with PickleTools {
 
   var state: BuilderState = EmptyBuilderState(orig)
 
@@ -78,7 +78,7 @@ class DebugPBuilder(orig: PBuilder)  extends PBuilder with PickleTools {
       case s: RawEntryState =>
         s.wasCollectionOrMap = true
         underlying.putField(name, pickler = { pu =>
-          val next = new DebugPBuilder(pu)
+          val next = new DiagnosticBuilder(pu)
           pickler(next)
           assert(next.isValidFinalState, s"Failed to correctly serialize field $name, bad state: ${next.state}}")
         })
@@ -106,7 +106,7 @@ class DebugPBuilder(orig: PBuilder)  extends PBuilder with PickleTools {
         // happy case
         state = x.copy(numElements = x.numElements - 1)
         underlying.putElement { nu =>
-          val next = new DebugPBuilder(nu)
+          val next = new DiagnosticBuilder(nu)
           pickler(next)
           assert(next.isValidFinalState, s"Failed to correctly write collection element, state: $state")
         }

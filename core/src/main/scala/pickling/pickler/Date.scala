@@ -18,7 +18,6 @@ trait DatePicklers extends PrimitivePicklers {
     def tag = FastTypeTag[Date]
     def pickle(picklee: Date, builder: PBuilder): Unit = {
       builder.beginEntry(picklee)
-
       builder.putField("value", b => {
         b.hintTag(implicitly[FastTypeTag[String]])
         b.hintStaticallyElidedType()
