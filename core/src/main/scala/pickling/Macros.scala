@@ -339,6 +339,9 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
 
     val createTagTree = super[FastTypeTagMacros].impl[T]
     val tpe = computeType[T]
+    if(tpe.typeSymbol.isJava) {
+      checkJava(tpe)
+    }
     val picklerName = c.fresh(syntheticPicklerName(tpe).toTermName)
     val pickleLogicTree = pickleLogic[T](tpe)
 

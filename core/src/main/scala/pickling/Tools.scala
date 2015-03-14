@@ -3,6 +3,7 @@ package scala.pickling
 import scala.pickling.internal._
 
 import scala.language.existentials
+import scala.pickling.ir.JavaIRs
 
 import scala.reflect.macros.Context
 import scala.reflect.api.Universe
@@ -312,11 +313,15 @@ abstract class Macro extends RichTypes { self =>
   }
 
   val irs = new ir.IRs[c.universe.type](c.universe)
+  val jirs = new JavaIRs[u.type](u)
   import irs._
 
   def shouldBotherAboutCleaning(tpe: Type) = shareAnalyzer.shouldBotherAboutCleaning(tpe)
   def shouldBotherAboutSharing(tpe: Type) = shareAnalyzer.shouldBotherAboutSharing(tpe)
   def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
+
+  // TODO - Just a debug method for reading java classfiles.
+  def checkJava(tpe: Type): Nothing = jirs.newClassIR(tpe.asInstanceOf[jirs.uni.Type])
 
   def shareEverything = {
     val shareEverything = c.inferImplicitValue(typeOf[refs.ShareEverything]) != EmptyTree
