@@ -3,7 +3,7 @@ package scala.pickling
 import scala.pickling.internal._
 
 import scala.language.existentials
-import scala.pickling.ir.JavaIRs
+import scala.pickling.ir.{JavaIRLogger, JavaIRs}
 
 import scala.reflect.macros.Context
 import scala.reflect.api.Universe
@@ -313,15 +313,22 @@ abstract class Macro extends RichTypes { self =>
   }
 
   val irs = new ir.IRs[c.universe.type](c.universe)
-  val jirs = new JavaIRs[u.type](u)
+  val jirs = new JavaIRs[u.type](u, IrLogger)
   import irs._
 
   def shouldBotherAboutCleaning(tpe: Type) = shareAnalyzer.shouldBotherAboutCleaning(tpe)
   def shouldBotherAboutSharing(tpe: Type) = shareAnalyzer.shouldBotherAboutSharing(tpe)
   def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
 
+  object IrLogger extends JavaIRLogger {
+    override def abort(msg: String): Nothing = c.abort(c.enclosingPosition, msg)
+    override def warn(msg: String): Unit = c.warning(c.enclosingPosition, msg)
+    override def error(msg: String): Unit = c.error(c.enclosingPosition, msg)
+    override def info(msg: String, force: Boolean = false): Unit = c.info(c.enclosingPosition, msg, force)
+  }
   // TODO - Just a debug method for reading java classfiles.
   def checkJava(tpe: Type): Nothing = jirs.newClassIR(tpe.asInstanceOf[jirs.uni.Type])
+
 
   def shareEverything = {
     val shareEverything = c.inferImplicitValue(typeOf[refs.ShareEverything]) != EmptyTree
