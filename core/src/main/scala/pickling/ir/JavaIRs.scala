@@ -8,6 +8,7 @@ import HasCompat._
 import scala.reflect.internal.ClassfileConstants
 import scala.reflect.io.AbstractFile
 import scala.tools.asm._
+import scala.tools.asm.{Type=>AsmType}
 import scala.tools.asm.signature.{SignatureReader, SignatureVisitor, SignatureWriter}
 
 
@@ -56,20 +57,66 @@ class JavaIRs[U <: Universe with Singleton](val uni: U, log: JavaIRLogger) {
       new SignatureReader(sig).accept(reader)
       reader.toType
     }
+
+
+
     // TODO - This is not very robust and we basically die on failure.
     private class JavaSignatureToScalaType(sig: String) extends SignatureVisitor(Opcodes.ASM5) {
+      // We run this visitor pattern as a state machine of explciit, immutable states.
       private var tpe: Option[Type] = None
-      private var mkType: Type => Type = identity
+      private var state: SignatureReaderState = new BaseState()
+      sealed trait SignatureReaderState {
+        def handleType(tpe: Type): Unit
+        def appendTypeArg(t: Type): Unit
+        def finalType: Type
+      }
+      class BaseState() extends SignatureReaderState {
+        var tcons: Type = NoType
+        var targs: List[Type] = Nil
+        def handleType(theType: Type): Unit = {
+          tcons = theType
+        }
+        def finalType: Type =
+          if(targs.isEmpty) tcons
+          else uni.appliedType(tcons, targs)
 
+        def appendTypeArg(t: Type): Unit = {
+          targs = targs :+ t
+        }
+      }
+      class TypeArgumentState(base: SignatureReaderState) extends SignatureReaderState {
+        def handleType(theType: Type): Unit = {
+          base.appendTypeArg(theType)
+          // Remove ourselves from the state.
+          JavaSignatureToScalaType.this.state = base
+        }
+        // This should not happen....
+        def appendTypeArg(t: Type): Unit = ???
+        def finalType: Type = base.finalType
+      }
+      class ArrayState(previous: SignatureReaderState) extends SignatureReaderState {
+        def handleType(theType: Type): Unit = {
+          // TODO - pop the stack of state?
+          previous.handleType(
+            uni.appliedType(uni.definitions.ArrayClass, theType)
+          )
+        }
+        def appendTypeArg(t: Type): Unit = previous.appendTypeArg(t)
+        def finalType: Type =
+          previous.finalType
+      }
+      // Unhandled scenarios.  Generally not seen in field types we parse.
       override def visitFormalTypeParameter(name: String): Unit = ???
       override def visitClassBound(): SignatureVisitor = ???
       override def visitInterfaceBound(): SignatureVisitor = ???
-      // TODO - What does this mean, and why do we always see it.
-      override def visitSuperclass(): SignatureVisitor = this
       override def visitInterface(): SignatureVisitor = ???
       override def visitParameterType(): SignatureVisitor = ???
       override def visitReturnType(): SignatureVisitor = ???
       override def visitExceptionType(): SignatureVisitor = ???
+      override def visitInnerClassType(name: String): Unit = ???
+
+      // TODO - What does this mean, and why do we always see it.
+      override def visitSuperclass(): SignatureVisitor = this
       override def visitBaseType(descriptor: Char): Unit = {
         // All primitive types
         val myTpe =
@@ -83,25 +130,50 @@ class JavaIRs[U <: Universe with Singleton](val uni: U, log: JavaIRLogger) {
             case ClassfileConstants.SHORT_TAG => typeOf[Short]
             case ClassfileConstants.BOOL_TAG => typeOf[Boolean]
           }
-        tpe = Some(mkType(myTpe))
-        mkType = identity
+        state.handleType(myTpe)
       }
-      override def visitTypeVariable(name: String): Unit = ???
+      override def visitTypeVariable(name: String): Unit = {
+        // TODO - to correctly handle this we actually need to keep track of the generics of
+        //        the java class and reconstitute that type here.
+        log.abort(s"Currently, Java generic classes are not supported.\nCannot handle type variable $name, in $sig")
+      }
       override def visitArrayType(): SignatureVisitor = {
-        mkType = { tpe: Type =>
-          uni.appliedType(typeOf[Array[_]].typeConstructor, tpe :: Nil)
-        }
+        state = new ArrayState(state)
         this
       }
       override def visitClassType(name: String): Unit = {
-        // TODO - is this correct, it feels wrong...?
-        tpe = Some(mkType(uni.rootMirror.staticClass(name.replaceAllLiterally("/", ".")).asType.toTypeConstructor))
-        mkType = identity
+        // TODO - Zaugg sent us this code.
+        // It seems to puke on inner classes, as they have a $ in the name.
+        if(name contains "$") log.abort(s"Inner class pickling is not handled yet.  Required Pickler for ${name}")
+        val baseTpe = uni.internal.thisType(uni.rootMirror.staticClass(name.replaceAllLiterally("/", "."))).widen
+        state.handleType(baseTpe)
       }
-      override def visitInnerClassType(name: String): Unit = ???
-      override def visitTypeArgument(): Unit = ???
-      override def visitTypeArgument(wildcard: Char): SignatureVisitor = ???
-      override def visitEnd(): Unit = ()
+      // This is called for any "raw" type argument (i.e. wildcard/unbound)
+      override def visitTypeArgument(): Unit = {
+        // True if we're writing a new type argument...
+        // Here, we just add a new skolem/unbound type.
+        // TODO - use uni.existentialAbstraction(), according to Adriaan
+        state.appendTypeArg(uni.WildcardType)
+      }
+      // This is called for any bound type argument.
+      override def visitTypeArgument(wildcard: Char): SignatureVisitor = {
+        // Wildcard willbe one of =, - or +, we think.
+        // TODO - Handle the wildcard in the generated type signature!
+        wildcard match {
+          case '=' => // We're good
+          case '+' =>
+            // TODO - We may be able to allow this, using "boundedWildcardType"
+            log.abort(s"Unable to handle unbound java generics (? extends T).  Found $sig")
+          case '-' =>
+            log.abort(s"Unable to handle unbound java generics (? super T).  Found $sig")
+        }
+        state = new TypeArgumentState(state)
+        this
+      }
+      // TODO - How often is this called?
+      override def visitEnd(): Unit = {
+        tpe = Some(state.finalType)
+      }
       final def toType: Type = {
         tpe getOrElse log.abort(s"Could not reify java signature into scala type, sig: $sig")
       }
@@ -160,10 +232,18 @@ class JavaIRs[U <: Universe with Singleton](val uni: U, log: JavaIRLogger) {
       } else if((Opcodes.ACC_TRANSIENT & access) > 0) {
         log.info(s"Ignoring transient field: $name")
       } else {
-        val fieldTpe = JavaSignatureToScalaType.reify(desc)
+        val sig =
+          signature match {
+            case null => desc
+            case s => s
+          }
+        val fieldTpe =
+          JavaSignatureToScalaType.reify(sig)
+        System.err.println(s"$name : $fieldTpe has signature $signature")
         // TODO - We need to find a way to test if a Java type requires a type parameter and we do not have it.
         fields = JavaFieldInfo(name, fieldTpe) +: fields
       }
+      // TODO - these appear to never get called...
       object printFieldVisitor extends FieldVisitor(Opcodes.ASM5) {
         override def visitTypeAnnotation(typeRef: Int, typePath: TypePath , desc: String , visible: Boolean): AnnotationVisitor = {
           System.err.println(s"visitTypeAnnotation($typeRef, $typePath, $desc, $visible)")
@@ -185,7 +265,7 @@ class JavaIRs[U <: Universe with Singleton](val uni: U, log: JavaIRLogger) {
         log.info(s"Visiting class $cls")
         val fields = {
           val visitor = new FieldMarkerVisitor(tpe)
-          cr.accept(visitor, 0 /* TODO - flags */)
+          cr.accept(visitor, ClassReader.SKIP_CODE)
           visitor.getFields
         }
         fields foreach System.err.println
