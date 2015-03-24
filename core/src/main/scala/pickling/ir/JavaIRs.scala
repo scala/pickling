@@ -22,6 +22,19 @@ trait JavaIRLogger {
   /** Aborts compilation with the given message. */
   def abort(msg: String): Nothing
 }
+object JavaIRLogger {
+  // A logger intended to be used in a reflective/runtime scenario.
+  object empty extends JavaIRLogger {
+    /** Issues a warning. */
+    override def warn(msg: String): Unit = ()
+    /** Marks compilation as failed and records why. */
+    override def error(msg: String): Unit = throw new RuntimeException(msg)
+    /** Aborts compilation with the given message. */
+    override def abort(msg: String): Nothing = throw new RuntimeException(msg)
+    /** Debugging info for the macro.  Note:  Will not display by default unelss forced. */
+    override def info(msg: String, force: Boolean): Unit = ()
+  }
+}
 
 
 class JavaIRs[U <: Universe with Singleton](val uni: U, log: JavaIRLogger) {
@@ -30,7 +43,10 @@ class JavaIRs[U <: Universe with Singleton](val uni: U, log: JavaIRLogger) {
   import definitions._
 
 
+  // Info about a field on ajava class.
   case class JavaFieldInfo(name: String, tpe: Type)
+  // Info about a class.
+  case class ClassInfo(className: String, fields: Seq[JavaFieldInfo], extendedSerializable: Boolean)
 
   private val evilGlobal: scala.tools.nsc.Global = {
     uni.asInstanceOf[scala.tools.nsc.Global]
@@ -182,30 +198,40 @@ class JavaIRs[U <: Universe with Singleton](val uni: U, log: JavaIRLogger) {
   }
 
   // TODO - Determine an API to grab fields that are not transient.
-  class FieldMarkerVisitor(tpe: Type) extends ClassVisitor(Opcodes.ASM5) {
+  // TODO - we should be able to parse our parent types...
+  class FieldMarkerVisitor(tpe: Type, isParent: Boolean = false) extends ClassVisitor(Opcodes.ASM5) {
 
     private var fields: Seq[JavaFieldInfo] = Nil
+    var wasSerializable: Boolean = false
 
     def getFields: Seq[JavaFieldInfo] = fields
 
     // TODO - Check not abstract!
     // Called when visiting a class.  We use this to check inheritence.
     override def visit(version: Int, access: Int, name: String, signature: String, superName: String, interfaces: Array[String]): Unit = {
-      if((access & Opcodes.ACC_ABSTRACT) > 0) {
-        log.error(s"Unable to generate (un)pickler for abstract Java type: $tpe")
+      if(!isParent) {
+        if ((access & Opcodes.ACC_ABSTRACT) > 0) {
+          log.error(s"Unable to generate (un)pickler for abstract Java type: $tpe")
+        }
+
+        if ((access & Opcodes.ACC_FINAL) == 0) {
+          log.warn(s"Warning: Generating a pickler for a java type which is not final/closed: $tpe\nSubclasses of $tpe will not be deserialized.")
+        }
       }
 
-      if((access & Opcodes.ACC_FINAL) == 0) {
-        log.warn(s"Warning: Generating a pickler for a java type which is not final/closed: $tpe\nSubclasses of $tpe will not be deserialized.")
-      }
-
-      if(superName != "java/lang/Object") {
+      if(superName != null && superName != "java/lang/Object") {
+        val superInfo = readClassFields(superName.replaceAllLiterally("/", "."), tpe, true)
+        if(superInfo.extendedSerializable) wasSerializable = true
+        // TODO - Read the parent class.
         // TODO - We'll need to go visit the super class for fields
-        log.error(s"Super-class support not implemented.  Found $name extends $superName")
+        // TODO -
+        fields = fields ++ superInfo.fields
+
+        //log.error(s"Super-class support not implemented.  Found $name extends $superName")
       }
       // TODO - are all interfaces listed?
-      if(!(interfaces contains "java/io/Serializable")) {
-        log.error(s"Cannot serialize a non-serializable class, $name.  Found interfaces: ${interfaces.mkString(",")}")
+      if((interfaces contains "java/io/Serializable")) {
+        wasSerializable = true
       }
     }
     // We use these visits to ensure writeObject/readObject methods are not customized. IF they a e
@@ -239,39 +265,31 @@ class JavaIRs[U <: Universe with Singleton](val uni: U, log: JavaIRLogger) {
           }
         val fieldTpe =
           JavaSignatureToScalaType.reify(sig)
-        System.err.println(s"$name : $fieldTpe has signature $signature")
+        log.info(s"$name : $fieldTpe has signature $signature")
         // TODO - We need to find a way to test if a Java type requires a type parameter and we do not have it.
         fields = JavaFieldInfo(name, fieldTpe) +: fields
       }
-      // TODO - these appear to never get called...
-      object printFieldVisitor extends FieldVisitor(Opcodes.ASM5) {
-        override def visitTypeAnnotation(typeRef: Int, typePath: TypePath , desc: String , visible: Boolean): AnnotationVisitor = {
-          System.err.println(s"visitTypeAnnotation($typeRef, $typePath, $desc, $visible)")
-          null
-        }
-        override def visitAttribute(attr: Attribute ): Unit = {
-          System.err.println(s"visitAttribute($attr)")
-        }
-      }
-      printFieldVisitor
+      null
     }
   }
-  def newClassIR(tpe: Type) = {
-    val g = evilGlobal
-    val cls = g.exitingFlatten(tpe.asInstanceOf[g.Type].typeSymbol.javaClassName).toString
-    log.info(s"Looking for Java class $cls")
-    readClass(cls) match {
+
+  def readClassFields(className: String, tpe: Type, isParent: Boolean = false): ClassInfo = {
+    readClass(className) match {
       case Some(cr) =>
-        log.info(s"Visiting class $cls")
-        val fields = {
-          val visitor = new FieldMarkerVisitor(tpe)
-          cr.accept(visitor, ClassReader.SKIP_CODE)
-          visitor.getFields
-        }
-        fields foreach System.err.println
-        ???
+        val visitor = new FieldMarkerVisitor(tpe, isParent)
+        cr.accept(visitor, ClassReader.SKIP_CODE)
+        // TODO - We should
+        ClassInfo(className, visitor.getFields, visitor.wasSerializable)
       case None =>
         log.abort(s"Could not load classfile for type: $tpe")
     }
+  }
+
+  def newClassIR(tpe: Type) = {
+    val g = evilGlobal
+    val cls = g.exitingFlatten(tpe.asInstanceOf[g.Type].typeSymbol.javaClassName).toString
+    val info = readClassFields(cls, tpe, isParent = false)
+    if(!info.extendedSerializable) log.warn(s"Generating a pickler for a Java class which does not extends Serializable, $tpe")
+    info
   }
 }
