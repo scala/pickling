@@ -12,12 +12,12 @@ trait IterablePicklers {
 }
 
 object TravPickler {
-  def apply[T: FastTypeTag, C <% Traversable[_]]
+  def apply[T, C <% Traversable[_]]
     (implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T],
               cbf: CanBuildFrom[C, T, C], collTag: FastTypeTag[C]): Pickler[C] with Unpickler[C] =
     new Pickler[C] with Unpickler[C] {
 
-    val elemTag  = implicitly[FastTypeTag[T]]
+    val elemTag  = elemPickler.tag
     val isPrimitive = elemTag.isEffectivelyPrimitive
 
     def tag: FastTypeTag[C] = collTag
@@ -85,6 +85,6 @@ object MapPickler {
   def apply[K: FastTypeTag, V: FastTypeTag, M[_, _] <: collection.Map[_, _]]
     (implicit elemPickler: Pickler[(K, V)], elemUnpickler: Unpickler[(K, V)],
               cbf: CanBuildFrom[M[K, V], (K, V), M[K, V]],
-              pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[M[K, V]]): Pickler[M[K, V]] with Unpickler[M[K, V]] =
+              collTag: FastTypeTag[M[K, V]]): Pickler[M[K, V]] with Unpickler[M[K, V]] =
     TravPickler[(K, V), M[K, V]]
 }
