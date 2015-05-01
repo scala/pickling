@@ -180,7 +180,6 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
         $hintKnownSize
         builder.beginEntry(picklee)
       """
-      val (nonLoopyFields, loopyFields) = cir.fields.partition(fir => !shouldBotherAboutLooping(fir.tpe))
       val putFields =
         if (tpe <:< typeOf[java.io.Externalizable]) {
           val fieldName = """$ext"""
@@ -192,7 +191,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
             )
           """)
         }
-        else (nonLoopyFields ++ loopyFields).flatMap(fir => {
+        else cir.fields.flatMap(fir => {
         // for each field, compute a tree for pickling it
         // (or empty list, if impossible)
 
@@ -497,7 +496,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
       // in the worst case we can do the same as the interpreted runtime does - just go for allocateInstance
 
       // pending fields are fields that are restored after instantiation (e.g., through field assignments)
-      val pendingFields = if (!canCallCtor) cir.fields else cir.fields.filter(fir =>
+      var pendingFields = if (!canCallCtor) cir.fields else cir.fields.filter(fir =>
         fir.isNonParam || shouldBotherAboutLooping(fir.tpe) || fir.javaSetter.isDefined
       )
 
@@ -512,15 +511,16 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
 
           if (ctorSig.isEmpty) {
             q"new $tpe"
-          } else {
+          } else if (pendingFields.isEmpty) {
             val ctorSym = ctorSig.head._1.owner.asMethod
-            val ctorArgs = ctorSym.paramss.map(_.map(f => {
-              val delayInitialization = pendingFields.exists(_.param.map(_ == f).getOrElse(false))
-              if (delayInitialization) q"null" else readField(f.name.toString, ctorSig(f))
-            }))
+            val ctorArgs = ctorSym.paramss.map(_.map { f =>
+              readField(f.name.toString, ctorSig(f))
+            })
             q"new $tpe(...$ctorArgs)"
+          } else {
+            pendingFields = cir.fields
+            q"scala.concurrent.util.Unsafe.instance.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]"
           }
-
         } else {
           q"scala.concurrent.util.Unsafe.instance.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]"
         }
