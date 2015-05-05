@@ -2,14 +2,15 @@ package scala.pickling.share.binary
 
 import org.scalatest.FunSuite
 import scala.pickling._, scala.pickling.Defaults._, binary._
+import static.StaticOnly
 
 import java.io.ByteArrayInputStream
 
-class C(val name: String, val desc: String, var c: C, val arr: Array[Int])
+final class C(val name: String, val desc: String, var c: C, val arr: Array[Int])
 
 case class Outer(a: Array[Simple])
 
-class Simple(x: Int) {
+final class Simple(x: Int) {
   var y: String = ""
 }
 
@@ -22,7 +23,7 @@ class ShareBinaryTest extends FunSuite {
   test("loop-share-nonprimitives") {
     c1.c = c3
     val pickle = c1.pickle
-    val expected = "BinaryPickle([0,0,0,29,115,99,97,108,97,46,112,105,99,107,108,105,110,103,46,115,104,97,114,101,46,98,105,110,97,114,121,46,67,0,0,0,2,99,49,0,0,0,4,100,101,115,99,0,0,0,1,1,0,0,0,-5,0,0,0,2,99,51,0,0,0,4,100,101,115,99,0,0,0,1,1,0,0,0,-5,0,0,0,2,99,50,0,0,0,4,100,101,115,99,0,0,0,1,1,0,0,0,-3,0,0,0,0])"
+    val expected = "BinaryPickle([0,0,0,29,115,99,97,108,97,46,112,105,99,107,108,105,110,103,46,115,104,97,114,101,46,98,105,110,97,114,121,46,67,0,0,0,2,99,49,0,0,0,4,100,101,115,99,-5,0,0,0,2,99,51,0,0,0,4,100,101,115,99,-5,0,0,0,2,99,50,0,0,0,4,100,101,115,99,-3,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0])"
     val found = pickle.toString
     assert(found === expected)
 
@@ -53,7 +54,7 @@ class ShareBinaryTest extends FunSuite {
     import shareEverything._
     c1.c = c3
     val pickle = c1.pickle
-    assert(pickle.toString === "BinaryPickle([0,0,0,29,115,99,97,108,97,46,112,105,99,107,108,105,110,103,46,115,104,97,114,101,46,98,105,110,97,114,121,46,67,0,0,0,2,99,49,0,0,0,4,100,101,115,99,0,0,0,1,1,0,0,0,-5,0,0,0,2,99,51,0,0,0,4,100,101,115,99,0,0,0,1,1,0,0,0,-5,0,0,0,2,99,50,0,0,0,4,100,101,115,99,0,0,0,1,1,0,0,0,-3,0,0,0,0])")
+    assert(pickle.toString === "BinaryPickle([0,0,0,29,115,99,97,108,97,46,112,105,99,107,108,105,110,103,46,115,104,97,114,101,46,98,105,110,97,114,121,46,67,0,0,0,2,99,49,0,0,0,4,100,101,115,99,-5,0,0,0,2,99,51,0,0,0,4,100,101,115,99,-5,0,0,0,2,99,50,0,0,0,4,100,101,115,99,-3,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0])")
 
     val c11 = pickle.unpickle[C]
     val c13 = c11.c
