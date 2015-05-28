@@ -160,3 +160,4 @@ resolvers += Resolver.sonatypeRepo("snapshots")
 For a more illustrative example, see a [sample sbt project which uses Scala Pickling](https://github.com/xeno-by/sbt-example-pickling).
 
 Or you can just directly download the 0.10.1 jar ([Scala 2.10](https://oss.sonatype.org/service/local/artifact/maven/redirect?r=releases&g=org.scala-lang.modules&a=scala-pickling_2.10&v=0.10.1&e=jar), [Scala 2.11](https://oss.sonatype.org/service/local/artifact/maven/redirect?r=releases&g=org.scala-lang.modules&a=scala-pickling_2.11&v=0.10.1&e=jar)).
+
