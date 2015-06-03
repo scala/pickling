@@ -104,6 +104,9 @@ trait PBuilder extends Hintable {
   /** Return the resulting pickle of this builder. */
   def result(): Pickle
 }
+/** Abstract shim for Java. */
+abstract class AbtractPBuilder extends PBuilder with PickleTools
+
 
 
 /**
@@ -181,6 +184,9 @@ trait PReader extends Hintable {
   /** Denote that we are done reading a collection. */
   def endCollection(): Unit
 }
+
+/** Abstract class for Java implementors of picklers. */
+abstract class AbstractPReader extends PReader with PickleTools
 
 /**
  * Exception thrown when the pickling or unpickling process fails.

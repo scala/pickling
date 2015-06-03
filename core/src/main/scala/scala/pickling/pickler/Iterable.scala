@@ -15,7 +15,7 @@ object TravPickler {
   def apply[T: FastTypeTag, C <% Traversable[_]]
     (implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T],
               cbf: CanBuildFrom[C, T, C], collTag: FastTypeTag[C]): Pickler[C] with Unpickler[C] =
-    new Pickler[C] with Unpickler[C] {
+    new AbstractPicklerUnpickler[C] {
 
     val elemTag  = implicitly[FastTypeTag[T]]
     val isPrimitive = elemTag.isEffectivelyPrimitive
