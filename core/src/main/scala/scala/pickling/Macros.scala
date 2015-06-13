@@ -57,8 +57,8 @@ trait PicklerUnpicklerMacros extends Macro
         import _root_.scala.pickling.PickleOps
         import _root_.scala.pickling.ir._
         import _root_.scala.pickling.internal._
-        override def pickle(picklee: $tpe, builder: scala.pickling.PBuilder): Unit = $picklerTree
-        override def unpickle(tagKey: String, reader: scala.pickling.PReader): Any = $unpicklerTree
+        override def pickle(picklee: $tpe, builder: _root_.scala.pickling.PBuilder): Unit = $picklerTree
+        override def unpickle(tagKey: String, reader: _root_.scala.pickling.PReader): Any = $unpicklerTree
         override def tag: FastTypeTag[$tpe] = $createTagTree
       }
       $picklerUnpicklerName
@@ -76,9 +76,9 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
   // TODO - We should use the GRL to lock the reflection in the TypeTag + Runtime lookup.
   def createRuntimePickler(builder: c.Tree): c.Tree = q"""
     val classLoader = this.getClass.getClassLoader
-    val tag = scala.pickling.FastTypeTag.mkRaw(clazz, scala.reflect.runtime.universe.runtimeMirror(classLoader))
+    val tag = _root_.scala.pickling.FastTypeTag.mkRaw(clazz, _root_.scala.reflect.runtime.universe.runtimeMirror(classLoader))
     $builder.hintTag(tag)
-    scala.pickling.runtime.RuntimePicklerLookup.genPickler(classLoader, clazz, tag)
+    _root_.scala.pickling.runtime.RuntimePicklerLookup.genPickler(classLoader, clazz, tag)
   """
 
   def computeType[T: c.WeakTypeTag]: Type = {
@@ -184,10 +184,10 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
         if (tpe <:< typeOf[java.io.Externalizable]) {
           val fieldName = """$ext"""
           List(q"""
-            val out = new scala.pickling.util.GenObjectOutput
+            val out = new _root_.scala.pickling.util.GenObjectOutput
             picklee.writeExternal(out)
             builder.putField($fieldName, b =>
-              scala.pickling.PickleOps(out).pickleInto(b)
+              _root_.scala.pickling.functions.pickleInto(out, b)
             )
           """)
         }
@@ -198,11 +198,11 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
         def pickleLogic(fieldValue: Tree): Tree =
           if (fir.tpe.typeSymbol.isEffectivelyFinal) q"""
             b.hintStaticallyElidedType()
-            scala.pickling.PickleOps($fieldValue).pickleInto(b)
+            _root_.scala.pickling.functions.pickleInto($fieldValue, b)
           """ else q"""
             val subPicklee: ${fir.tpe} = $fieldValue
             if (subPicklee == null || subPicklee.getClass == classOf[${fir.tpe}]) b.hintDynamicallyElidedType()
-            scala.pickling.PickleOps(subPicklee).pickleInto(b)
+            _root_.scala.pickling.functions.pickleInto(subPicklee, b)
           """
 
         def putField(getterLogic: Tree) =
@@ -241,7 +241,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
       val endEntry = q"builder.endEntry()"
       if (shouldBotherAboutSharing(tpe)) {
         q"""
-          val oid = scala.pickling.internal.`package`.lookupPicklee(picklee)
+          val oid = _root_.scala.pickling.internal.`package`.lookupPicklee(picklee)
           builder.hintOid(oid)
           $beginEntry
           if (oid == -1) { ..$putFields }
@@ -274,7 +274,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
       val unknownClassCase = {
         val dispatcheeNames = dispatchees.map(_.key).mkString(", ")
         val otherTermName = newTermName("other")
-        val throwUnknownTag = q"""throw scala.pickling.PicklingException("Class " + other + " not recognized by pickler, looking for one of: " + $dispatcheeNames)"""
+        val throwUnknownTag = q"""throw _root_.scala.pickling.PicklingException("Class " + other + " not recognized by pickler, looking for one of: " + $dispatcheeNames)"""
         CaseDef(Bind(otherTermName, Ident(nme.WILDCARD)), throwUnknownTag)
       }
 
@@ -300,7 +300,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
       // do not abort, but generate dispatch
       case tpe1 if sym.isAbstractClass && isClosed(sym) =>
         q"""
-          val pickler: scala.pickling.Pickler[_] = $genClosedDispatch
+          val pickler: _root_.scala.pickling.Pickler[_] = $genClosedDispatch
           pickler.asInstanceOf[scala.pickling.Pickler[$tpe1]].pickle(picklee, builder)
         """
 
@@ -328,7 +328,6 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
             if (picklee.getClass == classOf[$tpe]) $unifiedPickle
             else ${pickleAfterDispatch(true)}
           """
-
       case _ =>
         c.abort(c.enclosingPosition, s"cannot generate pickler for type $tpe")
     }
@@ -701,7 +700,7 @@ trait PickleMacros extends Macro with TypeAnalysis {
       import _root_.scala.pickling.internal._
       val $pickleeName: $tpe = $pickleeArg
       val $builderName = $format.createBuilder($output)
-      scala.pickling.PickleOps($pickleeName).pickleInto($builderName)
+      _root_.scala.pickling.functions.pickleInto($pickleeName, $builderName)
       $endPickle
     """
   }
@@ -727,10 +726,10 @@ trait PickleMacros extends Macro with TypeAnalysis {
     """ else q"""
       if ($pickleeName != null) {
         val $picklerName = ${createPickler(tpe, builder)}
-        $picklerName.asInstanceOf[scala.pickling.Pickler[$tpe]].pickle($pickleeName, $builder)
+        $picklerName.asInstanceOf[_root_.scala.pickling.Pickler[$tpe]].pickle($pickleeName, $builder)
       } else {
-        $builder.hintTag(scala.pickling.FastTypeTag.Null)
-        scala.pickling.Defaults.nullPickler.pickle(null, $builder)
+        $builder.hintTag(_root_.scala.pickling.FastTypeTag.Null)
+        _root_.scala.pickling.Defaults.nullPickler.pickle(null, $builder)
       }
     """
 
@@ -740,11 +739,11 @@ trait PickleMacros extends Macro with TypeAnalysis {
       import _root_.scala.pickling.PickleOps
       import _root_.scala.pickling.internal._
       val $pickleeName: $tpe = $picklee
-      scala.pickling.internal.GRL.lock()
+      _root_.scala.pickling.internal.GRL.lock()
       try {
         $picklingLogic
       } finally {
-        scala.pickling.internal.GRL.unlock()
+        _root_.scala.pickling.internal.GRL.unlock()
       }
     """
   }

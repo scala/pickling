@@ -11,20 +11,22 @@ object RuntimePicklerLookup extends RuntimePicklersUnpicklers {
     val className = if (clazz == null) "null" else clazz.getName
     GlobalRegistry.picklerMap.get(className) match {
       case None =>
-        // debug(s"!!! could not find registered pickler for class $className, tag ${tag.key} !!!")
-        val pickler: Pickler[_] = if (clazz.isArray) {
-          val mirror = ru.runtimeMirror(classLoader)
-          val elemClass = clazz.getComponentType()
-          val elemTag = FastTypeTag.mkRaw(elemClass, mirror)
-          val elemPickler = genPickler(classLoader, elemClass, elemTag)
-
-          mkRuntimeTravPickler[Array[AnyRef]](elemClass, elemTag, tag, elemPickler, null)
-        } else {
-          val runtime = new RuntimePickler(classLoader, clazz, tag)
-          runtime.mkPickler
-        }
-        GlobalRegistry.picklerMap += (className -> (x => pickler))
-        pickler
+        internal.GRL.lock()
+        try {
+          // debug(s"!!! could not find registered pickler for class $className, tag ${tag.key} !!!")
+          val pickler: Pickler[_] = if (clazz.isArray) {
+            val mirror = ru.runtimeMirror(classLoader)
+            val elemClass = clazz.getComponentType()
+            val elemTag = FastTypeTag.mkRaw(elemClass, mirror)
+            val elemPickler = genPickler(classLoader, elemClass, elemTag)
+            mkRuntimeTravPickler[Array[AnyRef]](elemClass, elemTag, tag, elemPickler, null)
+          } else {
+            val runtime = new RuntimePickler(classLoader, clazz, tag)
+            runtime.mkPickler
+          }
+          GlobalRegistry.picklerMap += (className -> (x => pickler))
+          pickler
+        } finally internal.GRL.unlock()
 
       case Some(existingPickler) =>
         existingPickler(tag)

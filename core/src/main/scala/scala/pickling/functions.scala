@@ -4,15 +4,11 @@ import scala.language.experimental.macros
 
 object functions {
   def unpickle[T](thePickle: Pickle)(implicit unpickler: Unpickler[T], format: PickleFormat): T = {
-    // TODO - move GRL locking code into just the runtime unpickler code + generators.
-    internal.GRL.lock()
-    try {
-      val reader = format.createReader(thePickle.asInstanceOf[format.PickleType])
-      val result = unpickler.unpickleEntry(reader).asInstanceOf[T]
-      // TODO - some mechanism to disable this.
-      internal.clearUnpicklees();
-      result
-    } finally internal.GRL.unlock()
+    val reader = format.createReader(thePickle.asInstanceOf[format.PickleType])
+    val result = unpickler.unpickleEntry(reader).asInstanceOf[T]
+    // TODO - some mechanism to disable this.
+    internal.clearUnpicklees();
+    result
   }
   def pickle[T](picklee: T)(implicit format: PickleFormat, pickler: Pickler[T]): format.PickleType = {
     val builder = format.createBuilder
@@ -24,18 +20,15 @@ object functions {
   def pickleInto[T](picklee: T, builder: PBuilder)(implicit pickler: Pickler[T]): Unit = {
     // TODO - BeginEntry/EndEntry needed?
     // TODO - this hinting should be in the pickler, not here.  We need to understand
-    //        when we want to use this vs. something else.
+    //        when we want to use this vs. something else, and avoid over-hinting everywhere.
     // TODO - Move GRL Lock only into dynamic picklers
-    internal.GRL.lock()
-    try { 
-      if(null == picklee) {
-        builder.hintTag(FastTypeTag.Null)
-        Defaults.nullPickler.pickle(null, builder)
-      } else {
-        builder.hintTag(pickler.tag)
-        pickler.pickle(picklee, builder)
-      }
-      } finally internal.GRL.unlock()
+    if(null == picklee) {
+      builder.hintTag(FastTypeTag.Null)
+      Defaults.nullPickler.pickle(null, builder)
+    } else {
+      builder.hintTag(pickler.tag)
+      pickler.pickle(picklee, builder)
+    }
     // TODO - This usually doesn't clear Picklee's, but should we?
   }
 
