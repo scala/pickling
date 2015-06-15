@@ -789,18 +789,13 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
     q"""
       var $unpicklerName: _root_.scala.pickling.Unpickler[$tpe] = null
       $unpicklerName = implicitly[_root_.scala.pickling.Unpickler[$tpe]]
-      _root_.scala.pickling.internal.GRL.lock()
-      try {
-        $readerName.hintTag($unpicklerName.tag)
-        $staticHint
-        val typeString = $readerName.beginEntry()
-        val result = $unpicklerName.unpickle(typeString, $readerName)
-        $readerName.endEntry()
-        $unpickleeCleanup
-        result.asInstanceOf[$tpe]
-      } finally {
-        _root_.scala.pickling.internal.GRL.unlock()
-      }
+      $readerName.hintTag($unpicklerName.tag)
+      $staticHint
+      val typeString = $readerName.beginEntry()
+      val result = $unpicklerName.unpickle(typeString, $readerName)
+      $readerName.endEntry()
+      $unpickleeCleanup
+      result.asInstanceOf[$tpe]
     """
   }
 }

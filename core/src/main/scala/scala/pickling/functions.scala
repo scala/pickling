@@ -7,7 +7,7 @@ object functions {
     val reader = format.createReader(thePickle.asInstanceOf[format.PickleType])
     val result = unpickler.unpickleEntry(reader).asInstanceOf[T]
     // TODO - some mechanism to disable this.
-    internal.clearUnpicklees();
+    internal.clearUnpicklees()
     result
   }
   def pickle[T](picklee: T)(implicit format: PickleFormat, pickler: Pickler[T]): format.PickleType = {
@@ -21,7 +21,6 @@ object functions {
     // TODO - BeginEntry/EndEntry needed?
     // TODO - this hinting should be in the pickler, not here.  We need to understand
     //        when we want to use this vs. something else, and avoid over-hinting everywhere.
-    // TODO - Move GRL Lock only into dynamic picklers
     if(null == picklee) {
       builder.hintTag(FastTypeTag.Null)
       Defaults.nullPickler.pickle(null, builder)
