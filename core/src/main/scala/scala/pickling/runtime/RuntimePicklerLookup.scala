@@ -5,7 +5,6 @@ import scala.reflect.runtime.{universe => ru}
 
 
 object RuntimePicklerLookup extends RuntimePicklersUnpicklers {
-  // TODO - We should lock the GRL before running this method, in case we generate any picklers.
   def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit share: refs.Share): Pickler[_] = {
     // println(s"generating runtime pickler for $clazz") // NOTE: needs to be an explicit println, so that we don't occasionally fallback to runtime in static cases
     val className = if (clazz == null) "null" else clazz.getName

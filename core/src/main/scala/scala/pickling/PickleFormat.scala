@@ -2,10 +2,13 @@ package scala.pickling
 
 import scala.reflect.runtime.universe.Mirror
 
-/** The location (buffer or stream) where values may be serialized.
+/** Holds the serialized representation of a value, such as an `Array[Byte]`.
   *
-  * TODO - We may want to rethink this interface a bit.  e.g. PBuilder can always return a pickle now. HOwever for
-  *        directly streamed PBuilder's we realyl don't want to do that.
+  * A `Pickle` is only returned by `PickleOps.pickle`. A directly-streamed `PBuilder` must be used together with
+  * `PickleOps.pickleTo` or `PickleOps.pickleInto` which return `Unit` instead of a pickle.
+  *
+  * When unpickling from a stream, a subclass such as `BinaryInputPickle` is used, which initializes the `value`
+  * to a dummy value. TODO - we may want to rethink this interface.
   */
 trait Pickle {
   /** The type of values stored in this pickle. */

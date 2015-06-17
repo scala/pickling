@@ -1,7 +1,5 @@
 package scala.pickling
 
-import scala.language.experimental.macros
-
 object functions {
   def unpickle[T](thePickle: Pickle)(implicit unpickler: Unpickler[T], format: PickleFormat): T = {
     val reader = format.createReader(thePickle.asInstanceOf[format.PickleType])
@@ -10,6 +8,7 @@ object functions {
     internal.clearUnpicklees()
     result
   }
+
   def pickle[T](picklee: T)(implicit format: PickleFormat, pickler: Pickler[T]): format.PickleType = {
     val builder = format.createBuilder
     pickleInto(picklee, builder)
@@ -17,11 +16,12 @@ object functions {
     internal.clearPicklees()
     builder.result.asInstanceOf[format.PickleType]
   }
+
   def pickleInto[T](picklee: T, builder: PBuilder)(implicit pickler: Pickler[T]): Unit = {
     // TODO - BeginEntry/EndEntry needed?
     // TODO - this hinting should be in the pickler, not here.  We need to understand
     //        when we want to use this vs. something else, and avoid over-hinting everywhere.
-    if(null == picklee) {
+    if (null == picklee) {
       builder.hintTag(FastTypeTag.Null)
       Defaults.nullPickler.pickle(null, builder)
     } else {

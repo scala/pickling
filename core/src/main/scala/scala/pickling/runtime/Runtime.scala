@@ -361,7 +361,7 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(i
 
           inst
         }
-      } finally GRL.unlock()
+        } finally GRL.unlock()
       }
     }
   }

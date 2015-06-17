@@ -69,10 +69,12 @@ trait PicklerUnpicklerMacros extends Macro
 trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
   import c.universe._
 
-  // TODO - We should use the GRL to lock the reflection in the TypeTag + Runtime lookup.
   def createRuntimePickler(builder: c.Tree): c.Tree = q"""
     val classLoader = this.getClass.getClassLoader
-    val tag = _root_.scala.pickling.FastTypeTag.mkRaw(clazz, _root_.scala.reflect.runtime.universe.runtimeMirror(classLoader))
+    _root_.scala.pickling.internal.GRL.lock()
+    val tag = try {
+      _root_.scala.pickling.FastTypeTag.mkRaw(clazz, _root_.scala.reflect.runtime.universe.runtimeMirror(classLoader))
+    } finally _root_.scala.pickling.internal.GRL.unlock()
     $builder.hintTag(tag)
     _root_.scala.pickling.runtime.RuntimePicklerLookup.genPickler(classLoader, clazz, tag)
   """
@@ -339,7 +341,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
     // Used to generate implicit object here
     q"""
       locally {
-        implicit object $picklerName extends _root_.scala.pickling.Pickler[$tpe] with scala.pickling.Generated {
+        implicit object $picklerName extends _root_.scala.pickling.Pickler[$tpe] with _root_.scala.pickling.Generated {
           import _root_.scala.pickling._
           import _root_.scala.pickling.internal._
           def pickle(picklee: $tpe, builder: _root_.scala.pickling.PBuilder): Unit = $pickleLogicTree
@@ -572,7 +574,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
             q"""
               val oid = _root_.scala.pickling.internal.`package`.preregisterUnpicklee()
               val $instance = $instantiationLogic
-                _root_.scala.pickling.internal.`package`.registerUnpicklee($instance, oid)
+              _root_.scala.pickling.internal.`package`.registerUnpicklee($instance, oid)
               ..$initPendingFields
               $instance
             """
@@ -783,9 +785,6 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
     val staticHint       = if (tpe.typeSymbol.isEffectivelyFinal && !isTopLevel) q"$readerName.hintStaticallyElidedType()" else q"";
     val unpickleeCleanup = if (isTopLevel && shouldBotherAboutCleaning(tpe)) q"clearUnpicklees()" else q"";
     val unpicklerName    = c.fresh(newTermName("unpickler$unpickle$"))
-    // TODO - We want to limit the GRL locking to *only* those picklers which touch a mirror.
-    // It may make sense ot have a "withMirror" macro that such picklers would make use of,
-    // which ensures the mirror is locked during usage.
     q"""
       var $unpicklerName: _root_.scala.pickling.Unpickler[$tpe] = null
       $unpicklerName = implicitly[_root_.scala.pickling.Unpickler[$tpe]]

@@ -25,7 +25,7 @@ object RuntimeUnpicklerLookup extends RuntimePicklersUnpicklers {
 
           mkRuntimeTravPickler[Array[AnyRef]](elemClass, elemTag, tag, null, elemUnpickler)
         } else {
-          scala.pickling.internal.GRL.lock()
+          internal.GRL.lock()
           try {
             val runtime = if (share.isInstanceOf[refs.ShareNothing]) {
               // debug(s"@@@ creating ShareNothingInterpretedUnpicklerRuntime for type $tagKey")
@@ -35,7 +35,7 @@ object RuntimeUnpicklerLookup extends RuntimePicklersUnpicklers {
               new InterpretedUnpicklerRuntime(mirror, tagKey)
             }
             runtime.genUnpickler
-          } finally scala.pickling.internal.GRL.unlock()
+          } finally internal.GRL.unlock()
         }
         GlobalRegistry.unpicklerMap += (tagKey -> unpickler)
         unpickler
