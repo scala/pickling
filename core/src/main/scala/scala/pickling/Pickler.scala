@@ -24,7 +24,7 @@ trait Pickler[T] {
   /** The fast type tag associated with this pickler. */
   def tag: FastTypeTag[T]
 }
-/** Shim for Java code. */
+// Shim for Java code.
 abstract class AbstractPickler[T] extends Pickler[T]
 object Pickler {
   def generate[T]: Pickler[T] = macro Compat.PicklerMacros_impl[T]
@@ -84,7 +84,7 @@ trait Unpickler[T] {
   /** The fast type tag associated with this unpickler. */
   def tag: FastTypeTag[T]
 }
-/** Shim for Java code. */
+// Shim for Java code.
 abstract class AbstractUnpickler[T] extends Unpickler[T]
 object Unpickler {
   def generate[T]: Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
