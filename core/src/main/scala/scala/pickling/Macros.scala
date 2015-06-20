@@ -53,8 +53,8 @@ trait PicklerUnpicklerMacros extends Macro
       implicit object $picklerUnpicklerName extends _root_.scala.pickling.AbstractPicklerUnpickler[$tpe] with _root_.scala.pickling.Generated
       {
         import _root_.scala.language.existentials
-        override def pickle(picklee: $tpe, builder: _root_.scala.pickling.PBuilder): Unit = $picklerTree
-        override def unpickle(tagKey: String, reader: _root_.scala.pickling.PReader): Any = $unpicklerTree
+        override def pickle(picklee: $tpe, builder: _root_.scala.pickling.PBuilder): _root_.scala.Unit = $picklerTree
+        override def unpickle(tagKey: _root_.java.lang.String, reader: _root_.scala.pickling.PReader): _root_.scala.Any = $unpicklerTree
         override def tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
       }
       $picklerUnpicklerName
@@ -340,11 +340,11 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
 
     // Used to generate implicit object here
     q"""
-      locally {
+      _root_.scala.Predef.locally {
         implicit object $picklerName extends _root_.scala.pickling.Pickler[$tpe] with _root_.scala.pickling.Generated {
           import _root_.scala.pickling._
           import _root_.scala.pickling.internal._
-          def pickle(picklee: $tpe, builder: _root_.scala.pickling.PBuilder): Unit = $pickleLogicTree
+          def pickle(picklee: $tpe, builder: _root_.scala.pickling.PBuilder): _root_.scala.Unit = $pickleLogicTree
           def tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
         }
         $picklerName
@@ -361,7 +361,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
       implicit object $picklerName extends _root_.scala.pickling.DPickler[$tpe] {
         import _root_.scala.pickling._
         import _root_.scala.pickling.internal._
-        def pickle(picklee0: $tpe, builder: _root_.scala.pickling.PBuilder): Unit = $dpicklerPickleImpl
+        def pickle(picklee0: $tpe, builder: _root_.scala.pickling.PBuilder): _root_.scala.Unit = $dpicklerPickleImpl
       }
       $picklerName
     """
@@ -423,7 +423,7 @@ trait OpenSumUnpicklerMacro extends Macro with UnpicklerMacros with FastTypeTagM
 
     q"""
       implicit object $unpicklerName extends _root_.scala.pickling.Unpickler[$tpe] with _root_.scala.pickling.Generated {
-        def unpickle(tagKey: String, reader: _root_.scala.pickling.PReader): Any = $unpickleLogic
+        def unpickle(tagKey: String, reader: _root_.scala.pickling.PReader): _root_.scala.Any = $unpickleLogic
         def tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
       }
       $unpicklerName
@@ -626,7 +626,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
             if (tagKey == _root_.scala.pickling.FastTypeTag.Null.key) {
               null
             } else if (tagKey == _root_.scala.pickling.FastTypeTag.Ref.key) {
-              implicitly[_root_.scala.pickling.Unpickler[_root_.scala.pickling.refs.Ref]].unpickle(tagKey, reader)
+              _root_.scala.Predef.implicitly[_root_.scala.pickling.Unpickler[_root_.scala.pickling.refs.Ref]].unpickle(tagKey, reader)
             } else {
               $unpickleObject
             }
@@ -669,7 +669,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
         import _root_.scala.pickling._
         import _root_.scala.pickling.ir._
         import _root_.scala.pickling.internal._
-        def unpickle(tagKey: String, reader: _root_.scala.pickling.PReader): Any = $unpickleLogicTree
+        def unpickle(tagKey: _root_.java.lang.String, reader: _root_.scala.pickling.PReader): _root_.scala.Any = $unpickleLogicTree
         def tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
       }
       $unpicklerName
@@ -701,7 +701,7 @@ trait PickleMacros extends Macro with TypeAnalysis {
   }
 
   def createPickler(tpe: c.Type, builder: c.Tree): c.Tree = q"""
-    val pickler = implicitly[_root_.scala.pickling.Pickler[$tpe]]
+    val pickler = _root_.scala.Predef.implicitly[_root_.scala.pickling.Pickler[$tpe]]
     $builder.hintTag(pickler.tag)
     pickler
   """
@@ -753,7 +753,7 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
     readerUnpickleHelper(tpe, readerName)(true)
 
   def createUnpickler(tpe: Type): Tree =
-    q"implicitly[_root_.scala.pickling.Unpickler[$tpe]]"
+    q"_root_.scala.Predef.implicitly[_root_.scala.pickling.Unpickler[$tpe]]"
 
   def createRefDispatch(): CaseDef =
     CaseDef(Literal(Constant(FastTypeTag.Ref.key)), EmptyTree, createUnpickler(typeOf[refs.Ref]))
@@ -787,7 +787,7 @@ trait UnpickleMacros extends Macro with TypeAnalysis {
     val unpicklerName    = c.fresh(newTermName("unpickler$unpickle$"))
     q"""
       var $unpicklerName: _root_.scala.pickling.Unpickler[$tpe] = null
-      $unpicklerName = implicitly[_root_.scala.pickling.Unpickler[$tpe]]
+      $unpicklerName = _root_.scala.Predef.implicitly[_root_.scala.pickling.Unpickler[$tpe]]
       $readerName.hintTag($unpicklerName.tag)
       $staticHint
       val typeString = $readerName.beginEntry()

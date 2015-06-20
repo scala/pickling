@@ -528,11 +528,11 @@ trait CurrentMirrorMacro extends Macro {
   def impl: c.Tree = {
     import c.universe._
     c.inferImplicitValue(typeOf[ru.Mirror], silent = true) orElse {
-      val cachedMirror = q"scala.pickling.internal.`package`.cachedMirror"
+      val cachedMirror = q"_root_.scala.pickling.internal.`package`.cachedMirror"
       q"""
         if ($cachedMirror != null) $cachedMirror
         else {
-          $cachedMirror = scala.reflect.runtime.currentMirror
+          $cachedMirror = _root_.scala.reflect.runtime.currentMirror
           $cachedMirror
         }
       """

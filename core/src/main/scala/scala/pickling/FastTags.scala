@@ -269,9 +269,9 @@ trait FastTypeTagMacros extends Macro {
       c.abort(c.enclosingPosition, s"cannot generate FastTypeTag for type parameter $T, FastTypeTag can only be generated for concrete types")
 
     q"""
-      new scala.pickling.FastTypeTag[$T] {
-        def mirror = scala.pickling.internal.`package`.currentMirror
-        lazy val tpe = scala.reflect.runtime.universe.weakTypeOf[$T]
+      new _root_.scala.pickling.FastTypeTag[$T] {
+        def mirror = _root_.scala.pickling.internal.`package`.currentMirror
+        lazy val tpe = _root_.scala.reflect.runtime.universe.weakTypeOf[$T]
         def key = ${T.key}
       }
     """
@@ -280,15 +280,15 @@ trait FastTypeTagMacros extends Macro {
     import c.universe._
     val T = weakTypeOf[T]
     q"""
-      new scala.pickling.FastTypeTag[ClassTag[$T]] {
-        def mirror = scala.pickling.internal.`package`.currentMirror
-        lazy val tpe = scala.reflect.runtime.universe.weakTypeOf[ClassTag[$T]]
+      new _root_.scala.pickling.FastTypeTag[ClassTag[$T]] {
+        def mirror = _root_.scala.pickling.internal.`package`.currentMirror
+        lazy val tpe = _root_.scala.reflect.runtime.universe.weakTypeOf[ClassTag[$T]]
         def key = "ClassTag[" + ${T.key} + "]"
       }
     """
   }
   def apply(key: c.Tree): c.Tree = {
     import c.universe._
-    q"""scala.pickling.FastTypeTag(scala.pickling.internal.`package`.currentMirror, $key)"""
+    q"""_root_.scala.pickling.FastTypeTag(_root_.scala.pickling.internal.`package`.currentMirror, $key)"""
   }
 }
