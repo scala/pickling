@@ -48,8 +48,11 @@ class RuntimeTypeInfo(classLoader: ClassLoader, clazz: Class[_], share: refs.Sha
   def shouldBotherAboutLooping(tpe: Type) = shareAnalyzer.shouldBotherAboutLooping(tpe)
 }
 
+// Note: This entire class must be constructed inside of a GRL-locked method.
 class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTypeTag[_])(implicit share: refs.Share) extends RuntimeTypeInfo(classLoader, clazz, share) {
   import ru._
+
+  assert(scala.pickling.internal.GRL.isHeldByCurrentThread, "Failed to aquire GRL lock before instantiating a runtime pickler!")
 
   sealed abstract class Logic(fir: irs.FieldIR, isEffFinal: Boolean) {
     // debug(s"creating Logic for ${fir.name}")
@@ -200,12 +203,14 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
 
       def tag: FastTypeTag[Any] = fastTag.asInstanceOf[FastTypeTag[Any]]
 
-      // TODO - We should use the GRL here
       def pickle(picklee: Any, builder: PBuilder): Unit = {
+        scala.pickling.internal.GRL.lock()
         //debug(s"pickling object of type: ${tag.key}")
-        builder.beginEntry(picklee)
-        putFields(picklee, builder)
-        builder.endEntry()
+        try {
+          builder.beginEntry(picklee)
+          putFields(picklee, builder)
+          builder.endEntry()
+        } finally scala.pickling.internal.GRL.unlock()
       }
     }
   }

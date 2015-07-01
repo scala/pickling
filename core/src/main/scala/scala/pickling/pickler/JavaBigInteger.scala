@@ -7,7 +7,7 @@ import java.math.BigInteger
 /** This contains implicits which can serialize java.math.BigInteger values. */
 trait JavaBigIntegerPicklers extends PrimitivePicklers {
   implicit val javaBigIntegerPickler:
-    Pickler[BigInteger] with Unpickler[BigInteger] = new Pickler[BigInteger] with Unpickler[BigInteger] {
+    Pickler[BigInteger] with Unpickler[BigInteger] = new AbstractPicklerUnpickler[BigInteger] {
     def tag = FastTypeTag[BigInteger]
     def pickle(picklee: BigInteger, builder: PBuilder): Unit = {
       builder.beginEntry(picklee)

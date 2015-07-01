@@ -22,7 +22,6 @@ case class BinaryPickleArray(data: Array[Byte]) extends BinaryPickle {
 
   def createReader(format: BinaryPickleFormat): PReader =
     new BinaryPickleReader(new ByteArrayInput(data), format)
-    //new BinaryPickleReader(data, mirror, format)
 
   override def toString = s"""BinaryPickle(${value.mkString("[", ",", "]")})"""
 }

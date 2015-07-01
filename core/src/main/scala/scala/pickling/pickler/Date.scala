@@ -6,7 +6,7 @@ import java.text.SimpleDateFormat
 
 trait DatePicklers extends PrimitivePicklers {
   implicit val datePickler: Pickler[Date] with Unpickler[Date] =
-  new Pickler[Date] with Unpickler[Date] {
+  new AbstractPicklerUnpickler[Date] {
     private val dateFormatTemplate = {
       val format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'") //use ISO_8601 format
       format.setLenient(false)
