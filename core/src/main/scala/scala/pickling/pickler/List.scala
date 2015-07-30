@@ -10,7 +10,7 @@ trait ListPicklerUnpicklerMacro extends CollectionPicklerUnpicklerMacro {
   lazy val ConsClass = c.mirror.staticClass("scala.collection.immutable.$colon$colon")
   def mkType(eltpe: c.Type) = appliedType(ConsClass.toTypeConstructor, List(eltpe))
   def mkArray(picklee: c.Tree) = q"$picklee.toArray"
-  def mkBuffer(eltpe: c.Type) = q"scala.collection.mutable.ListBuffer[$eltpe]()"
+  def mkBuffer(eltpe: c.Type) = q"_root_.scala.collection.mutable.ListBuffer[$eltpe]()"
   def mkResult(buffer: c.Tree) = q"$buffer.toList"
 }
 
@@ -29,30 +29,26 @@ trait CollectionPicklerUnpicklerMacro extends Macro with UnpickleMacros {
     val isFinal = eltpe.isEffectivelyFinal
     val picklerUnpicklerName = c.fresh(syntheticPicklerUnpicklerName(tpe).toTermName)
     q"""
-      implicit object $picklerUnpicklerName extends scala.pickling.Pickler[$tpe] with scala.pickling.Unpickler[$tpe] {
-        import scala.reflect.runtime.universe._
-        import scala.pickling._
-        import scala.pickling.internal._
-        import scala.pickling.PickleOps
+      implicit object $picklerUnpicklerName extends _root_.scala.pickling.AbstractPicklerUnpickler[$tpe] {
 
-        val elpickler: Pickler[$eltpe] = {
+        val elpickler: _root_.scala.pickling.Pickler[$eltpe] = {
           val elpickler = "bam!"
-          implicitly[Pickler[$eltpe]]
+          _root_.scala.Predef.implicitly[_root_.scala.pickling.Pickler[$eltpe]]
         }
-        val elunpickler: Unpickler[$eltpe] = {
+        val elunpickler: _root_.scala.pickling.Unpickler[$eltpe] = {
           val elunpickler = "bam!"
-          implicitly[Unpickler[$eltpe]]
+          _root_.scala.Predef.implicitly[_root_.scala.pickling.Unpickler[$eltpe]]
         }
-        val eltag: scala.pickling.FastTypeTag[$eltpe] = {
+        val eltag: _root_.scala.pickling.FastTypeTag[$eltpe] = {
           val eltag = "bam!"
-          implicitly[scala.pickling.FastTypeTag[$eltpe]]
+          _root_.scala.Predef.implicitly[_root_.scala.pickling.FastTypeTag[$eltpe]]
         }
-        val colltag: scala.pickling.FastTypeTag[$tpe] = {
+        val colltag: _root_.scala.pickling.FastTypeTag[$tpe] = {
           val colltag = "bam!"
-          implicitly[scala.pickling.FastTypeTag[$tpe]]
+          _root_.scala.Predef.implicitly[_root_.scala.pickling.FastTypeTag[$tpe]]
         }
 
-        def pickle(picklee: $tpe, builder: PBuilder): Unit = {
+        def pickle(picklee: $tpe, builder: _root_.scala.pickling.PBuilder): _root_.scala.Unit = {
           builder.hintTag(colltag)
           ${
             if (eltpe =:= IntTpe) q"builder.hintKnownSize(picklee.length * 4 + 100)".asInstanceOf[Tree]
@@ -72,11 +68,11 @@ trait CollectionPicklerUnpicklerMacro extends Macro with UnpickleMacros {
               ${
                 if (!isPrimitive && !isFinal) q"""
                   b.hintTag(eltag)
-                  PickleOps(arr(i)).pickleInto(b)
+                  _root_.scala.pickling.functions.pickleInto(arr(i), b)
                 """.asInstanceOf[Tree] else if (!isPrimitive && isFinal) q"""
                   b.hintTag(eltag)
                   b.hintStaticallyElidedType()
-                  PickleOps(arr(i)).pickleInto(b)
+                  _root_.scala.pickling.functions.pickleInto(arr(i), b)
                 """.asInstanceOf[Tree] else q"""
                   elpickler.pickle(arr(i), b)
                 """.asInstanceOf[Tree]
@@ -91,7 +87,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro with UnpickleMacros {
           builder.endCollection()
           builder.endEntry()
         }
-        def unpickle(tag: => scala.pickling.FastTypeTag[_], reader: PReader): Any = {
+        def unpickle(tag: => _root_.scala.pickling.FastTypeTag[_], reader: _root_.scala.pickling.PReader): _root_.scala.Any = {
           val arrReader = reader.beginCollection()
           ${
             if (isPrimitive) q"arrReader.hintStaticallyElidedType(); arrReader.hintTag(eltag); arrReader.pinHints()".asInstanceOf[Tree]
@@ -125,7 +121,7 @@ trait CollectionPicklerUnpicklerMacro extends Macro with UnpickleMacros {
           arrReader.endCollection()
           ${mkResult(q"buffer")}
         }
-        def tag: FastTypeTag[$tpe] = colltag
+        def tag: _root_.scala.pickling.FastTypeTag[$tpe] = colltag
       }
       $picklerUnpicklerName
     """

@@ -18,24 +18,24 @@ class ShareJsonTest extends FunSuite {
       |  "$type": "scala.pickling.share.json.C",
       |  "name": "c1",
       |  "desc": "desc",
-      |  "arr": [
-      |    1
-      |  ],
       |  "c": {
       |    "name": "c3",
       |    "desc": "desc",
-      |    "arr": [
-      |      1
-      |    ],
       |    "c": {
       |      "name": "c2",
       |      "desc": "desc",
+      |      "c": { "$ref": 0 },
       |      "arr": [
       |        1
-      |      ],
-      |      "c": { "$ref": 0 }
-      |    }
-      |  }
+      |      ]
+      |    },
+      |    "arr": [
+      |      1
+      |    ]
+      |  },
+      |  "arr": [
+      |    1
+      |  ]
       |})
     """.trim.stripMargin)
 
@@ -71,24 +71,24 @@ class ShareJsonTest extends FunSuite {
       |  "$type": "scala.pickling.share.json.C",
       |  "name": "c1",
       |  "desc": "desc",
-      |  "arr": [
-      |    1
-      |  ],
       |  "c": {
       |    "name": "c3",
       |    "desc": "desc",
-      |    "arr": [
-      |      1
-      |    ],
       |    "c": {
       |      "name": "c2",
       |      "desc": "desc",
+      |      "c": { "$ref": 0 },
       |      "arr": [
       |        1
-      |      ],
-      |      "c": { "$ref": 0 }
-      |    }
-      |  }
+      |      ]
+      |    },
+      |    "arr": [
+      |      1
+      |    ]
+      |  },
+      |  "arr": [
+      |    1
+      |  ]
       |})
     """.trim.stripMargin)
 

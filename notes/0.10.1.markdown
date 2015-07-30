@@ -1,13 +1,32 @@
 
   [@mauhiz]: https://github.com/mauhiz
+  [@eed3si9n]: https://github.com/eed3si9n
+  [@jsuereth]: https://github.com/jsuereth
+  [@phaller]: https://github.com/phaller
 
+  [60]: https://github.com/scala/pickling/issues/60
+  [263]: https://github.com/scala/pickling/issues/263
   [123]: https://github.com/scala/pickling/pull/123
-
-### Changes with compatibility implications
-
+  [294]: https://github.com/scala/pickling/pull/294
+  [295]: https://github.com/scala/pickling/pull/295
+  [328]: https://github.com/scala/pickling/pull/328
 
 ### Improvements
 
 - Java UUID support. [#123][123] by [@mauhiz][@mauhiz]
 
 ### Fixes
+
+- Fixes pickling of Java objects. See below 
+- Fixes unpickling of sealed trait in `Array`. [#294][294] by [@jsuereth][@jsuereth]
+- Fixes unpickling of `val` whose implementation accesses a field. [#328][328] by [@phaller][@phaller]
+
+### Java Pickling workaround
+
+Scala Pickling by default uses compile-time type information
+to automatically generate a pickler for a given type.
+For Java types, Pickling tries to guess the list of fields,
+and it often guesses incorrectly. [#60][60], [#263][263]
+
+Pickling 0.10.1 adds a workaround by stopping to
+compile when it detects an empty pickler. [#295][295] by [@eed3si9n][@eed3si9n]

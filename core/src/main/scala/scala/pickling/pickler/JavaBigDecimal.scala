@@ -8,7 +8,7 @@ import java.math.BigDecimal
   */
 trait JavaBigDecimalPicklers extends PrimitivePicklers {
   implicit val javaBigDecimalPickler:
-    Pickler[BigDecimal] with Unpickler[BigDecimal] = new Pickler[BigDecimal] with Unpickler[BigDecimal]{
+    Pickler[BigDecimal] with Unpickler[BigDecimal] = new AbstractPicklerUnpickler[BigDecimal] {
     def tag = FastTypeTag[BigDecimal]
     def pickle(picklee: BigDecimal, builder: PBuilder): Unit = {
       builder.beginEntry(picklee)

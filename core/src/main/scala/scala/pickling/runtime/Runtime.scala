@@ -133,7 +133,9 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
 
           builder.hintTag(tag)
           builder.beginEntry(picklee)
-          putFields()
+          GRL.lock()
+          try putFields()
+          finally GRL.unlock()
           builder.endEntry()
         } else {
           builder.hintTag(FastTypeTag.Null)
@@ -179,43 +181,49 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(implicit shar
     new Unpickler[Any] with PickleTools {
       def tag: FastTypeTag[Any] = fastTag.asInstanceOf[FastTypeTag[Any]]
       def unpickle(tagKey: String, reader: PReader): Any = {
-        if (cir.javaGetInstance) {
-          clazz.getDeclaredMethod("getInstance").invoke(null)
-        } else if (reader.atPrimitive) {
-          val result = reader.readPrimitive()
-          if (shouldBotherAboutSharing(tpe)) registerUnpicklee(result, preregisterUnpicklee())
-          result
-        } else if (tagKey.endsWith("$")) {
-          val c = Class.forName(tagKey)
-          c.getField("MODULE$").get(c)
-        } else {
-          val pendingFields =
-            if (tagKey.contains("anonfun$")) List[FieldIR]()
-            else cir.fields.filter(fir =>
-              fir.hasGetter || {
-                // exists as Java field
-                scala.util.Try(clazz.getDeclaredField(fir.name)).isSuccess
-              })
+        scala.pickling.internal.GRL.lock()
+        try {
+          if (cir.javaGetInstance) {
+            clazz.getDeclaredMethod("getInstance").invoke(null)
+          } else if (reader.atPrimitive) {
+            val result = reader.readPrimitive()
+            if (shouldBotherAboutSharing(tpe)) registerUnpicklee(result, preregisterUnpicklee())
+            result
+          } else if (tagKey.endsWith("$")) {
+            val c = Class.forName(tagKey)
+            c.getField("MODULE$").get(c)
+          } else {
+            val pendingFields =
+              if (tagKey.contains("anonfun$")) List[FieldIR]()
+              else cir.fields.filter(fir =>
+                fir.hasGetter || {
+                  // exists as Java field
+                  scala.util.Try(clazz.getDeclaredField(fir.name)).isSuccess
+                })
 
-          def fieldVals = pendingFields.map(fir => {
-            val freader = reader.readField(fir.name)
-            val fstaticTag = FastTypeTag(mirror, fir.tpe, fir.tpe.key)
-            freader.hintTag(fstaticTag)
+            def fieldVals = pendingFields.map(fir => {
+              val freader = reader.readField(fir.name)
+              val fstaticTag = FastTypeTag(mirror, fir.tpe, fir.tpe.key)
+              freader.hintTag(fstaticTag)
 
-            val fstaticSym = fstaticTag.tpe.typeSymbol
-            if (fstaticSym.isEffectivelyFinal) freader.hintStaticallyElidedType()
-            val fdynamicTag = try {
-              freader.beginEntry()
-            } catch {
-              case e @ PicklingException(msg, cause) =>
-                debug(s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}':
+              val fstaticSym = fstaticTag.tpe.typeSymbol
+              if (fstaticSym.isEffectivelyFinal) freader.hintStaticallyElidedType()
+              val fdynamicTag = try {
+                freader.beginEntry()
+              } catch {
+                case e@PicklingException(msg, cause) =>
+                  debug( s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}
+':
                          |$msg
-                         |enclosing object has type: '${tagKey}'
+
+                      |enclosing object has type: '${tagKey}
+'
                          |static type of field: '${fir.tpe.key}'
                          |""".stripMargin)
                 throw e
             }
-            val fval = {
+            val
+            fval = {
               if (freader.atPrimitive) {
                 val result = freader.readPrimitive()
                 if (shouldBotherAboutSharing(fir.tpe)) registerUnpicklee(result, preregisterUnpicklee())
@@ -253,6 +261,7 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(implicit shar
 
           inst
         }
+        } finally GRL.unlock()
       }
     }
   }
@@ -279,6 +288,8 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(i
     new Unpickler[Any] with PickleTools {
       def tag: FastTypeTag[Any] = fastTag.asInstanceOf[FastTypeTag[Any]]
       def unpickle(tagKey: String, reader: PReader): Any = {
+        GRL.lock()
+        try {
         if (reader.atPrimitive) {
           reader.readPrimitive()
         } else if (tagKey.endsWith("$")) {
@@ -350,6 +361,7 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(i
 
           inst
         }
+        } finally GRL.unlock()
       }
     }
   }
