@@ -3,6 +3,8 @@ package ir
 
 import scala.reflect.api.Universe
 
+// TODO - These need logging messages.
+
 /** An abstract implementation of a pickling generation algorithm.
   *
   *
@@ -11,9 +13,27 @@ import scala.reflect.api.Universe
 trait PicklingAlgorithm {
   /**
    * Attempts to construct pickling logic for a given type.
+   *
+   * TODO - Instead of Option, these should return an error messages that we can aggregate
+   *        to explain why a pickler/unpickler could not be generated for a given type.
    */
-  def generatePickler(tpe: IrClass): Option[PicklerAst]
-  def generateUnpickler(tpe: IrClass): Option[UnpicklerAst]
+  def generate(tpe: IrClass): Option[PickleUnpickleImplementation]
+}
+object PicklingAlgorithm {
+  def create(algs: Seq[PicklingAlgorithm]): PicklingAlgorithm =
+     new PicklingAlgorithm {
+       /**
+        * Attempts to construct pickling logic for a given type.
+        */
+       override def generate(tpe: IrClass): Option[PickleUnpickleImplementation] =
+         algs.foldLeft(Option.empty[PickleUnpickleImplementation]) { (prev, next) =>
+           System.err.println(s"Trying algorithm: $next")
+           prev match {
+             case x: Some[_] => x
+             case None => next.generate(tpe)
+           }
+         }
+     }
 }
 
 /** this algorithm inspects symbols to determine if we have a scala case class, and generates the
@@ -37,7 +57,7 @@ object CaseClassPickling extends PicklingAlgorithm {
         }
         if(hasStandaloneVar) {
           // TODO - Issue a real warning about standalone vars, and how we don't handle them.
-          System.err.println(s"Warning: ${tpe.className} has a member var.  Pickling is not guaranteed to handle this correctly.")
+          System.err.println(s"Warning: ${tpe.className} has a member var not represented in the constructor.  Pickling is not guaranteed to handle this correctly.")
         }
 
         // Here we need to unify the fields with the constructor names.  We assume they have the same name.
@@ -58,14 +78,43 @@ object CaseClassPickling extends PicklingAlgorithm {
    * @param tpe
    * @return
    */
-  override def generatePickler(tpe: IrClass): Option[PicklerAst] = {
+  override def generate(tpe: IrClass): Option[PickleUnpickleImplementation] = {
     getFieldsAndContructor(tpe) map { structure =>
-      PickleBehavior(structure.fields.map { field =>
+      val pickle = PickleBehavior(structure.fields.map { field =>
         GetField(field.name, field.sym)
       }.toSeq)
+      val unpickle = CallConstructor(structure.fields.map(_.name), structure.constructor)
+      PickleUnpickleImplementation(pickle, unpickle)
     }
   }
-  override def generateUnpickler(tpe: IrClass): Option[UnpicklerAst] =
-    getFieldsAndContructor(tpe) map { structure => CallConstructor(structure.fields.map(_.name), structure.constructor) }
-
 }
+
+/** This algorithm isnpects symbols to determine if we have an abstract class with fully known sub-classes,
+  * in which case we delegate behavior to the subclasses.
+  */
+object AdtPickling extends PicklingAlgorithm {
+  /**
+   * Attempts to construct pickling logic for a given type.
+   */
+  override def generate(tpe: IrClass): Option[PickleUnpickleImplementation] = {
+    tpe.closedSubclasses match {
+      case scala.util.Failure(msgs) =>
+        System.err.println(s"Failed ot create ADT pickler = $msgs")
+        // TODO - issue a warning?
+        None
+      case scala.util.Success(subclasses) =>
+        // TODO - Should we allow dynamic dispatch here?
+        val pickle = PickleBehavior(Seq(SubclassDispatch(subclasses, tpe)))
+        // TODO - Figure out unpickler
+        val unpickle = UnpickleBehavior(Seq())
+        Some(PickleUnpickleImplementation(pickle, unpickle))
+    }
+  }
+}
+
+// TODO - Java Serializable Serializer
+// TODO - Java Bean serializer
+// TODO - Scala singleton object serializer
+
+// TODO - Crazy-Avro-like-serializer
+

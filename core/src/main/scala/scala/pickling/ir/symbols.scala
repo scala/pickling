@@ -2,6 +2,7 @@ package scala.pickling
 package ir
 
 import scala.reflect.api.Universe
+import scala.util.Try
 
 
 /**
@@ -24,6 +25,13 @@ trait IrClass extends IrSymbol {
   def isCaseClass: Boolean
   /** True if this class is 'final' (or cannot be extended). */
   def isFinal: Boolean
+
+  /** The set of known subclasses for this type.  Will return a failure if the symbol loader
+    * isn't sure if the classes are closed.
+    */
+  def closedSubclasses: Try[Seq[IrClass]]
+  /** Return the type of this class for a given universe. */
+  def tpe[U <: Universe with Singleton](u: U): u.Type
 }
 
 sealed trait IrInnerClass extends IrSymbol with IrClass {
@@ -68,7 +76,7 @@ trait IrConstructor extends IrMember {
 import scala.reflect.api.Universe
 
 /** A symbol loader for Java/Scala Symbols. */
-abstract class IrSymbolLoader[U <: Universe with Singleton](val uni: U) {
+abstract class IrSymbolLoader[U <: Universe with Singleton](val u: U) {
   /** Loads the symbols for a given Type using this symbol loader. */
-  def newClass(tpe: uni.Type): IrClass
+  def newClass(tpe: u.Type): IrClass
 }

@@ -99,7 +99,14 @@ case class GetField(name: String, getter: IrMember) extends PicklerAst {
   def requiresReflection: Boolean = !getter.isPublic
 }
 
+// TODO - What to do with unknown dispatch?
+case class SubclassDispatch(subClasses: Seq[IrClass], parent: IrClass) extends PicklerAst {
+  def requiresReflection: Boolean = false
+}
+
 /** This represents the algorithm used to pickle a given class. */
 case class PickleBehavior(operations: Seq[PicklerAst]) extends PicklerAst {
   def requiresReflection: Boolean = operations.exists(_.requiresReflection)
 }
+
+case class PickleUnpickleImplementation(pickle: PicklerAst, unpickle: UnpicklerAst)

@@ -37,13 +37,15 @@ trait TypeAnalysis extends Macro {
 
 trait NewIrTestMacros extends Macro with SourceGenerator {
   import c.universe._
-  val symbols = new IrScalaSymbols[c.universe.type](c.universe)
+  val symbols = new IrScalaSymbols[c.universe.type, c.type](c.universe, tools)
+  val generator = PicklingAlgorithm.create(Seq(CaseClassPickling, AdtPickling))
   def test[T: c.WeakTypeTag]: c.Tree = {
     val tpe = computeType[T]
     val sym = symbols.newClass(tpe)
-    val alg = CaseClassPickling.generateUnpickler(sym)
-    val alg2 = CaseClassPickling.generatePickler(sym)
-    val tree2 = alg2 map generatePicklerClass[T]
+    val impl = generator.generate(sym)
+    val tree2 = impl map {
+      case PickleUnpickleImplementation(alg2, alg) => generatePicklerClass[T](alg2)
+    }
     System.err.println(s"Pickling impl = $tree2")
     tree2 match {
       case None =>

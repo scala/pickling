@@ -4,6 +4,12 @@ package ir
 
 import HasCompat._
 import scala.reflect.api.Universe
+import scala.reflect.macros.Context
+
+
+class UnclosedSubclassesException(errors: Seq[String]) extends Exception(errors.mkString("\n")) {
+  override def fillInStackTrace(): Throwable = this
+}
 
 /** An implementation of a symbol lookup table based on scala reflection.
   *
@@ -12,11 +18,37 @@ import scala.reflect.api.Universe
   *        remove all knowledge of private symbols from Java classes, because generally it doesn't care about
   *        Java's privates.
   */
-class IrScalaSymbols[U <: Universe with Singleton](override val uni: U) extends IrSymbolLoader[U](uni) {
-  import uni._
+class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u: U, tools: Tools[C]) extends IrSymbolLoader[U](u) {
+  import u._
   import compat._
   import definitions._
+  import tools._
 
+  import scala.pickling.internal.RichSymbol
+
+  // HELPER METHODS FOR SUBCLASSES
+  def isCaseClass(sym: TypeSymbol): Boolean =
+    sym.isClass && sym.asClass.isCaseClass
+
+  def isClosed(sym: tools.u.TypeSymbol): Boolean =
+    whyNotClosed(sym).isEmpty
+
+  def whyNotClosed(sym: tools.u.TypeSymbol): Seq[String] = {
+    if (sym.isEffectivelyFinal)
+      Nil
+    else if (isCaseClass(sym.asInstanceOf[u.TypeSymbol]))
+      Nil
+    else if (sym.isClass) {
+      val classSym = sym.asClass
+      if (tools.treatAsSealed(classSym)) {
+        tools.directSubclasses(classSym).flatMap(cl => whyNotClosed(cl.asType))
+      } else {
+        List(s"'${sym.fullName}' allows unknown subclasses (it is not sealed or final isCaseClass=${isCaseClass(sym.asInstanceOf[u.TypeSymbol])} isEffectivelyFinal=${sym.isEffectivelyFinal} isSealed=${classSym.isSealed} directSubclasses=${tools.directSubclasses(classSym)})")
+      }
+    } else {
+      List(s"'${sym.fullName}' is not a class or trait")
+    }
+  }
 
   def newClass(tpe: Type): IrClass = new ScalaIrClass(tpe)
 
@@ -51,6 +83,26 @@ class IrScalaSymbols[U <: Universe with Singleton](override val uni: U) extends 
 
     /** True if this class is 'final' (or cannot be extended). */
     override def isFinal: Boolean = classSymbol.isFinal
+    override def tpe[U <: Universe with Singleton](u: U): u.Type = tpe.asInstanceOf[u.Type]
+
+
+
+    /** The set of known subclasses for this type.  May be empty if we don't know of any.
+      * Note:  This method will return a failure if the known subclasses aren't "closed"
+      */
+    override def closedSubclasses: scala.util.Try[Seq[IrClass]] = {
+      val closedError = whyNotClosed(tpe.typeSymbol.asType.asInstanceOf[tools.u.TypeSymbol])
+      closedError match {
+        case Nil =>
+          scala.util.Success({
+            val dispatchees = tools.compileTimeDispatchees(tpe.asInstanceOf[tools.c.universe.Type], tools.u.rootMirror, false)
+            dispatchees.map(t => new ScalaIrClass(t.asInstanceOf[u.Type]))(collection.breakOut)
+          })
+        case errors =>
+          scala.util.Failure(new UnclosedSubclassesException(errors))
+      }
+
+    }
   }
   private class ScalaIrMethod(mthd: MethodSymbol, override val owner: IrClass) extends IrMethod {
     override def methodName: String = mthd.name.toString
