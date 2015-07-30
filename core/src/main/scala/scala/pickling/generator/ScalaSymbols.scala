@@ -1,5 +1,5 @@
 package scala.pickling
-package ir
+package generator
 
 
 import HasCompat._
@@ -119,6 +119,10 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
   private class ScalaIrConstructor(mthd: MethodSymbol, owner: IrClass) extends ScalaIrMethod(mthd, owner) with IrConstructor {
     override def parameterNames: Seq[String] =
       mthd.paramss.flatten.map(_.name.toString) // TODO - Is this safe?
+
+    override def parameterTypes[U <: Universe with Singleton](u: U): Seq[u.Type] = {
+      mthd.paramss.flatten.map(_.typeSignature.asInstanceOf[u.Type]).toSeq
+    }
 
     override def toString = s"CONSTRUCTOR ${owner.className} (${parameterNames.mkString(",")}}): ${mthd.typeSignature}"
   }

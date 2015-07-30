@@ -1,9 +1,16 @@
 package scala.pickling
-package ir
+package generator
 
 import scala.reflect.api.Universe
 
 // TODO - These need logging messages.
+
+/** An interface so we can pass logging to these algorithms at runtime/during testing. */
+trait AlgorithmLogger {
+  def warn(msg: String): Unit
+  def debug(msg: String): Unit
+  def abort(msg: String): Nothing
+}
 
 /** An abstract implementation of a pickling generation algorithm.
   *
@@ -17,7 +24,7 @@ trait PicklingAlgorithm {
    * TODO - Instead of Option, these should return an error messages that we can aggregate
    *        to explain why a pickler/unpickler could not be generated for a given type.
    */
-  def generate(tpe: IrClass): Option[PickleUnpickleImplementation]
+  def generate(tpe: IrClass, logger: AlgorithmLogger): Option[PickleUnpickleImplementation]
 }
 object PicklingAlgorithm {
   def create(algs: Seq[PicklingAlgorithm]): PicklingAlgorithm =
@@ -25,12 +32,13 @@ object PicklingAlgorithm {
        /**
         * Attempts to construct pickling logic for a given type.
         */
-       override def generate(tpe: IrClass): Option[PickleUnpickleImplementation] =
+       override def generate(tpe: IrClass, logger: AlgorithmLogger): Option[PickleUnpickleImplementation] =
          algs.foldLeft(Option.empty[PickleUnpickleImplementation]) { (prev, next) =>
-           System.err.println(s"Trying algorithm: $next")
            prev match {
              case x: Some[_] => x
-             case None => next.generate(tpe)
+             case None =>
+               logger.debug(s"Trying algorithm: $next")
+               next.generate(tpe, logger)
            }
          }
      }
@@ -44,11 +52,10 @@ object PicklingAlgorithm {
 object CaseClassPickling extends PicklingAlgorithm {
   case class FieldInfo(name: String, sym: IrMethod)
   case class CaseClassInfo(constructor: IrConstructor, fields: Seq[FieldInfo])
-  private def getFieldsAndContructor(tpe: IrClass): Option[CaseClassInfo] = {
+  private def getFieldsAndContructor(tpe: IrClass, logger: AlgorithmLogger): Option[CaseClassInfo] = {
     if(tpe.isCaseClass) {
       if(!tpe.isFinal) {
-        // TODO - Issue real warning about how we don't handle subclassing behavior when working with case classes.
-        System.err.println(s"Warning: ${tpe.className} is not final.  Generated unpickling code does not handle subclasses.")
+        logger.warn(s"Warning: ${tpe.className} is not final.  Generated unpickling code does not handle subclasses.")
       }
       tpe.primaryConstructor map { c =>
         val names = c.parameterNames.toSet
@@ -56,8 +63,7 @@ object CaseClassPickling extends PicklingAlgorithm {
           m.isVar && !(names contains m.methodName)
         }
         if(hasStandaloneVar) {
-          // TODO - Issue a real warning about standalone vars, and how we don't handle them.
-          System.err.println(s"Warning: ${tpe.className} has a member var not represented in the constructor.  Pickling is not guaranteed to handle this correctly.")
+          logger.warn(s"Warning: ${tpe.className} has a member var not represented in the constructor.  Pickling is not guaranteed to handle this correctly.")
         }
 
         // Here we need to unify the fields with the constructor names.  We assume they have the same name.
@@ -66,9 +72,9 @@ object CaseClassPickling extends PicklingAlgorithm {
           m <- tpe.methods.find(_.methodName == name)
         } yield FieldInfo(name, m)
         if(fields.length == c.parameterNames.length) CaseClassInfo(c, fields)
-        else ??? // TODO - what do we do if it doesn't line up?  This is probably some insidious bug.
+        // TODO - what do we do if it doesn't line up?  This is probably some insidious bug.
+        else logger.abort(s"Encountered a case class (${tpe.className}) where we could not find all the constructor parameters.")
       }
-
     } else None
   }
 
@@ -78,8 +84,8 @@ object CaseClassPickling extends PicklingAlgorithm {
    * @param tpe
    * @return
    */
-  override def generate(tpe: IrClass): Option[PickleUnpickleImplementation] = {
-    getFieldsAndContructor(tpe) map { structure =>
+  override def generate(tpe: IrClass, logger: AlgorithmLogger): Option[PickleUnpickleImplementation] = {
+    getFieldsAndContructor(tpe, logger) map { structure =>
       val pickle = PickleBehavior(structure.fields.map { field =>
         GetField(field.name, field.sym)
       }.toSeq)
@@ -96,11 +102,11 @@ object AdtPickling extends PicklingAlgorithm {
   /**
    * Attempts to construct pickling logic for a given type.
    */
-  override def generate(tpe: IrClass): Option[PickleUnpickleImplementation] = {
+  override def generate(tpe: IrClass, logger: AlgorithmLogger): Option[PickleUnpickleImplementation] = {
     tpe.closedSubclasses match {
       case scala.util.Failure(msgs) =>
-        System.err.println(s"Failed ot create ADT pickler = $msgs")
-        // TODO - issue a warning?
+        // TODO - SHould we warn here, or collect errors for later?
+        logger.warn(s"Failed to create ADT pickler = $msgs")
         None
       case scala.util.Success(subclasses) =>
         // TODO - Should we allow dynamic dispatch here?

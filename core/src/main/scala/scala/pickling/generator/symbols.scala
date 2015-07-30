@@ -1,5 +1,5 @@
 package scala.pickling
-package ir
+package generator
 
 import scala.reflect.api.Universe
 import scala.util.Try
@@ -71,6 +71,9 @@ trait IrConstructor extends IrMember {
     * @return
     */
   def parameterNames: Seq[String]
+  /** Grabs the type of all the constructor parameters. */
+  def parameterTypes[U <: Universe with Singleton](u: U): Seq[u.Type]
+  def returnType[U <: Universe with Singleton](u: Universe): u.Type
 }
 
 import scala.reflect.api.Universe

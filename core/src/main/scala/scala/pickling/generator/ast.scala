@@ -1,5 +1,5 @@
 package scala.pickling
-package ir
+package generator
 
 
 

@@ -40,5 +40,6 @@ object functions {
   }
 
   import scala.language.experimental.macros
-  def testNewThing[T]: Pickler[T] = macro Compat.NewIrTestMacros_impl[T]
+  def testNewThing[T]: Pickler[T] = macro scala.pickling.generator.Compat.genPickler_impl[T]
+  def testNewThing2[T]: AbstractPicklerUnpickler[T] = macro scala.pickling.generator.Compat.genPicklerUnpickler_impl[T]
 }
