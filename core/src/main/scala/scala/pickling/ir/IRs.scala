@@ -141,7 +141,7 @@ class IRs[U <: Universe with Singleton](val uni: U) {
               val isVal = sym.asTerm.isVal
               val getterExists = sym.asTerm.getter != NoSymbol
               // println(s"$isVal (public: ${sym.asTerm.isPublic}, isParamAcc: ${sym.asTerm.isParamAccessor}), $getterExists (${sym.asTerm.getter}, public: ${sym.asTerm.getter.isPublic})")
-              (isVal && sym.asTerm.isPublic) || (getterExists && sym.asTerm.getter.isPublic)
+                (isVal && sym.asTerm.isPublic) || (getterExists && sym.asTerm.getter.isPublic)
           }
         } else false
 

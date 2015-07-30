@@ -34,6 +34,26 @@ trait TypeAnalysis extends Macro {
   }
 }
 
+
+trait NewIrTestMacros extends Macro with SourceGenerator {
+  import c.universe._
+  val symbols = new IrScalaSymbols[c.universe.type](c.universe)
+  def test[T: c.WeakTypeTag]: c.Tree = {
+    val tpe = computeType[T]
+    val sym = symbols.newClass(tpe)
+    val alg = CaseClassPickling.generateUnpickler(sym)
+    val alg2 = CaseClassPickling.generatePickler(sym)
+    val tree2 = alg2 map generatePicklerClass[T]
+    System.err.println(s"Pickling impl = $tree2")
+    tree2 match {
+      case None =>
+        c.error(c.enclosingPosition, s"Failed to generate pickler for $tpe")
+        ???
+      case Some(tree) => tree
+    }
+  }
+}
+
 // purpose of this macro: a wrapper around both pickler and unpickler
 trait PicklerUnpicklerMacros extends Macro
                              with PicklerMacros with UnpicklerMacros
@@ -339,7 +359,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
     val pickleLogicTree = pickleLogic[T](tpe)
 
     // Used to generate implicit object here
-    q"""
+    val result = q"""
       _root_.scala.Predef.locally {
         implicit object $picklerName extends _root_.scala.pickling.Pickler[$tpe] with _root_.scala.pickling.Generated {
           import _root_.scala.pickling._
@@ -350,6 +370,8 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
         $picklerName
       }
     """
+    System.err.println(result)
+    result
   }
 
   def dpicklerImpl[T: c.WeakTypeTag]: c.Tree = {

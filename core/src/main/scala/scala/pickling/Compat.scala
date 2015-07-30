@@ -14,6 +14,12 @@ object Compat {
     def pt: A = t._1
   }
 
+  def NewIrTestMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[Pickler[T]] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with NewIrTestMacros
+    c.Expr[Pickler[T]](bundle.test[T])
+  }
+
   def PicklerMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[Pickler[T]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PicklerMacros
