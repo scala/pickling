@@ -34,7 +34,7 @@ Scala Pickling is available on Sonatype for Scala 2.10 and Scala 2.11!
 You can use Scala Pickling in your sbt project by simply adding the following dependency to your build file:
 
 ```scala
-libraryDependencies += "org.scala-lang.modules" %% "scala-pickling" % "0.10.0"
+libraryDependencies += "org.scala-lang.modules" %% "scala-pickling" % "0.10.1"
 ```
 
 ## What makes it different?
@@ -47,6 +47,30 @@ Scala Pickling...
 - gives you more **Typesafety**. No more errors from serialization/deserialization propagating to arbitrary points in your program. Unlike Java Serialization, errors either manifest themselves as compile-time errors, or runtime errors only at the point of unpickling.
 - has **Robust Support For Object-Orientation**. While Scala Pickling is based on the elegant notion of pickler combinators from functional programming, it goes on to extend the traditional form of pickler combinators to be able to handle open class hierarchies. That means that if you pickle an instance of a subclass, and then try to unpickle as a superclass, you will still get back an instance of the original subclass.
 - **Happens At Compile-Time**. That means that it’s super-performant because serialization-related code is typically generated at compile-time and inlined where it is needed in your code. Scala Pickling is essentially fully-static, reflection is only used as a fallback when static (compile-time) generation fails.
+
+## Optimizing performance
+
+Pickling enables optimizing performance through configuration, in case the pickled objects are known to be simpler than in the general case.
+
+### Disabling cyclic object graphs
+
+By default, Pickling can serialize cyclic object graphs (for example, for serializing doubly-linked lists). However, this requires bookkeeping at run time. If pickled objects are known to be *not cyclic* (for example, simple lists or trees), then this additional bookkeeping can be disabled using the following import:
+
+```scala
+import scala.pickling.shareNothing._
+```
+
+If objects are pickled in a tight loop, this import can lead to a significant performance improvement.
+
+### Static serialization without reflection
+
+To pickle objects of types like `Any` Pickling uses run-time reflection, since not enough information is available at compile time. However, Pickling supports a static-only mode that ensures *no run-time reflection* is used. In this mode, pickling objects that would otherwise require run-time reflection causes compile-time errors.
+
+The following import enables static-only serialization:
+
+```scala
+import scala.pickling.static._  // Avoid run-time reflection
+```
 
 ## A la carte import
 
@@ -125,14 +149,15 @@ res1: Apple = Apple(honeycrisp)
 
 ## Other ways of getting Pickling
 
-If you would like to run the latest development version of scala/pickling (0.10.1-SNAPSHOT), you also need to add the Sonatype "snapshots" repository resolver to your build file:
+If you would like to run the latest development version of scala/pickling (0.10.2-SNAPSHOT), you also need to add the Sonatype "snapshots" repository resolver to your build file:
 
 ```scala
-libraryDependencies += "org.scala-lang.modules" %% "scala-pickling" % "0.10.1-SNAPSHOT"
+libraryDependencies += "org.scala-lang.modules" %% "scala-pickling" % "0.10.2-SNAPSHOT"
 
 resolvers += Resolver.sonatypeRepo("snapshots")
 ```
 
 For a more illustrative example, see a [sample sbt project which uses Scala Pickling](https://github.com/xeno-by/sbt-example-pickling).
 
-Or you can just directly download the 0.10.0 jar ([Scala 2.10](https://oss.sonatype.org/service/local/artifact/maven/redirect?r=releases&g=org.scala-lang.modules&a=scala-pickling_2.10&v=0.10.0&e=jar), [Scala 2.11](https://oss.sonatype.org/service/local/artifact/maven/redirect?r=releases&g=org.scala-lang.modules&a=scala-pickling_2.11&v=0.10.0&e=jar)).
+Or you can just directly download the 0.10.1 jar ([Scala 2.10](https://oss.sonatype.org/service/local/artifact/maven/redirect?r=releases&g=org.scala-lang.modules&a=scala-pickling_2.10&v=0.10.1&e=jar), [Scala 2.11](https://oss.sonatype.org/service/local/artifact/maven/redirect?r=releases&g=org.scala-lang.modules&a=scala-pickling_2.11&v=0.10.1&e=jar)).
+
