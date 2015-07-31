@@ -67,16 +67,24 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
         case NoSymbol => None
       }
     }
+
+    private val allMethods = tpe.declarations.collect { case meth: MethodSymbol => meth }
     // The list of all "accessor" method symbols of the class.  We filter to only these to avoid ahving too many symbols
-    private val allAccessors = tpe.declarations.collect { case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
+    //private val allAccessors = allMethods.collect { case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
     // Here we only return "accessor" methods.
     override val methods: Seq[IrMethod] = {
-      (allAccessors map { mth =>
+      (allMethods map { mth =>
         new ScalaIrMethod(mth, this)
       })(collection.breakOut)
     }
+    override def companion: Option[IrClass] = {
+      val cp = tpe.typeSymbol.asType.companionSymbol.asType.toType
+      if(cp != NoType) Some(new ScalaIrClass(cp))
+      else None
+    }
 
     override def isScala = !tpe.typeSymbol.isJava
+    override def isScalaModule: Boolean = tpe.typeSymbol.isModule || tpe.typeSymbol.isModuleClass
 
     /** True if this class is a scala case class. */
     override def isCaseClass: Boolean = classSymbol.isCaseClass
@@ -105,24 +113,30 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
     }
   }
   private class ScalaIrMethod(mthd: MethodSymbol, override val owner: IrClass) extends IrMethod {
+    override def parameterNames: List[List[String]] =
+      mthd.paramss.map(_.map(_.name.toString)) // TODO - Is this safe?
+
+    override def parameterTypes[U <: Universe with Singleton](u: U): List[List[u.Type]] = {
+      mthd.paramss.map(_.map(_.typeSignature.asInstanceOf[u.Type]))
+    }
     override def methodName: String = mthd.name.toString
     // TODO - Figure out if the method is JVM public or not.
     override def isPublic: Boolean = mthd.isPublic
     override def isStatic: Boolean = mthd.isStatic
     override def toString = s"def ${methodName}: ${mthd.typeSignature}"
     override def isVar: Boolean =
-      (mthd.getter != NoSymbol) && (mthd.setter != NoSymbol)
+      (mthd.getter != NoSymbol) && (mthd.setter != NoSymbol) &&
+        (mthd.setter != mthd) // THis is  hack so the setter doesn't show up in our list of vars.
     override def returnType[U <: Universe with Singleton](u: Universe): u.Type = mthd.returnType.asInstanceOf[u.Type]
-
+    override def setter: Option[IrMethod] = {
+      mthd.setter match {
+        case NoSymbol => None
+        case x => Some(new ScalaIrMethod(x.asMethod, owner))
+      }
+    }
   }
 
   private class ScalaIrConstructor(mthd: MethodSymbol, owner: IrClass) extends ScalaIrMethod(mthd, owner) with IrConstructor {
-    override def parameterNames: Seq[String] =
-      mthd.paramss.flatten.map(_.name.toString) // TODO - Is this safe?
-
-    override def parameterTypes[U <: Universe with Singleton](u: U): Seq[u.Type] = {
-      mthd.paramss.flatten.map(_.typeSignature.asInstanceOf[u.Type]).toSeq
-    }
 
     override def toString = s"CONSTRUCTOR ${owner.className} (${parameterNames.mkString(",")}}): ${mthd.typeSignature}"
   }

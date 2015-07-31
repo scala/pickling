@@ -42,32 +42,19 @@ case class CallConstructor(fieldNames: Seq[String], constructor: IrConstructor) 
   def requiresReflection: Boolean =
     !(constructor.isPublic)
 }
-/** This represents using a static factory method to construct a class, using a set of serialized fields.
-  *
-  *
-  * TODO - Pickled field names/types for arguments
-  */
-case class CallStaticFactory(factoryMethod: IrMethod) extends UnpicklerAst {
-  assert(factoryMethod.isStatic)
-  def requiresReflection: Boolean = !factoryMethod.isPublic
-}
 
-/** This represents grabing a singleton factory using a static method or field access, and then calling
-  * a factory method defined on this singleton.
+/** This represents grabing a scala module and calling a factory method on it.
   *
   * @param fields
   *         The fields that should be deserialized IN THE ORDER SPECIFIED.
   *               i.e. an unpickler should deserialize these fields in the same order specified here, then
   *               pass them in that same order to the constructor.
   *               TODO - This should be a singleton.
-  * @param getSingleton
-  *          The mechanism of obtaining a singleton instance to execute the factory method against.
-  *          e.g. for Scala case classes, this would be the `MODULE$` field on the companion class.
   * @param factoryMethod
   *          The method to call which will construct an instance of the class.
   */
-case class CallSingletoneFactory(fields: Seq[IrField], getSingleton: IrMember, factoryMethod: IrMethod) extends UnpicklerAst {
-  assert(getSingleton.isStatic)
+case class CallModuleFactory(fields: Seq[String], module: IrClass, factoryMethod: IrMethod) extends UnpicklerAst {
+  assert(module.isScalaModule)
   assert(!factoryMethod.isStatic)
   def requiresReflection: Boolean =
     factoryMethod.isPublic

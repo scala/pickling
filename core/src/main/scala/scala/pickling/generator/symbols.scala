@@ -25,6 +25,8 @@ trait IrClass extends IrSymbol {
   def isCaseClass: Boolean
   /** True if this class is 'final' (or cannot be extended). */
   def isFinal: Boolean
+  /** True if this is a scala "object" */
+  def isScalaModule: Boolean
 
   /** The set of known subclasses for this type.  Will return a failure if the symbol loader
     * isn't sure if the classes are closed.
@@ -32,6 +34,8 @@ trait IrClass extends IrSymbol {
   def closedSubclasses: Try[Seq[IrClass]]
   /** Return the type of this class for a given universe. */
   def tpe[U <: Universe with Singleton](u: U): u.Type
+  /** Returns the companion of this class, if known. */
+  def companion: Option[IrClass]
 }
 
 sealed trait IrInnerClass extends IrSymbol with IrClass {
@@ -53,28 +57,31 @@ sealed trait IrMember extends IrSymbol {
 trait IrField extends IrMember {
   /** The name of the field, as we'd use to lookup via reflection. */
   def fieldName: String
+  /** Return the type of the field. */
+  def tpe[U <: Universe with Singleton](u: U): u.Type
 }
 trait IrMethod extends IrMember {
-  /** The name of the method, as we'd use to lookup via reflection. */
-  def methodName: String
-  /** Returns true if this method is associated with a var. */
-  def isVar: Boolean
-  /** Returns the Scala type associated with this field. */
-  def returnType[U <: Universe with Singleton](u: Universe): u.Type
-}
-/** The symbol representing a constructor. */
-trait IrConstructor extends IrMember {
   /** The code-names of the constructor parameters.  Note: There is an algorithm which will try to
     * align the constructor parameters with getter methods by symbol name.
     *
     * We do this for case-classes.
     * @return
     */
-  def parameterNames: Seq[String]
+  def parameterNames: List[List[String]]
   /** Grabs the type of all the constructor parameters. */
-  def parameterTypes[U <: Universe with Singleton](u: U): Seq[u.Type]
+  def parameterTypes[U <: Universe with Singleton](u: U): List[List[u.Type]]
+  /** The name of the method, as we'd use to lookup via reflection. */
+  def methodName: String
+  /** Returns true if this method is associated with a var. */
+  def isVar: Boolean
+  /** Returns the Scala type associated with this field. */
   def returnType[U <: Universe with Singleton](u: Universe): u.Type
+
+  /** Returns the setter method for this `var` if one exists. */
+  def setter: Option[IrMethod]
 }
+/** The symbol representing a constructor. */
+trait IrConstructor extends IrMethod {}
 
 import scala.reflect.api.Universe
 

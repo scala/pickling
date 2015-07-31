@@ -52,32 +52,84 @@ object PicklingAlgorithm {
 object CaseClassPickling extends PicklingAlgorithm {
   case class FieldInfo(name: String, sym: IrMethod)
   case class CaseClassInfo(constructor: IrConstructor, fields: Seq[FieldInfo])
-  private def getFieldsAndContructor(tpe: IrClass, logger: AlgorithmLogger): Option[CaseClassInfo] = {
+  private def checkConstructorImpl(tpe: IrClass, logger: AlgorithmLogger): Option[PickleUnpickleImplementation] = {
     if(tpe.isCaseClass) {
       if(!tpe.isFinal) {
         logger.warn(s"Warning: ${tpe.className} is not final.  Generated unpickling code does not handle subclasses.")
       }
-      tpe.primaryConstructor map { c =>
-        val names = c.parameterNames.toSet
-        val hasStandaloneVar = tpe.methods.exists { m =>
-          m.isVar && !(names contains m.methodName)
-        }
-        if(hasStandaloneVar) {
-          logger.warn(s"Warning: ${tpe.className} has a member var not represented in the constructor.  Pickling is not guaranteed to handle this correctly.")
-        }
 
-        // Here we need to unify the fields with the constructor names.  We assume they have the same name.
-        val fields = for {
-          name <- c.parameterNames.toSeq
-          m <- tpe.methods.find(_.methodName == name)
-        } yield FieldInfo(name, m)
-        if(fields.length == c.parameterNames.length) CaseClassInfo(c, fields)
-        // TODO - what do we do if it doesn't line up?  This is probably some insidious bug.
-        else logger.abort(s"Encountered a case class (${tpe.className}) where we could not find all the constructor parameters.")
+      tpe.primaryConstructor match {
+        case Some(c) if c.isPublic =>
+          val names = c.parameterNames.flatten.toSet
+          val standAloneVars = tpe.methods.filter { m =>
+            m.isVar && !(names contains m.methodName)
+          }
+          // TODO - Allow us to DISABLE serialziing these vars.
+          // TODO - Allow us to ERROR on classes like this.
+          if(!standAloneVars.isEmpty) {
+            logger.warn(s"Warning: ${tpe.className} has a member var not represented in the constructor.  Pickling is not guaranteed to handle this correctly.")
+          }
+
+          // Here we need to unify the fields with the constructor names.  We assume they have the same name.
+          val fields = for {
+            name <- c.parameterNames.flatten.toSeq
+            m <- tpe.methods.find(_.methodName == name)
+          } yield FieldInfo(name, m)
+          if(fields.length == c.parameterNames.flatten.length) {
+            val pickle = PickleBehavior(fields.map { field =>
+              GetField(field.name, field.sym)
+            }.toSeq ++ standAloneVars.map { field =>
+              GetField(field.methodName, field)
+            })
+            val unpickle =
+              UnpickleBehavior(
+                Seq(CallConstructor(fields.map(_.name), c)) ++
+                standAloneVars.map { field =>
+                  field.setter match {
+                    case Some(mth) => SetField(field.methodName, mth)
+                    case _ => sys.error(s"Attempting to define unpickle behavior, when no setter is defined on a var: ${field}")
+                  }
+                })
+            Some(PickleUnpickleImplementation(pickle, unpickle))
+          }
+          // TODO - what do we do if it doesn't line up?  This is probably some insidious bug.
+          else logger.abort(s"Encountered a case class (${tpe.className}) where we could not find all the constructor parameters.")
+        case _ =>
+          None
       }
     } else None
   }
 
+  def checkFactoryImpl(tpe: IrClass, logger: AlgorithmLogger): Option[PickleUnpickleImplementation] = {
+    // THis should be accurate, because all case calsses have companions
+    for {
+      companion <- tpe.companion
+      factoryMethod <-tpe.methods.filter(_.methodName == "apply").sortBy(_.parameterNames.flatten.size).headOption
+    } yield {
+      val names = factoryMethod.parameterNames.flatten.toSet
+      val hasStandaloneVar = tpe.methods.exists { m =>
+        m.isVar && !(names contains m.methodName)
+      }
+      if(hasStandaloneVar) {
+        logger.warn(s"Warning: ${tpe.className} has a member var not represented in the constructor.  Pickling is not guaranteed to handle this correctly.")
+      }
+      val fieldNameList = factoryMethod.parameterNames.flatten.toSeq
+      val fields = for {
+        name <- fieldNameList
+        m <- tpe.methods.find(_.methodName == name)
+      } yield FieldInfo(name, m)
+      if(fields.length == factoryMethod.parameterNames.flatten.length) {
+        val pickle = PickleBehavior(fields.map { field =>
+          GetField(field.name, field.sym)
+        }.toSeq)
+        // TODO - Figure out how to access the module object
+        val unpickle = CallModuleFactory(fieldNameList, companion, factoryMethod)
+        PickleUnpickleImplementation(pickle, unpickle)
+      }
+      // TODO - what do we do if it doesn't line up?  This is probably some insidious bug.
+      else logger.abort(s"Encountered a case class (${tpe.className}) where we could not find all the constructor parameters.")
+    }
+  }
 
   /**
    * Attempts to construct pickling logic fora  given type.
@@ -85,13 +137,9 @@ object CaseClassPickling extends PicklingAlgorithm {
    * @return
    */
   override def generate(tpe: IrClass, logger: AlgorithmLogger): Option[PickleUnpickleImplementation] = {
-    getFieldsAndContructor(tpe, logger) map { structure =>
-      val pickle = PickleBehavior(structure.fields.map { field =>
-        GetField(field.name, field.sym)
-      }.toSeq)
-      val unpickle = CallConstructor(structure.fields.map(_.name), structure.constructor)
-      PickleUnpickleImplementation(pickle, unpickle)
-    }
+    if(tpe.isCaseClass)
+      (checkConstructorImpl(tpe, logger) orElse checkFactoryImpl(tpe, logger))
+    else None
   }
 }
 

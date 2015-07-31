@@ -35,8 +35,11 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
 
       x.getter match {
         case x: IrField =>
-        // TODO - handle
+          // TODO - handle
           sys.error(s"non-method access not handled currently, trying to obtain field $x from ${x.owner}")
+        case _: IrConstructor =>
+          // This is a logic erorr
+          sys.error(s"Pickling logic error.  Found constructor when trying to pickle field ${x.name}.")
         case y: IrMethod =>
           val staticallyElided = {
             // TODO - Figure this out
@@ -48,9 +51,6 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
             val result = reflectively(newTermName("picklee"), y)(fm => putField(q"${fm}.get.asInstanceOf[${y.returnType(u).asInstanceOf[c.Type]}]", staticallyElided))
             q"""..$result"""
           }
-        case _: IrConstructor =>
-          // This is a logic erorr
-          sys.error(s"Pickling logic error.  Found constructor when trying to pickle field ${x.name}.")
       }
     }
     def genSubclassDispatch(x: SubclassDispatch): c.Tree = {
@@ -166,17 +166,72 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
 
 
   def genConstructorUnpickle(cons: CallConstructor): c.Tree = {
-    val args = (cons.fieldNames zip cons.constructor.parameterTypes[c.universe.type](c.universe)).map {
-      case (name, tpe) => readField(name, tpe)
-    }.toList
+    // Note, this is a bit ugly.
+    var idx = 0
+    val names = cons.fieldNames
+    val tpess = cons.constructor.parameterTypes[c.universe.type](c.universe)
+    val argss =
+      tpess map { tpes =>
+         tpes map { tpe =>
+           val name = names(idx)
+           idx += 1
+           readField(name, tpe)
+         }
+      }
     val tpe = cons.constructor.returnType[c.universe.type](c.universe)
     // TODO - Handle reflective case.
     if(cons.requiresReflection) sys.error(s"Unable to reflectively call constructors, currently.")
     else {
       if(cons.constructor.parameterNames.isEmpty) q"""new ${tpe}"""
       else {
-        q"new $tpe(...$args)"
+        q"new $tpe(...$argss)"
       }
+    }
+  }
+  def genCallModuleFactory(cons: CallModuleFactory): c.Tree = {
+    // Note, this is a bit ugly.
+    var idx = 0
+    val names = cons.fields
+    val tpess = cons.factoryMethod.parameterTypes[c.universe.type](c.universe)
+    val argss =
+      tpess map { tpes =>
+        tpes map { tpe =>
+          val name = names(idx)
+          idx += 1
+          readField(name, tpe)
+        }
+      }
+    val tpe = cons.factoryMethod.returnType[c.universe.type](c.universe)
+    // TODO - Handle reflective case.
+    val result = if(cons.requiresReflection) sys.error(s"Unable to reflectively call factory methods, currently.")
+    else {
+      if(cons.factoryMethod.parameterNames.isEmpty) q"${tpe}.${newTermName(cons.factoryMethod.methodName)}()"
+      else {
+        q"${tpe}.${newTermName(cons.factoryMethod.methodName)}(...$argss)"
+      }
+    }
+    result
+  }
+
+  /** Creates a `set` operation that reads a value from the pickle and writes it into the object.
+    *
+    * Note: This assumes there exists a `result` name in scope which is the currently instantiated unpickle object.
+    */
+  def genSetField(s: SetField): c.Tree = {
+    s.setter match {
+      case x: IrMethod =>
+        x.parameterTypes[c.universe.type ](c.universe) match {
+          case List(List(tpe)) =>
+            val read = readField(s.name, tpe)
+            if(x.isPublic) {
+              q"""
+                 result.${newTermName(x.methodName)}($read)
+               """
+            } else sys.error(s"Cannot call private/reflection-based properties yet") // TODO - Implement reflection
+          case x => sys.error(s"Cannot handle a setting method that does not take exactly one parameter, found parameters: $x!")
+        }
+
+      case x: IrField => ???
     }
 
   }
@@ -184,12 +239,17 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
   def generateUnpickleImplFromAst(unpicklerAst: UnpicklerAst): c.Tree = {
     unpicklerAst match {
       case c: CallConstructor => genConstructorUnpickle(c)
-      case x: CallSingletoneFactory => ???
-      case x: CallStaticFactory => ???
-      case x: SetField => ???
+      case c: CallModuleFactory => genCallModuleFactory(c)
+      case x: SetField => genSetField(x)
       case x: UnpickleBehavior =>
         val behavior = x.operations.map(generateUnpickleImplFromAst).toList
-        q"..$behavior"
+        behavior match {
+          case List() => q"null"
+          case List(head) => head
+            // TODO - Can we assume that ever additional operation is something which manipualtes the result?
+          case hd :: tail =>
+            q"""_root_.scala.Predef.locally { val result = $hd; ..$tail; result }"""
+        }
     }
   }
 

@@ -350,7 +350,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
         $picklerName
       }
     """
-    System.err.println(result)
+    //System.err.println(result)
     result
   }
 
@@ -676,7 +676,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
       }
       $unpicklerName
     """
-    System.err.println(result)
+    //System.err.println(result)
     result
   }
 }
