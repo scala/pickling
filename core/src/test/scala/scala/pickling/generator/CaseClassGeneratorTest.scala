@@ -47,12 +47,47 @@ class CaseClassGeneratorTest extends FunSuite {
     assert(x == y)
     assert(x.y == y.y)
   }
+
+  test("nestedCaseClass") {
+    val outer = new NestedCaseClassHolder()
+    val x = outer.NestedCaseClass(5)
+    val y = x.pickle.unpickle[outer.NestedCaseClass]
+    assert(x == y)
+  }
+  test("nestedValCaseClass") {
+    val x = NestedValCaseClass(5)
+    val y = x.pickle.unpickle[NestedValCaseClass]
+    assert(x == y)
+  }
+  test("protectedMember") {
+    val x = ProtectedMemberCaseClass(5, "hi")
+    val y = x.pickle.unpickle[ProtectedMemberCaseClass]
+    assert(x == y)
+  }
+  test("privateMember") {
+    val x = PrivateMemberCaseClass(5, "hi")
+    val y = x.pickle.unpickle[PrivateMemberCaseClass]
+    assert(x == y)
+  }
 }
 
 
 final case class CaseClassNoConstructor()
 final case class SimpleCaseClass(x: Int, y: String)
-final case class PrivateConstructorCaseClass private (x: Int, y: String) {}
 final case class MultipleParamListCaseClass(x: Int)(val y: String)
-// TODO - Should we persist the y or not?
 final case class NestedVarCaseClass(x: Int) { var y: Int = 0 }
+final class NestedCaseClassHolder {
+  final case class NestedCaseClass(x: Int)
+  object NestedCaseClass {
+    import scala.pickling.Defaults._
+    implicit val p = scala.pickling.functions.testNewThing2[NestedCaseClass]
+  }
+}
+case class NestedValCaseClass(x: Int) {
+  val y = "Hi"
+}
+case class ProtectedMemberCaseClass(x: Int, protected val y: String)
+case class PrivateMemberCaseClass(x: Int, private val y: String)
+// TODOs
+
+final case class PrivateConstructorCaseClass private (x: Int, y: String) {}

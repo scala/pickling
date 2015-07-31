@@ -32,9 +32,6 @@ sealed trait UnpicklerAst extends IrAst
 
 /** This represents the pickling library calling the constructor of a class using a set of serialized fields.
   *
-  *
-  * TODO - pickled field names/types
-  *
   * @param constructor
   *               The method symbol for which constructor to call.
   */
@@ -49,9 +46,8 @@ case class CallConstructor(fieldNames: Seq[String], constructor: IrConstructor) 
   *         The fields that should be deserialized IN THE ORDER SPECIFIED.
   *               i.e. an unpickler should deserialize these fields in the same order specified here, then
   *               pass them in that same order to the constructor.
-  *               TODO - This should be a singleton.
   * @param factoryMethod
-  *          The method to call which will construct an instance of the class.
+  *          The method to call which will construct an instance of the class.  This must be defined on a Scala module.
   */
 case class CallModuleFactory(fields: Seq[String], module: IrClass, factoryMethod: IrMethod) extends UnpicklerAst {
   assert(module.isScalaModule)
