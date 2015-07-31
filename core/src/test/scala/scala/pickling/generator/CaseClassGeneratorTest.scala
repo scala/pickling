@@ -55,16 +55,19 @@ class CaseClassGeneratorTest extends FunSuite {
     assert(x == y)
   }
   test("nestedValCaseClass") {
+    implicit val pu = scala.pickling.functions.testNewThing2[NestedValCaseClass]
     val x = NestedValCaseClass(5)
     val y = x.pickle.unpickle[NestedValCaseClass]
     assert(x == y)
   }
   test("protectedMember") {
+    implicit val pu = scala.pickling.functions.testNewThing2[ProtectedMemberCaseClass]
     val x = ProtectedMemberCaseClass(5, "hi")
     val y = x.pickle.unpickle[ProtectedMemberCaseClass]
     assert(x == y)
   }
   test("privateMember") {
+    implicit val pu = scala.pickling.functions.testNewThing2[PrivateMemberCaseClass ]
     val x = PrivateMemberCaseClass(5, "hi")
     val y = x.pickle.unpickle[PrivateMemberCaseClass]
     assert(x == y)
