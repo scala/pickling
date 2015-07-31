@@ -48,11 +48,51 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
           }
           if(y.isPublic) putField(q"picklee.${newTermName(y.methodName)}", staticallyElided)
           else {
-            val result = reflectively(newTermName("picklee"), y)(fm => putField(q"${fm}.get.asInstanceOf[${y.returnType(u).asInstanceOf[c.Type]}]", staticallyElided))
+            val result = reflectivelyGet(newTermName("picklee"), y)(fm => putField(q"${fm}.asInstanceOf[${y.returnType(u).asInstanceOf[c.Type]}]", staticallyElided))
             q"""..$result"""
           }
       }
     }
+
+    def reflectivelyGet(target: TermName, value: IrMember)(body: c.Tree => c.Tree): List[c.Tree] = {
+      // TODO - Should we use scala reflection?
+      // TODO - Should we trap errors and return better error messages?
+      // TODO - We should attempt to SAVE the reflective methods/fields somewhere so we aren't
+      //        looking them up all the time.
+      val valueTree =
+        value match {
+          case field: IrField =>
+            q"""
+              _root_.scala.Predef.locally {
+               val field = $target.getClass.getDeclaredField(${field.fieldName})
+               field.setAccesible(true)
+               field.get($target)
+             }"""
+          // Private scala methods may not encode normally for case classes.  This is a hack which goes after the field.
+          // TODO - We should update this to look for the accessor method which scala generally exposes for the deconstructor.
+          case mthd: IrMethod if mthd.isScala && mthd.isPrivate =>
+            val fieldName = "$$" + mthd.javaReflectionName
+            q"""
+              _root_.scala.Predef.locally {
+               $target.getClass.getDeclaredFields().find(_.getName endsWith $fieldName) match {
+                 case Some(field) =>
+                   field.setAccessible(true)
+                   field.get($target)
+                 case None => _root_.scala.sys.error("Failed to reflectively find field: " + ${mthd.javaReflectionName})
+               }
+
+             }"""
+          case mthd: IrMethod =>
+            q"""_root_.scala.Predef.locally {
+                  val mthd = $target.getClass.getDeclaredMethod(${mthd.javaReflectionName})
+                  mthd.setAccessible(true)
+                  mthd.invoke($target)
+               }
+             """
+        }
+        List(body(valueTree))
+    }
+
     def genSubclassDispatch(x: SubclassDispatch): c.Tree = {
       val tpe = x.parent.tpe[c.universe.type](c.universe)
       val clazzName = newTermName("clazz")
@@ -324,8 +364,6 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
   }
 
 
-  def reflectively(target: TermName, value: IrMember)(body: c.Tree => c.Tree): List[c.Tree] =
-    sys.error("Reflective usage not implemented yet.")
 
 
   def computeType[T: c.WeakTypeTag]: Type = {

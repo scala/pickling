@@ -119,10 +119,19 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
     override def parameterTypes[U <: Universe with Singleton](u: U): List[List[u.Type]] = {
       mthd.paramss.map(_.map(_.typeSignature.asInstanceOf[u.Type]))
     }
+    // TODO - We need to get the actual jvm name here.
     override def methodName: String = mthd.name.toString
+    override def javaReflectionName: String = {
+      mthd match {
+        case TermName(n) => n
+        case _ => mthd.name.toString
+      }
+    }
     // TODO - Figure out if the method is JVM public or not.
     override def isPublic: Boolean = mthd.isPublic
     override def isStatic: Boolean = mthd.isStatic
+    override def isPrivate: Boolean = mthd.isPrivate
+    override def isScala: Boolean = !mthd.isJava
     override def toString = s"def ${methodName}: ${mthd.typeSignature}"
     override def isVar: Boolean =
       (mthd.getter != NoSymbol) && (mthd.setter != NoSymbol) &&

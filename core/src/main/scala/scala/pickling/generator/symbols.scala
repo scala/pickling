@@ -51,6 +51,10 @@ sealed trait IrMember extends IrSymbol {
   def isStatic: Boolean
   /** Returns true if the given member is publicly accessible. */
   def isPublic: Boolean
+  /** Returns true if the given member is marked as private. */
+  def isPrivate: Boolean
+  /** Returns true if this member is a scala-symbol (i.e. we make take knowledge of scala-jvm-encoding. */
+  def isScala: Boolean
   // TODO - Signatures
 
 }
@@ -79,6 +83,8 @@ trait IrMethod extends IrMember {
 
   /** Returns the setter method for this `var` if one exists. */
   def setter: Option[IrMethod]
+  /** The name we should use for java reflection. */
+  def javaReflectionName: String
 }
 /** The symbol representing a constructor. */
 trait IrConstructor extends IrMethod {}
