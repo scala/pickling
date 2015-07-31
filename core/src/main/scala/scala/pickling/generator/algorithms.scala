@@ -157,6 +157,7 @@ object AdtPickling extends PicklingAlgorithm {
         logger.warn(s"Failed to create ADT pickler = $msgs")
         None
       case scala.util.Success(subclasses) =>
+        // TODO - Should we check if we need to also serialize our own state, or delegate that to a different algorithm?
         // TODO - Should we allow dynamic dispatch here?
         val pickle = PickleBehavior(Seq(SubclassDispatch(subclasses, tpe)))
         // TODO - Figure out unpickler
@@ -165,10 +166,8 @@ object AdtPickling extends PicklingAlgorithm {
     }
   }
 }
-
+// TODO - Scala singleton object serializer
 // TODO - Java Serializable Serializer
 // TODO - Java Bean serializer
-// TODO - Scala singleton object serializer
-
 // TODO - Crazy-Avro-like-serializer
 

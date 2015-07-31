@@ -66,6 +66,7 @@ class CaseClassGeneratorTest extends FunSuite {
     val y = x.pickle.unpickle[ProtectedMemberCaseClass]
     assert(x == y)
   }
+  // NOTE: Old pickling aglorithm fails on this case
   test("privateMember") {
     implicit val pu = scala.pickling.functions.testNewThing2[PrivateMemberCaseClass ]
     val x = PrivateMemberCaseClass(5, "hi")
@@ -77,6 +78,12 @@ class CaseClassGeneratorTest extends FunSuite {
     val x = NestedPrivateVarCaseClass(1)
     val y = x.pickle.unpickle[NestedPrivateVarCaseClass]
     assert(x == y)
+  }
+  test("nestedPrivateThisVar") {
+    implicit val pu = scala.pickling.functions.testNewThing2[NestedPrivateThisCaseClass]
+    val x = NestedPrivateThisCaseClass(1)
+    val y = x.pickle.unpickle[NestedPrivateThisCaseClass]
+    assert(x.toString == y.toString)
   }
 }
 
@@ -120,6 +127,19 @@ final case class NestedPrivateVarCaseClass(x: Int) {
   override def toString = s"NestedPrivateVarCaseClass($x) { var y = $y }"
 }
 object NestedPrivateVarCaseClass {
+  private var globalY = 1
+  private def nextY = {
+    globalY += 1
+    globalY
+  }
+}
+
+// Case 11 - nested private[this]
+final case class NestedPrivateThisCaseClass(x: Int) {
+  private[this] val y = NestedPrivateThisCaseClass.globalY
+  override def toString = s"NestedPrivateThisCaseClass($x) { var y = $y }"
+}
+object NestedPrivateThisCaseClass {
   private var globalY = 1
   private def nextY = {
     globalY += 1
