@@ -72,13 +72,23 @@ class CaseClassGeneratorTest extends FunSuite {
     val y = x.pickle.unpickle[PrivateMemberCaseClass]
     assert(x == y)
   }
+  test("nestedPrivateVal") {
+    implicit val pu = scala.pickling.functions.testNewThing2[NestedPrivateVarCaseClass]
+    val x = NestedPrivateVarCaseClass(1)
+    val y = x.pickle.unpickle[NestedPrivateVarCaseClass]
+    assert(x == y)
+  }
 }
 
-
+// Case 1 - empty
 final case class CaseClassNoConstructor()
+// Case 2 - simple
 final case class SimpleCaseClass(x: Int, y: String)
+// Case 3 - varags
 final case class MultipleParamListCaseClass(x: Int)(val y: String)
+// Case 4 - Nested public var
 final case class NestedVarCaseClass(x: Int) { var y: Int = 0 }
+// Case 5 - Embedded in class
 final class NestedCaseClassHolder {
   final case class NestedCaseClass(x: Int)
   object NestedCaseClass {
@@ -86,11 +96,33 @@ final class NestedCaseClassHolder {
     implicit val p = scala.pickling.functions.testNewThing2[NestedCaseClass]
   }
 }
+// Case 6 - Nested public val
 case class NestedValCaseClass(x: Int) {
   val y = "Hi"
 }
+// Case 7 - protected val
 case class ProtectedMemberCaseClass(x: Int, protected val y: String)
+// Case 8 - private val
 case class PrivateMemberCaseClass(x: Int, private val y: String)
-// TODOs
 
+// Case 9 - private cosntructor (SCALA BUG PREVENTS THIS FROM COMPILING)
 final case class PrivateConstructorCaseClass private (x: Int, y: String) {}
+
+// Case 10 - nested private var
+final case class NestedPrivateVarCaseClass(x: Int) {
+  private var y = NestedPrivateVarCaseClass.globalY
+  override def equals(x: Any): Boolean =
+    x match {
+      case null => false
+      case x: NestedPrivateVarCaseClass => (x.y == y) && (x.x == x.x)
+      case _ => false
+    }
+  override def toString = s"NestedPrivateVarCaseClass($x) { var y = $y }"
+}
+object NestedPrivateVarCaseClass {
+  private var globalY = 1
+  private def nextY = {
+    globalY += 1
+    globalY
+  }
+}

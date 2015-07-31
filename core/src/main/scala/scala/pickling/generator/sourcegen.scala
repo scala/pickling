@@ -71,19 +71,24 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
           // Private scala methods may not encode normally for case classes.  This is a hack which goes after the field.
           // TODO - We should update this to look for the accessor method which scala generally exposes for the deconstructor.
           case mthd: IrMethod if mthd.isScala && mthd.isPrivate =>
-            val fieldName = "$$" + mthd.javaReflectionName
+            val fieldName = mthd.javaReflectionName
+            // TODO - Check return type of method.
             q"""
               _root_.scala.Predef.locally {
-               $target.getClass.getDeclaredFields().find(_.getName endsWith $fieldName) match {
-                 case Some(field) =>
-                   field.setAccessible(true)
-                   field.get($target)
-                 case None => _root_.scala.sys.error("Failed to reflectively find field: " + ${mthd.javaReflectionName})
+               $target.getClass.getDeclaredMethods().find { m =>
+                 (m.getName endsWith $fieldName) && (m.getParameterTypes.length == 0)
+               } match {
+                 // TODO - make sure mthd has no arguments
+                 case Some(mthd)  =>
+                   mthd.setAccessible(true)
+                   mthd.invoke($target)
+                 case None => _root_.scala.sys.error("Failed to reflectively find method: " + ${mthd.javaReflectionName})
                }
 
              }"""
           case mthd: IrMethod =>
             q"""_root_.scala.Predef.locally {
+                  // TODO - make sure method has no arguments.
                   val mthd = $target.getClass.getDeclaredMethod(${mthd.javaReflectionName})
                   mthd.setAccessible(true)
                   mthd.invoke($target)
@@ -189,6 +194,8 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     // TODO - is this the right place to do this?
     val staticHint       = if (tpe.isEffectivelyFinal) q"$readerName.hintStaticallyElidedType()" else q"";
     val unpicklerName    = c.fresh(newTermName("unpickler$unpickle$"))
+    val resultName = c.fresh(newTermName("result"))
+    // TODO - may be able to drop locally.
       q"""
          _root_.scala.Predef.locally {
            val $readerName = reader.readField($name)
@@ -197,9 +204,9 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
            $readerName.hintTag($unpicklerName.tag)
            $staticHint
            val typeString = $readerName.beginEntry()
-           val result = $unpicklerName.unpickle(typeString, $readerName)
+           val $resultName = $unpicklerName.unpickle(typeString, $readerName)
            $readerName.endEntry()
-           result.asInstanceOf[$tpe]
+           $resultName.asInstanceOf[$tpe]
          }
        """
   }
@@ -267,12 +274,66 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
               q"""
                  result.${newTermName(x.methodName)}($read)
                """
-            } else sys.error(s"Cannot call private/reflection-based properties yet") // TODO - Implement reflection
-          case x => sys.error(s"Cannot handle a setting method that does not take exactly one parameter, found parameters: $x!")
+            } else reflectivelySet(newTermName("result"), x, read)
+          case x => sys.error(s"Cannot handle a setting method that does not take exactly one parameter, found parameters: $x")
         }
 
-      case x: IrField => ???
+      case x: IrField => sys.error(s"Unpickling to fields is not supported yet.")
     }
+
+  }
+
+  val ShortType = typeOf[Short]
+  val CharType = typeOf[Char]
+  val IntType = typeOf[Int]
+  val LongType = typeOf[Long]
+  val FloatType = typeOf[Float]
+  val DoubleType = typeOf[Double]
+  val BooleanType = typeOf[Boolean]
+  /** This will lift any primitive value into  the java-boxed version (usefulf or reflective code.) */
+  def liftPrimitives(value: c.Tree, tpe: Type): c.Tree = {
+    tpe match {
+      case ShortType => q"new _root_.java.lang.Short($value)"
+      case CharType => q"new _root_.java.lang.Character($value)"
+      case IntType => q"new _root_.java.lang.Integer($value)"
+      case LongType => q"new _root_.java.lang.Long($value)"
+      case FloatType => q"new _root_.java.lang.Float($value)"
+      case DoubleType => q"new _root_.java.lang.Double($value)"
+      case BooleanType => q"new _root_.java.lang.Boolean($value)"
+      case _ => value
+    }
+  }
+
+  def reflectivelySet(target: TermName, setter: IrMember, value: c.Tree): c.Tree = {
+    // TODO - Should we use scala reflection?
+    // TODO - Should we trap errors and return better error messages?
+    // TODO - We should attempt to SAVE the reflective methods/fields somewhere so we aren't
+    //        looking them up all the time.
+      setter match {
+        case field: IrField =>
+          val fieldTerm = c.fresh(newTermName("field"))
+          q"""
+               val $fieldTerm = $target.getClass.getDeclaredField(${field.fieldName})
+               $fieldTerm.setAccesible(true)
+               $fieldTerm.set($target, ${liftPrimitives(value, field.tpe[c.universe.type](c.universe))})
+          """
+        case mthd: IrMethod =>
+          val methodTerm = c.fresh(newTermName("mthd"))
+          val valueTerm = c.fresh(newTermName("value"))
+          // TODO - We should ensure types align.
+          val List(List(tpe)) = mthd.parameterTypes[c.universe.type](c.universe)
+          q"""$target.getClass.getDeclaredMethods.find { m =>
+                (m.getName ==${mthd.javaReflectionName}) && (m.getParameterTypes.length == 1)
+              } match {
+                case Some(mthd) =>
+                  val $valueTerm = ${liftPrimitives(value, tpe)}
+                  mthd.setAccessible(true)
+                  mthd.invoke($target, $valueTerm)
+                case None =>
+                  _root_.scala.sys.error("Could not find setter method: " + ${mthd.javaReflectionName})
+             }
+             """
+      }
 
   }
 
@@ -319,11 +380,11 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     val unpickleLogic = genUnpicklerLogic[T](unpicklerAst)
     q"""
        _root_.scala.Predef.locally {
-          implicit object $unpicklerName extends  _root_.scala.pickling.Unpickler[Foo] with _root_.scala.pickling.Generated {
+          implicit object $unpicklerName extends  _root_.scala.pickling.Unpickler[$tpe] with _root_.scala.pickling.Generated {
             def unpickle(tagKey: _root_.java.lang.String, reader: _root_.scala.pickling.PReader): _root_.scala.Any = $unpickleLogic
             def tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
           }
-          $unpicklerName
+          $unpicklerName : _root_.scala.pickling.Unpickler[$tpe]
        }
      """
   }
@@ -342,7 +403,7 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
             override def unpickle(tagKey: _root_.java.lang.String, reader: _root_.scala.pickling.PReader): _root_.scala.Any = $unpickleLogic
             override def tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
           }
-          $name
+          $name : _root_.scala.pickling.AbstractPicklerUnpickler[$tpe]
        }
      """
   }
