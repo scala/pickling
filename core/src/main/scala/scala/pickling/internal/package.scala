@@ -1,5 +1,7 @@
 package scala.pickling
 
+import java.util.concurrent.atomic.AtomicReference
+
 import scala.language.experimental.macros
 import scala.language.reflectiveCalls
 
@@ -13,6 +15,13 @@ package object internal {
   import ru._
   import compat._
 
+  private[this] var currentRuntimeVar = new AtomicReference[spi.PicklingRuntime](new DefaultRuntime())
+  def currentRuntime: spi.PicklingRuntime = currentRuntimeVar.get
+  // Here we inject a new runtime for usage.
+  def replaceRuntime(r: spi.PicklingRuntime): Unit = {
+    currentRuntimeVar.lazySet(r)
+  }
+
   /* Global reflection lock.
    * It is used to avoid data races that typically lead to runtime exceptions
    * when using (Scala) runtime reflection on Scala 2.10.x.
@@ -20,7 +29,7 @@ package object internal {
    * Note: visibility must be public, so that the lock can be accessed from
    *       macro-generated code.
    */
-  val GRL = new java.util.concurrent.locks.ReentrantLock
+  def GRL = currentRuntime.GRL
 
   // TOGGLE DEBUGGING
   private val debugEnabled: Boolean = System.getProperty("pickling.debug", "false").toBoolean
@@ -34,9 +43,7 @@ package object internal {
     def isNotNullable = sym.isClass && (sym.asClass.isPrimitive || sym.asClass.isDerivedValueClass)
     def isNullable = sym.isClass && !isNotNullable
   }
-
-  var cachedMirror: ru.Mirror = null
-  def currentMirror: ru.Mirror = macro Compat.CurrentMirrorMacro_impl
+  def currentMirror: ru.Mirror = currentRuntime.currentMirror
 
   private[pickling] def typeToString(tpe: Type): String = tpe.key
 
@@ -95,111 +102,13 @@ package object internal {
 
 
   // ----- utilities for managing object identity -----
-  private val pickleesTL = new ThreadLocal[IdentityHashMap[AnyRef, Integer]] {
-    override def initialValue() = new IdentityHashMap[AnyRef, Integer]()
-  }
-  private val nextPickleeTL = new ThreadLocal[Int] {
-    override def initialValue() = 0
-  }
+  // TODO - deprecated all of these
+  def lookupPicklee(picklee: Any): Int = currentRuntime.refRegistry.pickle.registerPicklee(picklee)
+  def registerPicklee(picklee: Any) = currentRuntime.refRegistry.pickle.registerPicklee(picklee)
+  def clearPicklees() = currentRuntime.refRegistry.pickle.clear()
+  def lookupUnpicklee(index: Int): Any = currentRuntime.refRegistry.unpickle.lookupUnpicklee(index)
+  def preregisterUnpicklee() = currentRuntime.refRegistry.unpickle.preregisterUnpicklee()
+  def registerUnpicklee(unpicklee: Any, index: Int) = currentRuntime.refRegistry.unpickle.regsiterUnpicklee(index, unpicklee)
 
-  def lookupPicklee(picklee: Any): Int = {
-    val anyRefPicklee = picklee.asInstanceOf[AnyRef]
-    // check if `anyRefPicklee` is already in the map.
-    // if so, obtain its index, else insert at index `nextPicklee`.
-    val picklees = pickleesTL.get()
-    if (picklees.containsKey(anyRefPicklee)) {
-      picklees.get(anyRefPicklee).intValue
-    } else {
-      val nextPicklee = nextPickleeTL.get()
-      picklees.put(anyRefPicklee, new Integer(nextPicklee))
-      nextPickleeTL.set(nextPicklee + 1)
-      -1
-    }
-  }
-
-  def registerPicklee(picklee: Any) = {
-    var nextPicklee = nextPickleeTL.get()
-    val picklees = pickleesTL.get()
-
-    val index = nextPicklee
-    picklees.put(picklee.asInstanceOf[AnyRef], new Integer(index))
-
-    // println(s"registerPicklee($picklee, $index)")
-    nextPicklee += 1
-    nextPickleeTL.set(nextPicklee)
-    pickleesTL.set(picklees)
-    index
-  }
-
-  def clearPicklees() = {
-    var nextPicklee = nextPickleeTL.get()
-    val picklees = pickleesTL.get()
-
-    picklees.clear()
-    nextPicklee = 0
-
-    nextPickleeTL.set(nextPicklee)
-    pickleesTL.set(picklees)
-  }
-
-  private val unpickleesTL = new ThreadLocal[Array[Any]] {
-    override def initialValue() = new Array[Any](65536)
-  }
-  private val nextUnpickleeTL = new ThreadLocal[Int] {
-    override def initialValue() = 0
-  }
-
-  def lookupUnpicklee(index: Int): Any = {
-    val nextUnpicklee = nextUnpickleeTL.get()
-    val unpicklees = unpickleesTL.get()
-
-    // println(s"lookupUnpicklee($index)")
-    if (index >= nextUnpicklee) throw PicklingException(s"fatal error: invalid index $index in unpicklee cache of length $nextUnpicklee")
-    val result = unpicklees(index)
-    if (result == null) throw new Error(s"fatal error: unpicklee cache is corrupted at $index")
-    result
-  }
-
-  def preregisterUnpicklee() = {
-    val nextUnpicklee = nextUnpickleeTL.get()
-    val index = nextUnpicklee
-
-    val unpicklees = unpickleesTL.get()
-
-    val len = unpicklees.length
-    val target = if (index == len) {
-      val newArr = Array.ofDim[Any](len * 2)
-      System.arraycopy(unpicklees, 0, newArr, 0, len)
-      unpickleesTL.set(newArr)
-      newArr
-    } else
-      unpicklees
-    target(index) = null
-
-    // println(s"preregisterUnpicklee() at $index")
-    nextUnpickleeTL.set(nextUnpicklee + 1)
-    index
-  }
-
-  def registerUnpicklee(unpicklee: Any, index: Int) = {
-    val unpicklees = unpickleesTL.get()
-
-    // println(s"registerUnpicklee($unpicklee, $index)")
-    unpicklees(index) = unpicklee
-    unpickleesTL.set(unpicklees)
-  }
-
-  def clearUnpicklees() = {
-    var nextUnpicklee = nextUnpickleeTL.get()
-    val unpicklees = unpickleesTL.get()
-
-    var i = 0
-    while (i < nextUnpicklee) {
-      unpicklees(i) = null
-      i += 1
-    }
-    nextUnpicklee = 0
-    nextUnpickleeTL.set(nextUnpicklee)
-    unpickleesTL.set(unpicklees)
-  }
+  def clearUnpicklees() = currentRuntime.refRegistry.unpickle.clear()
 }

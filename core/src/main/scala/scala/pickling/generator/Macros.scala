@@ -2,11 +2,17 @@ package scala.pickling
 package generator
 
 
-trait PicklingMacros extends Macro with SourceGenerator {
+trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
   import c.universe._
   val symbols = new IrScalaSymbols[c.universe.type, c.type](c.universe, tools)
-  // TODO - create this based on the context. If user doesn't want reflection, disable it.
-  val generator = PicklingAlgorithm.create(Seq(new CaseClassPickling(allowReflection = true), AdtPickling))
+  // TODO - We should have more customization than "isStaticOnly"
+  val generator =
+    if(isStaticOnly) {
+      PicklingAlgorithm.create(Seq(new CaseClassPickling(allowReflection = false), AdtPickling))
+    } else {
+      PicklingAlgorithm.create(Seq(new CaseClassPickling(allowReflection = true), AdtPickling))
+    }
+
   object logger extends AlgorithmLogger {
     def warn(msg: String): Unit = c.warning(c.enclosingPosition, msg)
     def debug(msg: String): Unit =

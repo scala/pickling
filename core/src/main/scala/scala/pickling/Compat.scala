@@ -56,12 +56,6 @@ object Compat {
     c.Expr[DPickler[T]](bundle.dpicklerImpl[T])
   }
 
-  def CurrentMirrorMacro_impl(c: Context): c.Expr[ru.Mirror] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with CurrentMirrorMacro
-    c.Expr[ru.Mirror](bundle.impl)
-  }
-
   def FastTypeTagMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[FastTypeTag[T]] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with FastTypeTagMacros

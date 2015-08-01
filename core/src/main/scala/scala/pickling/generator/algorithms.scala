@@ -90,11 +90,6 @@ class CaseClassPickling(val allowReflection: Boolean) extends PicklingAlgorithm 
   case class CaseClassInfo(constructor: IrConstructor, fields: Seq[FieldInfo])
   private def checkConstructorImpl(tpe: IrClass, logger: AlgorithmLogger): AlgorithmResult = {
     if(tpe.isCaseClass) {
-      if(!tpe.isFinal) {
-        // TODO - Make this fatal or handle it...
-        logger.warn(s"Warning: ${tpe.className} is not final.  Generated unpickling code does not handle subclasses.")
-      }
-
       tpe.primaryConstructor match {
         case Some(c) if c.isPublic =>
           val names = c.parameterNames.flatten.toSet
@@ -194,9 +189,15 @@ class CaseClassPickling(val allowReflection: Boolean) extends PicklingAlgorithm 
    * @return
    */
   override def generate(tpe: IrClass, logger: AlgorithmLogger): AlgorithmResult = {
-    if(tpe.isCaseClass)
+    if(tpe.isCaseClass) {
+      // TODO - Make this fatal or handle it...  If we want to handle it, we need to wrap our implementations for the
+      //        case class with "check for subclass" guards.  We should also check to see if we *know* the
+      //        possible subclasses or not.
+      if(!tpe.isFinal) {
+        logger.warn(s"Warning: ${tpe.className} is not final.  Generated unpickling code does not handle subclasses.")
+      }
       (checkConstructorImpl(tpe, logger) join checkFactoryImpl(tpe, logger))
-    else AlgorithmFailure(s"Cannot use case-class algorithm on non-case class $tpe")
+    } else AlgorithmFailure(s"Cannot use case-class algorithm on non-case class $tpe")
   }
 }
 
@@ -228,5 +229,5 @@ object AdtPickling extends PicklingAlgorithm {
 // TODO - Scala singleton object serializer
 // TODO - Java Serializable Serializer
 // TODO - Java Bean serializer
-// TODO - Crazy-Avro-like-serializer
+// TODO - Crazy-Kryo-like-serializer
 
