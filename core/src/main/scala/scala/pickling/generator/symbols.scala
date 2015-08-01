@@ -21,6 +21,10 @@ trait IrClass extends IrSymbol {
   def methods: Seq[IrMethod]
   /** True if this class is defined in Scala. */
   def isScala: Boolean
+  /** True if this class is a trait. */
+  def isTrait: Boolean
+  /** True if this is an abstract class/interface/trait. */
+  def isAbstract: Boolean
   /** True if this class is a scala case class. */
   def isCaseClass: Boolean
   /** True if this class is 'final' (or cannot be extended). */

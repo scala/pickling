@@ -59,6 +59,8 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
     private def classSymbol = tpe.typeSymbol.asClass
     /** The class name represented by this symbol. */
     override def className: String = classSymbol.fullName
+    override def isTrait: Boolean = classSymbol.isTrait
+    override def isAbstract: Boolean = classSymbol.isAbstract
     override def primaryConstructor: Option[IrConstructor] = {
       tpe.declaration(nme.CONSTRUCTOR) match {
         // NOTE: primary ctor is always the first in the list
@@ -78,9 +80,15 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
       })(collection.breakOut)
     }
     override def companion: Option[IrClass] = {
-      val cp = tpe.typeSymbol.asType.companionSymbol.asType.toType
-      if(cp != NoType) Some(new ScalaIrClass(cp))
-      else None
+      if(tpe.typeSymbol.isType) {
+        val tmp = tpe.typeSymbol.asType.companionSymbol
+        if(tmp.isType) {
+          val cp = tmp.asType.toType
+          if (cp != NoType) Some(new ScalaIrClass(cp))
+          else None
+        }
+        else None
+      } else None
     }
 
     override def isScala = !tpe.typeSymbol.isJava
@@ -110,7 +118,8 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
           scala.util.Failure(new UnclosedSubclassesException(errors))
       }
     }
-    override def toString = s"IrClass<$tpe>"
+    // TODO - use tpe.key implicit from helpers to get a consistent tag key here.
+    override def toString = s"$tpe"
   }
   private class ScalaIrMethod(mthd: MethodSymbol, override val owner: IrClass) extends IrMethod {
     override def parameterNames: List[List[String]] =
@@ -147,6 +156,6 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
 
   private class ScalaIrConstructor(mthd: MethodSymbol, owner: IrClass) extends ScalaIrMethod(mthd, owner) with IrConstructor {
 
-    override def toString = s"CONSTRUCTOR ${owner.className} (${parameterNames.mkString(",")}}): ${mthd.typeSignature}"
+    override def toString = s"CONSTRUCTOR ${owner} (${parameterNames.mkString(",")}}): ${mthd.typeSignature}"
   }
 }
