@@ -20,6 +20,24 @@ object SimpleAdt {
   }
 }
 
+object NestedAdt {
+  import scala.pickling.Defaults._
+  @scala.pickling.directSubclasses(value = Array(classOf[Foo], classOf[NestedAdt]))
+  sealed trait Adt
+  final case class Foo(x: Int) extends Adt
+  @scala.pickling.directSubclasses(value = Array(classOf[Bar]))
+  sealed trait NestedAdt extends Adt
+  final case class Bar(y: String) extends Adt
+  implicit val p = {
+    implicit val f = scala.pickling.functions.testNewThing2[Foo]
+    implicit val f2 = {
+      implicit val b = scala.pickling.functions.testNewThing2[Bar]
+      scala.pickling.functions.testNewThing2[NestedAdt]
+    }
+    scala.pickling.functions.testNewThing2[Adt]
+  }
+}
+
 
 
 class AdtGeneratorTest  extends FunSuite {
@@ -27,6 +45,16 @@ class AdtGeneratorTest  extends FunSuite {
   import scala.pickling.json._
   test("simpleAdt") {
     import SimpleAdt.{Adt, Foo, Bar, fp2}
+    val x: Adt = Foo(5)
+    val x1: Adt = Bar("hi")
+    val y = x.pickle.unpickle[Adt]
+    val y1 = x1.pickle.unpickle[Adt]
+    assert(x == y)
+    assert(x1 == y1)
+  }
+
+  test("nestedAdt") {
+    import NestedAdt.{Adt, Foo, Bar, p}
     val x: Adt = Foo(5)
     val x1: Adt = Bar("hi")
     val y = x.pickle.unpickle[Adt]

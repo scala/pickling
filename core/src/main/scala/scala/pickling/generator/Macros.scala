@@ -15,7 +15,7 @@ trait PicklingMacros extends Macro with SourceGenerator {
     def abort(msg: String): Nothing = c.abort(c.enclosingPosition, msg)
     def error(msg: String): Unit = c.error(c.enclosingPosition, msg)
   }
-  def test[T: c.WeakTypeTag]: c.Tree = {
+  def genPickler[T: c.WeakTypeTag]: c.Tree = {
     val tpe = computeType[T]
     val sym = symbols.newClass(tpe)
     val impl = generator.generateImpl(sym, logger)
@@ -30,7 +30,22 @@ trait PicklingMacros extends Macro with SourceGenerator {
       case Some(tree) => tree
     }
   }
-  def picklerUnpickler[T: c.WeakTypeTag]: c.Tree = {
+  def genUnPickler[T: c.WeakTypeTag]: c.Tree = {
+    val tpe = computeType[T]
+    val sym = symbols.newClass(tpe)
+    val impl = generator.generateImpl(sym, logger)
+    val tree2 = impl map {
+      case PickleUnpickleImplementation(alg2, alg) => generateUnpicklerClass[T](alg)
+    }
+    System.err.println(s"Pickling impl = $tree2")
+    tree2 match {
+      case None =>
+        c.error(c.enclosingPosition, s"Failed to generate pickler for $tpe")
+        ???
+      case Some(tree) => tree
+    }
+  }
+  def genPicklerUnpickler[T: c.WeakTypeTag]: c.Tree = {
     val tpe = computeType[T]
     val sym = symbols.newClass(tpe)
     val impl = generator.generateImpl(sym, logger)
