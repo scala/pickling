@@ -164,10 +164,9 @@ object AdtPickling extends PicklingAlgorithm {
         None
       case scala.util.Success(subclasses) =>
         // TODO - Should we check if we need to also serialize our own state, or delegate that to a different algorithm?
-        // TODO - Should we allow dynamic dispatch here?
+        // TODO - Should we allow dynamic dispatch here (reflection)?
         val pickle = PickleBehavior(Seq(SubclassDispatch(subclasses, tpe)))
-        // TODO - Figure out unpickler
-        val unpickle = UnpickleBehavior(Seq())
+        val unpickle = UnpickleBehavior(Seq(SubclassUnpicklerDelegation(subclasses, tpe)))
         Some(PickleUnpickleImplementation(pickle, unpickle))
     }
   }

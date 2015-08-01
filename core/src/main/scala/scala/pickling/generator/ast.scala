@@ -83,9 +83,22 @@ case class GetField(name: String, getter: IrMember) extends PicklerAst {
 }
 
 // TODO - What to do with unknown dispatch?
+// We most likely want two additional ASTs here:
+// 1. What to do in the event we don't know what class we see at runtime (throw exception | runtime unpickler generation)
+// 2. What should we do if the runtime class is the current class (i.e we're working on a concrete, but non-final class.
 case class SubclassDispatch(subClasses: Seq[IrClass], parent: IrClass) extends PicklerAst {
   def requiresReflection: Boolean = false
 }
+
+// TODO - What to do with unknown dispatch?
+// We most likely want two additional ASTs here:
+// 1. What to do in the event we don't know what class we see at runtime (throw exception | runtime unpickler generation)
+// 2. What should we do if the runtime class is the current class (i.e we're working on a concrete, but non-final class.
+case class SubclassUnpicklerDelegation(subClasses: Seq[IrClass], parent: IrClass) extends UnpicklerAst {
+  def requiresReflection: Boolean = false
+}
+
+
 /** Ensure that beginEntry/hintOid (sharing/ref)/endEntry are called around the nested operations. */
 case class PickleEntry(ops: Seq[PicklerAst]) extends PicklerAst {
   def requiresReflection: Boolean = ops exists (_.requiresReflection)

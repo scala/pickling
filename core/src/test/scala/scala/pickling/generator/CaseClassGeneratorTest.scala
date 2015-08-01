@@ -31,6 +31,7 @@ class CaseClassGeneratorTest extends FunSuite {
   }
   */
 
+
   test("mulitpleParamList") {
     implicit val pu = scala.pickling.functions.testNewThing2[MultipleParamListCaseClass]
     val x = MultipleParamListCaseClass(1)("hi")

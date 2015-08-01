@@ -341,12 +341,30 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
       }
 
   }
+  def createUnpickler(tpe: Type): Tree =
+    q"_root_.scala.Predef.implicitly[_root_.scala.pickling.Unpickler[$tpe]]"
+  def genSubclassUnpickler(x: SubclassUnpicklerDelegation): c.Tree = {
+    val tpe = x.parent.tpe[c.universe.type](c.universe)
+    // TODO - Allow runtime pickler lookup if enabled...
+    val defaultCase =
+      CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""throw new Error(s"Cannot unpickle, Unexpected tag: $$tagKey")""")
+    val subClassCases =
+       x.subClasses.toList map { sc =>
+         val stpe = sc.tpe[c.universe.type](c.universe)
+         val skey = stpe.key
+         CaseDef(Literal(Constant(skey)), EmptyTree, createUnpickler(stpe))
+       }
+    q"""val unpickler: _root_.scala.pickling.Unpickler[_] = ${Match(q"tagKey", subClassCases ++ List(defaultCase))}
+      unpickler.asInstanceOf[_root_.scala.pickling.Unpickler[$tpe]].unpickle(tagKey, reader)
+      """
+  }
 
   def generateUnpickleImplFromAst(unpicklerAst: UnpicklerAst): c.Tree = {
     unpicklerAst match {
       case c: CallConstructor => genConstructorUnpickle(c)
       case c: CallModuleFactory => genCallModuleFactory(c)
       case x: SetField => genSetField(x)
+      case x: SubclassUnpicklerDelegation => genSubclassUnpickler(x)
       case x: UnpickleBehavior =>
         val behavior = x.operations.map(generateUnpickleImplFromAst).toList
         behavior match {
