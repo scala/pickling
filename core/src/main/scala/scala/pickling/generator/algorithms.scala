@@ -37,7 +37,7 @@ object PicklingAlgorithm {
            prev match {
              case x: Some[_] => x
              case None =>
-               logger.debug(s"Trying algorithm: $next")
+               logger.debug(s"Trying algorithm: $next on $tpe")
                next.generate(tpe, logger)
            }
          }
@@ -48,6 +48,9 @@ object PicklingAlgorithm {
   * pickling code for it.
   *
   * This ONLY handles case-class types, it will not handle ADTS.
+  *
+  * TODO - We want two variants of this.  One which allows runtime java-reflection, and one which does not.  Currently
+  *        this allows runtime java reflection for fields/methods.
   */
 object CaseClassPickling extends PicklingAlgorithm {
   case class FieldInfo(name: String, sym: IrMethod)
@@ -76,11 +79,11 @@ object CaseClassPickling extends PicklingAlgorithm {
             m <- tpe.methods.find(_.methodName == name)
           } yield FieldInfo(name, m)
           if(fields.length == c.parameterNames.flatten.length) {
-            val pickle = PickleBehavior(fields.map { field =>
+            val pickle = PickleBehavior(Seq(PickleEntry(fields.map { field =>
               GetField(field.name, field.sym)
             }.toSeq ++ standAloneVars.map { field =>
               GetField(field.methodName, field)
-            })
+            })))
             val unpickle =
               UnpickleBehavior(
                 Seq(CallConstructor(fields.map(_.name), c)) ++
@@ -119,9 +122,9 @@ object CaseClassPickling extends PicklingAlgorithm {
         m <- tpe.methods.find(_.methodName == name)
       } yield FieldInfo(name, m)
       if(fields.length == factoryMethod.parameterNames.flatten.length) {
-        val pickle = PickleBehavior(fields.map { field =>
+        val pickle = PickleBehavior(Seq(PickleEntry(fields.map { field =>
           GetField(field.name, field.sym)
-        }.toSeq)
+        }.toSeq)))
         // TODO - Figure out how to access the module object
         val unpickle = CallModuleFactory(fieldNameList, companion, factoryMethod)
         PickleUnpickleImplementation(pickle, unpickle)
@@ -155,6 +158,9 @@ object AdtPickling extends PicklingAlgorithm {
       case scala.util.Failure(msgs) =>
         // TODO - SHould we warn here, or collect errors for later?
         logger.warn(s"Failed to create ADT pickler = $msgs")
+        None
+      case scala.util.Success(Seq()) =>
+        logger.warn(s"Failed to create ADT pickler for $tpe.  Type is closed, but could not find subclasses.\n  You can use @directSubclasses to annotate known subclasses.")
         None
       case scala.util.Success(subclasses) =>
         // TODO - Should we check if we need to also serialize our own state, or delegate that to a different algorithm?

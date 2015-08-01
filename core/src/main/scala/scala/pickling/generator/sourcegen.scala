@@ -20,7 +20,7 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     def genGetField(x: GetField): c.Tree = {
       def pickleLogic(isStaticallyElided: Boolean, fieldValue: Tree): Tree = {
         val elideHint =
-          if(isStaticallyElided) q"b.hintStaticallyElidedType()" else q""
+          if (isStaticallyElided) q"b.hintStaticallyElidedType()" else q""
         // TODO - Hint dynamically elided?
         // NOTE; This will look up an IMPLICIT pickler for the value, based on the type.
         //       This is how we chain our macros to find all the valid types.
@@ -46,7 +46,7 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
             val tpe = y.returnType(c.universe)
             tpe.isEffectivelyFinal || tpe.isEffectivelyPrimitive
           }
-          if(y.isPublic) putField(q"picklee.${newTermName(y.methodName)}", staticallyElided)
+          if (y.isPublic) putField(q"picklee.${newTermName(y.methodName)}", staticallyElided)
           else {
             val result = reflectivelyGet(newTermName("picklee"), y)(fm => putField(q"${fm}.asInstanceOf[${y.returnType(u).asInstanceOf[c.Type]}]", staticallyElided))
             q"""..$result"""
@@ -95,7 +95,7 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
                }
              """
         }
-        List(body(valueTree))
+      List(body(valueTree))
     }
 
     def genSubclassDispatch(x: SubclassDispatch): c.Tree = {
@@ -126,10 +126,22 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
           pickler.asInstanceOf[_root_.scala.pickling.Pickler[$tpe]].pickle(picklee, builder)
         """
     }
+    def genPickleEntry(op: PickleEntry): c.Tree = {
+      val nested =
+        op.ops.toList map genPickleOp
+      q"""
+         builder.hintTag(tag)
+         builder.beginEntry(picklee)
+         $hintShareId
+         ..$nested
+         builder.endEntry()
+       """
+    }
     def genPickleOp(op: PicklerAst): c.Tree =
       op match {
         case PickleBehavior(ops) => q"""..${ops.map(genPickleOp)}"""
         case x: GetField => genGetField(x)
+        case x: PickleEntry => genPickleEntry(x)
         case x: SubclassDispatch => genSubclassDispatch(x)
       }
     genPickleOp(picklerAst)
@@ -161,14 +173,7 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     //        The presence of runtime code is controlled by generation algorithms, rather than the code generator.
     //        We could still disable the generation here.
     //        This is somethign the current algorithm does which we do not do.
-
-    // TODO - We may not want to ALWAYS serialize null as null....
-    checkNullPickle(q"""
-          builder.hintTag(tag)
-          builder.beginEntry(picklee)
-          $hintShareId
-          ${generatePickleImplFromAst(picklerAst)}
-          builder.endEntry()""")
+    checkNullPickle(generatePickleImplFromAst(picklerAst))
   }
 
   def genUnpicklerLogic[T: c.WeakTypeTag](unpicklerAst: UnpicklerAst): c.Tree = {

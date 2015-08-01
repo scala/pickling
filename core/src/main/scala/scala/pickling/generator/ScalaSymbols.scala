@@ -109,8 +109,8 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
         case errors =>
           scala.util.Failure(new UnclosedSubclassesException(errors))
       }
-
     }
+    override def toString = s"IrClass<$tpe>"
   }
   private class ScalaIrMethod(mthd: MethodSymbol, override val owner: IrClass) extends IrMethod {
     override def parameterNames: List[List[String]] =

@@ -86,6 +86,10 @@ case class GetField(name: String, getter: IrMember) extends PicklerAst {
 case class SubclassDispatch(subClasses: Seq[IrClass], parent: IrClass) extends PicklerAst {
   def requiresReflection: Boolean = false
 }
+/** Ensure that beginEntry/hintOid (sharing/ref)/endEntry are called around the nested operations. */
+case class PickleEntry(ops: Seq[PicklerAst]) extends PicklerAst {
+  def requiresReflection: Boolean = ops exists (_.requiresReflection)
+}
 
 /** This represents the algorithm used to pickle a given class. */
 case class PickleBehavior(operations: Seq[PicklerAst]) extends PicklerAst {
