@@ -7,42 +7,6 @@ import internal._
 // TODO - Move all these into the "PicklerRegistry"
 trait RuntimePicklersUnpicklers {
 
-  GlobalRegistry.picklerMap   += ("scala.Tuple2" -> (tag => new Tuple2RTPickler(tag)))
-
-
-  /* Register all specialized variants of Tuple2.
-   */
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcII$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcIJ$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcID$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcIC$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcIZ$sp" -> (tag => new Tuple2RTPickler(tag)))
-
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcJI$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcJJ$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcJD$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcJC$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcJZ$sp" -> (tag => new Tuple2RTPickler(tag)))
-
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcDI$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcDJ$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcDD$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcDC$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcDZ$sp" -> (tag => new Tuple2RTPickler(tag)))
-
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcCI$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcCJ$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcCD$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcCC$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcCZ$sp" -> (tag => new Tuple2RTPickler(tag)))
-
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcZI$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcZJ$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcZD$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcZC$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcZZ$sp" -> (tag => new Tuple2RTPickler(tag)))
-
-
   def mkRuntimeTravPickler[C <% Traversable[_]](elemClass: Class[_], elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
                                                 elemPickler0: Pickler[_], elemUnpickler0: Unpickler[_]):
     Pickler[C] with Unpickler[C] = new Pickler[C] with Unpickler[C] {

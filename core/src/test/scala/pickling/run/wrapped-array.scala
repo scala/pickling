@@ -3,7 +3,6 @@ package scala.pickling.test.collection
 import org.scalatest.FunSuite
 
 import scala.pickling._, scala.pickling.Defaults._, json._
-import runtime.GlobalRegistry
 
 import scala.collection.mutable.WrappedArray
 
@@ -64,7 +63,7 @@ class WrappedArrayTest extends FunSuite {
     }
   }
 
-  GlobalRegistry.picklerMap += ("scala.collection.mutable.WrappedArray$ofRef" -> (x => mkAnyRefWrappedArrayPickler))
+  internal.currentRuntime.picklers.registerPickler("scala.collection.mutable.WrappedArray$ofRef", mkAnyRefWrappedArrayPickler)
   internal.currentRuntime.picklers.registerUnpickler("scala.collection.mutable.WrappedArray.ofRef[java.lang.Object]", mkAnyRefWrappedArrayPickler)
 
   test("main") {

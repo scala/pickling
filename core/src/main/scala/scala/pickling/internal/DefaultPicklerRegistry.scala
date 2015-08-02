@@ -29,8 +29,11 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
     }
   }
   def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit share: refs.Share): Pickler[_] = {
+    // TODO - The whole mechanism we use here seems pretty bad.  We should probably always store using the TAG, and keep the TUple2 magikz out of our storage.
+    //        For now this code is just mimicking what was tehre before, we can clean up in the future.
     val className = if (clazz == null) "null" else clazz.getName
-    picklerMap.get(className) match {
+    // First check the special tuple picklers
+    lookupTupleSpecialPicklers(className, tag).orElse(picklerMap.get(className)) match {
       case Some(p) => p
       case None =>
         val p = generator.genPickler(classLoader, clazz, tag)

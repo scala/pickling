@@ -4,7 +4,6 @@ import scala.language.experimental.macros
 import scala.language.implicitConversions
 
 import scala.annotation.implicitNotFound
-import scala.pickling.runtime.GlobalRegistry
 import scala.pickling.internal._
 
 /** A static pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
@@ -106,11 +105,14 @@ object PicklerUnpickler {
 }
 
 abstract class AutoRegister[T: FastTypeTag](name: String) extends AbstractPicklerUnpickler[T] {
-  debug(s"autoregistering pickler $this under key '$name'")
-  // TODO - Swap to the new registry of picklers.
-  GlobalRegistry.picklerMap += (name -> (x => this))
-  // internal.currentRuntime.picklers.registerPickler(name, this)
   val tag = implicitly[FastTypeTag[T]]
-  debug(s"autoregistering unpickler $this under key '${tag.key}'")
-  internal.currentRuntime.picklers.registerUnpickler(tag.key, this)
+
+  // Register this pickler with the global handler.
+  locally {
+    val p = internal.currentRuntime.picklers
+    debug(s"autoregistering pickler $this under key '$name'")
+    p.registerPickler(name, this)
+    debug(s"autoregistering unpickler $this under key '${tag.key}'")
+    p.registerUnpickler(tag.key, this)
+  }
 }
