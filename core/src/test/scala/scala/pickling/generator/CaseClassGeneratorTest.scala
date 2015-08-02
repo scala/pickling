@@ -9,14 +9,14 @@ class CaseClassGeneratorTest extends FunSuite {
   import scala.pickling.Defaults._
   import scala.pickling.json._
   test("noConstructor") {
-    implicit val pu = scala.pickling.functions.testNewThing2[CaseClassNoConstructor]
+    implicit val pu = PicklingMacros.genPicklerUnpickler[CaseClassNoConstructor]
     val x = CaseClassNoConstructor()
     val y = x.pickle.unpickle[CaseClassNoConstructor]
     assert(x == y)
   }
 
   test("simple") {
-    implicit val pu = scala.pickling.functions.testNewThing2[SimpleCaseClass]
+    implicit val pu = PicklingMacros.genPicklerUnpickler[SimpleCaseClass]
     val x = SimpleCaseClass(1, "hi")
     val y = x.pickle.unpickle[SimpleCaseClass]
     assert(x == y)
@@ -33,7 +33,7 @@ class CaseClassGeneratorTest extends FunSuite {
 
 
   test("mulitpleParamList") {
-    implicit val pu = scala.pickling.functions.testNewThing2[MultipleParamListCaseClass]
+    implicit val pu = PicklingMacros.genPicklerUnpickler[MultipleParamListCaseClass]
     val x = MultipleParamListCaseClass(1)("hi")
     val y = x.pickle.unpickle[MultipleParamListCaseClass]
     assert(x == y)
@@ -41,7 +41,7 @@ class CaseClassGeneratorTest extends FunSuite {
   }
 
   test("nestedVar") {
-    implicit val pu = scala.pickling.functions.testNewThing2[NestedVarCaseClass]
+    implicit val pu = PicklingMacros.genPicklerUnpickler[NestedVarCaseClass]
     val x = NestedVarCaseClass(1)
     x.y = 2
     val y = x.pickle.unpickle[NestedVarCaseClass]
@@ -56,32 +56,32 @@ class CaseClassGeneratorTest extends FunSuite {
     assert(x == y)
   }
   test("nestedValCaseClass") {
-    implicit val pu = scala.pickling.functions.testNewThing2[NestedValCaseClass]
+    implicit val pu = PicklingMacros.genPicklerUnpickler[NestedValCaseClass]
     val x = NestedValCaseClass(5)
     val y = x.pickle.unpickle[NestedValCaseClass]
     assert(x == y)
   }
   test("protectedMember") {
-    implicit val pu = scala.pickling.functions.testNewThing2[ProtectedMemberCaseClass]
+    implicit val pu = PicklingMacros.genPicklerUnpickler[ProtectedMemberCaseClass]
     val x = ProtectedMemberCaseClass(5, "hi")
     val y = x.pickle.unpickle[ProtectedMemberCaseClass]
     assert(x == y)
   }
   // NOTE: Old pickling aglorithm fails on this case
   test("privateMember") {
-    implicit val pu = scala.pickling.functions.testNewThing2[PrivateMemberCaseClass ]
+    implicit val pu = PicklingMacros.genPicklerUnpickler[PrivateMemberCaseClass ]
     val x = PrivateMemberCaseClass(5, "hi")
     val y = x.pickle.unpickle[PrivateMemberCaseClass]
     assert(x == y)
   }
   test("nestedPrivateVal") {
-    implicit val pu = scala.pickling.functions.testNewThing2[NestedPrivateVarCaseClass]
+    implicit val pu = PicklingMacros.genPicklerUnpickler[NestedPrivateVarCaseClass]
     val x = NestedPrivateVarCaseClass(1)
     val y = x.pickle.unpickle[NestedPrivateVarCaseClass]
     assert(x == y)
   }
   test("nestedPrivateThisVar") {
-    implicit val pu = scala.pickling.functions.testNewThing2[NestedPrivateThisCaseClass]
+    implicit val pu = PicklingMacros.genPicklerUnpickler[NestedPrivateThisCaseClass]
     val x = NestedPrivateThisCaseClass(1)
     val y = x.pickle.unpickle[NestedPrivateThisCaseClass]
     assert(x.toString == y.toString)
@@ -101,7 +101,7 @@ final class NestedCaseClassHolder {
   final case class NestedCaseClass(x: Int)
   object NestedCaseClass {
     import scala.pickling.Defaults._
-    implicit val p = scala.pickling.functions.testNewThing2[NestedCaseClass]
+    implicit val p = PicklingMacros.genPicklerUnpickler[NestedCaseClass]
   }
 }
 // Case 6 - Nested public val

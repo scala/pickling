@@ -14,9 +14,9 @@ object SimpleAdt {
   final case class Foo(x: Int) extends Adt
   final case class Bar(y: String) extends Adt
   implicit val fp2 = {
-    implicit val fp = scala.pickling.functions.testNewThing2[Foo]
-    implicit val fp3 = scala.pickling.functions.testNewThing2[Bar]
-    scala.pickling.functions.testNewThing2[Adt]
+    implicit val fp = PicklingMacros.genPicklerUnpickler[Foo]
+    implicit val fp3 = PicklingMacros.genPicklerUnpickler[Bar]
+    PicklingMacros.genPicklerUnpickler[Adt]
   }
 }
 
@@ -29,12 +29,12 @@ object NestedAdt {
   sealed trait NestedAdt extends Adt
   final case class Bar(y: String) extends Adt
   implicit val p = {
-    implicit val f = scala.pickling.functions.testNewThing2[Foo]
+    implicit val f = PicklingMacros.genPicklerUnpickler[Foo]
     implicit val f2 = {
-      implicit val b = scala.pickling.functions.testNewThing2[Bar]
-      scala.pickling.functions.testNewThing2[NestedAdt]
+      implicit val b = PicklingMacros.genPicklerUnpickler[Bar]
+      PicklingMacros.genPicklerUnpickler[NestedAdt]
     }
-    scala.pickling.functions.testNewThing2[Adt]
+    PicklingMacros.genPicklerUnpickler[Adt]
   }
 }
 

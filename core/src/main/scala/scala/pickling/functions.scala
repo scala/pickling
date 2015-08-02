@@ -38,8 +38,4 @@ object functions {
     // TODO - some mechanism to turn this off, also should we have the GRL for this?
     internal.clearPicklees()
   }
-
-  import scala.language.experimental.macros
-  def testNewThing[T]: Pickler[T] = macro scala.pickling.generator.Compat.genPickler_impl[T]
-  def testNewThing2[T]: AbstractPicklerUnpickler[T] = macro scala.pickling.generator.Compat.genPicklerUnpickler_impl[T]
 }

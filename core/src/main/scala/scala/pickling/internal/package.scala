@@ -102,7 +102,7 @@ package object internal {
 
 
   // ----- utilities for managing object identity -----
-  // TODO - deprecated all of these
+  // TODO - deprecated all of these, or leave them for convenience?
   def lookupPicklee(picklee: Any): Int = currentRuntime.refRegistry.pickle.registerPicklee(picklee)
   def registerPicklee(picklee: Any) = currentRuntime.refRegistry.pickle.registerPicklee(picklee)
   def clearPicklees() = currentRuntime.refRegistry.pickle.clear()
