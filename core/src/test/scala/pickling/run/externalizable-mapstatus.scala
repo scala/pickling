@@ -154,7 +154,7 @@ class MapStatusTest extends FunSuite {
     val p = implicitly[Pickler[T]]
     val up = implicitly[Unpickler[T]]
     GlobalRegistry.picklerMap += (clazz.getName() -> (x => p))
-    GlobalRegistry.unpicklerMap += (clazz.getName() -> up)
+    internal.currentRuntime.picklers.registerUnpickler(clazz.getName, up)
   }
 
   register[MapStatus]

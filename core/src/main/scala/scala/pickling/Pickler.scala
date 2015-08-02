@@ -107,8 +107,10 @@ object PicklerUnpickler {
 
 abstract class AutoRegister[T: FastTypeTag](name: String) extends AbstractPicklerUnpickler[T] {
   debug(s"autoregistering pickler $this under key '$name'")
+  // TODO - Swap to the new registry of picklers.
   GlobalRegistry.picklerMap += (name -> (x => this))
+  // internal.currentRuntime.picklers.registerPickler(name, this)
   val tag = implicitly[FastTypeTag[T]]
   debug(s"autoregistering unpickler $this under key '${tag.key}'")
-  GlobalRegistry.unpicklerMap += (tag.key -> this)
+  internal.currentRuntime.picklers.registerUnpickler(tag.key, this)
 }
