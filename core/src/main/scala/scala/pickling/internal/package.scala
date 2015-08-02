@@ -15,7 +15,12 @@ package object internal {
   import ru._
   import compat._
 
-  private[this] var currentRuntimeVar = new AtomicReference[spi.PicklingRuntime](new DefaultRuntime())
+  private[this] def initDefaultRuntime = {
+    // TODO - Figure out some way to configure the default runtime at startup.
+    if(true) new DefaultRuntime()
+    else new NoReflectionRuntime()
+  }
+  private[this] var currentRuntimeVar = new AtomicReference[spi.PicklingRuntime](initDefaultRuntime)
   def currentRuntime: spi.PicklingRuntime = currentRuntimeVar.get
   // Here we inject a new runtime for usage.
   def replaceRuntime(r: spi.PicklingRuntime): Unit = {

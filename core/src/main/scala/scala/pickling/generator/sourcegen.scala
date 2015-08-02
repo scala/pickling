@@ -109,7 +109,7 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
       val failDispatch = {
         val dispatcheeNames = x.subClasses.map(_.className).mkString(", ")
         val otherTermName = newTermName("other")
-        val throwUnknownTag = q"""throw _root_.scala.pickling.PicklingException("Class " + other + " not recognized by pickler, looking for one of: " + $dispatcheeNames)"""
+        val throwUnknownTag = q"""throw _root_.scala.pickling.PicklingException("Class " + clazz + " not recognized by pickler, looking for one of: " + $dispatcheeNames)"""
         CaseDef(Bind(otherTermName, Ident(nme.WILDCARD)), throwUnknownTag)
       }
       // val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, createRuntimePickler(q"builder"))
@@ -347,7 +347,7 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     val tpe = x.parent.tpe[c.universe.type](c.universe)
     // TODO - Allow runtime pickler lookup if enabled...
     val defaultCase =
-      CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""throw new Error(s"Cannot unpickle, Unexpected tag: $$tagKey")""")
+      CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""throw new _root_.scala.pickling.PicklingException("Cannot unpickle, Unexpected tag: " + tagKey + " not recognized.")""")
     val subClassCases =
        x.subClasses.toList map { sc =>
          val stpe = sc.tpe[c.universe.type](c.universe)
