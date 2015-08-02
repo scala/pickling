@@ -39,9 +39,6 @@ object AlgorithmFailure {
 trait PicklingAlgorithm {
   /**
    * Attempts to construct pickling logic for a given type.
-   *
-   * TODO - Instead of Option, these should return an error messages that we can aggregate
-   *        to explain why a pickler/unpickler could not be generated for a given type.
    */
   def generate(tpe: IrClass, logger: AlgorithmLogger): AlgorithmResult
 
@@ -227,6 +224,17 @@ object AdtPickling extends PicklingAlgorithm {
   }
 }
 // TODO - Scala singleton object serializer
+object ScalaSingleton extends PicklingAlgorithm {
+  override def generate(tpe: IrClass, logger: AlgorithmLogger): AlgorithmResult = {
+    if(tpe.isScalaModule) {
+      AlgorithmSucccess(PickleUnpickleImplementation(
+        PickleBehavior(Seq(PickleEntry(Seq()))),
+        UnpickleBehavior(Seq(UnpickleSingleton(tpe)))
+      ))
+    } else AlgorithmFailure(s"$tpe is not a singleton scala object")
+  }
+}
+
 // TODO - Java Serializable Serializer
 // TODO - Java Bean serializer
 // TODO - Crazy-Kryo-like-serializer

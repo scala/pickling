@@ -78,6 +78,13 @@ case class SubclassUnpicklerDelegation(subClasses: Seq[IrClass], parent: IrClass
 case class UnpickleBehavior(operations: Seq[UnpicklerAst]) extends UnpicklerAst {
   def requiresReflection = operations exists (_.requiresReflection)
 }
+/** Unpickle a singleton type. */
+case class UnpickleSingleton(tpe: IrClass) extends UnpicklerAst {
+  def requiresReflection: Boolean = {
+    // TODO - check to see if the tpe is private....
+    false
+  }
+}
 
 /** This is an AST node representing an operation performed by a pickler. */
 sealed trait PicklerAst extends IrAst

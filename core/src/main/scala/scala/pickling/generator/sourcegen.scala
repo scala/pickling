@@ -358,6 +358,11 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
       unpickler.asInstanceOf[_root_.scala.pickling.Unpickler[$tpe]].unpickle(tagKey, reader)
       """
   }
+  def genUnpickleSingleton(s: UnpickleSingleton): c.Tree = {
+    val tpe = s.tpe.tpe[c.universe.type](c.universe)
+    val m = tpe.typeSymbol.asClass.module
+    q"$m"
+  }
 
   def generateUnpickleImplFromAst(unpicklerAst: UnpicklerAst): c.Tree = {
     unpicklerAst match {
@@ -365,6 +370,7 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
       case c: CallModuleFactory => genCallModuleFactory(c)
       case x: SetField => genSetField(x)
       case x: SubclassUnpicklerDelegation => genSubclassUnpickler(x)
+      case x: UnpickleSingleton => genUnpickleSingleton(x)
       case x: UnpickleBehavior =>
         val behavior = x.operations.map(generateUnpickleImplFromAst).toList
         behavior match {

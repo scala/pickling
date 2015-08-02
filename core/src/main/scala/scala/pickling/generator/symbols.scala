@@ -31,7 +31,6 @@ trait IrClass extends IrSymbol {
   def isFinal: Boolean
   /** True if this is a scala "object" */
   def isScalaModule: Boolean
-
   /** The set of known subclasses for this type.  Will return a failure if the symbol loader
     * isn't sure if the classes are closed.
     */

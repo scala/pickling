@@ -92,7 +92,7 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
     }
 
     override def isScala = !tpe.typeSymbol.isJava
-    override def isScalaModule: Boolean = tpe.typeSymbol.isModule || tpe.typeSymbol.isModuleClass
+    override def isScalaModule: Boolean = classSymbol.isModuleClass
 
     /** True if this class is a scala case class. */
     override def isCaseClass: Boolean = classSymbol.isCaseClass
