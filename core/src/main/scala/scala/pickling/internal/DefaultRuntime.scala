@@ -2,15 +2,17 @@ package scala.pickling
 package internal
 
 import java.util.concurrent.locks.ReentrantLock
-
-import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
-import scala.pickling.runtime.RuntimeUnpicklerLookup
 import scala.pickling.spi._
 import scala.reflect.runtime.universe.Mirror
 
 /**
  * The default implementation of a pickling runtime.
+ *
+ * Notes:
+ *   - This supports circular reference handling via TLS buffers during pickling/unpickling
+ *   - This supports runtime pickler/unpickler generation via scala reflection.
+ *   - This uses an actual lock to keep reflective usages safe.
  */
 class DefaultRuntime extends spi.PicklingRuntime {
   override val GRL = new ReentrantLock()

@@ -5,7 +5,7 @@ import scala.reflect.{runtime => reflectRuntime}
 import internal._
 
 // TODO - Move all these into the "PicklerRegistry"
-trait RuntimePicklersUnpicklers {
+object CustomRuntime {
 
   def mkRuntimeTravPickler[C <% Traversable[_]](elemClass: Class[_], elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
                                                 elemPickler0: Pickler[_], elemUnpickler0: Unpickler[_]):
@@ -94,7 +94,7 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends Pickler[(Any, Any)] with Unpi
     } else {
       val clazz = value.getClass
       val tag = FastTypeTag.mkRaw(clazz, reflectRuntime.currentMirror).asInstanceOf[FastTypeTag[Any]]
-      val pickler = RuntimePicklerLookup.genPickler(clazz.getClassLoader, clazz, tag).asInstanceOf[Pickler[Any]]
+      val pickler = scala.pickling.internal.currentRuntime.picklers.genPickler(clazz.getClassLoader, clazz, tag).asInstanceOf[Pickler[Any]]
       (tag, pickler)
     }
 
@@ -129,7 +129,7 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends Pickler[(Any, Any)] with Unpi
       if (reader1.atPrimitive) {
         reader1.readPrimitive()
       } else {
-        val unpickler1 = RuntimeUnpicklerLookup.genUnpickler(reflectRuntime.currentMirror, tag1)
+        val unpickler1 = internal.currentRuntime.picklers.genUnpickler(reflectRuntime.currentMirror, tag1)
         try {
           unpickler1.unpickle(tag1, reader1)
         } catch {

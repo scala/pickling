@@ -76,7 +76,7 @@ trait PicklerMacros extends Macro with PickleMacros with FastTypeTagMacros {
       _root_.scala.pickling.FastTypeTag.mkRaw(clazz, _root_.scala.reflect.runtime.universe.runtimeMirror(classLoader))
     } finally _root_.scala.pickling.internal.GRL.unlock()
     $builder.hintTag(tag)
-    _root_.scala.pickling.runtime.RuntimePicklerLookup.genPickler(classLoader, clazz, tag)
+    _root_.scala.pickling.internal.`package`.currentRuntime.picklers.genPickler(classLoader, clazz, tag)
   """
 
   def computeType[T: c.WeakTypeTag]: Type = {
@@ -393,7 +393,7 @@ trait OpenSumUnpicklerMacro extends Macro with UnpicklerMacros with FastTypeTagM
       val refDispatch         = createRefDispatch()
       // TODO - for now we're using "currentMirror" macro.  That may not be ok.
       val runtimeDispatch     = CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""
-        _root_.scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(_root_.scala.pickling.internal.`package`.currentMirror, tagKey)
+        _root_.scala.pickling.internal.`package`.currentRuntime.picklers.genUnpickler(_root_.scala.pickling.internal.`package`.currentMirror, tagKey)
       """)
 
       q"""
@@ -637,7 +637,7 @@ trait UnpicklerMacros extends Macro with UnpickleMacros with FastTypeTagMacros {
           // FOR now we summon up a mirror using the currentMirror macro.
           // TODO - we may need a more robust mechanism  of grabbing the currentMirror
           val runtimeUnpickle = q"""
-            val rtUnpickler = _root_.scala.pickling.runtime.RuntimeUnpicklerLookup.genUnpickler(_root_.scala.pickling.internal.`package`.currentMirror, tagKey)
+            val rtUnpickler = _root_.scala.pickling.internal.`package`.currentRuntime.picklers.genUnpickler(_root_.scala.pickling.internal.`package`.currentMirror, tagKey)
             rtUnpickler.unpickle(tagKey, reader)
           """
 
