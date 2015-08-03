@@ -59,12 +59,15 @@ trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
     val tpe = computeType[T]
     val sym = symbols.newClass(tpe)
     val impl = generator.generateImpl(sym, logger)
+    //System.err.println(impl)
     val tree2 = impl map generatePicklerUnpicklerClass[T]
     tree2 match {
       case None =>
         c.error(c.enclosingPosition, s"Failed to generate pickler for $tpe")
         ???
-      case Some(tree) => tree
+      case Some(tree) =>
+        //System.err.println(tree)
+        tree
     }
   }
 }

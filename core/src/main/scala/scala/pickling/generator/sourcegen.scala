@@ -101,30 +101,46 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     def genSubclassDispatch(x: SubclassDispatch): c.Tree = {
       val tpe = x.parent.tpe[c.universe.type](c.universe)
       val clazzName = newTermName("clazz")
-      val compileTimeDispatch: List[CaseDef] = (x.subClasses map { subtpe =>
+        val compileTimeDispatch: List[CaseDef] = (x.subClasses map { subtpe =>
         val tpe = subtpe.tpe[c.universe.type](c.universe)
         CaseDef(Bind(clazzName, Ident(nme.WILDCARD)), q"clazz == classOf[$tpe]", createPickler(tpe, q"builder"))
       })(collection.breakOut)
 
+
       val failDispatch = {
         val dispatcheeNames = x.subClasses.map(_.className).mkString(", ")
         val otherTermName = newTermName("other")
-        val throwUnknownTag = q"""throw _root_.scala.pickling.PicklingException("Class " + clazz + " not recognized by pickler, looking for one of: " + $dispatcheeNames)"""
+        val throwUnknownTag =
+          if(x.subClasses.isEmpty) {
+            q"""throw _root_.scala.pickling.PicklingException("Class " + clazz + " not recognized by pickler")"""
+        } else q"""throw _root_.scala.pickling.PicklingException("Class " + clazz + " not recognized by pickler, looking for one of: " + $dispatcheeNames)"""
         CaseDef(Bind(otherTermName, Ident(nme.WILDCARD)), throwUnknownTag)
       }
-      // val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, createRuntimePickler(q"builder"))
+      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, createRuntimePickler(q"builder"))
       // TODO - Figure out if we can handle runtime dispatch...
-      val unknownDispatch = List(failDispatch)
+      val unknownDispatch =
+        if(x.lookupRuntime) List(runtimeDispatch)
+        else List(failDispatch)
+
 
 
       val picklerLookup = q"""
         val clazz = if (picklee != null) picklee.getClass else null
         ${Match(q"clazz", compileTimeDispatch ++ unknownDispatch)}
       """
-      q"""
+      val subclasses =
+        q"""
           val pickler: _root_.scala.pickling.Pickler[_] = $picklerLookup
           pickler.asInstanceOf[_root_.scala.pickling.Pickler[$tpe]].pickle(picklee, builder)
         """
+      // If we have parent behavior, we need to do a quick instanceOf check first.
+      x.parentBehavior match {
+        case None => subclasses
+        case Some(b) =>
+          val parentTpe = x.parent.tpe[c.universe.type](c.universe)
+          val impl = generatePickleImplFromAst(b)
+          q"""if(classOf[$parentTpe] == picklee.getClass) $impl else $subclasses"""
+      }
     }
     def genPickleEntry(op: PickleEntry): c.Tree = {
       val nested =
@@ -146,6 +162,17 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
       }
     genPickleOp(picklerAst)
   }
+
+  // Code which will lookup a runtime pickler.
+  def createRuntimePickler(builder: c.Tree): c.Tree = q"""
+    val classLoader = this.getClass.getClassLoader
+    _root_.scala.pickling.internal.GRL.lock()
+    val tag = try {
+      _root_.scala.pickling.FastTypeTag.mkRaw(clazz, _root_.scala.reflect.runtime.universe.runtimeMirror(classLoader))
+    } finally _root_.scala.pickling.internal.GRL.unlock()
+    $builder.hintTag(tag)
+    _root_.scala.pickling.internal.`package`.currentRuntime.picklers.genPickler(classLoader, clazz, tag)
+  """
 
   def createPickler(tpe: c.Type, builder: c.Tree): c.Tree = q"""
     val pickler = _root_.scala.Predef.implicitly[_root_.scala.pickling.Pickler[$tpe]]
@@ -347,16 +374,24 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     val tpe = x.parent.tpe[c.universe.type](c.universe)
     // TODO - Allow runtime pickler lookup if enabled...
     val defaultCase =
-      CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""throw new _root_.scala.pickling.PicklingException("Cannot unpickle, Unexpected tag: " + tagKey + " not recognized.")""")
+      if(x.lookupRuntime) CaseDef(Ident(nme.WILDCARD), EmptyTree, q"_root_.scala.pickling.internal.`package`.currentRuntime.picklers.genUnpickler(_root_.scala.pickling.internal.`package`.currentMirror, tagKey)")
+      else CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""throw new _root_.scala.pickling.PicklingException("Cannot unpickle, Unexpected tag: " + tagKey + " not recognized.")""")
     val subClassCases =
        x.subClasses.toList map { sc =>
          val stpe = sc.tpe[c.universe.type](c.universe)
          val skey = stpe.key
          CaseDef(Literal(Constant(skey)), EmptyTree, createUnpickler(stpe))
        }
-    q"""val unpickler: _root_.scala.pickling.Unpickler[_] = ${Match(q"tagKey", subClassCases ++ List(defaultCase))}
-      unpickler.asInstanceOf[_root_.scala.pickling.Unpickler[$tpe]].unpickle(tagKey, reader)
-      """
+    val subClass =
+      q"""val unpickler: _root_.scala.pickling.Unpickler[_] = ${Match(q"tagKey", subClassCases ++ List(defaultCase))}
+        unpickler.asInstanceOf[_root_.scala.pickling.Unpickler[$tpe]].unpickle(tagKey, reader)
+        """
+    x.parentBehavior match {
+      case None => subClass
+      case Some(p) =>
+        val ptree = generateUnpickleImplFromAst(p)
+        q"""if(tagKey == ${tpe.key}) $ptree else $subClass"""
+    }
   }
   def genUnpickleSingleton(s: UnpickleSingleton): c.Tree = {
     val tpe = s.tpe.tpe[c.universe.type](c.universe)
