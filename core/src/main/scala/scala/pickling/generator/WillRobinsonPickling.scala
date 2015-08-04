@@ -10,6 +10,7 @@ package generator
   */
 object WillRobinsonPickling extends PicklingAlgorithm {
   private case class FieldInfo(setter: SetField, getter: GetField)
+  // TODO - Constructor unification in the case-class generator is probably still useful here...
   private def allScalaField(tpe: IrClass, logger: AlgorithmLogger): Seq[FieldInfo] = {
     // TODO - We find all these and hope it's ok
     val fields = tpe.methods.filter(m => m.isVal || m.isVar).toList.sortBy(_.methodName)

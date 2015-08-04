@@ -14,9 +14,24 @@ class WillRobinsonGeneratorTest extends FunSuite {
     assert(x.getClass == y.getClass)
   }
   test("private-var non-final class") {
+    val x = new PrivateVarNonFinal(5)
+    val p = PicklerUnpickler.generate[PrivateVarNonFinal]
+    val y = x.pickle.unpickle[PrivateVarNonFinal]
+    assert(x != y)
+    assert(x.toString == y.toString)
+  }
+  test("private-val non-final class") {
     val x = new PrivateValNonFinal(5)
     val p = PicklerUnpickler.generate[PrivateValNonFinal]
     val y = x.pickle.unpickle[PrivateValNonFinal]
+    assert(x != y)
+    assert(x.toString == y.toString)
+  }
+  // TODO - This is broken.
+  test("private-this-val non-final class") {
+    val x = new PrivateThisVal(5)
+    val p = PicklerUnpickler.generate[PrivateThisVal]
+    val y = x.pickle.unpickle[PrivateThisVal]
     assert(x != y)
     assert(x.toString == y.toString)
   }
@@ -24,6 +39,16 @@ class WillRobinsonGeneratorTest extends FunSuite {
 
 class EmptyNonFinal {}
 class PrivateValNonFinal(y: Int) {
-  private var x: Int = y
+  private val x: Int = y
+  override def toString = x.toString
+}
+
+class PrivateVarNonFinal(y: Int) {
+  private val x: Int = y
+  override def toString = x.toString
+}
+
+class PrivateThisVal(y: Int) {
+  private[this] val x: Int = y
   override def toString = x.toString
 }
