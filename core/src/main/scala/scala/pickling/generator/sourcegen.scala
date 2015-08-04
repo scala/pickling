@@ -399,6 +399,11 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     q"$m"
   }
 
+  def genAllocateInstance(x: AllocateInstance): c.Tree = {
+    val tpe = x.tpe.tpe[c.universe.type](c.universe)
+    q"""_root_.scala.concurrent.util.Unsafe.instance.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]"""
+  }
+
   def generateUnpickleImplFromAst(unpicklerAst: UnpicklerAst): c.Tree = {
     unpicklerAst match {
       case c: CallConstructor => genConstructorUnpickle(c)
@@ -406,6 +411,7 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
       case x: SetField => genSetField(x)
       case x: SubclassUnpicklerDelegation => genSubclassUnpickler(x)
       case x: UnpickleSingleton => genUnpickleSingleton(x)
+      case x: AllocateInstance => genAllocateInstance(x)
       case x: UnpickleBehavior =>
         val behavior = x.operations.map(generateUnpickleImplFromAst).toList
         behavior match {

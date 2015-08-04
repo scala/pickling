@@ -36,6 +36,7 @@ object IrAst {
       case x: SetField => f(x)
       case x: GetField => f(x)
       case x: UnpickleSingleton => f(x)
+      case x: AllocateInstance => f(x)
       case UnpickleBehavior(ops) => f(UnpickleBehavior(ops.map(chain).asInstanceOf[Seq[UnpicklerAst]]))
       case PickleBehavior(ops) => f(PickleBehavior(ops.map(chain).asInstanceOf[Seq[PicklerAst]]))
       case PickleEntry(ops) => f(PickleEntry(ops.map(chain).asInstanceOf[Seq[PicklerAst]]))
@@ -117,6 +118,12 @@ case class UnpickleBehavior(operations: Seq[UnpicklerAst]) extends UnpicklerAst 
   def requiresReflection = operations exists (_.requiresReflection)
   override def toString = s"unpickle behavior {${operations.mkString("\n", "\n", "\n")}}"
 }
+
+/** A raw `Unsafe.allocateInstance` call for a given type/class. */
+case class AllocateInstance(tpe: IrClass) extends UnpicklerAst {
+  def requiresReflection = true
+}
+
 /** Unpickle a singleton type. */
 case class UnpickleSingleton(tpe: IrClass) extends UnpicklerAst {
   def requiresReflection: Boolean = {

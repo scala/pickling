@@ -72,7 +72,8 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
 
     private val allMethods = tpe.declarations.collect { case meth: MethodSymbol => meth }
     // The list of all "accessor" method symbols of the class.  We filter to only these to avoid ahving too many symbols
-    //private val allAccessors = allMethods.collect { case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
+    //private val fields? = allMethods.collect { case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
+
     // Here we only return "accessor" methods.
     override val methods: Seq[IrMethod] = {
       (allMethods map { mth =>
@@ -142,6 +143,7 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
     override def isPrivate: Boolean = mthd.isPrivate
     override def isScala: Boolean = !mthd.isJava
     override def toString = s"def ${methodName}: ${mthd.typeSignature}"
+    override def isVal: Boolean = mthd.isVal
     override def isVar: Boolean =
       (mthd.getter != NoSymbol) && (mthd.setter != NoSymbol) &&
         (mthd.setter != mthd) // THis is  hack so the setter doesn't show up in our list of vars.

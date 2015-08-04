@@ -16,7 +16,7 @@ trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
     if(isStaticOnly) {
       PicklingAlgorithm.create(Seq(new CaseClassPickling(allowReflection = false), AdtPickling, ScalaSingleton))
     } else {
-      PicklingAlgorithm.create(Seq(new CaseClassPickling(allowReflection = true), AdtPickling, ScalaSingleton))
+      PicklingAlgorithm.create(Seq(new CaseClassPickling(allowReflection = true), AdtPickling, ScalaSingleton, WillRobinsonPickling))
     }
 
   object logger extends AlgorithmLogger {

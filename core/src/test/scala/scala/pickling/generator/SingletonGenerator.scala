@@ -5,7 +5,7 @@ import org.scalatest.FunSuite
 
 object TopLevelObject
 
-class SingletonGenerator extends FunSuite {
+class SingletonGeneratorTest extends FunSuite {
 
 
   test("topLevelObject") {

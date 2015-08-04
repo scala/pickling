@@ -81,6 +81,8 @@ trait IrMethod extends IrMember {
   def methodName: String
   /** Returns true if this method is associated with a var. */
   def isVar: Boolean
+  /** Returns true if this method is associated with a scala var. */
+  def isVal: Boolean
   /** Returns the Scala type associated with this field. */
   def returnType[U <: Universe with Singleton](u: Universe): u.Type
 
