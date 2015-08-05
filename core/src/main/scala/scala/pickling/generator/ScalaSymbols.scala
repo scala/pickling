@@ -80,6 +80,13 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
         new ScalaIrMethod(mth, this)
       })(collection.breakOut)
     }
+    override def fields: Seq[IrField] = {
+      // TODO - It's possible some terms come from the constructor.  We don't really know if they are available at runtime
+      //        or not, so we may ignore them.
+      def isConstructorArg(x: TermSymbol): Boolean =
+        x.owner.isConstructor
+      tpe.members.filter(_.isTerm).map(_.asTerm).filter(x => x.isVal || x.isVar).map(x => new ScalaIrField(x, this)).toList
+    }
     override def companion: Option[IrClass] = {
       if(tpe.typeSymbol.isType) {
         val tmp = tpe.typeSymbol.asType.companionSymbol
@@ -122,6 +129,25 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
     // TODO - use tpe.key implicit from helpers to get a consistent tag key here.
     override def toString = s"$tpe"
   }
+
+  private class ScalaIrField(field: TermSymbol, override val owner: IrClass) extends IrField{
+    override def fieldName: String = field.name.toString
+    override def tpe[U <: Universe with Singleton](u: U): u.Type = field.typeSignature.asInstanceOf[u.Type]
+    override def isPublic: Boolean = field.isPublic
+    override def isStatic: Boolean = field.isStatic
+    override def isFinal: Boolean = field.isFinal
+    override def isScala: Boolean = true // We don't generate fields for java types
+    override def isPrivate: Boolean = field.isPrivate
+    override def isParameter: Boolean = field.isParameter
+    // TODO - isPrivateThis
+
+    // TODO - We want to make sure this name matches what we'll see in reflection.
+    override def toString = s"field ${fieldName}: ${field.typeSignature}"
+
+    /** The name we should use for java reflection. */
+    override def javaReflectionName: String = field.fullName
+  }
+
   private class ScalaIrMethod(mthd: MethodSymbol, override val owner: IrClass) extends IrMethod {
     override def parameterNames: List[List[String]] =
       mthd.paramss.map(_.map(_.name.toString)) // TODO - Is this safe?
@@ -132,14 +158,38 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
     // TODO - We need to get the actual jvm name here.
     override def methodName: String = mthd.name.toString
     override def javaReflectionName: String = {
-      mthd match {
+      if(mthd.isParamAccessor && (mthd.isPrivate || mthd.isPrivateThis)) {
+        // TODO - We may n
+        // eed to append a $$<num> to the method name.  Basically what we have is a constructor argument.
+        def makeEncodedJvmName(names: List[String], buf: StringBuilder, isStart: Boolean = false): String =
+           names match {
+             case Nil => buf.toString
+             case next :: Nil =>
+               buf.append("$$").append(next)
+               buf.toString
+             case next :: rest if isStart =>
+               buf.append(next)
+               makeEncodedJvmName(rest, buf, isStart = false)
+             case next :: rest =>
+               buf.append("$").append(next)
+               makeEncodedJvmName(rest, buf, isStart = false)
+           }
+        System.err.println(s"Looking for encoded method name of $mthd")
+        // Create the odd/hacky method name used for private methods.
+        // TODO - encoded names?
+        val split = mthd.fullName.split('.').toList
+        val result = makeEncodedJvmName(split, new StringBuilder, true)
+        System.err.println(s" - full name= ${mthd.fullName}\n - split = ${split}\n - result = ${result}")
+        result
+      } else mthd match {
         case TermName(n) => n
-        case _ => mthd.name.toString
+        case _ => mthd.name.encodedName.toString
       }
     }
     // TODO - Figure out if the method is JVM public or not.
     override def isPublic: Boolean = mthd.isPublic
     override def isStatic: Boolean = mthd.isStatic
+    override def isFinal: Boolean = mthd.isFinal
     override def isPrivate: Boolean = mthd.isPrivate
     override def isScala: Boolean = !mthd.isJava
     override def toString = s"def ${methodName}: ${mthd.typeSignature}"

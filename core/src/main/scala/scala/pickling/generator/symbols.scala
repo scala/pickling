@@ -19,6 +19,8 @@ trait IrClass extends IrSymbol {
   def primaryConstructor: Option[IrConstructor]
   /** The methods defined on this class. (May be filtered to only those relevant to pickling interests. */
   def methods: Seq[IrMethod]
+  /** The fields on this class.  Note: For scala, these may also show up as methods. */
+  def fields: Seq[IrField]
   /** True if this class is defined in Scala. */
   def isScala: Boolean
   /** True if this class is a trait. */
@@ -54,10 +56,16 @@ sealed trait IrMember extends IrSymbol {
   def isStatic: Boolean
   /** Returns true if the given member is publicly accessible. */
   def isPublic: Boolean
+  /** True if the field is marked final, and would need to be reflectively set. */
+  def isFinal: Boolean
   /** Returns true if the given member is marked as private. */
   def isPrivate: Boolean
   /** Returns true if this member is a scala-symbol (i.e. we make take knowledge of scala-jvm-encoding. */
   def isScala: Boolean
+  /** Returns true iff this is an IrField. */
+  def isField: Boolean
+  /** The name we should use for java reflection. */
+  def javaReflectionName: String
   // TODO - Signatures
 
 }
@@ -66,6 +74,12 @@ trait IrField extends IrMember {
   def fieldName: String
   /** Return the type of the field. */
   def tpe[U <: Universe with Singleton](u: U): u.Type
+
+  /** True if the field is a constructor parameter in Scala.  These may not exist at runtime and we don't
+    * really know from the symbol table if this is the case.
+    */
+  def isParameter: Boolean
+  override final def isField: Boolean = true
 }
 trait IrMethod extends IrMember {
   /** The code-names of the constructor parameters.  Note: There is an algorithm which will try to
@@ -88,8 +102,8 @@ trait IrMethod extends IrMember {
 
   /** Returns the setter method for this `var` if one exists. */
   def setter: Option[IrMethod]
-  /** The name we should use for java reflection. */
-  def javaReflectionName: String
+
+  override final def isField: Boolean = false
 }
 /** The symbol representing a constructor. */
 trait IrConstructor extends IrMethod {}

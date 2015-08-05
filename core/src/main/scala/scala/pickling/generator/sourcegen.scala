@@ -15,6 +15,13 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     q"""$builder.hintTag(_root_.scala.pickling.FastTypeTag.Null)
         _root_.scala.pickling.Defaults.nullPickler.pickle(null, $builder)"""
 
+
+
+  def allowNonExistentField(impl: Tree): c.Tree = {
+    q"""try $impl catch {
+            case _: _root_.java.lang.reflect.NoSuchFieldException => // TODO - Don't just ignore bad things, figure out how to actually read the class file for reals.
+          }"""
+  }
   def generatePickleImplFromAst(picklerAst: PicklerAst): c.Tree = {
 
     def genGetField(x: GetField): c.Tree = {
@@ -36,7 +43,13 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
       x.getter match {
         case x: IrField =>
           // TODO - handle
-          sys.error(s"non-method access not handled currently, trying to obtain field $x from ${x.owner}")
+          val tpe = x.tpe[c.universe.type](c.universe)
+          val staticallyElided = tpe.isEffectivelyFinal || tpe.isEffectivelyPrimitive
+          if(x.isScala || !x.isPublic) {
+            // We always have to use reflection for scala fields right now.
+            val result = reflectivelyGet(newTermName("picklee"), x)(fm => putField(q"${fm}.asInstanceOf[$tpe]", staticallyElided))
+            q"..$result"
+          } else putField(q"picklee.${newTermName(x.fieldName)}", staticallyElided)
         case _: IrConstructor =>
           // This is a logic erorr
           sys.error(s"Pickling logic error.  Found constructor when trying to pickle field ${x.name}.")
@@ -54,49 +67,6 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
       }
     }
 
-    def reflectivelyGet(target: TermName, value: IrMember)(body: c.Tree => c.Tree): List[c.Tree] = {
-      // TODO - Should we use scala reflection?
-      // TODO - Should we trap errors and return better error messages?
-      // TODO - We should attempt to SAVE the reflective methods/fields somewhere so we aren't
-      //        looking them up all the time.
-      val valueTree =
-        value match {
-          case field: IrField =>
-            q"""
-              _root_.scala.Predef.locally {
-               val field = $target.getClass.getDeclaredField(${field.fieldName})
-               field.setAccesible(true)
-               field.get($target)
-             }"""
-          // Private scala methods may not encode normally for case classes.  This is a hack which goes after the field.
-          // TODO - We should update this to look for the accessor method which scala generally exposes for the deconstructor.
-          case mthd: IrMethod if mthd.isScala && mthd.isPrivate =>
-            val fieldName = mthd.javaReflectionName
-            // TODO - Check return type of method.
-            q"""
-              _root_.scala.Predef.locally {
-               $target.getClass.getDeclaredMethods().find { m =>
-                 (m.getName endsWith $fieldName) && (m.getParameterTypes.length == 0)
-               } match {
-                 // TODO - make sure mthd has no arguments
-                 case Some(mthd)  =>
-                   mthd.setAccessible(true)
-                   mthd.invoke($target)
-                 case None => _root_.scala.sys.error("Failed to reflectively find method: " + ${mthd.javaReflectionName})
-               }
-
-             }"""
-          case mthd: IrMethod =>
-            q"""_root_.scala.Predef.locally {
-                  // TODO - make sure method has no arguments.
-                  val mthd = $target.getClass.getDeclaredMethod(${mthd.javaReflectionName})
-                  mthd.setAccessible(true)
-                  mthd.invoke($target)
-               }
-             """
-        }
-      List(body(valueTree))
-    }
 
     def genSubclassDispatch(x: SubclassDispatch): c.Tree = {
       val tpe = x.parent.tpe[c.universe.type](c.universe)
@@ -310,7 +280,13 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
           case x => sys.error(s"Cannot handle a setting method that does not take exactly one parameter, found parameters: $x")
         }
 
-      case x: IrField => sys.error(s"Unpickling to fields is not supported yet.")
+      case x: IrField =>
+        val tpe = x.tpe[c.universe.type](c.universe)
+        val read = readField(s.name, tpe)
+        val staticallyElided = tpe.isEffectivelyFinal || tpe.isEffectivelyPrimitive
+        if(x.isScala || !x.isPublic || x.isFinal) {
+          reflectivelySet(newTermName("result"), x, read)
+        } else q"""result.${newTermName(x.fieldName)} = $read"""
     }
 
   }
@@ -336,38 +312,7 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     }
   }
 
-  def reflectivelySet(target: TermName, setter: IrMember, value: c.Tree): c.Tree = {
-    // TODO - Should we use scala reflection?
-    // TODO - Should we trap errors and return better error messages?
-    // TODO - We should attempt to SAVE the reflective methods/fields somewhere so we aren't
-    //        looking them up all the time.
-      setter match {
-        case field: IrField =>
-          val fieldTerm = c.fresh(newTermName("field"))
-          q"""
-               val $fieldTerm = $target.getClass.getDeclaredField(${field.fieldName})
-               $fieldTerm.setAccesible(true)
-               $fieldTerm.set($target, ${liftPrimitives(value, field.tpe[c.universe.type](c.universe))})
-          """
-        case mthd: IrMethod =>
-          val methodTerm = c.fresh(newTermName("mthd"))
-          val valueTerm = c.fresh(newTermName("value"))
-          // TODO - We should ensure types align.
-          val List(List(tpe)) = mthd.parameterTypes[c.universe.type](c.universe)
-          q"""$target.getClass.getDeclaredMethods.find { m =>
-                (m.getName ==${mthd.javaReflectionName}) && (m.getParameterTypes.length == 1)
-              } match {
-                case Some(mthd) =>
-                  val $valueTerm = ${liftPrimitives(value, tpe)}
-                  mthd.setAccessible(true)
-                  mthd.invoke($target, $valueTerm)
-                case None =>
-                  _root_.scala.sys.error("Could not find setter method: " + ${mthd.javaReflectionName})
-             }
-             """
-      }
 
-  }
   def createUnpickler(tpe: Type): Tree =
     q"_root_.scala.Predef.implicitly[_root_.scala.pickling.Unpickler[$tpe]]"
   def genSubclassUnpickler(x: SubclassUnpicklerDelegation): c.Tree = {
@@ -505,5 +450,73 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     if(originalTpe.termSymbol.isModule) originalTpe.widen
     else originalTpe
   }
+
+
+  // ---- Reflective Helper Methods ----
+
+  def reflectivelyGet(target: TermName, value: IrMember)(body: c.Tree => c.Tree): List[c.Tree] = {
+    // TODO - Should we use scala reflection?
+    // TODO - Should we trap errors and return better error messages?
+    // TODO - We should attempt to SAVE the reflective methods/fields somewhere so we aren't
+    //        looking them up all the time.
+    // TODO - We should handle `owner` and Declared vs. inherited Fields/Methods.
+    val valueTree =
+      value match {
+        case field: IrField =>
+
+          val get = q"""
+              _root_.scala.Predef.locally {
+                val cls = $target.getClass
+                val field = _root_.scala.pickling.internal.Reflect.getField(cls, ${field.javaReflectionName})
+                field.setAccessible(true)
+                field.get($target)
+             }"""
+          if(field.isParameter) allowNonExistentField(get) else get
+        // Private scala methods may not encode normally for case classes.  This is a hack which goes after the field.
+        // TODO - We should update this to look for the accessor method which scala generally exposes for the deconstructor.
+        case mthd: IrMethod if mthd.isScala && mthd.isPrivate =>
+          val fieldName = mthd.javaReflectionName
+          // TODO - We may need to do a specialied lookup for magic named methods.
+          q"""_root_.scala.Predef.locally {
+                  val mthd = _root_.scala.pickling.internal.Reflect.getMethod($target.getClass, ${mthd.javaReflectionName}, Array())
+                  mthd.setAccessible(true)
+                  mthd.invoke($target)
+                }"""
+        case mthd: IrMethod =>
+          q"""_root_.scala.Predef.locally {
+                  val mthd = _root_.scala.pickling.internal.Reflect.getMethod($target.getClass, ${mthd.javaReflectionName}, Array())
+                  mthd.setAccessible(true)
+                  mthd.invoke($target)
+                }"""
+      }
+    List(body(valueTree))
+  }
+  def reflectivelySet(target: TermName, setter: IrMember, value: c.Tree): c.Tree = {
+    // TODO - Should we use scala reflection?
+    // TODO - Should we trap errors and return better error messages?
+    // TODO - We should attempt to SAVE the reflective methods/fields somewhere so we aren't
+    //        looking them up all the time.
+    setter match {
+      case field: IrField =>
+        val fieldTerm = c.fresh(newTermName("field"))
+        val result = q"""
+                 val $fieldTerm = _root_.scala.pickling.internal.Reflect.getField($target.getClass, ${field.javaReflectionName})
+                 $fieldTerm.setAccessible(true)
+                 $fieldTerm.set($target, ${liftPrimitives(value, field.tpe[c.universe.type](c.universe))})"""
+        if(field.isParameter) allowNonExistentField(result) else result
+      case mthd: IrMethod =>
+        val methodTerm = c.fresh(newTermName("mthd"))
+        // TODO - We should ensure types align.
+        val List(List(tpe)) = mthd.parameterTypes[c.universe.type](c.universe)
+        q"""
+                val $methodTerm = _root_.scala.pickling.internal.Reflect.getMethod($target.getClass, ${mthd.javaReflectionName}, Array(classOf[$tpe]))
+                $methodTerm.setAccessible(true)
+                $methodTerm.invoke($target, ${liftPrimitives(value, tpe)})
+              """
+    }
+
+  }
+
+  // -- End Reflective Helper Methods --
 
 }

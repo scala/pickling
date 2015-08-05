@@ -86,7 +86,7 @@ case class CallModuleFactory(fields: Seq[String], module: IrClass, factoryMethod
   *               The mechanism of setting the value.  Can either directly manipulate a field, or use a method call.
   */
 case class SetField(name: String, setter: IrMember) extends UnpicklerAst {
-  def requiresReflection: Boolean = !setter.isPublic
+  def requiresReflection: Boolean = !setter.isPublic || ((setter.isScala && setter.isField))
   override def toString = s"set $name w/ $setter"
 }
 
@@ -142,7 +142,8 @@ sealed trait PicklerAst extends IrAst
  * @param getter
  */
 case class GetField(name: String, getter: IrMember) extends PicklerAst {
-  def requiresReflection: Boolean = !getter.isPublic
+  // NOTE; We do not know how to handle non-reflective field access for scala symbols yet.
+  def requiresReflection: Boolean = !getter.isPublic || (getter.isScala && getter.isField)
   override def toString = s"get field $name from $getter"
 }
 

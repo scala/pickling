@@ -13,15 +13,9 @@ object WillRobinsonPickling extends PicklingAlgorithm {
   // TODO - Constructor unification in the case-class generator is probably still useful here...
   private def allScalaField(tpe: IrClass, logger: AlgorithmLogger): Seq[FieldInfo] = {
     // TODO - We find all these and hope it's ok
-    val fields = tpe.methods.filter(m => m.isVal || m.isVar).toList.sortBy(_.methodName)
-    fields.flatMap { f =>
-      f.setter match {
-        case None =>
-          logger.warn(s"Field $f has no setter.  $tpe may not be serialized correctly")
-          Nil
-        case Some(s) =>
-          Seq(FieldInfo(SetField(f.methodName, s), GetField(f.methodName, f)))
-      }
+    val fields = tpe.fields.toList.sortBy(_.fieldName)
+    fields.map{ f =>
+      FieldInfo(SetField(f.fieldName, f), GetField(f.fieldName, f))
     }
   }
 
