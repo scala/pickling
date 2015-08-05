@@ -24,7 +24,7 @@ object Reflect {
       catch {
         case nsf: NoSuchFieldException =>
           if ((cls.getSuperclass != null) && (cls.getSuperclass != classOf[Object])) getFieldHelper(cls.getSuperclass)
-          else throw new PicklingException(s"Could not find field $name in $cls")
+          else throw new PicklingException(s"Could not find field [$name] in [$cls]")
       }
     }
     getFieldHelper(cls)
@@ -36,7 +36,7 @@ object Reflect {
       catch {
         case nsf: NoSuchMethodException =>
           if ((cls.getSuperclass != null) && cls.getSuperclass != classOf[Object]) getMethodHelper(cls.getSuperclass)
-          else throw new PicklingException(s"Could not find method $name(${args.mkString(", ")}) in $cls")
+          else throw new PicklingException(s"Could not find method [$name(${args.mkString(", ")})] in [$cls]")
       }
     }
     getMethodHelper(cls)

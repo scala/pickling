@@ -83,6 +83,8 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
     override def fields: Seq[IrField] = {
       // TODO - It's possible some terms come from the constructor.  We don't really know if they are available at runtime
       //        or not, so we may ignore them.
+      //        It's actually a really bad scenario because you can't distinguish between something which
+      //        is actually annotated as a val and something which is just a constructor argument.
       def isConstructorArg(x: TermSymbol): Boolean =
         x.owner.isConstructor
       tpe.members.filter(_.isTerm).map(_.asTerm).filter(x => x.isVal || x.isVar).map(x => new ScalaIrField(x, this)).toList
@@ -144,8 +146,20 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
     // TODO - We want to make sure this name matches what we'll see in reflection.
     override def toString = s"field ${fieldName}: ${field.typeSignature}"
 
+    // TODO - some kind of check to see if the field actualyl exists in runtime.  Scala sometimes erases
+    //        fields completely, and having a field is actually more of a runtime concern for scala.
+
+
     /** The name we should use for java reflection. */
-    override def javaReflectionName: String = field.fullName
+    override def javaReflectionName: String = {
+      field.name.toString match {
+          // TODO - Why do we need this random fix, is this a bug?
+        case x if x endsWith " " =>
+          //System.err.println(s"Caugh funny symbol: $field, name: ${field.name}, fullName: ${field.fullName}")
+          x.dropRight(1).toString
+        case x => x
+       }
+    }
   }
 
   private class ScalaIrMethod(mthd: MethodSymbol, override val owner: IrClass) extends IrMethod {
@@ -159,27 +173,23 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
     override def methodName: String = mthd.name.toString
     override def javaReflectionName: String = {
       if(mthd.isParamAccessor && (mthd.isPrivate || mthd.isPrivateThis)) {
-        // TODO - We may n
-        // eed to append a $$<num> to the method name.  Basically what we have is a constructor argument.
+        // Here we check to see if we need to encode the funky name that scala gives private fields to avoid conflicts
+        // with fields in the parent class.
         def makeEncodedJvmName(names: List[String], buf: StringBuilder, isStart: Boolean = false): String =
            names match {
              case Nil => buf.toString
-             case next :: Nil =>
-               buf.append("$$").append(next)
-               buf.toString
              case next :: rest if isStart =>
                buf.append(next)
                makeEncodedJvmName(rest, buf, isStart = false)
+             case next :: Nil =>
+               buf.append("$$").append(next)
+               buf.toString
              case next :: rest =>
                buf.append("$").append(next)
                makeEncodedJvmName(rest, buf, isStart = false)
            }
-        System.err.println(s"Looking for encoded method name of $mthd")
-        // Create the odd/hacky method name used for private methods.
-        // TODO - encoded names?
         val split = mthd.fullName.split('.').toList
         val result = makeEncodedJvmName(split, new StringBuilder, true)
-        System.err.println(s" - full name= ${mthd.fullName}\n - split = ${split}\n - result = ${result}")
         result
       } else mthd match {
         case TermName(n) => n

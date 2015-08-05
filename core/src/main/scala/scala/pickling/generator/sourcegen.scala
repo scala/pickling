@@ -19,7 +19,9 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
 
   def allowNonExistentField(impl: Tree): c.Tree = {
     q"""try $impl catch {
-            case _: _root_.java.lang.reflect.NoSuchFieldException => // TODO - Don't just ignore bad things, figure out how to actually read the class file for reals.
+            case _: _root_.scala.pickling.PicklingException =>
+            // TODO - Don't just ignore bad things, figure out how to actually read the class file for reals.
+            // We could basically by blocked by scala here, though.
           }"""
   }
   def generatePickleImplFromAst(picklerAst: PicklerAst): c.Tree = {
@@ -46,9 +48,13 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
           val tpe = x.tpe[c.universe.type](c.universe)
           val staticallyElided = tpe.isEffectivelyFinal || tpe.isEffectivelyPrimitive
           if(x.isScala || !x.isPublic) {
-            // We always have to use reflection for scala fields right now.
-            val result = reflectivelyGet(newTermName("picklee"), x)(fm => putField(q"${fm}.asInstanceOf[$tpe]", staticallyElided))
-            q"..$result"
+            // We always have to use reflection for scala fields right now.  Additionally, for Scala fields, we
+            // actually have no idea if they exist at runtime, so we allow failure for now, which is EVIL, but we have no alternative.
+            val result = reflectivelyGet(newTermName("picklee"), x)(fm => fm)
+            val rTerm = c.fresh(newTermName("result"))
+            val logic = q"""val $rTerm = { ..$result }
+                            ${putField(q"$rTerm.asInstanceOf[$tpe]", staticallyElided)}"""
+            if(x.isScala) allowNonExistentField(logic) else logic
           } else putField(q"picklee.${newTermName(x.fieldName)}", staticallyElided)
         case _: IrConstructor =>
           // This is a logic erorr
@@ -471,7 +477,8 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
                 field.setAccessible(true)
                 field.get($target)
              }"""
-          if(field.isParameter) allowNonExistentField(get) else get
+          get
+
         // Private scala methods may not encode normally for case classes.  This is a hack which goes after the field.
         // TODO - We should update this to look for the accessor method which scala generally exposes for the deconstructor.
         case mthd: IrMethod if mthd.isScala && mthd.isPrivate =>
@@ -503,7 +510,8 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
                  val $fieldTerm = _root_.scala.pickling.internal.Reflect.getField($target.getClass, ${field.javaReflectionName})
                  $fieldTerm.setAccessible(true)
                  $fieldTerm.set($target, ${liftPrimitives(value, field.tpe[c.universe.type](c.universe))})"""
-        if(field.isParameter) allowNonExistentField(result) else result
+        // Workaround for issues with not being able to accurate read scala symbols.
+        if(field.isScala) allowNonExistentField(result) else result
       case mthd: IrMethod =>
         val methodTerm = c.fresh(newTermName("mthd"))
         // TODO - We should ensure types align.
