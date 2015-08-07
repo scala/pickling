@@ -135,6 +135,7 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
         case x: GetField => genGetField(x)
         case x: PickleEntry => genPickleEntry(x)
         case x: SubclassDispatch => genSubclassDispatch(x)
+        case x: PickleExternalizable => genExternalizablePickle(newTermName("picklee"), newTermName("builder"), x)
       }
     genPickleOp(picklerAst)
   }
@@ -363,6 +364,8 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
       case x: SubclassUnpicklerDelegation => genSubclassUnpickler(x)
       case x: UnpickleSingleton => genUnpickleSingleton(x)
       case x: AllocateInstance => genAllocateInstance(x)
+        // TODO - This is kind of hacky, should be a temproary workaround for a better solution.
+      case x: UnpickleExternalizable => genExternalizablUnPickle(newTermName("reader"), x)
       case x: UnpickleBehavior =>
         val behavior = x.operations.map(generateUnpickleImplFromAst).toList
         behavior match {
@@ -405,7 +408,7 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
             def unpickle(tagKey: _root_.java.lang.String, reader: _root_.scala.pickling.PReader): _root_.scala.Any = $unpickleLogic
             def tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
           }
-          $unpicklerName : _root_.scala.pickling.Unpickler[$tpe]
+          $unpicklerName : _root_.scala.pickling.Unpickler[$tpe] with _root_.scala.pickling.Generated
        }
      """
   }
@@ -424,7 +427,7 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
             override def unpickle(tagKey: _root_.java.lang.String, reader: _root_.scala.pickling.PReader): _root_.scala.Any = $unpickleLogic
             override def tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
           }
-          $name : _root_.scala.pickling.AbstractPicklerUnpickler[$tpe]
+          $name : _root_.scala.pickling.AbstractPicklerUnpickler[$tpe] with _root_.scala.pickling.Generated
        }
      """
   }
@@ -455,6 +458,37 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     // TODO - fix this for certain primitive types, like Null, etc.
     if(originalTpe.termSymbol.isModule) originalTpe.widen
     else originalTpe
+  }
+
+  // -- Externalizable Hackery --
+  def genExternalizablePickle(target: TermName, builder: TermName, pe: PickleExternalizable): c.Tree = {
+    val out = c.fresh(newTermName("out"))
+    val objectOutTpe = typeOf[scala.pickling.util.GenObjectOutput]
+    val fieldName = "$ext"
+    q"""val $out = new _root_.scala.pickling.util.GenObjectOutput
+        $target.writeExternal($out)
+        $builder.putField($fieldName, b =>
+          _root_.scala.pickling.functions.pickleInto($out, b)
+        )
+     """
+  }
+  def genExternalizablUnPickle(reader: TermName, pe: UnpickleExternalizable): c.Tree = {
+    val tpe = pe.tpe.tpe[c.universe.type](c.universe)
+    val readerName = c.fresh(newTermName("readerName"))
+    val target = c.fresh(newTermName("out"))
+    val objectOutTpe = typeOf[scala.pickling.util.GenObjectOutput]
+    val fieldName = "$ext"
+    q"""
+       val $target = _root_.scala.concurrent.util.Unsafe.instance.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]
+       val $readerName = reader.readField($fieldName)
+       val out = {
+         val up = _root_.scala.Predef.implicitly[_root_.scala.pickling.Unpickler[$objectOutTpe]]
+         up.unpickleEntry($readerName).asInstanceOf[$objectOutTpe]
+       }
+       val in = out.toInput
+       $target.readExternal(in)
+       $target
+        """
   }
 
 

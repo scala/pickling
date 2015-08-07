@@ -37,6 +37,8 @@ object IrAst {
       case x: GetField => f(x)
       case x: UnpickleSingleton => f(x)
       case x: AllocateInstance => f(x)
+      case x: PickleExternalizable => f(x)
+      case x: UnpickleExternalizable => f(x)
       case UnpickleBehavior(ops) => f(UnpickleBehavior(ops.map(chain).asInstanceOf[Seq[UnpicklerAst]]))
       case PickleBehavior(ops) => f(PickleBehavior(ops.map(chain).asInstanceOf[Seq[PicklerAst]]))
       case PickleEntry(ops) => f(PickleEntry(ops.map(chain).asInstanceOf[Seq[PicklerAst]]))
@@ -170,6 +172,15 @@ case class SubclassDispatch(subClasses: Seq[IrClass], parent: IrClass, parentBeh
          else List("case _ => error")))
     s"class match {${cases.mkString("\n", "\n", "\n")}"
   }
+}
+/** Hardcoded pickling of Externalizable classes using built in magik. */
+case class PickleExternalizable(tpe: IrClass) extends PicklerAst {
+  def requiresReflection: Boolean = false
+}
+/** Hardcoded unpickling of Externalizable classes using built in magik classes. */
+case class UnpickleExternalizable(tpe: IrClass) extends UnpicklerAst {
+  // We use unsafe to instantiate
+  def requiresReflection: Boolean = true
 }
 
 

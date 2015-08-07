@@ -11,12 +11,27 @@ package generator
 class CaseClassPickling(val allowReflection: Boolean) extends PicklingAlgorithm {
   case class FieldInfo(name: String, sym: IrMethod)
   case class CaseClassInfo(constructor: IrConstructor, fields: Seq[FieldInfo])
+
+
+  // TODO - This helper method should be available elsewhere.
+  def allVars(cls: IrClass): Seq[IrMethod] = {
+    def allmethods(clss: List[IrClass], mthds: Seq[IrMethod], visitedClasses: Set[String]): Seq[IrMethod] =
+       clss match {
+         case hd :: tail if visitedClasses(hd.className) => allmethods(tail, mthds, visitedClasses)
+         case hd :: tail =>
+           val newMthds = hd.methods.filter(_.isVar).filterNot(x => mthds.exists(_.methodName == x.methodName))
+           allmethods(tail ++ hd.parentClasses, newMthds ++ mthds, visitedClasses + hd.className)
+         case Nil => mthds
+       }
+    allmethods(List(cls), Nil, Set())
+  }
   private def checkConstructorImpl(tpe: IrClass, logger: AlgorithmLogger): AlgorithmResult = {
     if(tpe.isCaseClass) {
       tpe.primaryConstructor match {
         case Some(c) if c.isPublic =>
           val names = c.parameterNames.flatten.toSet
-          val standAloneVars = tpe.methods.filter { m =>
+          val vars = allVars(tpe)
+          val standAloneVars = vars.filter { m =>
             m.isVar && !(names contains m.methodName)
           }
           // TODO - Allow us to DISABLE serialziing these vars.
@@ -77,18 +92,19 @@ class CaseClassPickling(val allowReflection: Boolean) extends PicklingAlgorithm 
       companion <- tpe.companion
       factoryMethod <-tpe.methods.filter(_.methodName == "apply").sortBy(_.parameterNames.flatten.size).headOption
     } yield {
+        val vars = allVars(tpe)
         val names = factoryMethod.parameterNames.flatten.toSet
-        val hasStandaloneVar = tpe.methods.exists { m =>
+        val hasStandaloneVar = vars.exists { m =>
           m.isVar && !(names contains m.methodName)
         }
-        // TODO - We should have this be configured to be a failure or silenced.
+        // TODO - We should have this be configured to be a failure or silenced.  Also, we should copy the var options from above.
         if(hasStandaloneVar) {
           logger.warn(s"Warning: ${tpe.className} has a member var not represented in the constructor.  Pickling is not guaranteed to handle this correctly.")
         }
         val fieldNameList = factoryMethod.parameterNames.flatten.toSeq
         val fields = for {
           name <- fieldNameList
-          m <- tpe.methods.find(_.methodName == name)
+          m <- vars.find(_.methodName == name)
         } yield FieldInfo(name, m)
         if(fields.length == factoryMethod.parameterNames.flatten.length) {
           val pickle = PickleBehavior(Seq(PickleEntry(fields.map { field =>

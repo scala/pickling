@@ -33,6 +33,8 @@ trait IrClass extends IrSymbol {
   def isFinal: Boolean
   /** True if this is a scala "object" */
   def isScalaModule: Boolean
+  /** Returs all the parent classes (traits, interfaces, etc,) for this type. */
+  def parentClasses: Seq[IrClass]
   /** The set of known subclasses for this type.  Will return a failure if the symbol loader
     * isn't sure if the classes are closed.
     */
