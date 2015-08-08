@@ -122,18 +122,18 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
       val nested =
         op.ops.toList map genPickleOp
       val oid = c.fresh(newTermName("oid"))
-      // TODO - Use sharing implicits to determine how to handle this? Or just delegate
-      //        share decision to runtime impl...
       // TODO - hint known size
+      val shareHint: List[c.Tree] =
+        if(shareNothing) List(q"()")
+        else List(q"val $oid = _root_.scala.pickling.internal.`package`.lookupPicklee(picklee)", q"builder.hintOid($oid)")
+      val shareLogic: c.Tree =
+        if(shareNothing) q"..$nested"
+        else q"if($oid == -1) { ..$nested }"
       q"""
-         val $oid = _root_.scala.pickling.internal.`package`.lookupPicklee(picklee)
-         builder.hintOid($oid)
+         ..$shareHint
          builder.hintTag(tag)
          builder.beginEntry(picklee)
-         if($oid == -1) {
-           // TODO - Hint known size
-           ..$nested
-         }
+         $shareLogic
          builder.endEntry()
        """
     }
@@ -370,12 +370,23 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
       case x: UnpickleExternalizable => genExternalizablUnPickle(newTermName("reader"), x)
       case x: UnpickleBehavior =>
         val behavior = x.operations.map(generateUnpickleImplFromAst).toList
-        behavior match {
+        // TODO - This is kind of hacky.  We're trying to make sure during unpickling we always register/unregister appropriately...
+        x.operations match {
           case List() => q"null"
-          case List(head) => head
+          case List(head: SubclassUnpicklerDelegation) => generateUnpickleImplFromAst(head)
             // TODO - Can we assume that ever additional operation is something which manipualtes the result?
           case hd :: tail =>
-            q"""_root_.scala.Predef.locally { val result = $hd; ..$tail; result }"""
+            val hdTree = generateUnpickleImplFromAst(hd)
+            val tlTree = tail.map(generateUnpickleImplFromAst)
+            // Note: We are *always* generating the unpickle sharing code, in the event that
+            //       someone pickles with sharing, but we try to unpickle without it.
+            q"""_root_.scala.Predef.locally {
+                  val oid = _root_.scala.pickling.internal.`package`.preregisterUnpicklee()
+                  val result = $hdTree;
+                  _root_.scala.pickling.internal.`package`.registerUnpicklee(result, oid)
+                  ..$tlTree;
+                  result
+                }"""
         }
     }
   }

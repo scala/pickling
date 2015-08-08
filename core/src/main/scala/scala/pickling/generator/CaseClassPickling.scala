@@ -105,7 +105,7 @@ class CaseClassPickling(val allowReflection: Boolean) extends PicklingAlgorithm 
           val pickle = PickleBehavior(Seq(PickleEntry(fields.map { field =>
             GetField(field.name, field.sym)
           }.toSeq)))
-          val unpickle = CallModuleFactory(fieldNameList, companion, factoryMethod)
+          val unpickle = UnpickleBehavior(Seq(CallModuleFactory(fieldNameList, companion, factoryMethod)))
           PickleUnpickleImplementation(pickle, unpickle)
         }
         // TODO - what do we do if it doesn't line up?  This is probably some insidious bug.
