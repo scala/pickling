@@ -32,6 +32,8 @@ object J {
 }
 
 class StaticOnlyTest extends FunSuite {
+  // TODO - We should re-enable these once we figure out what StaticOnly should mean.
+  /*
   test("main") {
     val x: C = new D
     val pkl: JSONPickle = x.pickle
@@ -43,4 +45,5 @@ class StaticOnlyTest extends FunSuite {
     val pkl: JSONPickle = pickle(x)
     assert(unpickle[C](pkl).fld == 1)
   }
+  */
 }

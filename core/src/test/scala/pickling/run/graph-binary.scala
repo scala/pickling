@@ -4,6 +4,7 @@ import org.scalatest.FunSuite
 
 import scala.pickling._, scala.pickling.Defaults._, binary._
 
+
 class Vertex(val label: String) {
   var neighbors: List[Vertex] = List()
 
@@ -24,9 +25,19 @@ class Graph {
     vertices = v +: vertices
     v
   }
+
+  override def toString = s"Graph($vertices)"
 }
 
 class GraphBinaryTest extends FunSuite {
+
+  // NOTE - Gets around diverging implicit expansion issue, temporarily.
+  implicit val pu = {
+    implicit val vu = PicklerUnpickler.generate[Vertex]
+    implicit val lvu = Defaults.listPickler[Vertex]
+    PicklerUnpickler.generate[Graph]
+  }
+
   test("main") {
     val g = new Graph
 

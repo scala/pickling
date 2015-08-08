@@ -24,6 +24,7 @@ class TestMacroHygiene {
   def hygiene(): Any = {
     val scala, Any, String, FastTypeTag, Unit = ()
     trait scala; trait Any; trait String; trait FastTypeTag; trait Unit;
+    implicit val hgt = PicklerUnpickler.generate[HygieneTester  ]
     HygieneTester(Option(false), Seq("hi")).pickle.unpickle[HygieneTester]
   }
 }

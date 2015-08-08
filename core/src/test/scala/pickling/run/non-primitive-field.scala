@@ -3,7 +3,8 @@ package scala.pickling.non.primitive.field
 import org.scalatest.FunSuite
 import scala.pickling._, scala.pickling.Defaults._, json._
 
-case class Person(name: String, age: Int)
+// Note: Previously picklign would not consider `final` when eliding types.  Now we always do.
+final case class Person(name: String, age: Int)
 case class Philipp(mother: Person)
 
 class NonPrimitiveFieldTest extends FunSuite {

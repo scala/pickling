@@ -10,7 +10,9 @@ class BinaryListIntCustomTest extends FunSuite {
   test("main") {
     val lst = (1 to 10).toList
 
-    implicit def genListPickler[T](implicit format: PickleFormat): HandwrittenListIntPicklerUnpickler = new HandwrittenListIntPicklerUnpickler
+    // Note: Previously list picklers were generated from scratch as `::`.  Now we actually provide list picklers, so this test
+    //       is less useful.
+    implicit def genListPickler(implicit format: PickleFormat): HandwrittenListIntPicklerUnpickler = new HandwrittenListIntPicklerUnpickler
     class HandwrittenListIntPicklerUnpickler(implicit val format: PickleFormat) extends Pickler[::[Int]] with Unpickler[::[Int]] {
       def pickle(picklee: ::[Int], builder: PBuilder): Unit = {
         builder.beginEntry()
@@ -56,7 +58,8 @@ class BinaryListIntCustomTest extends FunSuite {
     }
 
     val pickle = lst.pickle
-    assert(pickle.toString === "BinaryPickle([0,0,0,50,115,99,97,108,97,46,99,111,108,108,101,99,116,105,111,110,46,105,109,109,117,116,97,98,108,101,46,36,99,111,108,111,110,36,99,111,108,111,110,91,115,99,97,108,97,46,73,110,116,93,0,0,0,10,0,0,0,1,0,0,0,2,0,0,0,3,0,0,0,4,0,0,0,5,0,0,0,6,0,0,0,7,0,0,0,8,0,0,0,9,0,0,0,10])")
+    // Since we no longer do runtime delegation to `::` class for pickling lists, the custom pickler is no longer used.
+    //assert(pickle.toString === "BinaryPickle([0,0,0,50,115,99,97,108,97,46,99,111,108,108,101,99,116,105,111,110,46,105,109,109,117,116,97,98,108,101,46,36,99,111,108,111,110,36,99,111,108,111,110,91,115,99,97,108,97,46,73,110,116,93,0,0,0,10,0,0,0,1,0,0,0,2,0,0,0,3,0,0,0,4,0,0,0,5,0,0,0,6,0,0,0,7,0,0,0,8,0,0,0,9,0,0,0,10])")
     assert(pickle.unpickle[List[Int]] === List(1, 2, 3, 4, 5, 6, 7, 8, 9, 10))
   }
 }

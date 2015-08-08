@@ -29,7 +29,9 @@ package json {
     def createBuilder() = new JSONPickleBuilder(this, new StringOutput)
     def createBuilder(out: Output[String]): PBuilder = new JSONPickleBuilder(this, out)
     def createReader(pickle: JSONPickle) = {
-      JSON.parseRaw(pickle.value) match {
+      // TODO - Raw strings, null, etc. should be valid JSON.
+      if(pickle.value == "null") new JSONPickleReader(null, this)
+      else JSON.parseRaw(pickle.value) match {
         case Some(raw) => new JSONPickleReader(raw, this)
         case None => throw new PicklingException("failed to parse \"" + pickle.value + "\" as JSON")
       }
@@ -107,7 +109,8 @@ package json {
       } else {
         tags.push(hints.tag)
         if (primitives.contains(hints.tag.key)) {
-          if (hints.isElidedType) primitives(hints.tag.key)(picklee)
+          // Null always goes out raw.
+          if (hints.isElidedType || hints.tag.key == FastTypeTag.Null.key) primitives(hints.tag.key)(picklee)
           else {
             appendLine("{")
             appendLine("\"$type\": \"" + hints.tag.key + "\",")

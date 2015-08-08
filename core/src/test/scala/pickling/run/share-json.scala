@@ -9,33 +9,34 @@ class ShareJsonTest extends FunSuite {
   val c1 = new C("c1", "desc", null, Array(1))
   val c2 = new C("c2", "desc", c1, Array(1))
   val c3 = new C("c3", "desc", c2, Array(1))
-
   test("loop-share-nonprimitives") {
     c1.c = c3
     val pickle = c1.pickle
     assert(pickle.toString === """
       |JSONPickle({
       |  "$type": "scala.pickling.share.json.C",
-      |  "name": "c1",
-      |  "desc": "desc",
-      |  "c": {
-      |    "name": "c3",
-      |    "desc": "desc",
-      |    "c": {
-      |      "name": "c2",
-      |      "desc": "desc",
-      |      "c": { "$ref": 0 },
-      |      "arr": [
-      |        1
-      |      ]
-      |    },
-      |    "arr": [
-      |      1
-      |    ]
-      |  },
       |  "arr": [
       |    1
-      |  ]
+      |  ],
+      |  "c": {
+      |    "$type": "scala.pickling.share.json.C",
+      |    "arr": [
+      |      1
+      |    ],
+      |    "c": {
+      |      "$type": "scala.pickling.share.json.C",
+      |      "arr": [
+      |        1
+      |      ],
+      |      "c": { "$ref": 0 },
+      |      "desc": "desc",
+      |      "name": "c2"
+      |    },
+      |    "desc": "desc",
+      |    "name": "c3"
+      |  },
+      |  "desc": "desc",
+      |  "name": "c1"
       |})
     """.trim.stripMargin)
 
@@ -69,26 +70,28 @@ class ShareJsonTest extends FunSuite {
     assert(pickle.toString === """
       |JSONPickle({
       |  "$type": "scala.pickling.share.json.C",
-      |  "name": "c1",
-      |  "desc": "desc",
-      |  "c": {
-      |    "name": "c3",
-      |    "desc": "desc",
-      |    "c": {
-      |      "name": "c2",
-      |      "desc": "desc",
-      |      "c": { "$ref": 0 },
-      |      "arr": [
-      |        1
-      |      ]
-      |    },
-      |    "arr": [
-      |      1
-      |    ]
-      |  },
       |  "arr": [
       |    1
-      |  ]
+      |  ],
+      |  "c": {
+      |    "$type": "scala.pickling.share.json.C",
+      |    "arr": [
+      |      1
+      |    ],
+      |    "c": {
+      |      "$type": "scala.pickling.share.json.C",
+      |      "arr": [
+      |        1
+      |      ],
+      |      "c": { "$ref": 0 },
+      |      "desc": "desc",
+      |      "name": "c2"
+      |    },
+      |    "desc": "desc",
+      |    "name": "c3"
+      |  },
+      |  "desc": "desc",
+      |  "name": "c1"
       |})
     """.trim.stripMargin)
 
@@ -114,26 +117,28 @@ class ShareJsonTest extends FunSuite {
     assert(pickle.toString === """
       |JSONPickle({
       |  "$type": "scala.pickling.share.json.C",
-      |  "name": "c3",
-      |  "desc": "desc",
-      |  "c": {
-      |    "name": "c2",
-      |    "desc": "desc",
-      |    "c": {
-      |      "name": "c1",
-      |      "desc": "desc",
-      |      "c": null,
-      |      "arr": [
-      |        1
-      |      ]
-      |    },
-      |    "arr": [
-      |      1
-      |    ]
-      |  },
       |  "arr": [
       |    1
-      |  ]
+      |  ],
+      |  "c": {
+      |    "$type": "scala.pickling.share.json.C",
+      |    "arr": [
+      |      1
+      |    ],
+      |    "c": {
+      |      "$type": "scala.pickling.share.json.C",
+      |      "arr": [
+      |        1
+      |      ],
+      |      "c": null,
+      |      "desc": "desc",
+      |      "name": "c1"
+      |    },
+      |    "desc": "desc",
+      |    "name": "c2"
+      |  },
+      |  "desc": "desc",
+      |  "name": "c3"
       |})
     """.trim.stripMargin)
 
