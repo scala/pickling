@@ -5,7 +5,6 @@ import scala.language.existentials
 
 import scala.reflect.macros.Context
 import scala.reflect.runtime.{universe => ru}
-import pickler.ListPicklerUnpicklerMacro
 
 // this is only necessary because 2.10.x doesn't support macro bundles
 object Compat {
@@ -14,46 +13,10 @@ object Compat {
     def pt: A = t._1
   }
 
-  def PicklerMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[Pickler[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with PicklerMacros
-    c.Expr[Pickler[T]](bundle.impl[T])
-  }
-
-  def UnpicklerMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[Unpickler[T] with Generated] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with UnpicklerMacros
-    c.Expr[Unpickler[T] with Generated](bundle.impl[T])
-  }
-
-  def PicklerUnpicklerMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[Pickler[T] with Unpickler[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with PicklerUnpicklerMacros
-    c.Expr[Pickler[T] with Unpickler[T]](bundle.impl[T])
-  }
-
-  def OpenSumUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context): c.Expr[Unpickler[T] with Generated] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with OpenSumUnpicklerMacro
-    c.Expr[Unpickler[T] with Generated](bundle.impl[T])
-  }
-
   def PickleMacros_pickleTo[T: c.WeakTypeTag, S](c: Context)(output: c.Expr[S])(format: c.Expr[PickleFormat]): c.Expr[Unit] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PickleMacros
     c.Expr[Unit](bundle.pickleTo[T](output.tree)(format.tree))
-  }
-
-  def ListPicklerUnpicklerMacro_impl[T: c.WeakTypeTag](c: Context)(format: c.Expr[PickleFormat]): c.Expr[Pickler[T] with Unpickler[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with ListPicklerUnpicklerMacro
-    c.Expr[Pickler[T] with Unpickler[T]](bundle.impl[T](format.tree))
-  }
-
-  def PicklerMacros_dpicklerImpl[T: c.WeakTypeTag](c: Context): c.Expr[DPickler[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with PicklerMacros
-    c.Expr[DPickler[T]](bundle.dpicklerImpl[T])
   }
 
   def FastTypeTagMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[FastTypeTag[T]] = {

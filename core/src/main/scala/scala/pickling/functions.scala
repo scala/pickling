@@ -17,6 +17,7 @@ object functions {
     builder.result.asInstanceOf[format.PickleType]
   }
 
+  // Note: this does NOT clear picklees.
   def pickleInto[T](picklee: T, builder: PBuilder)(implicit pickler: Pickler[T]): Unit = {
     // TODO - BeginEntry/EndEntry needed?
     // TODO - this hinting should be in the pickler, not here.  We need to understand
@@ -28,7 +29,6 @@ object functions {
       builder.hintTag(pickler.tag)
       pickler.pickle(picklee, builder)
     }
-    // TODO - This usually doesn't clear Picklee's, but should we?
   }
 
   def pickleTo[T, F <: PickleFormat](picklee: T, output: F#OutputType)(implicit pickler: Pickler[T], format: F): Unit = {
