@@ -26,6 +26,20 @@ object IrSymbol {
     //       allow serializing transient fields...
     allmethods(List(cls), Nil, Set())
   }
+
+  def allDeclaredFieldsIncludingSubclasses(cls: IrClass): Seq[IrField] = {
+    def allfields(clss: List[IrClass], fields: Seq[IrField], visitedClasses: Set[String]): Seq[IrField] =
+      clss match {
+        case hd :: tail if visitedClasses(hd.className) => allfields(tail, fields, visitedClasses)
+        case hd :: tail =>
+          val newFields = hd.fields
+          allfields(tail ++ hd.parentClasses, newFields ++ fields, visitedClasses + hd.className)
+        case Nil => fields
+      }
+    // TODO - We should maybe warn if we see transient fields that cause us not to compile correctly, or maybe
+    //       allow serializing transient fields...
+    allfields(List(cls), Nil, Set())
+  }
 }
 /** Represents a java class. */
 trait IrClass extends IrSymbol {

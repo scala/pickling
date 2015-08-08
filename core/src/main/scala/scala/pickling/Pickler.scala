@@ -26,8 +26,8 @@ trait Pickler[T] {
 // Shim for Java code.
 abstract class AbstractPickler[T] extends Pickler[T]
 object Pickler {
-  //def generate[T]: Pickler[T] = macro Compat.PicklerMacros_impl[T]
   def generate[T]: Pickler[T] = macro generator.Compat.genPickler_impl[T]
+  def generateOld[T]: Pickler[T] = macro Compat.PicklerMacros_impl[T]
 }
 
 /** A dynamic pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
@@ -89,6 +89,7 @@ abstract class AbstractUnpickler[T] extends Unpickler[T]
 object Unpickler {
   //def generate[T]: Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
   def generate[T]: Unpickler[T] = macro generator.Compat.genUnpickler_impl[T]
+  def generateOld[T]: Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
 }
 /* Shim for java code (TODO - a good name for this.) */
 abstract class AbstractPicklerUnpickler[T] extends Pickler[T] with Unpickler[T]
