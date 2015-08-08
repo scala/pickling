@@ -13,7 +13,8 @@ object WillRobinsonPickling extends PicklingAlgorithm {
   // TODO - Constructor unification in the case-class generator is probably still useful here...
   private def allScalaField(tpe: IrClass, logger: AlgorithmLogger): Seq[FieldInfo] = {
     // TODO - We find all these and hope it's ok
-    val fields = tpe.fields.toList.sortBy(_.fieldName)
+    // TODO - We need this list to actually come from a recursive descent through the hierarchy for vars.
+    val fields = tpe.fields.filterNot(_.isMarkedTransient).toList.sortBy(_.fieldName)
     fields.map{ f =>
       FieldInfo(SetField(f.fieldName, f), GetField(f.fieldName, f))
     }

@@ -42,7 +42,7 @@ def noPublish = Seq(
 
 // Use root project
 lazy val root: Project = (project in file(".")).
-  aggregate(core, benchmark, sandbox).
+  aggregate(core, benchmark, sandbox, macroTests).
   settings(commonSettings ++ noPublish: _*).
   settings(
     name := "Scala Pickling",
@@ -72,6 +72,16 @@ lazy val core: Project = (project in file("core")).
       }
       baseDeps ++ additional
     }
+  )
+
+lazy val macroTests: Project = (project in file("macro-test")).
+  dependsOn(core).
+  settings(commonSettings:_*).settings(noPublish:_*).
+  settings(
+    libraryDependencies ++= Seq(
+      scalaTest % Test,
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
+    )
   )
 
 lazy val testUtil: Project = (project in file("test-util")).

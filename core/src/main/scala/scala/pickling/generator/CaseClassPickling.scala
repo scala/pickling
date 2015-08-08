@@ -15,15 +15,9 @@ class CaseClassPickling(val allowReflection: Boolean) extends PicklingAlgorithm 
 
   // TODO - This helper method should be available elsewhere.
   def allVars(cls: IrClass): Seq[IrMethod] = {
-    def allmethods(clss: List[IrClass], mthds: Seq[IrMethod], visitedClasses: Set[String]): Seq[IrMethod] =
-       clss match {
-         case hd :: tail if visitedClasses(hd.className) => allmethods(tail, mthds, visitedClasses)
-         case hd :: tail =>
-           val newMthds = hd.methods.filter(_.isVar).filterNot(x => mthds.exists(_.methodName == x.methodName))
-           allmethods(tail ++ hd.parentClasses, newMthds ++ mthds, visitedClasses + hd.className)
-         case Nil => mthds
-       }
-    allmethods(List(cls), Nil, Set())
+    ( cls.methods.filter(_.isParamAccessor) ++
+      IrSymbol.allDeclaredMethodIncludingSubclasses(cls).filter(x => x.isVar || x.isVal)
+    ).groupBy(_.methodName).map(_._2.head).toList.filterNot(_.isMarkedTransient)
   }
   private def checkConstructorImpl(tpe: IrClass, logger: AlgorithmLogger): AlgorithmResult = {
     if(tpe.isCaseClass) {
@@ -43,7 +37,8 @@ class CaseClassPickling(val allowReflection: Boolean) extends PicklingAlgorithm 
           // Here we need to unify the fields with the constructor names.  We assume they have the same name.
           val fields = for {
             name <- c.parameterNames.flatten.toSeq
-            m <- tpe.methods.find(_.methodName == name)
+            // NOTE: here we use the vars list, because it's already filtered out transient vars.
+            m <- vars.find(_.methodName == name)
           } yield FieldInfo(name, m)
           if(fields.length == c.parameterNames.flatten.length) {
             val pickle = PickleBehavior(Seq(PickleEntry(fields.map { field =>
@@ -79,7 +74,7 @@ class CaseClassPickling(val allowReflection: Boolean) extends PicklingAlgorithm 
             } else AlgorithmSucccess(PickleUnpickleImplementation(pickle, unpickle))
           }
           // TODO - what do we do if it doesn't line up?  This is probably some insidious bug.
-          else logger.abort(s"Encountered a case class (${tpe.className}) where we could not find all the constructor parameters.")
+          else AlgorithmFailure(s"Encountered a case class (${tpe.className}) where we could not find all the constructor parameters.  This may be because some fields are marked transient.")
         case _ =>
           AlgorithmFailure("case-class constructor is not public")
       }

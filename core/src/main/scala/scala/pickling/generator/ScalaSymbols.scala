@@ -51,15 +51,18 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
   }
 
   def newClass(tpe: Type): IrClass =
-    if(tpe.typeSymbol.isClass) new ScalaIrClass(tpe)
-    else sys.error(s"Don't know how to handle $tpe, ${tpe.typeSymbol.owner}")
+    if(tpe.typeSymbol.isClass) {
+      val (quantified, rawTpe) = tpe match { case ExistentialType(quantified, rtpe) => (quantified, rtpe); case rtpe => (Nil, rtpe) }
+      new ScalaIrClass(tpe, quantified, rawTpe)
+    } else sys.error(s"Don't know how to handle $tpe, ${tpe.typeSymbol.owner}")
 
 
 
   // Implementation of IrClass symbol using a scala Type.
-  private class ScalaIrClass(tpe: Type) extends IrClass {
-    private[generator] val (quantified, rawTpe) = tpe match { case ExistentialType(quantified, rtpe) => (quantified, rtpe); case rtpe => (Nil, rtpe) }
-
+  private class ScalaIrClass(private[generator] val tpe: Type) extends IrClass {
+    //System.err.println(s"New class: $tpe")
+    def this(tpe: Type, quantified: List[Symbol], rawType: Type) = this(tpe)
+    private[generator] val (quantified, rawType) = tpe match { case ExistentialType(quantified, rtpe) => (quantified, rtpe); case rtpe => (Nil, rtpe) }
     private def classSymbol = tpe.typeSymbol.asClass
     /** The class name represented by this symbol. */
     override def className: String = classSymbol.fullName
@@ -75,14 +78,19 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
     }
 
     // TODO - Should we iterate down ALL of the hierarchy here for members, or make the algorithms do it later...
-    private val allMethods =
-      // NOTE - we need to figure out distinctness in some better way here.
-      // Right now some symbols were showing up twice, but we're probably dropping important ones.
-      (tpe.members ++ tpe.declarations).collect { case meth: MethodSymbol => meth }.groupBy(_.name.toString).map {
-        case (name, mthds) =>
-          // Pick one in the event we have a ton with the same name (some may be constructor args)
-          mthds.head
+    private val allMethods = {
+      val constructorArgs = tpe.members.collect {
+        case meth: MethodSymbol => meth
+      }.toList.filter { x =>
+        //System.err.println(s"$x - param: ${x.isParamAccessor}, var: ${x.isVar}, val: ${x.isVal}, owner: ${x.owner}, owner-constructor: ${x.owner.isConstructor}")
+        (x.owner == tpe.typeSymbol) && (x.isParamAccessor)
       }.toList
+      //System.err.println(s"$tpe has constructor args:\n - ${constructorArgs.mkString("\n - ")}")
+      // NOTE - This will only collect memeber vals/vals.  It's possible some things come from the constructor.
+      val declaredVars = (tpe.declarations).collect { case meth: MethodSymbol => meth }.toList
+      // NOTE - There can be duplication between 'constructor args' and 'declared vars' we'd like to avoid.
+        declaredVars
+    }
     // The list of all "accessor" method symbols of the class.  We filter to only these to avoid ahving too many symbols
     //private val fields? = allMethods.collect { case meth: MethodSymbol if meth.isAccessor || meth.isParamAccessor => meth }
 
@@ -106,7 +114,7 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
         val tmp = tpe.typeSymbol.asType.companionSymbol
         if(tmp.isType) {
           val cp = tmp.asType.toType
-          if (cp != NoType) Some(new ScalaIrClass(cp))
+          if (cp != NoType) Some(new ScalaIrClass(cp, quantified, rawType))
           else None
         }
         else None
@@ -134,7 +142,7 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
         case Nil =>
           scala.util.Success({
             val dispatchees = tools.compileTimeDispatchees(tpe.asInstanceOf[tools.c.universe.Type], tools.u.rootMirror, false)
-            dispatchees.map(t => new ScalaIrClass(t.asInstanceOf[u.Type]))(collection.breakOut)
+            dispatchees.map(t => new ScalaIrClass(t.asInstanceOf[u.Type], quantified, rawType))(collection.breakOut)
           })
         case errors =>
           scala.util.Failure(new UnclosedSubclassesException(errors))
@@ -147,20 +155,38 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
     override def parentClasses: Seq[IrClass] = {
       // TODO - We may need, additionally,  run some existentialAbstractoin fun on these signatures so the
       //        symbol/types are fully realized from what we had.
-      classSymbol.baseClasses filter (_.isClass) filterNot (_.typeSignature == tpe) map (x => new ScalaIrClass(fillParameters(x)))
+      // We always drop the first class, becasue it is ourself.
+      classSymbol.baseClasses.drop(1) filter (_.isClass) map { x =>
+        //new ScalaIrClass(fillParameters(x), quantified, rawType)
+        new ScalaIrClass(tpe.baseType(x), quantified, rawType)
+      }
     }
 
     /** Fill is the concrete types for a given symbol using the concrete types this class knows about. */
     final def fillParameters(baseSym: Symbol): Type = {
-      val baseSymTpe = baseSym.typeSignature.asSeenFrom(rawTpe, rawTpe.typeSymbol.asClass)
-      // println(s"baseSymTpe: ${baseSymTpe.toString}")
+      //System.err.println(s"baseSym= ${baseSym.toString}")
+      val baseSymTpe = baseSym.typeSignature.asSeenFrom(rawType, rawType.typeSymbol.asClass)
+      //System.err.println(s"baseSymTpe: ${baseSymTpe.toString}")
 
       val rawSymTpe = baseSymTpe match { case NullaryMethodType(ntpe) => ntpe; case ntpe => ntpe }
-      existentialAbstraction(quantified, rawSymTpe)
+      val result = existentialAbstraction(quantified, rawSymTpe)
+      //System.err.println(s"result = ${result.toString}")
+      result
     }
   }
 
   private class ScalaIrField(field: TermSymbol, override val owner: ScalaIrClass) extends IrField{
+
+    override def isMarkedTransient: Boolean = {
+      // TODO - is this correct?
+      val tr = scala.util.Try {
+        ((field.accessed != NoSymbol) && field.accessed.annotations.exists(_.tpe =:= typeOf[scala.transient])) ||
+        ((field.getter != NoSymbol) && field.getter.annotations.exists(_.tpe =:= typeOf[scala.transient])) ||
+          (field.annotations.exists(_.tpe =:= typeOf[scala.transient]))
+      }
+      tr.getOrElse(false)
+    }
+
     private def removeTrailingSpace(orig: String): String =
       orig match {
         // TODO - Why do we need this random fix, is this a bug?
@@ -170,7 +196,7 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
         case x => x
       }
     override def fieldName: String = removeTrailingSpace(field.name.toString)
-    override def tpe[U <: Universe with Singleton](u: U): u.Type = field.typeSignature.asInstanceOf[u.Type]
+    override def tpe[U <: Universe with Singleton](u: U): u.Type = field.typeSignature.asSeenFrom(owner.tpe, owner.tpe.typeSymbol).asInstanceOf[u.Type]
     override def isPublic: Boolean = field.isPublic
     override def isStatic: Boolean = field.isStatic
     override def isFinal: Boolean = field.isFinal
@@ -194,7 +220,17 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
       mthd.paramss.map(_.map(_.name.toString)) // TODO - Is this safe?
 
     override def parameterTypes[U <: Universe with Singleton](u: U): List[List[u.Type]] = {
-      mthd.paramss.map(_.map(fillParameters).map(_.asInstanceOf[u.Type]))
+      mthd.paramss.map(_.map(x => fillParameters(x).asSeenFrom(owner.tpe, owner.tpe.typeSymbol)).map(_.asInstanceOf[u.Type]))
+    }
+
+    override def isMarkedTransient: Boolean = {
+      // TODO - is this correct?
+      val tr = scala.util.Try {
+        ((mthd.accessed != NoSymbol) && mthd.accessed.annotations.exists(_.tpe =:= typeOf[scala.transient])) ||
+          ((mthd.getter != NoSymbol) && mthd.getter.annotations.exists(_.tpe =:= typeOf[scala.transient])) ||
+          (mthd.annotations.exists(_.tpe =:= typeOf[scala.transient]))
+      }
+      tr.getOrElse(false)
     }
 
     // TODO - We need to get the actual jvm name here.
@@ -237,6 +273,7 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
     override def isPrivate: Boolean = mthd.isPrivate
     override def isScala: Boolean = !mthd.isJava
     override def toString = s"def ${methodName}: ${mthd.typeSignature}"
+    override def isParamAccessor: Boolean = mthd.isParamAccessor
     override def isVal: Boolean = mthd.isVal
     override def isVar: Boolean =
       (mthd.getter != NoSymbol) && (mthd.setter != NoSymbol) &&
@@ -245,8 +282,8 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
       // TODO - We need to fill in generic parameters of our owner class so that this actually works.  If we fail to do so,
       //        We wind up delegating to runtime picklers when we DO know the static types.
       //fillParameters(mthd.returnType.typeSymbol).asInstanceOf[u.Type]
-      fillParameters(mthd).resultType.asInstanceOf[u.Type]
-      //mthd.returnType.asInstanceOf[u.Type]
+      //fillParameters(mthd).resultType.asInstanceOf[u.Type]
+       mthd.returnType.asSeenFrom(owner.tpe, owner.tpe.typeSymbol).asInstanceOf[u.Type]
     override def setter: Option[IrMethod] = {
       mthd.setter match {
         case NoSymbol => None

@@ -11,6 +11,22 @@ import scala.util.Try
 sealed trait IrSymbol {
   // TODO - isJava
 }
+object IrSymbol {
+  // TODO - This helper method should be available elsewhere.
+  def allDeclaredMethodIncludingSubclasses(cls: IrClass): Seq[IrMethod] = {
+    def allmethods(clss: List[IrClass], mthds: Seq[IrMethod], visitedClasses: Set[String]): Seq[IrMethod] =
+      clss match {
+        case hd :: tail if visitedClasses(hd.className) => allmethods(tail, mthds, visitedClasses)
+        case hd :: tail =>
+          val newMthds = hd.methods
+          allmethods(tail ++ hd.parentClasses, newMthds ++ mthds, visitedClasses + hd.className)
+        case Nil => mthds
+      }
+    // TODO - We should maybe warn if we see transient fields that cause us not to compile correctly, or maybe
+    //       allow serializing transient fields...
+    allmethods(List(cls), Nil, Set())
+  }
+}
 /** Represents a java class. */
 trait IrClass extends IrSymbol {
   /** The class name represented by this symbol. */
@@ -68,6 +84,8 @@ sealed trait IrMember extends IrSymbol {
   def isField: Boolean
   /** The name we should use for java reflection. */
   def javaReflectionName: String
+  /** This is true if the field is marked transient (either by scala or java serialization). */
+  def isMarkedTransient: Boolean
   // TODO - Signatures
 
 }
@@ -99,6 +117,8 @@ trait IrMethod extends IrMember {
   def isVar: Boolean
   /** Returns true if this method is associated with a scala var. */
   def isVal: Boolean
+  /** Returns true if this method is a param accessor for a constructor arg of a class. */
+  def isParamAccessor: Boolean
   /** Returns the Scala type associated with this field. */
   def returnType[U <: Universe with Singleton](u: Universe): u.Type
 
