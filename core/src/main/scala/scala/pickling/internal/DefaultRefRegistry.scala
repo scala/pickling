@@ -38,6 +38,7 @@ class DefaultRefPicklingRegistry extends RefPicklingRegistry {
     nextPicklee = 0
   }
 }
+
 // Single-threaded unpickling registry. */
 class DefaultRefUnpicklingRegistry(maxRefs: Int = 655536) extends RefUnpicklingRegistry {
   private var refs: Array[Any] = new Array[Any](maxRefs)
@@ -65,8 +66,9 @@ class DefaultRefUnpicklingRegistry(maxRefs: Int = 655536) extends RefUnpicklingR
     }
 
   }
-  override def regsiterUnpicklee(oid: Int, value: Any): Unit =
+  override def regsiterUnpicklee(oid: Int, value: Any): Unit = {
     refs(oid) = value
+  }
   override def lookupUnpicklee(oid: Int): Any = {
     if (oid >= idx) throw PicklingException(s"fatal error: invalid index $oid unpicklee cache of length $idx")
     val result = refs(oid)
