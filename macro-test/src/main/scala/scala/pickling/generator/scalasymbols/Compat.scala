@@ -64,10 +64,10 @@ trait SymbolTestMacros extends Macro {
     val tpe = weakTypeOf[T]
     val cls = symbols.newClass(tpe)
     cls.methods.filter { x =>
-      System.err.println(s"Checking var/val/param for $x")
+      //System.err.println(s"Checking var/val/param for $x")
       x.isVar || x.isVal || x.isParamAccessor
     }.filter { x =>
-      System.err.println(s"Checking $x for transient: ${x.isMarkedTransient}")
+      //System.err.println(s"Checking $x for transient: ${x.isMarkedTransient}")
       x.isMarkedTransient
     }.map(_.methodName)
   }
