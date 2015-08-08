@@ -93,7 +93,9 @@ trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
         c.error(c.enclosingPosition, s"Failed to generate pickler/unpickler for $tpe")
         ???
       case Some(tree) =>
-        //System.err.println(s" --=== $tpe ===--\n$tree\n --=== / $tpe ===--")
+        if((tpe.key == "scala.Option[scala.pickling.spec.PicklingSpec.CaseBase]") ||
+          (tpe =:= typeOf[None.type])
+        ) System.err.println(s" --=== $tpe ===--\n$tree\n --=== / $tpe ===--")
         tree
     }
   }

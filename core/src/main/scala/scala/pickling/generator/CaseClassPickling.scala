@@ -122,7 +122,8 @@ class CaseClassPickling(val allowReflection: Boolean) extends PicklingAlgorithm 
    * @return
    */
   override def generate(tpe: IrClass, logger: AlgorithmLogger): AlgorithmResult = {
-    if(tpe.isCaseClass) {
+    // Scala modules are pickled differently, so we have to explicitly ignore `case object`
+    if(tpe.isCaseClass && !tpe.isScalaModule) {
       val behavior = (checkConstructorImpl(tpe, logger) join checkFactoryImpl(tpe, logger))
       if(!tpe.isFinal) {
         // TODO - We need a different flag to say if we'll use runtime picklers *VS* reflection. The two features are not the same.

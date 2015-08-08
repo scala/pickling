@@ -46,7 +46,7 @@ trait SymbolTestMacros extends Macro {
   def valNames[T: WeakTypeTag]: Seq[String] = {
     val tpe = weakTypeOf[T]
     val cls = symbols.newClass(tpe)
-    System.err.println(s"Checking $tpe members:\n - ${cls.methods.map(x => s"${x}, isVal: ${x.isVal}, isVar: ${x.isVar}, isParam: ${x.isParamAccessor}").mkString("\n - ")}")
+    //System.err.println(s"Checking $tpe members:\n - ${cls.methods.map(x => s"${x}, isVal: ${x.isVal}, isVar: ${x.isVar}, isParam: ${x.isParamAccessor}").mkString("\n - ")}")
     cls.methods.filter(_.isVal).map(_.methodName)
   }
   def paramNames[T: WeakTypeTag]: Seq[String] = {
