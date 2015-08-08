@@ -121,11 +121,19 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     def genPickleEntry(op: PickleEntry): c.Tree = {
       val nested =
         op.ops.toList map genPickleOp
+      val oid = c.fresh(newTermName("oid"))
+      // TODO - Use sharing implicits to determine how to handle this? Or just delegate
+      //        share decision to runtime impl...
+      // TODO - hint known size
       q"""
+         val $oid = _root_.scala.pickling.internal.`package`.lookupPicklee(picklee)
+         builder.hintOid($oid)
          builder.hintTag(tag)
          builder.beginEntry(picklee)
-         $hintShareId
-         ..$nested
+         if($oid == -1) {
+           // TODO - Hint known size
+           ..$nested
+         }
          builder.endEntry()
        """
     }
@@ -156,12 +164,6 @@ trait SourceGenerator extends Macro with FastTypeTagMacros {
     $builder.hintTag(pickler.tag)
     pickler
   """
-
-  def hintShareId: c.Tree = {
-    // TODO - Some kind of flag to disable this logic from being generated.
-    q"""val oid = _root_.scala.pickling.internal.`package`.lookupPicklee(picklee)
-        builder.hintOid(oid)"""
-  }
 
   def checkNullPickle(pickleLogic: c.Tree): c.Tree =
     q"""
