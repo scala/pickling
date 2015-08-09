@@ -55,7 +55,7 @@ class BinaryPickleBuilder(format: BinaryPickleFormat, out: BinaryOutput) extends
       output.ensureCapacity(knownSize)
   }
 
-  @inline def beginEntry(picklee: Any): PBuilder = withHints { hints =>
+  @inline def beginEntry(picklee: Any, tag: FastTypeTag[_]): PBuilder = withHints { hints =>
     mkOutput(hints.knownSize)
 
     if (picklee == null) {
@@ -67,8 +67,8 @@ class BinaryPickleBuilder(format: BinaryPickleFormat, out: BinaryOutput) extends
       if (!hints.isElidedType) {
         // quickly decide whether we should use picklee.getClass instead
         val ts =
-          if (hints.tag.key.contains("anonfun$")) picklee.getClass.getName
-          else hints.tag.key
+          if (tag.key.contains("anonfun$")) picklee.getClass.getName
+          else tag.key
         output.putString( ts)
       }
 
@@ -77,7 +77,7 @@ class BinaryPickleBuilder(format: BinaryPickleFormat, out: BinaryOutput) extends
       // hence when unpickling it's enough to just increment the nextUnpicklee counter
       // and everything will work out automatically!
 
-      hints.tag.key match { // PERF: should store typestring once in hints.
+      tag.key match { // PERF: should store typestring once in hints.
         case KEY_UNIT =>
           output.putByte(UNIT_TAG)
         case KEY_NULL =>
@@ -162,23 +162,23 @@ class BinaryPickleReader(in: BinaryInput, format: BinaryPickleFormat) extends Ab
   def beginEntry: String = {
     val res: Any = withHints { hints =>
 
-      if (hints.isElidedType && nullablePrimitives.contains(hints.tag.key)) {
+      if (hints.isElidedType && nullablePrimitives.contains(hints.elidedType.get.key)) {
         val lookahead = in.getByte()
         lookahead match {
           case UNIT_TAG => FastTypeTag.Unit
           case NULL_TAG => FastTypeTag.Null
           case REF_TAG  => FastTypeTag.Ref
-          case _        => in.setLookahead(lookahead); hints.tag
+          case _        => in.setLookahead(lookahead); hints.elidedType.get
         }
-      } else if (hints.isElidedType && primitives.contains(hints.tag.key)) {
-        hints.tag
+      } else if (hints.isElidedType && primitives.contains(hints.elidedType.get.key)) {
+        hints.elidedType.get
       } else {
         val lookahead = in.getByte()
         lookahead match {
           case NULL_TAG =>
             FastTypeTag.Null
           case ELIDED_TAG =>
-            hints.tag
+            hints.elidedType.getOrElse(throw new PicklingException(s"Type is elided in pickle, but no elide hint was provided by unpickler!"))
           case REF_TAG =>
             FastTypeTag.Ref
           case _ =>
@@ -187,9 +187,7 @@ class BinaryPickleReader(in: BinaryInput, format: BinaryPickleFormat) extends Ab
               in.getStringWithLookahead(lookahead)
             } catch {
               case PicklingException(msg, cause) =>
-                val primInfo = if (hints.tag == null) ""
-                  else s"\nnullable prim: ${nullablePrimitives.contains(hints.tag.key)}\nprim: ${primitives.contains(hints.tag.key)}"
-                throw PicklingException(s"error decoding type string. debug info: $hints$primInfo\ncause:$msg")
+                throw PicklingException(s"error decoding type string. debug info: $hints\ncause:$msg")
             }
             res
         }

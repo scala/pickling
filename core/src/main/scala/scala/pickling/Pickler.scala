@@ -69,7 +69,7 @@ trait Unpickler[T] {
    *        if needed.   Each Unpickler should make no assumptions about its own type.
    */
   def unpickleEntry(reader: PReader): Any = {
-    reader.hintTag(this.tag)
+    // TODO - If we are statically elided, we should HINT our type.
     val tag = reader.beginEntry()
     val result = unpickle(tag, reader)
     reader.endEntry()

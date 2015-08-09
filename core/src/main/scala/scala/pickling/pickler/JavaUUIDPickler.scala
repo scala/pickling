@@ -8,25 +8,21 @@ trait JavaUUIDPicklers extends PrimitivePicklers {
     Pickler[UUID] with Unpickler[UUID] = new AbstractPicklerUnpickler[UUID] {
     def tag = FastTypeTag[UUID]
     def pickle(picklee: java.util.UUID, builder: PBuilder):Unit = {
-      builder.beginEntry(picklee)
-      builder.hintStaticallyElidedType()
+      builder.beginEntry(picklee, tag)
 
       builder.putField("msb", { b =>
-        b.hintTag(FastTypeTag.Long)
-        b.hintStaticallyElidedType()
+        b.hintElidedType(FastTypeTag.Long)
         longPickler.pickle(picklee.getMostSignificantBits, b)
       })
       builder.putField("lsb", { b =>
-        b.hintTag(FastTypeTag.Long)
-        b.hintStaticallyElidedType()
+        b.hintElidedType(FastTypeTag.Long)
         longPickler.pickle(picklee.getLeastSignificantBits, b)
       })
       builder.endEntry()
     }
 
     def unpickle(tag: String, reader: PReader): Any = {
-      reader.hintStaticallyElidedType()
-      reader.hintTag(FastTypeTag.Long)
+      reader.hintElidedType(FastTypeTag.Long)
       reader.pinHints()
       val r1 = reader.readField("msb")
       val tag1 = r1.beginEntry()

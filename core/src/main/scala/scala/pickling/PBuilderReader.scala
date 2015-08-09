@@ -5,14 +5,29 @@ import scala.language.experimental.macros
 import scala.reflect.runtime.universe._
 // TODO - Document this, specifically what pinHints means.
 trait Hintable {
-  def hintTag(tag: FastTypeTag[_]): this.type
+  /** Hints at the expected (byte) size of the entry we're about to write.. */
   def hintKnownSize(knownSize: Int): this.type
-  def hintStaticallyElidedType(): this.type
-  def hintDynamicallyElidedType(): this.type
+  /** Hints to the pickle format that we KNOW the type of this field, so it can elide any type hints from the final pickle.
+    *  During unpickling, this informs the format that it shouldn't look for any type hints in the pickle, but instead
+    *  use this tag as the unpickle tag key.
+    */
+  def hintElidedType(tag: FastTypeTag[_]): this.type
+
+  /** Hints the object id of the next `beginEntry`/`endEntry` calls.
+    * If this oid is -1, it implies that the next entry has not been registered in any sharing cache, and should
+    * be pickled fully.   If the oid != -1, then the pickle format is free to elide the fields of the entry in
+    * favor of pickling a [[scala.pickling.refs.Ref]].
+    *
+    * Hint: This is only used during pickling.
+    */
   def hintOid(id: Int): this.type
+  /** Locks the hints down to what we've specified, so if you drop into anotehr pickler it retains our information. */
   def pinHints(): this.type
+  /** Unlocks the hints. */
   def unpinHints(): this.type
+  /** Creates a new fresh set of hints, preserving what was hinted before. */
   def pushHints(): this.type
+  /** Pops to the previously saved set of hints. */
   def popHints(): this.type
 }
 
@@ -21,18 +36,17 @@ trait Hintable {
  *
  * Here are a few static rules that all picklers must follow when using this interface.
  *
- * 1. You will be given a type hint before any beginEntry() call.
- * 2. There will be one endEntry() for every beginEntry() call.
- * 3. There will be one endCollection() for every beginCollection() call.
- * 4. Every beginCollection()/endCollection() pair will be inside a beginEntry()/endEntry() pair.
- * 5. Every putElement() call must happen within a beginCollection()/endCollection() block.
- * 6. Every putField() call must happen within a beginEntry()/endEntry() block.
- * 7. There is no guarantee that putElement() will be called within a beginCollectoin()/endCollection() pair.
+ * 1. There will be one endEntry() for every beginEntry() call.
+ * 2. There will be one endCollection() for every beginCollection() call.
+ * 3. Every beginCollection()/endCollection() pair will be inside a beginEntry()/endEntry() pair.
+ * 4. Every putElement() call must happen within a beginCollection()/endCollection() block.
+ * 5. Every putField() call must happen within a beginEntry()/endEntry() block.
+ * 6. There is no guarantee that putElement() will be called within a beginCollectoin()/endCollection() pair.
  *    i.e. we can write empty collections.
- * 8. There is no guarantee that putField will be called within a beginEntry()/endEntry() pair.
+ * 7. There is no guarantee that putField will be called within a beginEntry()/endEntry() pair.
  *    i.e. if we don't put any fields, this means the entry was for a "primitive" type, at least what
  *    The pickling library considers primitives.
- * 9. The order of putField calls in any pickler will be the exact same ordering when unpickling, if the format
+ * 8. The order of putField calls in any pickler will be the exact same ordering when unpickling, if the format
  *    is compatible.
  *
  * Here is a list of all types the auto-generated Picklers considers "primitives" and must be directly supported by
@@ -64,10 +78,13 @@ trait PBuilder extends Hintable {
     * @param picklee
     *                The object to be serialized.  This may be a primtiive, in which case
     *                it can be immediately serialized (or you can wait unitl endEntry is called).
+    * @param tag
+    *                The tag to use when pickling this entry.   Tags must be serialized/restored, unless
+    *                otherwise hinted that it can be elided.
     * @return
     *                A pbuilder instance a pickler can use to serialize the picklee, if it's a complex type.
     */
-  def beginEntry(picklee: Any): PBuilder
+  def beginEntry(picklee: Any, tag: FastTypeTag[_]): PBuilder
   /**
    * Serialize a "field" in a complex structure/object being pickled.
    * @param name  The name of the field to serialize.
@@ -114,17 +131,16 @@ abstract class AbtsractPBuilder extends PBuilder with PickleTools
  *
  * Here are a few static rules that all picklers must follow when using this interface.
  *
- * 1. There must be a hintTag() before any beginEntry() call.
- * 2. There will be one endEntry() for every beginEntry() call.
- * 3. There will be one endCollection() for every beginCollection() call.
- * 4. Every beginCollection()/endCollection() pair will be inside a beginEntry()/endEntry() pair.
- * 5. Every readLength() call will be immediately after a beginCollection() call.
- * 6. Every readElement() call must happen within a beginCollection()/endCollection() block, and after a readLength().
- * 7. Every readField() call must happen within a beginEntry()/endEntry() block.
- * 8. If readLength() returns 0, there will be no called to readElement().
- * 9. readField() will only be called where atObject would return true
- * 10. readPrimitive will only be called when atPrimitive would return true
- * 11. The order of readField calls in any pickler will be the exact same ordering when pickling,
+ * 1. There will be one endEntry() for every beginEntry() call.
+ * 2. There will be one endCollection() for every beginCollection() call.
+ * 3. Every beginCollection()/endCollection() pair will be inside a beginEntry()/endEntry() pair.
+ * 4. Every readLength() call will be immediately after a beginCollection() call.
+ * 5. Every readElement() call must happen within a beginCollection()/endCollection() block, and after a readLength().
+ * 6. Every readField() call must happen within a beginEntry()/endEntry() block.
+ * 7. If readLength() returns 0, there will be no called to readElement().
+ * 8. readField() will only be called where atObject would return true
+ * 9. readPrimitive will only be called when atPrimitive would return true
+ * 10. The order of readField calls in any pickler will be the exact same ordering when pickling,
  *
  * Here is a list of all types the auto-generated Picklers considers "primitives" and must be directly supported by
  * any PReader "readPrimitive" operation:

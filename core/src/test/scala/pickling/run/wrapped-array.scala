@@ -20,8 +20,7 @@ class WrappedArrayTest extends FunSuite {
     def tag: FastTypeTag[WrappedArray.ofRef[AnyRef]] = implicitly[FastTypeTag[WrappedArray.ofRef[AnyRef]]]
 
     def pickle(coll: WrappedArray.ofRef[AnyRef], builder: PBuilder): Unit = {
-      builder.hintTag(implicitly[FastTypeTag[WrappedArray.ofRef[AnyRef]]])
-      builder.beginEntry(coll)
+      builder.beginEntry(coll, implicitly[FastTypeTag[WrappedArray.ofRef[AnyRef]]])
 
       builder.beginCollection(coll.size)
       coll.foreach { (elem: AnyRef) =>
@@ -30,23 +29,19 @@ class WrappedArrayTest extends FunSuite {
           // TODO: allow passing in ClassLoader to picklers selected from registry
           val classLoader: ClassLoader = elemClass.getClassLoader
           val elemTag = FastTypeTag.mkRaw(elemClass, mirror) // slow: `mkRaw` is called for each element
-          b.hintTag(elemTag)
           val pickler = internal.currentRuntime.picklers.genPickler(classLoader, elemClass, elemTag).asInstanceOf[Pickler[AnyRef]]
           pickler.pickle(elem, b)
         }
       }
       builder.endCollection()
-
       builder.endEntry()
     }
 
     def unpickle(tpe: String, preader: PReader): Any = {
       val reader = preader.beginCollection()
-
       val length = reader.readLength()
       val elemClass = (new Object).getClass
       val newArray = java.lang.reflect.Array.newInstance(elemClass, length).asInstanceOf[Array[AnyRef]]
-
       var i = 0
       while (i < length) {
         val r = reader.readElement()
@@ -57,7 +52,6 @@ class WrappedArrayTest extends FunSuite {
         newArray(i) = elem.asInstanceOf[AnyRef]
         i = i + 1
       }
-
       preader.endCollection()
       new WrappedArray.ofRef(newArray)
     }

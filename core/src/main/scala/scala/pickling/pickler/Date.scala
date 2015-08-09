@@ -17,11 +17,10 @@ trait DatePicklers extends PrimitivePicklers {
 
     def tag = FastTypeTag[Date]
     def pickle(picklee: Date, builder: PBuilder): Unit = {
-      builder.beginEntry(picklee)
+      builder.beginEntry(picklee, tag)
 
       builder.putField("value", b => {
-        b.hintTag(implicitly[FastTypeTag[String]])
-        b.hintStaticallyElidedType()
+        b.hintElidedType(implicitly[FastTypeTag[String]])
         stringPickler.pickle(dateFormat.format(picklee), b)
       })
 
@@ -29,13 +28,8 @@ trait DatePicklers extends PrimitivePicklers {
     }
     def unpickle(tag: String, reader: PReader): Any = {
       val reader1 = reader.readField("value")
-      reader1.hintTag(implicitly[FastTypeTag[String]])
-      reader1.hintStaticallyElidedType()
-
-      val tag = reader1.beginEntry()
-      val result = stringPickler.unpickle(tag, reader1)
-      reader1.endEntry()
-
+      reader1.hintElidedType(implicitly[FastTypeTag[String]])
+      val result = stringPickler.unpickleEntry(reader1)
       dateFormat.parse(result.asInstanceOf[String])
     }
   }

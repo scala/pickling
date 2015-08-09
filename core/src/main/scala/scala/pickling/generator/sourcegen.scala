@@ -12,8 +12,7 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
   import c.universe._
 
   def pickleNull(builder: c.Tree): c.Tree =
-    q"""$builder.hintTag(_root_.scala.pickling.FastTypeTag.Null)
-        _root_.scala.pickling.Defaults.nullPickler.pickle(null, $builder)"""
+    q"""_root_.scala.pickling.Defaults.nullPickler.pickle(null, $builder)"""
 
 
 
@@ -27,20 +26,20 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
   def generatePickleImplFromAst(picklerAst: PicklerAst): c.Tree = {
 
     def genGetField(x: GetField): c.Tree = {
-      def pickleLogic(isStaticallyElided: Boolean, fieldValue: Tree): Tree = {
+      def pickleLogic(isStaticallyElided: Boolean, fieldValue: Tree, tpe: Type): Tree = {
+        val fieldPickler = c.fresh(newTermName("fieldPickler"))
         val elideHint =
-          if (isStaticallyElided) q"b.hintStaticallyElidedType()" else q""
-        // TODO - Hint dynamically elided?
+          if (isStaticallyElided) q"b.hintElidedType($fieldPickler.tag)" else q""
         // NOTE; This will look up an IMPLICIT pickler for the value, based on the type.
         //       This is how we chain our macros to find all the valid types.
-
         q"""
+           val $fieldPickler = _root_.scala.Predef.implicitly[_root_.scala.pickling.Pickler[$tpe]]
            $elideHint
-           _root_.scala.pickling.functions.pickleInto($fieldValue, b)"""
+           $fieldPickler.pickle($fieldValue, b)"""
       }
 
-      def putField(getterLogic: Tree, isStaticallyElided: Boolean): c.Tree =
-        q"builder.putField(${x.name}, b => ${pickleLogic(isStaticallyElided, getterLogic)})"
+      def putField(getterLogic: Tree, isStaticallyElided: Boolean, tpe: Type): c.Tree =
+        q"builder.putField(${x.name}, b => ${pickleLogic(isStaticallyElided, getterLogic, tpe)})"
 
       x.getter match {
         case x: IrField =>
@@ -53,21 +52,21 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
             val result = reflectivelyGet(newTermName("picklee"), x)(fm => fm)
             val rTerm = c.fresh(newTermName("result"))
             val logic = q"""val $rTerm = { ..$result }
-                            ${putField(q"$rTerm.asInstanceOf[$tpe]", staticallyElided)}"""
+                            ${putField(q"$rTerm.asInstanceOf[$tpe]", staticallyElided, tpe)}"""
             if(x.isScala) allowNonExistentField(logic) else logic
-          } else putField(q"picklee.${newTermName(x.fieldName)}", staticallyElided)
+          } else putField(q"picklee.${newTermName(x.fieldName)}", staticallyElided, tpe)
         case _: IrConstructor =>
           // This is a logic erorr
           sys.error(s"Pickling logic error.  Found constructor when trying to pickle field ${x.name}.")
         case y: IrMethod =>
+          val tpe = y.returnType(c.universe)
           val staticallyElided = {
             // TODO - Figure this out
-            val tpe = y.returnType(c.universe)
             tpe.isEffectivelyFinal || tpe.isEffectivelyPrimitive
           }
-          if (y.isPublic) putField(q"picklee.${newTermName(y.methodName)}", staticallyElided)
+          if (y.isPublic) putField(q"picklee.${newTermName(y.methodName)}", staticallyElided, tpe)
           else {
-            val result = reflectivelyGet(newTermName("picklee"), y)(fm => putField(q"${fm}.asInstanceOf[${y.returnType(u).asInstanceOf[c.Type]}]", staticallyElided))
+            val result = reflectivelyGet(newTermName("picklee"), y)(fm => putField(q"${fm}.asInstanceOf[${y.returnType(u).asInstanceOf[c.Type]}]", staticallyElided, tpe))
             q"""..$result"""
           }
       }
@@ -131,8 +130,7 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
         else q"if($oid == -1) { ..$nested }"
       q"""
          ..$shareHint
-         builder.hintTag(tag)
-         builder.beginEntry(picklee)
+         builder.beginEntry(picklee, tag)
          $shareLogic
          builder.endEntry()
        """
@@ -155,20 +153,17 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
     val tag = try {
       _root_.scala.pickling.FastTypeTag.mkRaw(clazz, _root_.scala.reflect.runtime.universe.runtimeMirror(classLoader))
     } finally _root_.scala.pickling.internal.GRL.unlock()
-    $builder.hintTag(tag)
     _root_.scala.pickling.internal.`package`.currentRuntime.picklers.genPickler(classLoader, clazz, tag)
   """
 
   def createPickler(tpe: c.Type, builder: c.Tree): c.Tree = q"""
     val pickler = _root_.scala.Predef.implicitly[_root_.scala.pickling.Pickler[$tpe]]
-    $builder.hintTag(pickler.tag)
     pickler
   """
 
   def checkNullPickle(pickleLogic: c.Tree): c.Tree =
     q"""
         if(null == picklee) {
-          builder.hintTag(_root_.scala.pickling.FastTypeTag.Null)
           _root_.scala.pickling.Defaults.nullPickler.pickle(null, builder)
         } else $pickleLogic"""
 
@@ -202,9 +197,10 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
 
   def readField(name: String, tpe: Type): c.Tree = {
     val readerName = c.fresh(newTermName("reader"))
-    // TODO - is this the right place to do this?
-    val staticHint       = if (tpe.isEffectivelyFinal) q"$readerName.hintStaticallyElidedType()" else q"";
     val unpicklerName    = c.fresh(newTermName("unpickler$unpickle$"))
+    // TODO - is this the right place to do this?
+    val staticHint       = if (tpe.isEffectivelyFinal) q"$readerName.hintElidedType($unpicklerName.tag)" else q"";
+
     val resultName = c.fresh(newTermName("result"))
     // TODO - may be able to drop locally.
       q"""
@@ -212,7 +208,6 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
            val $readerName = reader.readField($name)
            var $unpicklerName: _root_.scala.pickling.Unpickler[$tpe] = null
            $unpicklerName = _root_.scala.Predef.implicitly[_root_.scala.pickling.Unpickler[$tpe]]
-           $readerName.hintTag($unpicklerName.tag)
            $staticHint
            val typeString = $readerName.beginEntry()
            val $resultName = $unpicklerName.unpickle(typeString, $readerName)

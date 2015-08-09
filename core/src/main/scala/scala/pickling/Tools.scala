@@ -457,60 +457,48 @@ abstract class Macro extends RichTypes { self =>
 }
 
 case class Hints(
-  tag: FastTypeTag[_] = null,
   knownSize: Int = -1,
-  isStaticallyElidedType: Boolean = false,
-  isDynamicallyElidedType: Boolean = false,
+  elidedType: Option[FastTypeTag[_]] = None,
   oid: Int = -1,
   pinned: Boolean = false) {
-  def isElidedType = isStaticallyElidedType || isDynamicallyElidedType
+  def isElidedType = !elidedType.isEmpty
 }
 
-trait PickleTools {
+trait PickleTools extends Hintable {
   protected var hints: List[Hints] = List(Hints())
   def areHintsPinned: Boolean = hints.head.pinned
 
-  def hintTag(tag: FastTypeTag[_]): this.type = {
-    hints = hints.head.copy(tag = tag) :: hints.tail
-    this
-  }
-
-  def hintKnownSize(knownSize: Int): this.type = {
+  override def hintKnownSize(knownSize: Int): this.type = {
     hints = hints.head.copy(knownSize = knownSize) :: hints.tail
     this
   }
 
-  def hintStaticallyElidedType(): this.type = {
-    hints = hints.head.copy(isStaticallyElidedType = true) :: hints.tail
+  override def hintElidedType(tag: FastTypeTag[_]): this.type = {
+    hints = hints.head.copy(elidedType = Some(tag)) :: hints.tail
     this
   }
 
-  def hintDynamicallyElidedType(): this.type = {
-    hints = hints.head.copy(isDynamicallyElidedType = true) :: hints.tail
-    this
-  }
-
-  def hintOid(oid: Int): this.type = {
+  override def hintOid(oid: Int): this.type = {
     hints = hints.head.copy(oid = oid) :: hints.tail
     this
   }
 
-  def pinHints(): this.type = {
+  override def pinHints(): this.type = {
     hints = hints.head.copy(pinned = true) :: hints.tail
     this
   }
 
-  def unpinHints(): this.type = {
+  override def unpinHints(): this.type = {
     hints = hints.head.copy(pinned = false) :: hints.tail
     this
   }
 
-  def pushHints(): this.type = {
+  override def pushHints(): this.type = {
     hints = Hints() :: hints
     this
   }
 
-  def popHints(): this.type = {
+  override def popHints(): this.type = {
     hints = hints.tail
     this
   }

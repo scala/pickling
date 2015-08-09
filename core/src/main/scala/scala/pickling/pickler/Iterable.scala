@@ -28,19 +28,17 @@ object TravPickler {
 
     def pickle(coll: C, builder: PBuilder): Unit = {
       if (elemTag == FastTypeTag.Int) builder.hintKnownSize(coll.size * 4 + 100)
-      builder.beginEntry(coll)
+      builder.beginEntry(coll, tag)
       builder.beginCollection(coll.size)
 
       builder.pushHints()
       if (isPrimitive) {
-        builder.hintStaticallyElidedType()
-        builder.hintTag(elemTag)
+        builder.hintElidedType(elemTag)
         builder.pinHints()
       }
 
       (coll: Traversable[_]).asInstanceOf[Traversable[T]].foreach { (elem: T) =>
         builder putElement { b =>
-          if (!isPrimitive) b.hintTag(elemTag)
           elemPickler.pickle(elem, b)
         }
       }
@@ -55,8 +53,7 @@ object TravPickler {
 
       preader.pushHints()
       if (isPrimitive) {
-        reader.hintStaticallyElidedType()
-        reader.hintTag(elemTag)
+        reader.hintElidedType(elemTag)
         reader.pinHints()
       }
 
