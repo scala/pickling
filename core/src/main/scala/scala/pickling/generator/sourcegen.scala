@@ -125,13 +125,13 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
       val shareHint: List[c.Tree] =
         if(shareNothing) List(q"()")
         else List(q"val $oid = _root_.scala.pickling.internal.`package`.lookupPicklee(picklee)", q"builder.hintOid($oid)")
-      val shareLogic: c.Tree =
+      /*val shareLogic: c.Tree =
         if(shareNothing) q"..$nested"
-        else q"if($oid == -1) { ..$nested }"
+        else q"if($oid == -1) { ..$nested }"*/
       q"""
          ..$shareHint
          builder.beginEntry(picklee, tag)
-         $shareLogic
+         ..$nested
          builder.endEntry()
        """
     }

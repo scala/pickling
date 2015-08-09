@@ -46,6 +46,7 @@ class BinaryPickleBuilder(format: BinaryPickleFormat, out: BinaryOutput) extends
   import format._
   
   private var output: BinaryOutput = out
+  private var isIgnoringFields = false
 
   @inline private[this] def mkOutput(knownSize: Int): Unit = {
     if (output == null)
@@ -55,14 +56,19 @@ class BinaryPickleBuilder(format: BinaryPickleFormat, out: BinaryOutput) extends
       output.ensureCapacity(knownSize)
   }
 
+  private def ignoringSharedRefs(action: => PBuilder): PBuilder =
+      if(isIgnoringFields) this
+      else action
+
   @inline def beginEntry(picklee: Any, tag: FastTypeTag[_]): PBuilder = withHints { hints =>
     mkOutput(hints.knownSize)
 
     if (picklee == null) {
       output.putByte( NULL_TAG)
-    } else if (hints.oid != -1) {
+    } else if (hints.isSharedReference) {
       output.putByte( REF_TAG)
       output.putInt( hints.oid)
+      isIgnoringFields = true
     } else {
       if (!hints.isElidedType) {
         // quickly decide whether we should use picklee.getClass instead
@@ -123,20 +129,24 @@ class BinaryPickleBuilder(format: BinaryPickleFormat, out: BinaryOutput) extends
     this
   }
 
-  @inline def putField(name: String, pickler: PBuilder => Unit): PBuilder = {
+  @inline def putField(name: String, pickler: PBuilder => Unit): PBuilder = ignoringSharedRefs {
     // can skip writing name if we pickle/unpickle in the same order
     pickler(this)
     this
   }
 
-  @inline def endEntry(): Unit = { /* do nothing */ }
+  @inline def endEntry(): Unit = {
+    /* do nothing */
+    // We always reset this:
+    isIgnoringFields = false
+  }
 
-  @inline def beginCollection(length: Int): PBuilder = {
+  @inline def beginCollection(length: Int): PBuilder = ignoringSharedRefs {
     output.putInt(length)
     this
   }
 
-  @inline def putElement(pickler: PBuilder => Unit): PBuilder = {
+  @inline def putElement(pickler: PBuilder => Unit): PBuilder = ignoringSharedRefs {
     pickler(this)
     this
   }

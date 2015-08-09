@@ -461,7 +461,10 @@ case class Hints(
   elidedType: Option[FastTypeTag[_]] = None,
   oid: Int = -1,
   pinned: Boolean = false) {
+  /** Returns true if the type tag can be/was eldied . */
   def isElidedType = !elidedType.isEmpty
+  /** Returns true if the currently pickled object was previously pickled and can just be `shared` with the previous value. */
+  def isSharedReference: Boolean = oid != -1
 }
 
 trait PickleTools extends Hintable {
