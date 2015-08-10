@@ -8,7 +8,7 @@ import scala.pickling.Pickler
 import scala.reflect.macros.Context
 import scala.reflect.runtime.{universe => ru}
 
-object Compat {
+private[pickling] object Compat {
   def genPickler_impl[T: c.WeakTypeTag](c: Context): c.Expr[Pickler[T] with Generated] = {
     val c0: c.type = c
     val bundle = new { val c: c0.type = c0 } with PicklingMacros

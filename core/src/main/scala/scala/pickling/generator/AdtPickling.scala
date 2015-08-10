@@ -5,7 +5,7 @@ package generator
 /** This algorithm isnpects symbols to determine if we have an abstract class with fully known sub-classes,
   * in which case we delegate behavior to the subclasses.
   */
-object AdtPickling extends PicklingAlgorithm {
+private[pickling] object AdtPickling extends PicklingAlgorithm {
   /**
    * Attempts to construct pickling logic for a given type.
    */

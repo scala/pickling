@@ -8,10 +8,10 @@ import scala.util.Try
 /**
  * A minimal symbol set to allow us to construct our mini-pickle-behavior language
  */
-sealed trait IrSymbol {
+private[pickling] sealed trait IrSymbol {
   // TODO - isJava
 }
-object IrSymbol {
+private[pickling] object IrSymbol {
   // TODO - This helper method should be available elsewhere.
   def allDeclaredMethodIncludingSubclasses(cls: IrClass): Seq[IrMethod] = {
     def allmethods(clss: List[IrClass], mthds: Seq[IrMethod], visitedClasses: Set[String]): Seq[IrMethod] =
@@ -42,7 +42,7 @@ object IrSymbol {
   }
 }
 /** Represents a java class. */
-trait IrClass extends IrSymbol {
+private[pickling] trait IrClass extends IrSymbol {
   /** The class name represented by this symbol. */
   def className: String
   /** The primary constructor of the class. */
@@ -75,13 +75,13 @@ trait IrClass extends IrSymbol {
   def companion: Option[IrClass]
 }
 
-sealed trait IrInnerClass extends IrSymbol with IrClass {
+private[pickling] sealed trait IrInnerClass extends IrSymbol with IrClass {
   def outerClass: IrClass
 }
 /** Represents a member of a particular class.
   * This might be a Constructor, Field or Member.
   */
-sealed trait IrMember extends IrSymbol {
+private[pickling] sealed trait IrMember extends IrSymbol {
   /** The class that this member belongs to. */
   def owner: IrClass
   /** Returns true if the members is defined statically for the class. */
@@ -103,7 +103,7 @@ sealed trait IrMember extends IrSymbol {
   // TODO - Signatures
 
 }
-trait IrField extends IrMember {
+private[pickling] trait IrField extends IrMember {
   /** The name of the field, as we'd use to lookup via reflection. */
   def fieldName: String
   /** Return the type of the field. */
@@ -115,7 +115,7 @@ trait IrField extends IrMember {
   def isParameter: Boolean
   override final def isField: Boolean = true
 }
-trait IrMethod extends IrMember {
+private[pickling] trait IrMethod extends IrMember {
   /** The code-names of the constructor parameters.  Note: There is an algorithm which will try to
     * align the constructor parameters with getter methods by symbol name.
     *
@@ -142,12 +142,10 @@ trait IrMethod extends IrMember {
   override final def isField: Boolean = false
 }
 /** The symbol representing a constructor. */
-trait IrConstructor extends IrMethod {}
-
-import scala.reflect.api.Universe
+private[pickling] trait IrConstructor extends IrMethod {}
 
 /** A symbol loader for Java/Scala Symbols. */
-abstract class IrSymbolLoader[U <: Universe with Singleton](val u: U) {
+private[pickling] abstract class IrSymbolLoader[U <: Universe with Singleton](val u: U) {
   /** Loads the symbols for a given Type using this symbol loader. */
   def newClass(tpe: u.Type): IrClass
 }

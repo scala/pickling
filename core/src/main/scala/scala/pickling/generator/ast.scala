@@ -19,7 +19,7 @@ package generator
  *
  *
  */
-sealed trait IrAst {
+private[pickling] sealed trait IrAst {
   /** Returns true if the implementation of this particular AST node requires the use of of
     * a private member, for which we do not have access.
     * @return
@@ -27,7 +27,7 @@ sealed trait IrAst {
   def requiresReflection: Boolean
 }
 
-object IrAst {
+private[pickling] object IrAst {
   def transform(ast: IrAst)(f: IrAst => IrAst): IrAst = {
     def chain(ast: IrAst): IrAst = transform(ast)(f)
     ast match {
@@ -50,14 +50,14 @@ object IrAst {
 }
 
 /** An AST node representing an operation that can be performed in an unpickler. */
-sealed trait UnpicklerAst extends IrAst
+private[pickling] sealed trait UnpicklerAst extends IrAst
 
 /** This represents the pickling library calling the constructor of a class using a set of serialized fields.
   *
   * @param constructor
   *               The method symbol for which constructor to call.
   */
-case class CallConstructor(fieldNames: Seq[String], constructor: IrConstructor) extends UnpicklerAst {
+private[pickling] case class CallConstructor(fieldNames: Seq[String], constructor: IrConstructor) extends UnpicklerAst {
   def requiresReflection: Boolean =
     !(constructor.isPublic)
   override def toString = s"constructor (${fieldNames.mkString(", ")})"
@@ -72,7 +72,7 @@ case class CallConstructor(fieldNames: Seq[String], constructor: IrConstructor) 
   * @param factoryMethod
   *          The method to call which will construct an instance of the class.  This must be defined on a Scala module.
   */
-case class CallModuleFactory(fields: Seq[String], module: IrClass, factoryMethod: IrMethod) extends UnpicklerAst {
+private[pickling] case class CallModuleFactory(fields: Seq[String], module: IrClass, factoryMethod: IrMethod) extends UnpicklerAst {
   assert(module.isScalaModule)
   assert(!factoryMethod.isStatic)
   def requiresReflection: Boolean =
@@ -87,7 +87,7 @@ case class CallModuleFactory(fields: Seq[String], module: IrClass, factoryMethod
   * @param setter
   *               The mechanism of setting the value.  Can either directly manipulate a field, or use a method call.
   */
-case class SetField(name: String, setter: IrMember) extends UnpicklerAst {
+private[pickling] case class SetField(name: String, setter: IrMember) extends UnpicklerAst {
   def requiresReflection: Boolean = !setter.isPublic || ((setter.isScala && setter.isField))
   override def toString = s"set $name w/ $setter"
 }
@@ -103,7 +103,7 @@ case class SetField(name: String, setter: IrMember) extends UnpicklerAst {
  * @param lookupRuntime
  *            True if we should generate code to hit the runtime unpicklers, otherwise unknown tags will lead to an error.
  */
-case class SubclassUnpicklerDelegation(subClasses: Seq[IrClass], parent: IrClass, parentBehavior: Option[UnpicklerAst] = None, lookupRuntime: Boolean = false) extends UnpicklerAst {
+private[pickling] case class SubclassUnpicklerDelegation(subClasses: Seq[IrClass], parent: IrClass, parentBehavior: Option[UnpicklerAst] = None, lookupRuntime: Boolean = false) extends UnpicklerAst {
   def requiresReflection: Boolean = false
   override def toString = {
     val cases = (
@@ -116,18 +116,18 @@ case class SubclassUnpicklerDelegation(subClasses: Seq[IrClass], parent: IrClass
 }
 
 /** A set of behaviors used to implement unpickling. */
-case class UnpickleBehavior(operations: Seq[UnpicklerAst]) extends UnpicklerAst {
+private[pickling] case class UnpickleBehavior(operations: Seq[UnpicklerAst]) extends UnpicklerAst {
   def requiresReflection = operations exists (_.requiresReflection)
   override def toString = s"unpickle behavior {${operations.mkString("\n", "\n", "\n")}}"
 }
 
 /** A raw `Unsafe.allocateInstance` call for a given type/class. */
-case class AllocateInstance(tpe: IrClass) extends UnpicklerAst {
+private[pickling] case class AllocateInstance(tpe: IrClass) extends UnpicklerAst {
   def requiresReflection = true
 }
 
 /** Unpickle a singleton type. */
-case class UnpickleSingleton(tpe: IrClass) extends UnpicklerAst {
+private[pickling] case class UnpickleSingleton(tpe: IrClass) extends UnpicklerAst {
   def requiresReflection: Boolean = {
     // TODO - check to see if the tpe is private....
     false
@@ -136,14 +136,14 @@ case class UnpickleSingleton(tpe: IrClass) extends UnpicklerAst {
 }
 
 /** This is an AST node representing an operation performed by a pickler. */
-sealed trait PicklerAst extends IrAst
+private[pickling] sealed trait PicklerAst extends IrAst
 
 /**
  * This represents the pickling library GETTING the value of a field, and writing out to the pickle.
  * This can be done either through a getting metod, or via direct field access.
  * @param getter
  */
-case class GetField(name: String, getter: IrMember) extends PicklerAst {
+private[pickling] case class GetField(name: String, getter: IrMember) extends PicklerAst {
   // NOTE; We do not know how to handle non-reflective field access for scala symbols yet.
   def requiresReflection: Boolean = !getter.isPublic || (getter.isScala && getter.isField)
   override def toString = s"get field $name from $getter"
@@ -162,7 +162,7 @@ case class GetField(name: String, getter: IrMember) extends PicklerAst {
   * @param lookupRuntime
   *                      True if we are allowed to generate/lookup picklers are runtime.
   */
-case class SubclassDispatch(subClasses: Seq[IrClass], parent: IrClass, parentBehavior: Option[PicklerAst] = None, lookupRuntime: Boolean = false) extends PicklerAst {
+private[pickling] case class SubclassDispatch(subClasses: Seq[IrClass], parent: IrClass, parentBehavior: Option[PicklerAst] = None, lookupRuntime: Boolean = false) extends PicklerAst {
   def requiresReflection: Boolean = false
   override def toString = {
     val cases: Seq[String] =
@@ -174,29 +174,29 @@ case class SubclassDispatch(subClasses: Seq[IrClass], parent: IrClass, parentBeh
   }
 }
 /** Hardcoded pickling of Externalizable classes using built in magik. */
-case class PickleExternalizable(tpe: IrClass) extends PicklerAst {
+private[pickling] case class PickleExternalizable(tpe: IrClass) extends PicklerAst {
   def requiresReflection: Boolean = false
 }
 /** Hardcoded unpickling of Externalizable classes using built in magik classes. */
-case class UnpickleExternalizable(tpe: IrClass) extends UnpicklerAst {
+private[pickling] case class UnpickleExternalizable(tpe: IrClass) extends UnpicklerAst {
   // We use unsafe to instantiate
   def requiresReflection: Boolean = true
 }
 
 
 /** Ensure that beginEntry/hintOid (sharing/ref)/endEntry are called around the nested operations. */
-case class PickleEntry(ops: Seq[PicklerAst]) extends PicklerAst {
+private[pickling] case class PickleEntry(ops: Seq[PicklerAst]) extends PicklerAst {
   def requiresReflection: Boolean = ops exists (_.requiresReflection)
   override def toString = s"  entry {${ops.mkString("\n", "\n", "\n")}}"
 }
 
 /** This represents the algorithm used to pickle a given class. */
-case class PickleBehavior(operations: Seq[PicklerAst]) extends PicklerAst {
+private[pickling] case class PickleBehavior(operations: Seq[PicklerAst]) extends PicklerAst {
   def requiresReflection: Boolean = operations.exists(_.requiresReflection)
   override def toString = s"pickle behavior {${operations.mkString("\n", "\n", "\n")}}"
 }
 
-case class PickleUnpickleImplementation(pickle: PicklerAst, unpickle: UnpicklerAst) extends IrAst {
+private[pickling] case class PickleUnpickleImplementation(pickle: PicklerAst, unpickle: UnpicklerAst) extends IrAst {
   override def requiresReflection: Boolean = pickle.requiresReflection || unpickle.requiresReflection
   override def toString = s"$pickle\n---$unpickle\n"
 }

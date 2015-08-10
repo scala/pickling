@@ -7,7 +7,7 @@ import scala.reflect.api.Universe
 import scala.reflect.macros.Context
 
 
-class UnclosedSubclassesException(errors: Seq[String]) extends Exception(errors.mkString("\n")) {
+private[pickling] class UnclosedSubclassesException(errors: Seq[String]) extends Exception(errors.mkString("\n")) {
   override def fillInStackTrace(): Throwable = this
 }
 
@@ -18,7 +18,7 @@ class UnclosedSubclassesException(errors: Seq[String]) extends Exception(errors.
   *        remove all knowledge of private symbols from Java classes, because generally it doesn't care about
   *        Java's privates.
   */
-class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u: U, tools: Tools[C]) extends IrSymbolLoader[U](u) {
+private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u: U, tools: Tools[C]) extends IrSymbolLoader[U](u) {
   import u._
   import compat._
   import definitions._

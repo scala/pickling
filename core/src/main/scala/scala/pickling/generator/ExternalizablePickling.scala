@@ -4,7 +4,7 @@ package scala.pickling.generator
  * This implements an algorithm which will handle Externalizable classes.  It's not
  * the most efficient, but it does work and has tests.
  */
-class ExternalizablePickling extends PicklingAlgorithm {
+private[pickling] class ExternalizablePickling extends PicklingAlgorithm {
 
   def isExternalizable(tpe: IrClass): Boolean = {
     (tpe.className == "java.io.Externalizable") ||

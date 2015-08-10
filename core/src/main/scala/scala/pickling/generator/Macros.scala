@@ -2,13 +2,13 @@ package scala.pickling
 package generator
 
 // TODO - move these into Pickler/Unpickler and replace the existing macros.
-object PicklingMacros {
+private[pickling] object PicklingMacros {
   import scala.language.experimental.macros
   def genPickler[T]: Pickler[T] with Generated = macro scala.pickling.generator.Compat.genPickler_impl[T]
   def genUnpickler[T]: Unpickler[T] with Generated = macro scala.pickling.generator.Compat.genUnpickler_impl[T]
   def genPicklerUnpickler[T]: AbstractPicklerUnpickler[T] with Generated = macro scala.pickling.generator.Compat.genPicklerUnpickler_impl[T]
 }
-trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
+private[pickling] trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
   import c.universe._
   val symbols = new IrScalaSymbols[c.universe.type, c.type](c.universe, tools)
   // TODO - We should have more customization than "isStaticOnly"

@@ -8,7 +8,7 @@ import scala.reflect.api.Universe
   *
   *
   */
-trait SourceGenerator extends Macro with FastTypeTagMacros {
+private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
   import c.universe._
 
   def pickleNull(builder: c.Tree): c.Tree =

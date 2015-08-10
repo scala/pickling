@@ -3,7 +3,7 @@ package generator
 
 
 // This should be able to serialize singleton scala objects.
-object ScalaSingleton extends PicklingAlgorithm {
+private[pickling] object ScalaSingleton extends PicklingAlgorithm {
   override def generate(tpe: IrClass, logger: AlgorithmLogger): AlgorithmResult = {
     if(tpe.isScalaModule) {
       AlgorithmSucccess(PickleUnpickleImplementation(

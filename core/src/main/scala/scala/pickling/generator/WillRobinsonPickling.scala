@@ -8,7 +8,7 @@ package generator
   * - https://en.wikipedia.org/wiki/Danger,_Will_Robinson
   * - https://www.youtube.com/watch?v=RG0ochx16Dg
   */
-object WillRobinsonPickling extends PicklingAlgorithm {
+private[pickling] object WillRobinsonPickling extends PicklingAlgorithm {
   private case class FieldInfo(setter: SetField, getter: GetField)
   // TODO - Constructor unification in the case-class generator is probably still useful here...
   private def allScalaField(tpe: IrClass, logger: AlgorithmLogger): Seq[FieldInfo] = {

@@ -6,7 +6,7 @@ import scala.reflect.api.Universe
 // TODO - These need logging messages.
 
 /** An interface so we can pass logging to these algorithms at runtime/during testing. */
-trait AlgorithmLogger {
+private[pickling] trait AlgorithmLogger {
   def warn(msg: String): Unit
   def debug(msg: String): Unit
   def error(msg: String): Unit
@@ -14,7 +14,7 @@ trait AlgorithmLogger {
 }
 
 /** Represents the result of an algorithm call. */
-sealed trait AlgorithmResult {
+private[pickling]sealed trait AlgorithmResult {
   def join(other: => AlgorithmResult): AlgorithmResult
   def map(f: PickleUnpickleImplementation => PickleUnpickleImplementation): AlgorithmResult =
      this match {
@@ -22,32 +22,28 @@ sealed trait AlgorithmResult {
        case x => x
      }
 }
-final case class AlgorithmSucccess(impl: PickleUnpickleImplementation) extends AlgorithmResult {
+private[pickling]final case class AlgorithmSucccess(impl: PickleUnpickleImplementation) extends AlgorithmResult {
   def join(other: => AlgorithmResult): AlgorithmResult = this
 }
 /** A list of reasons why an algorithm failued to run. */
-final case class AlgorithmFailure(reasons: List[String]) extends AlgorithmResult {
+private[pickling]final case class AlgorithmFailure(reasons: List[String]) extends AlgorithmResult {
   def join(other: => AlgorithmResult): AlgorithmResult =
     other match {
       case x: AlgorithmSucccess => x
       case AlgorithmFailure(rs) => AlgorithmFailure(reasons ++ rs)
     }
 }
-object AlgorithmFailure {
+private[pickling]object AlgorithmFailure {
   def apply(reason: String): AlgorithmFailure = AlgorithmFailure(List(reason))
 }
-/** An abstract implementation of a pickling generation algorithm.
-  *
-  *
-  * TODO - Do we even need an interfaace?
-  */
-trait PicklingAlgorithm {
+/** An algorithm whcih can generate the IR of a pickler/unpickler *OR* a  good set of error messages. */
+private[pickling] trait PicklingAlgorithm {
   /**
    * Attempts to construct pickling logic for a given type.
    */
   def generate(tpe: IrClass, logger: AlgorithmLogger): AlgorithmResult
 }
-object PicklingAlgorithm {
+private[pickling] object PicklingAlgorithm {
   def run(alg: PicklingAlgorithm)(tpe: IrClass, logger: AlgorithmLogger): Option[PickleUnpickleImplementation] = {
     alg.generate(tpe, logger) match {
       case AlgorithmSucccess(success) => Some(success)
