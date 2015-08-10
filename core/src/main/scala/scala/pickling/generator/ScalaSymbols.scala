@@ -172,19 +172,26 @@ class IrScalaSymbols[U <: Universe with Singleton, C <: Context](override val u:
       val result = existentialAbstraction(quantified, rawSymTpe)
       //System.err.println(s"result = ${result.toString}")
       result
+
     }
+    /** This is part of a workaround for issues discovering transient annotations on fields. */
+    private[IrScalaSymbols] val transientArgNames: Set[String] = {
+      IrSymbol.allDeclaredMethodIncludingSubclasses(this).filter(x => x.isParamAccessor || x.isVar || x.isVal).filter(_.isMarkedTransient).map(_.methodName).toSet
+    }
+
   }
 
   private class ScalaIrField(field: TermSymbol, override val owner: ScalaIrClass) extends IrField{
 
     override def isMarkedTransient: Boolean = {
-      // TODO - is this correct?
       val tr = scala.util.Try {
         ((field.accessed != NoSymbol) && field.accessed.annotations.exists(_.tpe =:= typeOf[scala.transient])) ||
         ((field.getter != NoSymbol) && field.getter.annotations.exists(_.tpe =:= typeOf[scala.transient])) ||
           (field.annotations.exists(_.tpe =:= typeOf[scala.transient]))
       }
-      tr.getOrElse(false)
+      // TODO - Here we wrokaround a scala symbol issue where the field is never annotated with transient.
+      val isSameNameAsTransientVar = owner.transientArgNames(fieldName)
+      isSameNameAsTransientVar || tr.getOrElse(false)
     }
 
     private def removeTrailingSpace(orig: String): String =

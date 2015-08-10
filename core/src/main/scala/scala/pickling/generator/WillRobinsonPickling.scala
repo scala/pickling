@@ -14,14 +14,10 @@ object WillRobinsonPickling extends PicklingAlgorithm {
   private def allScalaField(tpe: IrClass, logger: AlgorithmLogger): Seq[FieldInfo] = {
     // TODO - We find all these and hope it's ok
     // TODO - We need this list to actually come from a recursive descent through the hierarchy for vars.
-
-    // Here we recognize a bug in our symbol loader not being able to detect the transient annotation on fields.
-    val transientArgNames =
-      IrSymbol.allDeclaredMethodIncludingSubclasses(tpe).filter(x => x.isParamAccessor).filter(_.isMarkedTransient).map(_.methodName).toSet
     val fields =
       // Note: For some reason, we sometimes see the same field twice, so we filter these out here.
       //       This is probably a bug somewhere.
-      IrSymbol.allDeclaredFieldsIncludingSubclasses(tpe).filterNot(_.isMarkedTransient).filterNot(x => transientArgNames(x.fieldName)).toList.
+      IrSymbol.allDeclaredFieldsIncludingSubclasses(tpe).filterNot(_.isMarkedTransient).toList.
         // TODO - This uniqueness enforcement is probably due to errors in the symbol loading, maybe should be enforced there.
         groupBy(_.fieldName).map(_._2.head).toList.
         sortBy(_.fieldName)

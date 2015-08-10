@@ -27,7 +27,6 @@ class RangePartitioner[K : ClassTag, V](
 
 class TransientSimpleTest extends FunSuite {
   test("main") {
-    implicit val pu = PicklerUnpickler.generate[Person]
     val per = Person("Jenny", 123)
     val p: JSONPickle = per.pickle
     val up = p.unpickle[Person]

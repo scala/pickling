@@ -93,8 +93,11 @@ class TestScalaSymbols extends FunSuite {
 
     // TODO - Note, only the var is detecting as transitive right now.  Which is why this isn't working for
     // will robinson pickling.
-    //val transientFields = Compat.getTransientFieldNames[TransientFoo]
-    //assert(transientFields == Seq("y"))
+    val fields = Compat.fieldNames[TransientFoo]
+    assert(fields == Seq("y"))
+
+    val transientFields = Compat.getTransientFieldNames[TransientFoo]
+    assert(transientFields == Seq("y"))
   }
 
   test("detectFieldNames") {

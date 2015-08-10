@@ -197,6 +197,6 @@ case class PickleBehavior(operations: Seq[PicklerAst]) extends PicklerAst {
 }
 
 case class PickleUnpickleImplementation(pickle: PicklerAst, unpickle: UnpicklerAst) extends IrAst {
-  override def requiresReflection: Boolean = pickle.requiresReflection && unpickle.requiresReflection
+  override def requiresReflection: Boolean = pickle.requiresReflection || unpickle.requiresReflection
   override def toString = s"$pickle\n---$unpickle\n"
 }
