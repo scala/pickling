@@ -1,8 +1,6 @@
 package scala.pickling
 package generator
 
-import com.sun.org.apache.xalan.internal.xsltc.compiler.sym
-
 // TODO - move these into Pickler/Unpickler and replace the existing macros.
 object PicklingMacros {
   import scala.language.experimental.macros
