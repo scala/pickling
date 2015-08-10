@@ -15,9 +15,9 @@ trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
   val generator =
     if(isStaticOnly) {
       // TODO - should we consider externalizable "safe" or "static only" since we know it's externalizable at compile time?
-      PicklingAlgorithm.create(Seq(new CaseClassPickling(allowReflection = false), AdtPickling, ScalaSingleton))
+      PicklingAlgorithm.aggregate(Seq(new CaseClassPickling(allowReflection = false), AdtPickling, ScalaSingleton))
     } else {
-      PicklingAlgorithm.create(Seq(new CaseClassPickling(allowReflection = true), AdtPickling, ScalaSingleton, new ExternalizablePickling, WillRobinsonPickling))
+      PicklingAlgorithm.aggregate(Seq(new CaseClassPickling(allowReflection = true), AdtPickling, ScalaSingleton, new ExternalizablePickling, WillRobinsonPickling))
     }
 
   object logger extends AlgorithmLogger {
@@ -49,7 +49,7 @@ trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
     val tpe = computeType[T]
     checkClassType(tpe)
     val sym = symbols.newClass(tpe)
-    val impl = generator.generateImpl(sym, logger)
+    val impl = PicklingAlgorithm.run(generator)(sym, logger)
     val tree2 = impl map {
       case PickleUnpickleImplementation(alg2, alg) => generatePicklerClass[T](alg2)
     }
@@ -66,7 +66,7 @@ trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
     val tpe = computeType[T]
     checkClassType(tpe)
     val sym = symbols.newClass(tpe)
-    val impl = generator.generateImpl(sym, logger)
+    val impl = PicklingAlgorithm.run(generator)(sym, logger)
     val tree2 = impl map {
       case PickleUnpickleImplementation(alg2, alg) => generateUnpicklerClass[T](alg)
     }
@@ -83,7 +83,7 @@ trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
     val tpe = computeType[T]
     checkClassType(tpe)
     val sym = symbols.newClass(tpe)
-    val impl = generator.generateImpl(sym, logger)
+    val impl = PicklingAlgorithm.run(generator)(sym, logger)
     //System.err.println(impl)
     val tree2 = impl map generatePicklerUnpicklerClass[T]
     tree2 match {

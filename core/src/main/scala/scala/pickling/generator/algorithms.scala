@@ -46,12 +46,10 @@ trait PicklingAlgorithm {
    * Attempts to construct pickling logic for a given type.
    */
   def generate(tpe: IrClass, logger: AlgorithmLogger): AlgorithmResult
-
-  /** Attempts to create pickling logic for a given type.  Not this will automatically issue
-    * warnings based on why all algorithms failed, if algorithms do fail.
-    */
-  def generateImpl(tpe: IrClass, logger: AlgorithmLogger): Option[PickleUnpickleImplementation] = {
-    generate(tpe, logger) match {
+}
+object PicklingAlgorithm {
+  def run(alg: PicklingAlgorithm)(tpe: IrClass, logger: AlgorithmLogger): Option[PickleUnpickleImplementation] = {
+    alg.generate(tpe, logger) match {
       case AlgorithmSucccess(success) => Some(success)
       case AlgorithmFailure(failures) =>
         val fString = failures.mkString("\n - ", "\n - ", "\n")
@@ -59,9 +57,16 @@ trait PicklingAlgorithm {
         None
     }
   }
-}
-object PicklingAlgorithm {
-  def create(algs: Seq[PicklingAlgorithm]): PicklingAlgorithm =
+
+
+  /** Aggregates the sequence of picklers (prioritizing left-to-right or first-to-last) to
+    * create a new "uber" pickling algorithm.
+    * @param algs
+    *             The list of pickling algorithms to try, in-order.
+    * @return
+    *         A new algorithm which will try all passed in algorithms and only fail if all algorithms fail.
+    */
+  def aggregate(algs: Seq[PicklingAlgorithm]): PicklingAlgorithm =
      new PicklingAlgorithm {
        /**
         * Attempts to construct pickling logic for a given type.
