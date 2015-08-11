@@ -56,10 +56,20 @@ class ShareJsonTest extends FunSuite {
   }
 
   test("loop-share-nothing") {
-    intercept[StackOverflowError] {
+    /*intercept[StackOverflowError] {
       import shareNothing._
       c1.c = c3
       c2.pickle
+    }*/
+    // Note we've been running out of memory on this test in jenkins, which is also a legitimate success case
+    try {
+      import shareNothing._
+      c1.c = c3
+      c2.pickle
+      fail("Expected a stack overflow or out of memory error")
+    } catch {
+      case x: StackOverflowError => ()
+      case x: OutOfMemoryError => ()
     }
   }
 
