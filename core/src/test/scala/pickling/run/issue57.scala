@@ -10,7 +10,9 @@ case class SimpleProp(prop: String) {}
 class Issue57Test extends FunSuite {
   test("Issue #57") {
     val simplePickle = new Simple(new SimpleProp("TestProp")).pickle
+    //System.err.println(simplePickle)
     val simpleUnpickle = simplePickle.unpickle[Simple]
+    //System.err.println(simpleUnpickle)
     assert(simpleUnpickle.stringWrapper.toString === "SimpleProp(TestProp)")
   }
 }

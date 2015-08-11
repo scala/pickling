@@ -9,6 +9,10 @@ trait IterablePicklers {
   implicit def iterablePickler[T: FastTypeTag](implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T],
     collTag: FastTypeTag[Iterable[T]], cbf: CanBuildFrom[Iterable[T], T, Iterable[T]]):
     Pickler[Iterable[T]] with Unpickler[Iterable[T]] = TravPickler[T, Iterable[T]]
+
+  // TODO - Add all known collection types so we don't hit odd runtime perfomrance issues with deserializing full structure.
+  implicit def listPickler[T: FastTypeTag](implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T], colTag: FastTypeTag[List[T]], cbf: CanBuildFrom[List[T], T, List[T]]):
+     Pickler[List[T]] with Unpickler[List[T]] = TravPickler[T, List[T]]
 }
 
 object TravPickler {

@@ -4,7 +4,6 @@ import scala.language.experimental.macros
 import scala.language.implicitConversions
 
 import scala.annotation.implicitNotFound
-import scala.pickling.runtime.GlobalRegistry
 import scala.pickling.internal._
 
 /** A static pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
@@ -27,7 +26,7 @@ trait Pickler[T] {
 // Shim for Java code.
 abstract class AbstractPickler[T] extends Pickler[T]
 object Pickler {
-  def generate[T]: Pickler[T] = macro Compat.PicklerMacros_impl[T]
+  def generate[T]: Pickler[T] = macro generator.Compat.genPickler_impl[T]
 }
 
 /** A dynamic pickler for type `T`. Its `pickle` method takes an object-to-be-pickled of
@@ -42,11 +41,6 @@ object Pickler {
 trait DPickler[T] {
   def pickle(picklee: T, builder: PBuilder): Unit
 }
-
-object DPickler {
-  implicit def genDPickler[T]: DPickler[T] = macro Compat.PicklerMacros_dpicklerImpl[T]
-}
-
 // marker trait to indicate a generated pickler
 // this is important for the dispatch between custom and generated picklers
 trait Generated
@@ -87,13 +81,14 @@ trait Unpickler[T] {
 // Shim for Java code.
 abstract class AbstractUnpickler[T] extends Unpickler[T]
 object Unpickler {
-  def generate[T]: Unpickler[T] = macro Compat.UnpicklerMacros_impl[T]
+  def generate[T]: Unpickler[T] = macro generator.Compat.genUnpickler_impl[T]
 }
 /* Shim for java code (TODO - a good name for this.) */
 abstract class AbstractPicklerUnpickler[T] extends Pickler[T] with Unpickler[T]
 object PicklerUnpickler {
-  def apply[T](p: Pickler[T], u: Unpickler[T]): Pickler[T] with Unpickler[T] = new DelegatingPicklerUnpickler(p, u)
-  def generate[T]: Pickler[T] with Unpickler[T] = macro Compat.PicklerUnpicklerMacros_impl[T]
+  def apply[T](p: Pickler[T], u: Unpickler[T]): AbstractPicklerUnpickler[T] = new DelegatingPicklerUnpickler(p, u)
+  //def generate[T]: Pickler[T] with Unpickler[T] = macro Compat.PicklerUnpicklerMacros_impl[T]
+  def generate[T]: AbstractPicklerUnpickler[T] = macro generator.Compat.genPicklerUnpickler_impl[T]
   /** This is a private implementation of PicklerUnpickler that delegates pickle and unpickle to underlying. */
   private class DelegatingPicklerUnpickler[T](p: Pickler[T], u: Unpickler[T]) extends AbstractPicklerUnpickler[T] {
     // From Pickler
@@ -106,9 +101,14 @@ object PicklerUnpickler {
 }
 
 abstract class AutoRegister[T: FastTypeTag](name: String) extends AbstractPicklerUnpickler[T] {
-  debug(s"autoregistering pickler $this under key '$name'")
-  GlobalRegistry.picklerMap += (name -> (x => this))
   val tag = implicitly[FastTypeTag[T]]
-  debug(s"autoregistering unpickler $this under key '${tag.key}'")
-  GlobalRegistry.unpicklerMap += (tag.key -> this)
+
+  // Register this pickler with the global handler.
+  locally {
+    val p = internal.currentRuntime.picklers
+    debug(s"autoregistering pickler $this under key '$name'")
+    p.registerPickler(name, this)
+    debug(s"autoregistering unpickler $this under key '${tag.key}'")
+    p.registerUnpickler(tag.key, this)
+  }
 }

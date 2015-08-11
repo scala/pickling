@@ -28,6 +28,14 @@ class Graph {
 
 class GraphJsonTest extends FunSuite {
   test("main") {
+
+    // NOTE - Gets around diverging implicit expansion issue, temporarily.
+    implicit val pu = {
+      implicit val vu = PicklerUnpickler.generate[Vertex]
+      implicit val lvu = Defaults.listPickler[Vertex]
+      PicklerUnpickler.generate[Graph]
+    }
+
     val g = new Graph
 
     // a little web graph: BBC -> MS, EPFL -> BBC, PHILIPP -> BBC, PHILIPP -> EPFL

@@ -521,21 +521,3 @@ trait PickleTools {
     body(hints)
   }
 }
-
-trait CurrentMirrorMacro extends Macro {
-  import scala.reflect.runtime.{universe => ru}
-
-  def impl: c.Tree = {
-    import c.universe._
-    c.inferImplicitValue(typeOf[ru.Mirror], silent = true) orElse {
-      val cachedMirror = q"_root_.scala.pickling.internal.`package`.cachedMirror"
-      q"""
-        if ($cachedMirror != null) $cachedMirror
-        else {
-          $cachedMirror = _root_.scala.reflect.runtime.currentMirror
-          $cachedMirror
-        }
-      """
-    }
-  }
-}

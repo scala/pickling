@@ -47,6 +47,8 @@ class RDD[T: ClassTag](
   def context = sc
 
   var x = 5
+
+  override def toString = s"RDD($x)"
 }
 
 class FlatMappedRDD[U: ClassTag, T: ClassTag](
@@ -62,6 +64,9 @@ class FlatMappedRDD[U: ClassTag, T: ClassTag](
 
   //override def compute(split: Partition, context: TaskContext) =
     //firstParent[T].iterator(split, context).flatMap(f)
+
+  override def toString = s"FlatMapped($prev, $f, $x)"
+
 }
 
 
@@ -69,11 +74,19 @@ class Transient2SparkTest extends FunSuite {
   test("main") {
     val sc = new SparkContext(new SparkConf(true))
     val rdd = new RDD[Int](sc, Seq(new Dependency(null)))
+    // TODo - There's a bug with implicit expansion of Seq picklers, which we need to fix.
+    implicit val seqDepp = Defaults.seqPickler[Dependency[_]]
+    implicit val rddpp = PicklerUnpickler.generate[RDD[Int]]
+    implicit val fmrddp = PicklerUnpickler.generate[FlatMappedRDD[Int, Int]]
     val fmrdd = new FlatMappedRDD[Int, Int](rdd, (x: Int) => (1 to x).toList)
-
-    val p: JSONPickle = fmrdd.pickle
+    val p: JSONPickle =
+      fmrdd.pickle
+    //System.err.println(p)
     val up = p.unpickle[FlatMappedRDD[Int, Int]]
+    //System.err.println(up)
+    //System.err.println(s"up.x = ${up.x}, up.getIt = ${up.getIt}")
 
+    assert(up.getIt(5) == List(1, 2, 3, 4, 5))
     assert(up.getIt(up.x) == List(1, 2, 3, 4, 5))
   }
 }

@@ -72,7 +72,7 @@ trait Benchmark {
    *  should not be measured. This method is run before each call to the
    *  benchmark payload, 'run'.
    */
-  def setUp() {}
+  def setUp(): Unit = {}
 
   /** Perform cleanup operations after each 'run'. For micro benchmarks,
    *  think about using the result of 'run' in a way that prevents the JVM

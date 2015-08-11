@@ -3,7 +3,6 @@ package scala.pickling.test.collection
 import org.scalatest.FunSuite
 
 import scala.pickling._, scala.pickling.Defaults._, json._
-import runtime.GlobalRegistry
 
 import scala.collection.mutable.WrappedArray
 
@@ -32,7 +31,7 @@ class WrappedArrayTest extends FunSuite {
           val classLoader: ClassLoader = elemClass.getClassLoader
           val elemTag = FastTypeTag.mkRaw(elemClass, mirror) // slow: `mkRaw` is called for each element
           b.hintTag(elemTag)
-          val pickler = runtime.RuntimePicklerLookup.genPickler(classLoader, elemClass, elemTag).asInstanceOf[Pickler[AnyRef]]
+          val pickler = internal.currentRuntime.picklers.genPickler(classLoader, elemClass, elemTag).asInstanceOf[Pickler[AnyRef]]
           pickler.pickle(elem, b)
         }
       }
@@ -52,7 +51,7 @@ class WrappedArrayTest extends FunSuite {
       while (i < length) {
         val r = reader.readElement()
         val elemTag = r.beginEntry()
-        val elemUnpickler = runtime.RuntimeUnpicklerLookup.genUnpickler(mirror, elemTag)
+        val elemUnpickler = internal.currentRuntime.picklers.genUnpickler(mirror, elemTag)
         val elem = elemUnpickler.unpickle(elemTag, r)
         r.endEntry()
         newArray(i) = elem.asInstanceOf[AnyRef]
@@ -64,8 +63,8 @@ class WrappedArrayTest extends FunSuite {
     }
   }
 
-  GlobalRegistry.picklerMap += ("scala.collection.mutable.WrappedArray$ofRef" -> (x => mkAnyRefWrappedArrayPickler))
-  GlobalRegistry.unpicklerMap += ("scala.collection.mutable.WrappedArray.ofRef[java.lang.Object]" -> mkAnyRefWrappedArrayPickler)
+  internal.currentRuntime.picklers.registerPickler("scala.collection.mutable.WrappedArray$ofRef", mkAnyRefWrappedArrayPickler)
+  internal.currentRuntime.picklers.registerUnpickler("scala.collection.mutable.WrappedArray.ofRef[java.lang.Object]", mkAnyRefWrappedArrayPickler)
 
   test("main") {
     val l = List(Rating(10), Rating(5), Rating(2))

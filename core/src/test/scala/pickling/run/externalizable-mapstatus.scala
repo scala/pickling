@@ -20,7 +20,6 @@ package scala.pickling.externalizable.mapstatus
 import org.scalatest.FunSuite
 
 import scala.pickling._, scala.pickling.Defaults._, json._
-import runtime.GlobalRegistry
 
 import scala.reflect.{ClassTag, classTag}
 
@@ -153,8 +152,8 @@ class MapStatusTest extends FunSuite {
     val clazz = classTag[T].runtimeClass
     val p = implicitly[Pickler[T]]
     val up = implicitly[Unpickler[T]]
-    GlobalRegistry.picklerMap += (clazz.getName() -> (x => p))
-    GlobalRegistry.unpicklerMap += (clazz.getName() -> up)
+    internal.currentRuntime.picklers.registerPickler(clazz.getName(), p)
+    internal.currentRuntime.picklers.registerUnpickler(clazz.getName, up)
   }
 
   register[MapStatus]

@@ -3,7 +3,7 @@ package scala.pickling.json.non.primitive.field
 import org.scalatest.FunSuite
 import scala.pickling._, scala.pickling.Defaults._, json._
 
-case class Person(name: String, age: Int)
+final case class Person(name: String, age: Int)
 case class Philipp(mother: Person)
 
 class JSONNonPrimitiveFieldTest extends FunSuite {

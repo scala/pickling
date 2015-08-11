@@ -4,73 +4,8 @@ package runtime
 import scala.reflect.{runtime => reflectRuntime}
 import internal._
 
-trait RuntimePicklersUnpicklers {
-
-  GlobalRegistry.picklerMap   += ("scala.Tuple2" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2" -> (new Tuple2RTPickler(null)))
-
-  /* Register all specialized variants of Tuple2.
-   */
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcII$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcIJ$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcID$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcIC$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcIZ$sp" -> (tag => new Tuple2RTPickler(tag)))
-
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcJI$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcJJ$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcJD$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcJC$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcJZ$sp" -> (tag => new Tuple2RTPickler(tag)))
-
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcDI$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcDJ$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcDD$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcDC$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcDZ$sp" -> (tag => new Tuple2RTPickler(tag)))
-
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcCI$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcCJ$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcCD$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcCC$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcCZ$sp" -> (tag => new Tuple2RTPickler(tag)))
-
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcZI$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcZJ$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcZD$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcZC$sp" -> (tag => new Tuple2RTPickler(tag)))
-  GlobalRegistry.picklerMap += ("scala.Tuple2$mcZZ$sp" -> (tag => new Tuple2RTPickler(tag)))
-
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcII$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcIJ$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcID$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcIC$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcIZ$sp" -> (new Tuple2RTPickler(null)))
-
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcJI$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcJJ$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcJD$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcJC$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcJZ$sp" -> (new Tuple2RTPickler(null)))
-
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcDI$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcDJ$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcDD$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcDC$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcDZ$sp" -> (new Tuple2RTPickler(null)))
-
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcCI$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcCJ$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcCD$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcCC$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcCZ$sp" -> (new Tuple2RTPickler(null)))
-
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcZI$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcZJ$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcZD$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcZC$sp" -> (new Tuple2RTPickler(null)))
-  GlobalRegistry.unpicklerMap += ("scala.Tuple2$mcZZ$sp" -> (new Tuple2RTPickler(null)))
-
+// TODO - Move all these into the "PicklerRegistry"
+object CustomRuntime {
 
   def mkRuntimeTravPickler[C <% Traversable[_]](elemClass: Class[_], elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
                                                 elemPickler0: Pickler[_], elemUnpickler0: Unpickler[_]):
@@ -159,7 +94,7 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends Pickler[(Any, Any)] with Unpi
     } else {
       val clazz = value.getClass
       val tag = FastTypeTag.mkRaw(clazz, reflectRuntime.currentMirror).asInstanceOf[FastTypeTag[Any]]
-      val pickler = RuntimePicklerLookup.genPickler(clazz.getClassLoader, clazz, tag).asInstanceOf[Pickler[Any]]
+      val pickler = scala.pickling.internal.currentRuntime.picklers.genPickler(clazz.getClassLoader, clazz, tag).asInstanceOf[Pickler[Any]]
       (tag, pickler)
     }
 
@@ -194,7 +129,7 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends Pickler[(Any, Any)] with Unpi
       if (reader1.atPrimitive) {
         reader1.readPrimitive()
       } else {
-        val unpickler1 = RuntimeUnpicklerLookup.genUnpickler(reflectRuntime.currentMirror, tag1)
+        val unpickler1 = internal.currentRuntime.picklers.genUnpickler(reflectRuntime.currentMirror, tag1)
         try {
           unpickler1.unpickle(tag1, reader1)
         } catch {

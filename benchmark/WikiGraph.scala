@@ -167,7 +167,7 @@ object WikiGraphPicklingBench extends WikiGraphBenchmark {
   implicit val ListVertexTag = FastTypeTag.materializeFastTypeTag[List[Vertex]]
   implicit val NilTag = FastTypeTag.materializeFastTypeTag[Nil.type]
   // TODO - why does this no longer compile?
-  implicit val picklerNil = DPickler.genDPickler[Nil.type] 
+  implicit val picklerNil = Pickler.generate[Nil.type]
   implicit val unpicklerNil = implicitly[Unpickler[Nil.type]]
   implicit lazy val picklerVertex: Pickler[Vertex] = {
     val picklerVertex = "boom!"

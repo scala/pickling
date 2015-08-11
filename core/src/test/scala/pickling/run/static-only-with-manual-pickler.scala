@@ -8,8 +8,8 @@ import static.StaticOnly
 // a pickler.
 class NotClosed(fld: Int)
 
-case class FakeImplementation() extends Exception("Not a real implementation")
-case class Apple(x: Int)
+final case class FakeImplementation() extends Exception("Not a real implementation")
+final case class Apple(x: Int)
 
 class StaticOnlyWithManualPicklerTest extends FunSuite {
   test("main") {
