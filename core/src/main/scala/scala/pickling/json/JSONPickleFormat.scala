@@ -46,6 +46,7 @@ package json {
     private var pendingIndent = false
     private var lastIsBrace = false
     private var lastIsBracket = false
+    private var isIgnoringFields = false
     private def append(s: String) = {
       val sindent = if (pendingIndent) "  " * nindent else ""
       buf.put(sindent + s)
@@ -106,9 +107,10 @@ package json {
       val realTag =
         if(null == picklee) FastTypeTag.Null
         else tag
-      if (hints.oid != -1) {
+      if (hints.isSharedReference) {
         tags.push(FastTypeTag.Ref)
         append("{ \"$ref\": " + hints.oid + " }")
+        isIgnoringFields = true
       } else {
         tags.push(realTag)
         if (primitives.contains(realTag.key)) {
@@ -139,33 +141,39 @@ package json {
       }
       this
     }
-    def putField(name: String, pickler: PBuilder => Unit): PBuilder = {
-      // assert(!primitives.contains(tags.top.key), tags.top)
-      if (!lastIsBrace) appendLine(",") // TODO: very inefficient, but here we don't care much about performance
-      append("\"" + name + "\": ")
-      pickler(this)
+    private def ignoringSharedRef(action: => PBuilder): PBuilder =
+      if(isIgnoringFields) this
+      else action
+    def putField(name: String, pickler: PBuilder => Unit): PBuilder = ignoringSharedRef {
+        // assert(!primitives.contains(tags.top.key), tags.top)
+        if (!lastIsBrace) appendLine(",") // TODO: very inefficient, but here we don't care much about performance
+        append("\"" + name + "\": ")
+        pickler(this)
       this
     }
     def endEntry(): Unit = {
       unindent()
       if (primitives.contains(tags.pop().key)) () // do nothing
       else { appendLine(); append("}") }
+      // Always undo this state.
+      isIgnoringFields = false
     }
-    def beginCollection(length: Int): PBuilder = {
+    def beginCollection(length: Int): PBuilder = ignoringSharedRef {
       putField("elems", b => ())
       appendLine("[")
       // indent()
       this
     }
-    def putElement(pickler: PBuilder => Unit): PBuilder = {
+    def putElement(pickler: PBuilder => Unit): PBuilder = ignoringSharedRef {
       if (!lastIsBracket) appendLine(",") // TODO: very inefficient, but here we don't care much about performance
       pickler(this)
       this
     }
-    def endCollection(): Unit = {
+    def endCollection(): Unit = ignoringSharedRef {
       appendLine()
       append("]")
       // unindent()
+      this
     }
     def result(): JSONPickle = {
       assert(tags.isEmpty, tags)

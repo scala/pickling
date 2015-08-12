@@ -167,12 +167,8 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
         case _ =>
           val oid = scala.pickling.internal.lookupPicklee(fieldValue)
           builder.hintOid(oid)
-          if (oid == -1) {
-            pickler.pickle(fieldValue, builder)
-          } else {
-            builder.beginEntry(fieldValue, fieldTag)
-            builder.endEntry()
-          }
+          // Note: Now we always pickle fully, and the format decides whether to share.
+          pickler.pickle(fieldValue, builder)
       }
     else
       pickler.pickle(fieldValue, builder)
