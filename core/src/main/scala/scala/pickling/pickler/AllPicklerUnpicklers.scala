@@ -10,6 +10,7 @@ trait AllPicklers extends PrimitivePicklers
   with JavaUUIDPicklers
   with PrimitiveArrayPicklers
   with RefPicklers
+  with EitherPicklers
   with CollectionPicklers {}
 object AllPicklers extends AllPicklers {}
 
