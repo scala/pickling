@@ -86,7 +86,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
               if (oid == -1) {
                 pickler.pickle(picklee, builder)
               } else {
-                builder.beginEntry(picklee)
+                builder.beginEntry(picklee, tag)
                 builder.endEntry()
               }
           }
@@ -113,11 +113,11 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
 
               builder.putField(fir.name, b => {
                 if (isEffFinal) {
-                  b.hintStaticallyElidedType()
+                  b.hintElidedType(fldTag)
                   pickleInto(fir.tpe, fldValue, b, fldPickler)
                 } else  {
                   val subPicklee = fldValue
-                  if (subPicklee == null || subPicklee.getClass == mirror.runtimeClass(fir.tpe.erasure)) b.hintDynamicallyElidedType() else ()
+                  if (subPicklee == null || subPicklee.getClass == mirror.runtimeClass(fir.tpe.erasure)) b.hintElidedType(fldTag) else ()
                   pickleInto(fir.tpe, subPicklee, b, fldPickler)
                 }
               })
@@ -130,16 +130,13 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
               // })
             }
           }
-
-          builder.hintTag(tag)
-          builder.beginEntry(picklee)
+          builder.beginEntry(picklee, tag)
           GRL.lock()
           try putFields()
           finally GRL.unlock()
           builder.endEntry()
         } else {
-          builder.hintTag(FastTypeTag.Null)
-          builder.beginEntry(null)
+          builder.beginEntry(null, FastTypeTag.Null)
           builder.endEntry()
         }
       }
@@ -204,10 +201,8 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(implicit shar
             def fieldVals = pendingFields.map(fir => {
               val freader = reader.readField(fir.name)
               val fstaticTag = FastTypeTag(mirror, fir.tpe, fir.tpe.key)
-              freader.hintTag(fstaticTag)
-
               val fstaticSym = fstaticTag.tpe.typeSymbol
-              if (fstaticSym.isEffectivelyFinal) freader.hintStaticallyElidedType()
+              if (fstaticSym.isEffectivelyFinal) freader.hintElidedType(fstaticTag)
               val fdynamicTag = try {
                 freader.beginEntry()
               } catch {
@@ -310,10 +305,8 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(i
           def fieldVals = pendingFields.map(fir => {
             val freader = reader.readField(fir.name)
             val fstaticTag = FastTypeTag(mirror, fir.tpe, fir.tpe.key)
-            freader.hintTag(fstaticTag)
-
             val fstaticSym = fstaticTag.tpe.typeSymbol
-            if (fstaticSym.isEffectivelyFinal) freader.hintStaticallyElidedType()
+            if (fstaticSym.isEffectivelyFinal) freader.hintElidedType(fstaticTag)
             val fdynamicTag = try {
               freader.beginEntry()
             } catch {

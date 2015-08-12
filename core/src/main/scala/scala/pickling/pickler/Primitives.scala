@@ -20,11 +20,12 @@ trait PrimitivePicklers {
 
 class PrimitivePickler[T: FastTypeTag](name: String) extends AutoRegister[T](name) {
   def pickle(picklee: T, builder: PBuilder): Unit = {
-    builder.beginEntry(picklee)
+    builder.beginEntry(picklee, tag)
     builder.endEntry()
   }
   def unpickle(tag: String, reader: PReader): Any = {
     try {
+      // TODO - beginEntry/endEntry?
       reader.readPrimitive()
     } catch {
       case PicklingException(msg, cause) =>

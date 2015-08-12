@@ -93,7 +93,11 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
     // debug(s"creating DefaultLogic for ${fir.name}")
     val staticClass = mirror.runtimeClass(fir.tpe.erasure)
     def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: Pickler[Any], fldTag: FastTypeTag[_]): Unit = {
-      if (fldValue == null || fldValue.getClass == staticClass) b.hintDynamicallyElidedType()
+      // TODO - Dynamic elides are no longer supported, but here is where they could be.  They were never generated
+      //        for non-runtime picklers, and therefore were of little use.
+      //        The issue with dynamic elides is that the unpickler needs to support them, and it's not
+      //        somethign you could know at runtime.
+      // if (fldValue == null || fldValue.getClass == staticClass) doSomeKindofDynamicElide, perhaps
       pickleInto(fldClass, fldValue, b, fldPickler, fldTag)
     }
   }
@@ -101,7 +105,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
   final class EffectivelyFinalLogic(fir: irs.FieldIR) extends Logic(fir, true) {
     // debug(s"creating EffectivelyFinalLogic for ${fir.name}")
     def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: Pickler[Any], fldTag: FastTypeTag[_]): Unit = {
-      b.hintStaticallyElidedType()
+      b.hintElidedType(fldTag)
       pickleInto(fldClass, fldValue, b, fldPickler, fldTag)
     }
   }
@@ -147,7 +151,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
   final class PrivateEffectivelyFinalJavaFieldLogic(fir: irs.FieldIR, field: Field) extends PrivateJavaFieldLogic(fir, field) {
     // debug(s"creating PrivateEffectivelyFinalJavaFieldLogic for ${fir.name}")
     override def pickleLogic(fldClass: Class[_], fldValue: Any, b: PBuilder, fldPickler: Pickler[Any], fldTag: FastTypeTag[_]): Unit = {
-      b.hintStaticallyElidedType()
+      b.hintElidedType(fldTag)
       pickleInto(fldClass, fldValue, b, fldPickler, fldTag)
     }
   }
@@ -155,7 +159,6 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
   // difference to old runtime pickler: create tag based on fieldClass instead of fir.tpe
   def pickleInto(fieldClass: Class[_], fieldValue: Any, builder: PBuilder, pickler: Pickler[Any], fieldTag: FastTypeTag[_]): Unit = {
     //debug(s"fieldTag for pickleInto: ${fieldTag.key}")
-    builder.hintTag(fieldTag)
 
     val fieldTpe = fieldTag.tpe
     if (shouldBotherAboutSharing(fieldTpe))
@@ -167,7 +170,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
           if (oid == -1) {
             pickler.pickle(fieldValue, builder)
           } else {
-            builder.beginEntry(fieldValue)
+            builder.beginEntry(fieldValue, fieldTag)
             builder.endEntry()
           }
       }
@@ -207,7 +210,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
         scala.pickling.internal.GRL.lock()
         //debug(s"pickling object of type: ${tag.key}")
         try {
-          builder.beginEntry(picklee)
+          builder.beginEntry(picklee, tag)
           putFields(picklee, builder)
           builder.endEntry()
         } finally scala.pickling.internal.GRL.unlock()

@@ -66,12 +66,11 @@ package json {
       unindent()
       appendLine("[")
       pushHints()
-      hintStaticallyElidedType()
-      hintTag(tag)
+      hintElidedType(tag)
       pinHints()
       var i = 0
       while (i < arr.length) {
-        putElement(b => b.beginEntry(arr(i)).endEntry())
+        putElement(b => b.beginEntry(arr(i), tag).endEntry())
         i += 1
       }
       popHints()
@@ -101,22 +100,26 @@ package json {
       FastTypeTag.ArrayFloat.key -> ((picklee: Any) => pickleArray(picklee.asInstanceOf[Array[Float]], FastTypeTag.Float)),
       FastTypeTag.ArrayDouble.key -> ((picklee: Any) => pickleArray(picklee.asInstanceOf[Array[Double]], FastTypeTag.Double))
     )
-    def beginEntry(picklee: Any): PBuilder = withHints { hints =>
+    override def beginEntry(picklee: Any, tag: FastTypeTag[_]): PBuilder = withHints { hints =>
       indent()
+      // We add special support here for null
+      val realTag =
+        if(null == picklee) FastTypeTag.Null
+        else tag
       if (hints.oid != -1) {
         tags.push(FastTypeTag.Ref)
         append("{ \"$ref\": " + hints.oid + " }")
       } else {
-        tags.push(hints.tag)
-        if (primitives.contains(hints.tag.key)) {
+        tags.push(realTag)
+        if (primitives.contains(realTag.key)) {
           // Null always goes out raw.
-          if (hints.isElidedType || hints.tag.key == FastTypeTag.Null.key) primitives(hints.tag.key)(picklee)
+          if (hints.isElidedType || realTag.key == FastTypeTag.Null.key) primitives(realTag.key)(picklee)
           else {
             appendLine("{")
-            appendLine("\"$type\": \"" + hints.tag.key + "\",")
+            appendLine("\"$type\": \"" + tag.key + "\",")
             append("\"value\": ")
             indent()
-            primitives(hints.tag.key)(picklee)
+            primitives(realTag.key)(picklee)
             unindent()
             appendLine("")
             unindent()
@@ -128,8 +131,8 @@ package json {
           if (!hints.isElidedType) {
             // quickly decide whether we should use picklee.getClass instead
             val ts =
-              if (hints.tag.key.contains("anonfun$")) picklee.getClass.getName
-              else hints.tag.key
+              if (tag.key.contains("anonfun$")) picklee.getClass.getName
+              else tag.key
             append("\"$type\": \"" + ts + "\"")
           }
         }
@@ -209,13 +212,13 @@ package json {
         else if (hints.isElidedType) {
           datum match {
             case JSONObject(fields) if fields.contains("$ref") => FastTypeTag.Ref.key
-            case _ => hints.tag.key
+            case _ => hints.elidedType.get.key
           }
         } else {
           datum match {
             case JSONObject(fields) if fields.contains("$ref") => FastTypeTag.Ref.key
             case JSONObject(fields) if fields.contains("$type") => fields("$type").asInstanceOf[String]
-            case JSONObject(fields) => hints.tag.key
+            case JSONObject(fields) => throw new PicklingException(s"Logic pickling error:  Could not find a type tag, and no elided type was hinted: ${fields}")
           }
         }
       }

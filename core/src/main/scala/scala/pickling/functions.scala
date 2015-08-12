@@ -22,13 +22,8 @@ object functions {
     // TODO - BeginEntry/EndEntry needed?
     // TODO - this hinting should be in the pickler, not here.  We need to understand
     //        when we want to use this vs. something else, and avoid over-hinting everywhere.
-    if (null == picklee) {
-      builder.hintTag(FastTypeTag.Null)
-      Defaults.nullPickler.pickle(null, builder)
-    } else {
-      builder.hintTag(pickler.tag)
-      pickler.pickle(picklee, builder)
-    }
+    if (null == picklee) Defaults.nullPickler.pickle(null, builder)
+    else pickler.pickle(picklee, builder)
   }
 
   def pickleTo[T, F <: PickleFormat](picklee: T, output: F#OutputType)(implicit pickler: Pickler[T], format: F): Unit = {

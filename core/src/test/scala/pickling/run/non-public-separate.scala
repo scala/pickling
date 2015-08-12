@@ -12,6 +12,8 @@ class Hobby(var name: String, private var notes: String, private val attitude: S
 }
 
 class NonPublicSeparateTest extends FunSuite {
+  //implicit val pu = PicklerUnpickler.generate[Hobby]
+  //implicit val pu2 = PicklerUnpickler.generate[Person]
   test("main") {
     val person = new Person("Eugene", 25, new Hobby("hacking", "mostly Scala", "loving it"))
     val anyPickle = (person: Any).pickle
@@ -20,6 +22,7 @@ class NonPublicSeparateTest extends FunSuite {
       |  "$type": "scala.pickling.non.public.separate.Person",
       |  "name": "Eugene",
       |  "hobby": {
+      |    "$type": "scala.pickling.non.public.separate.Hobby",
       |    "name": "hacking",
       |    "notes": "mostly Scala",
       |    "attitude": "loving it"

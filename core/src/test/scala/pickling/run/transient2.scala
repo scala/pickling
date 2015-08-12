@@ -75,9 +75,10 @@ class Transient2SparkTest extends FunSuite {
     val sc = new SparkContext(new SparkConf(true))
     val rdd = new RDD[Int](sc, Seq(new Dependency(null)))
     // TODo - There's a bug with implicit expansion of Seq picklers, which we need to fix.
-    implicit val seqDepp = Defaults.seqPickler[Dependency[_]]
-    implicit val rddpp = PicklerUnpickler.generate[RDD[Int]]
-    implicit val fmrddp = PicklerUnpickler.generate[FlatMappedRDD[Int, Int]]
+    //implicit def depP = PicklerUnpickler.generate[Dependency[_]]
+    //implicit val seqDepp = Defaults.seqPickler[Dependency[_]]
+    //implicit val rddpp = PicklerUnpickler.generate[RDD[Int]]
+    //implicit val fmrddp = PicklerUnpickler.generate[FlatMappedRDD[Int, Int]]
     val fmrdd = new FlatMappedRDD[Int, Int](rdd, (x: Int) => (1 to x).toList)
     val p: JSONPickle =
       fmrdd.pickle

@@ -19,19 +19,17 @@ object CustomRuntime {
     def tag: FastTypeTag[C] = collTag.asInstanceOf[FastTypeTag[C]]
 
     def pickle(coll: C, builder: PBuilder): Unit = {
-      builder.beginEntry(coll)
+      builder.beginEntry(coll, tag)
       builder.beginCollection(coll.size)
 
       builder.pushHints()
       if (isPrimitive) {
-        builder.hintStaticallyElidedType()
-        builder.hintTag(elemTag)
+        builder.hintElidedType(elemTag)
         builder.pinHints()
       }
 
       (coll: Traversable[_]).asInstanceOf[Traversable[AnyRef]].foreach { (elem: AnyRef) =>
         builder putElement { b =>
-          if (!isPrimitive) b.hintTag(elemTag)
           elemPickler.pickle(elem, b)
         }
       }
@@ -46,8 +44,7 @@ object CustomRuntime {
 
       preader.pushHints()
       if (isPrimitive) {
-        reader.hintStaticallyElidedType()
-        reader.hintTag(elemTag)
+        reader.hintElidedType(elemTag)
         reader.pinHints()
       }
 
@@ -99,14 +96,13 @@ class Tuple2RTPickler(tag: FastTypeTag[_]) extends Pickler[(Any, Any)] with Unpi
     }
 
     builder.putField(name, b => {
-      b.hintTag(tag1)
       pickler1.pickle(value, b)
     })
   }
 
   def pickle(picklee: (Any, Any), builder: PBuilder): Unit = {
     // println(s"@@@ using runtime ${this.getClass.getName}")
-    builder.beginEntry(picklee)
+    builder.beginEntry(picklee, tag)
 
     val fld1 = picklee._1
     pickleField("_1", fld1, builder)

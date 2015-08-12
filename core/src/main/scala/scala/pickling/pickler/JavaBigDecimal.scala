@@ -11,23 +11,17 @@ trait JavaBigDecimalPicklers extends PrimitivePicklers {
     Pickler[BigDecimal] with Unpickler[BigDecimal] = new AbstractPicklerUnpickler[BigDecimal] {
     def tag = FastTypeTag[BigDecimal]
     def pickle(picklee: BigDecimal, builder: PBuilder): Unit = {
-      builder.beginEntry(picklee)
+      builder.beginEntry(picklee, tag)
       builder.putField("value", b => {
-        b.hintTag(implicitly[FastTypeTag[String]])
-        b.hintStaticallyElidedType()
+        b.hintElidedType(implicitly[FastTypeTag[String]])
         stringPickler.pickle(picklee.toString, b)
       })
       builder.endEntry()
     }
     def unpickle(tag: String, reader: PReader): Any = {
       val reader1 = reader.readField("value")
-      reader1.hintTag(implicitly[FastTypeTag[String]])
-      reader1.hintStaticallyElidedType()
-
-      val tag = reader1.beginEntry()
-      val result = stringPickler.unpickle(tag, reader1)
-      reader1.endEntry()
-
+      reader1.hintElidedType(implicitly[FastTypeTag[String]])
+      val result = stringPickler.unpickleEntry(reader1)
       new BigDecimal(result.asInstanceOf[String])
     }
   }

@@ -15,17 +15,16 @@ class BinaryListIntCustomTest extends FunSuite {
     implicit def genListPickler(implicit format: PickleFormat): HandwrittenListIntPicklerUnpickler = new HandwrittenListIntPicklerUnpickler
     class HandwrittenListIntPicklerUnpickler(implicit val format: PickleFormat) extends Pickler[::[Int]] with Unpickler[::[Int]] {
       def pickle(picklee: ::[Int], builder: PBuilder): Unit = {
-        builder.beginEntry()
+        builder.beginEntry(picklee, tag)
         val arr = picklee.toArray
         val length = arr.length
         builder.beginCollection(arr.length)
-        builder.hintStaticallyElidedType()
-        builder.hintTag(FastTypeTag.Int)
+        builder.hintElidedType(FastTypeTag.Int)
         builder.pinHints()
 
         var i: Int = 0
         while (i < length) {
-          builder.beginEntry(arr(i))
+          builder.beginEntry(arr(i), FastTypeTag.Int)
           builder.endEntry()
           i = i + 1
         }
@@ -36,8 +35,7 @@ class BinaryListIntCustomTest extends FunSuite {
       }
       def unpickle(tag: String, reader: PReader): Any = {
         val arrReader = reader.beginCollection()
-        arrReader.hintStaticallyElidedType()
-        arrReader.hintTag(FastTypeTag.Int)
+        arrReader.hintElidedType(FastTypeTag.Int)
         arrReader.pinHints()
 
         val buffer = ListBuffer[Int]()
