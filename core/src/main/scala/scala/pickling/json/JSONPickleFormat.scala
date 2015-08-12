@@ -142,8 +142,8 @@ package json {
       this
     }
     private def ignoringSharedRef(action: => PBuilder): PBuilder =
-        if(isIgnoringFields) this
-        else action
+      if(isIgnoringFields) this
+      else action
     def putField(name: String, pickler: PBuilder => Unit): PBuilder = ignoringSharedRef {
         // assert(!primitives.contains(tags.top.key), tags.top)
         if (!lastIsBrace) appendLine(",") // TODO: very inefficient, but here we don't care much about performance

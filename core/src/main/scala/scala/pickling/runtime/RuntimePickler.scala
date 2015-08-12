@@ -169,12 +169,6 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
           builder.hintOid(oid)
           // Note: Now we always pickle fully, and the format decides whether to share.
           pickler.pickle(fieldValue, builder)
-          /*if (oid == -1) {
-            pickler.pickle(fieldValue, builder)
-          } else {
-            builder.beginEntry(fieldValue, fieldTag)
-            builder.endEntry()
-          }*/
       }
     else
       pickler.pickle(fieldValue, builder)

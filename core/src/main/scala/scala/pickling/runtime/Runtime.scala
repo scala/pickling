@@ -84,14 +84,6 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
               val oid = scala.pickling.internal.lookupPicklee(picklee)
               builder.hintOid(oid)
               pickler.pickle(picklee, builder)
-              /*
-              if (oid == -1) {
-                pickler.pickle(picklee, builder)
-              } else {
-                builder.beginEntry(picklee, tag)
-                builder.endEntry()
-              }
-              */
           }
         else
           pickler.pickle(picklee, builder)
