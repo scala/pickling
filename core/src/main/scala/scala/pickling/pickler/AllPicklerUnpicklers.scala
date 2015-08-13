@@ -8,6 +8,7 @@ trait AllPicklers extends PrimitivePicklers
   with JavaBigDecimalPicklers
   with JavaBigIntegerPicklers
   with JavaUUIDPicklers
+  with TypeTagPicklers
   with PrimitiveArrayPicklers
   with RefPicklers
   with CollectionPicklers {}
