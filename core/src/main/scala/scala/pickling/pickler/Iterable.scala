@@ -71,6 +71,7 @@ object TravPickler {
       preader.endCollection()
       builder.result
     }
+      override def toString = s"TraversablePickler($tag)"
   }
 }
 
@@ -83,7 +84,7 @@ object SeqSetPickler {
 }
 
 object MapPickler {
-  def apply[K: FastTypeTag, V: FastTypeTag, M[_, _] <: collection.Map[_, _]]
+  def apply[K, V, M[_, _] <: collection.Map[_, _]]
     (implicit elemPickler: Pickler[(K, V)], elemUnpickler: Unpickler[(K, V)],
               cbf: CanBuildFrom[M[K, V], (K, V), M[K, V]],
               collTag: FastTypeTag[M[K, V]]): Pickler[M[K, V]] with Unpickler[M[K, V]] =
