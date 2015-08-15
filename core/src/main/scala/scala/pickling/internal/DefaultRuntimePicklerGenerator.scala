@@ -50,6 +50,7 @@ class DefaultRuntimePicklerGenerator(reflectionLock: ReentrantLock) extends spi.
         // debug(s"runtime unpickling of an array: $tagKey")
         val elemTypeString = tagKey.substring(12, tagKey.length - 1)
         // debug(s"creating tag for element type: $elemTypeString")
+        // TODO - If the elem tag is not something useful, we should treat it as `Any`...
         val elemTag = FastTypeTag(currentRuntime.currentMirror, elemTypeString)
         val elemClass = Classes.classFromString(elemTypeString)
         val elemUnpickler = internal.currentRuntime.picklers.genUnpickler(mirror, elemTypeString)

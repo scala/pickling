@@ -15,6 +15,7 @@ final class NoReflectionRuntime() extends PicklingRuntime {
   /** The current reflection mirror to use when doing runtime unpickling/pickling. */
   override def currentMirror: runtime.universe.Mirror = runtime.currentMirror
 
+  // TODO - we should allow registered picklers, just no reflective pickler generation...
   object picklers extends PicklerRegistry {
     override def genUnpickler(mirror: runtime.universe.Mirror, tagKey: String)(implicit share: refs.Share): _root_.scala.pickling.Unpickler[_] =
       throw new UnsupportedOperationException(s"Runtime pickler generation is disabled.  Cannot create unpickler for $tagKey")
@@ -23,6 +24,9 @@ final class NoReflectionRuntime() extends PicklingRuntime {
     override def registerPickler(key: String, p: Pickler[_]): Unit = ()
     override def lookupUnpickler(key: String): Option[Unpickler[_]] = None
     override def registerUnpickler(key: String, p: Unpickler[_]): Unit = ()
+    override def lookupPickler(key: String): Option[Pickler[_]] = None
+    override def registerUnpicklerGenerator(typeConstructorKey: String, generator: (AppliedType) => Unpickler[_]): Unit = ()
+    override def registerPicklerGenerator(typeConstructorKey: String, generator: (AppliedType) => Pickler[_]): Unit = ()
   }
   override val refRegistry: RefRegistry = new DefaultRefRegistry()
   override val GRL: ReentrantLock = new ReentrantLock()

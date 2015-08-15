@@ -56,8 +56,8 @@ class WrappedArrayTest extends FunSuite {
       new WrappedArray.ofRef(newArray)
     }
   }
-
-  internal.currentRuntime.picklers.registerPickler("scala.collection.mutable.WrappedArray$ofRef", mkAnyRefWrappedArrayPickler)
+  // TODO - This is kind of a hack because we don't really know the full tag, and we're tagging the instance with a partial tag.
+  internal.currentRuntime.picklers.registerPickler("scala.collection.mutable.WrappedArray.ofRef", mkAnyRefWrappedArrayPickler)
   internal.currentRuntime.picklers.registerUnpickler("scala.collection.mutable.WrappedArray.ofRef[java.lang.Object]", mkAnyRefWrappedArrayPickler)
 
   test("main") {

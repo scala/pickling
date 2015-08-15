@@ -41,41 +41,13 @@ trait RuntimePicklerRegistryHelper extends PicklerRegistry {
     registerUnpickler("scala.Tuple2$mcZD$sp", (new Tuple2RTPickler(null)))
     registerUnpickler("scala.Tuple2$mcZC$sp", (new Tuple2RTPickler(null)))
     registerUnpickler("scala.Tuple2$mcZZ$sp", (new Tuple2RTPickler(null)))
+
+    // TODO - Does this work the way we want?
+    registerPicklerGenerator("scala.Tuple2", tuplePicklerGenerator)
   }
-  /** Helper to lookup the very odd, and poorly behaved Tuple2 classes. */
-  def lookupTupleSpecialPicklers(classKey: String, tag: FastTypeTag[_]): Option[Pickler[_]] = {
-    classKey match {
-      case "scala.Tuple2"         => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcII$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcIJ$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcID$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcIC$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcIZ$sp" => Some( new Tuple2RTPickler (tag) )
-  
-      case "scala.Tuple2$mcJI$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcJJ$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcJD$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcJC$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcJZ$sp" => Some( new Tuple2RTPickler (tag) )
-  
-      case "scala.Tuple2$mcDI$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcDJ$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcDD$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcDC$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcDZ$sp" => Some( new Tuple2RTPickler (tag) )
-  
-      case "scala.Tuple2$mcCI$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcCJ$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcCD$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcCC$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcCZ$sp" => Some( new Tuple2RTPickler (tag) )
-  
-      case "scala.Tuple2$mcZI$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcZJ$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcZD$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcZC$sp" => Some( new Tuple2RTPickler (tag) )
-      case "scala.Tuple2$mcZZ$sp" => Some( new Tuple2RTPickler (tag) )
-      case _ => None
-    }
-  } 
+
+  def tuplePicklerGenerator: AppliedType => Pickler[_] = { tpe =>
+    val tag = FastTypeTag.apply(internal.currentMirror, tpe.toString)
+    new Tuple2RTPickler(tag)
+  }
 }
