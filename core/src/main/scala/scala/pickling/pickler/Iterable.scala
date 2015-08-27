@@ -10,15 +10,59 @@ trait IterablePicklers {
     collTag: FastTypeTag[Iterable[T]], cbf: CanBuildFrom[Iterable[T], T, Iterable[T]]):
     Pickler[Iterable[T]] with Unpickler[Iterable[T]] = TravPickler[T, Iterable[T]]
 
+
+
   // TODO - Add all known collection types so we don't hit odd runtime perfomrance issues with deserializing full structure.
   implicit def listPickler[T: FastTypeTag](implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T], colTag: FastTypeTag[List[T]], cbf: CanBuildFrom[List[T], T, List[T]]):
      Pickler[List[T]] with Unpickler[List[T]] = TravPickler[T, List[T]]
+
+  locally {
+    val generator =
+      TravPickler.generate(implicitly[CanBuildFrom[List[Any], Any, List[Any]]], identity[List[Any]]) { tpe =>
+        TravPickler.oneArgumentTagExtractor(tpe)
+      } _
+    currentRuntime.picklers.registerPicklerGenerator("scala.collection.immutable.List", generator)
+    currentRuntime.picklers.registerUnpicklerGenerator("scala.collection.immutable.List", generator)
+    currentRuntime.picklers.registerPicklerGenerator("scala.collection.immutable.$colon$colon", generator)
+    currentRuntime.picklers.registerUnpicklerGenerator("scala.collection.immutable.$colon$colon", generator)
+    currentRuntime.picklers.registerPicklerGenerator("scala.collection.immutable.Nil.type", generator)
+    currentRuntime.picklers.registerUnpicklerGenerator("scala.collection.immutable.Nil.type", generator)
+  }
 }
 
 object TravPickler {
+  private val ANY_TAG = FastTypeTag[Any]
+
+  def oneArgumentTagExtractor[T](tpe: AppliedType): FastTypeTag[T] = {
+    tpe.typeargs match {
+      case List(one) => FastTypeTag.apply(currentMirror, one.toString).asInstanceOf[FastTypeTag[T]]
+        // Note: This is what we do to handle
+      case List() => ANY_TAG.asInstanceOf[FastTypeTag[T]]
+      case x => throw new PicklingException(s"Error, expected one type argument  on $tpe, found: $x")
+    }
+  }
+
+  /** Creates a pickling generator that can be registered at runtime. */
+  def generate[T, C](cbf: CanBuildFrom[C,T,C], asTraversable: C => Traversable[_])(elementTagExtractor: AppliedType => FastTypeTag[T])(tpe: AppliedType): AbstractPicklerUnpickler[_] = {
+    // TODO - we need to construct all the things we need from the tag to create a pickler/unpickler
+    val elementType = elementTagExtractor(tpe)
+    // TODO - These any pickler.unpicklers should be passed in.
+    val elemPickler =
+      if(elementType.key == ANY_TAG.key) AllPicklers.anyPickler
+      else currentRuntime.picklers.lookupPickler(elementType.key).getOrElse(
+        throw new PicklingException(s"Cannnot generate a pickler/unpickler for $tpe, cannot find a pickler for $elementType"))
+    val elemUnpickler =
+      if(elementType.key == ANY_TAG.key) AllPicklers.anyUnpickler
+      else currentRuntime.picklers.lookupUnpickler(elementType.key).getOrElse(
+        throw new PicklingException(s"Cannnot generate a pickler/unpickler for $tpe, cannot find an unpickler for $elementType"))
+    val colTag = FastTypeTag.apply(currentMirror, tpe.toString)
+    apply[T,C](asTraversable, elemPickler.asInstanceOf[Pickler[T]], elemUnpickler.asInstanceOf[Unpickler[T]], cbf, colTag.asInstanceOf[FastTypeTag[C]])
+  }
+
+
   def apply[T, C <% Traversable[_]]
     (implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T],
-              cbf: CanBuildFrom[C, T, C], collTag: FastTypeTag[C]): Pickler[C] with Unpickler[C] =
+              cbf: CanBuildFrom[C, T, C], collTag: FastTypeTag[C]): AbstractPicklerUnpickler[C] =
     new AbstractPicklerUnpickler[C] {
 
     val elemTag  = elemPickler.tag

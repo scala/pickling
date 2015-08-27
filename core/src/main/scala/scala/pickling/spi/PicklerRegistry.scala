@@ -34,6 +34,9 @@ trait PicklerRegistry {
     * @param typeConstructorKey  The type constructor.  e.g. "scala.List" for something that can make scala.List[A] picklers.
     * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
     *                   this type.
+    *                   Note:  it is possible for the type arguments to be an empty set.  This is the case if we are
+    *                   trying to manually inspect an object at runtime to deterimine its type, and we do not know what
+    *                   the arguments are.  You can treat this case as 'existential' arguments.
     */
   def registerPicklerGenerator(typeConstructorKey: String, generator: AppliedType => Pickler[_]): Unit
   /** Registers a function which can generate picklers for a given type constructor.

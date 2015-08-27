@@ -75,14 +75,17 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
 
   /** Looks for a pickler with the given FastTypeTag string. */
   override def lookupPickler(key: String): Option[Pickler[_]] = {
+    System.err.println(s"Looking up pickler for: $key")
     picklerMap.get(key) match {
       case x: Some[Pickler[_]] => x
       case None =>
         // TODO - fix AppliedType for a `parseAll` string or some such.
         val (a, remaining) = AppliedType.parse(key)
-        if(remaining.isEmpty && !a.typeargs.isEmpty) {
+        if(remaining.isEmpty) {
+          System.err.println(s"Looking up unpickler generator for: ${a.typename}")
           picklerGenMap.get(a.typename) match {
             case Some(gen) =>
+              System.err.println(s"Generating pickler for: $key")
               // Genereate the pickler, register it with ourselves for future lookup, and return it.
               val up = gen(a)
               registerPickler(key, up)
