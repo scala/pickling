@@ -60,7 +60,7 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
       case None =>
         // Now we use the typeConstructor registry
         val (a, remaining) = AppliedType.parse(key)
-        if(remaining.isEmpty && !a.typeargs.isEmpty) {
+        if(remaining.isEmpty) {
           unpicklerGenMap.get(a.typename) match {
             case Some(gen) =>
               // Genereate the pickler, register it with ourselves for future lookup, and return it.
