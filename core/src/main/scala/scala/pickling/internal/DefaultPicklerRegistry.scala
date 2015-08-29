@@ -22,7 +22,6 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
   // During constrcution, we can now register the default picklers against our cache of picklers.
   autoRegisterDefaults()
 
-  /** Looks up the registered unpickler using the provided tagKey. */
   override def genUnpickler(mirror: Mirror, tagKey: String)(implicit share: refs.Share): Unpickler[_] = {
     lookupUnpickler(tagKey) match {
       case Some(p) => p
@@ -46,11 +45,11 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
   }
 
   /** Registers a pickler with this registry for future use. */
-  override def registerPickler(key: String, p: Pickler[_]): Unit =
+  override def registerPickler[T](key: String, p: Pickler[T]): Unit =
     picklerMap.put(key, p)
 
   /** Registers an unpickler with this registry for future use. */
-  override def registerUnpickler(key: String, p: Unpickler[_]): Unit =
+  override def registerUnpickler[T](key: String, p: Unpickler[T]): Unit =
     unpicklerMap.put(key, p)
 
   /** Checks the existince of an unpickler. */
@@ -59,40 +58,39 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
       case x: Some[Unpickler[_]] => x
       case None =>
         // Now we use the typeConstructor registry
-        val (a, remaining) = AppliedType.parse(key)
-        if(remaining.isEmpty) {
-          unpicklerGenMap.get(a.typename) match {
-            case Some(gen) =>
-              // Genereate the pickler, register it with ourselves for future lookup, and return it.
-              val up = gen(a)
-              registerUnpickler(key, up)
-              Some(up)
-            case None => None
-          }
-        } else None // This key is not an applied type.
+        AppliedType.parseFull(key) match {
+          case Some(a) =>
+            unpicklerGenMap.get(a.typename) match {
+              case Some(gen) =>
+                // Genereate the pickler, register it with ourselves for future lookup, and return it.
+                val up = gen(a)
+                registerUnpickler(key, up)
+                Some(up)
+              case None => None
+            }
+          case None => None // This key is not an applied type.
+        }
     }
   }
 
   /** Looks for a pickler with the given FastTypeTag string. */
   override def lookupPickler(key: String): Option[Pickler[_]] = {
-    System.err.println(s"Looking up pickler for: $key")
     picklerMap.get(key) match {
       case x: Some[Pickler[_]] => x
       case None =>
         // TODO - fix AppliedType for a `parseAll` string or some such.
-        val (a, remaining) = AppliedType.parse(key)
-        if(remaining.isEmpty) {
-          System.err.println(s"Looking up unpickler generator for: ${a.typename}")
-          picklerGenMap.get(a.typename) match {
-            case Some(gen) =>
-              System.err.println(s"Generating pickler for: $key")
-              // Genereate the pickler, register it with ourselves for future lookup, and return it.
-              val up = gen(a)
-              registerPickler(key, up)
-              Some(up)
-            case None => None
-          }
-        } else None // This key is not an applied type.
+        AppliedType.parseFull(key) match {
+          case Some(a) =>
+            picklerGenMap.get(a.typename) match {
+              case Some(gen) =>
+                // Genereate the pickler, register it with ourselves for future lookup, and return it.
+                val up = gen(a)
+                registerPickler(key, up)
+                Some(up)
+              case None => None
+            }
+          case None => None // This key is not an applied type.
+        }
     }
 
   }
@@ -103,7 +101,7 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
     * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
     *                   this type.
     */
-  override def registerUnpicklerGenerator(typeConstructorKey: String, generator: (AppliedType) => Unpickler[_]): Unit =
+  override def registerUnpicklerGenerator[T](typeConstructorKey: String, generator: (AppliedType) => Unpickler[T]): Unit =
     unpicklerGenMap.put(typeConstructorKey, generator)
 
 
@@ -113,6 +111,29 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
     * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
     *                   this type.
     */
-  override def registerPicklerGenerator(typeConstructorKey: String, generator: (AppliedType) => Pickler[_]): Unit =
+  override def registerPicklerGenerator[T](typeConstructorKey: String, generator: (AppliedType) => Pickler[T]): Unit =
     picklerGenMap.put(typeConstructorKey, generator)
+
+  /** Registers a pickler and unpickler for a type with this registry for future use.
+    * @param key  The type key for the pickler. Note: In reflective scenarios this may not include type parameters.
+    *             In those situations, the pickler should be able to handle arbitrary (existential) type parameters.
+    * @param p  The unpickler to register.
+    */
+  override def registerPicklerUnpickler[T](key: String, p: (Pickler[T] with Unpickler[T])): Unit = {
+    // TODO - Should we lock or something here?
+    registerPickler(key, p)
+    registerUnpickler(key, p)
+  }
+
+  /** Registers a function which can generate picklers for a given type constructor.
+    *
+    * @param typeConstructorKey  The type constructor.  e.g. "scala.List" for something that can make scala.List[A] picklers.
+    * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
+    *                   this type.
+    */
+  override def registerPicklerUnpicklerGenerator[T](typeConstructorKey: String, generator: (AppliedType) => (Pickler[T] with Unpickler[T])): Unit = {
+    // TODO - Should we lock or something here?
+    registerPicklerGenerator(typeConstructorKey, generator)
+    registerUnpicklerGenerator(typeConstructorKey, generator)
+  }
 }

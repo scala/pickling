@@ -58,8 +58,8 @@ package object internal {
     if (typeFromStringCache.contains(stpe)) typeFromStringCache(stpe)
     else {
       val result =
-        AppliedType.parse(stpe) match {
-          case (AppliedType(typename, appliedTypeArgs), _) =>
+        AppliedType.parseFull(stpe) match {
+          case Some(AppliedType(typename, appliedTypeArgs)) =>
             def errorMsg = s"""error: cannot find class or module with type name '$typename'
                               |full type string: '$stpe'""".stripMargin
 
@@ -74,7 +74,7 @@ package object internal {
             }
             val tycon = sym.asType.toTypeConstructor
             appliedType(tycon, appliedTypeArgs.map(starg => typeFromString(mirror, starg.toString)))
-          case _ =>
+          case None =>
             sys.error(s"fatal: cannot unpickle $stpe")
         }
       typeFromStringCache(stpe) = result

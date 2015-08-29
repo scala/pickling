@@ -46,7 +46,7 @@ trait RuntimePicklerRegistryHelper extends PicklerRegistry {
     registerPicklerGenerator("scala.Tuple2", tuplePicklerGenerator)
   }
 
-  def tuplePicklerGenerator: AppliedType => Pickler[_] = { tpe =>
+  def tuplePicklerGenerator: AppliedType => Pickler[(Any,Any)] = { tpe =>
     val tag = FastTypeTag.apply(internal.currentMirror, tpe.toString)
     new Tuple2RTPickler(tag)
   }
