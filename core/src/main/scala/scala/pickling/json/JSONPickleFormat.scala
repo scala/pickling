@@ -227,6 +227,7 @@ package json {
             case JSONObject(fields) if fields.contains("$ref") => FastTypeTag.Ref.key
             case JSONObject(fields) if fields.contains("$type") => fields("$type").asInstanceOf[String]
             case JSONObject(fields) => throw new PicklingException(s"Logic pickling error:  Could not find a type tag, and no elided type was hinted: ${fields}")
+            case value => throw new PicklingException(s"Logic pickling error:  Could not find a type tag on primitive, and no elided type was hinted: $value")
           }
         }
       }

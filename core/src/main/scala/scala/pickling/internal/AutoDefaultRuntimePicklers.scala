@@ -1,7 +1,8 @@
 package scala.pickling
 package internal
 
-import scala.pickling.runtime.{Tuple2RTPickler}
+import scala.pickling.pickler.AnyUnpickler
+import scala.pickling.runtime.{Tuple2RTKnownTagUnpickler, Tuple2RTPickler}
 import scala.pickling.spi.PicklerRegistry
 
 /** Helper method to help register picklers which can handle special/crazy classes for runtime generration.
@@ -11,43 +12,57 @@ import scala.pickling.spi.PicklerRegistry
   */
 trait RuntimePicklerRegistryHelper extends PicklerRegistry {
   final def autoRegisterDefaults(): Unit = {
-    registerUnpickler("scala.Tuple2", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcII$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcIJ$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcID$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcIC$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcIZ$sp", (new Tuple2RTPickler(null)))
+    val tpes = List(
+      "scala.Tuple2",
+      "scala.Tuple2$mcII$sp",
+      "scala.Tuple2$mcIJ$sp",
+      "scala.Tuple2$mcID$sp",
+      "scala.Tuple2$mcIZ$sp",
 
-    registerUnpickler("scala.Tuple2$mcJI$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcJJ$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcJD$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcJC$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcJZ$sp", (new Tuple2RTPickler(null)))
+      "scala.Tuple2$mcJI$sp",
+      "scala.Tuple2$mcJJ$sp",
+      "scala.Tuple2$mcJD$sp",
+      "scala.Tuple2$mcJC$sp",
+      "scala.Tuple2$mcJZ$sp",
 
-    registerUnpickler("scala.Tuple2$mcDI$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcDJ$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcDD$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcDC$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcDZ$sp", (new Tuple2RTPickler(null)))
+      "scala.Tuple2$mcDI$sp",
+      "scala.Tuple2$mcDJ$sp",
+      "scala.Tuple2$mcDD$sp",
+      "scala.Tuple2$mcDC$sp",
+      "scala.Tuple2$mcDZ$sp",
 
-    registerUnpickler("scala.Tuple2$mcCI$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcCJ$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcCD$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcCC$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcCZ$sp", (new Tuple2RTPickler(null)))
+      "scala.Tuple2$mcCI$sp",
+      "scala.Tuple2$mcCJ$sp",
+      "scala.Tuple2$mcCD$sp",
+      "scala.Tuple2$mcCC$sp",
+      "scala.Tuple2$mcCZ$sp",
 
-    registerUnpickler("scala.Tuple2$mcZI$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcZJ$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcZD$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcZC$sp", (new Tuple2RTPickler(null)))
-    registerUnpickler("scala.Tuple2$mcZZ$sp", (new Tuple2RTPickler(null)))
+      "scala.Tuple2$mcZI$sp",
+      "scala.Tuple2$mcZJ$sp",
+      "scala.Tuple2$mcZD$sp",
+      "scala.Tuple2$mcZC$sp",
+      "scala.Tuple2$mcZZ$sp"
+    )
 
-    // TODO - Does this work the way we want?
-    registerPicklerGenerator("scala.Tuple2", tuplePicklerGenerator)
+    for(tpe <- tpes) {
+      registerPicklerGenerator(tpe, tuplePicklerGenerator)
+      registerUnpicklerGenerator(tpe, tupleUnpicklerGenerator)
+    }
   }
 
-  def tuplePicklerGenerator: AppliedType => Pickler[(Any,Any)] = { tpe =>
+  def tuplePicklerGenerator: AppliedType => Pickler[(Any,Any)] with Unpickler[(Any, Any)] = { tpe =>
+    // TODO - Actually extract the tpe of the internal things.
     val tag = FastTypeTag.apply(internal.currentMirror, tpe.toString)
-    new Tuple2RTPickler(tag)
+    new Tuple2RTPickler()
+  }
+
+  def tupleUnpicklerGenerator: AppliedType => Unpickler[(Any,Any)] = {
+    case AppliedType(_, List(left, right)) =>
+      val lhs =
+        currentRuntime.picklers.lookupUnpickler(left.toString).getOrElse(AnyUnpickler).asInstanceOf[Unpickler[Any]]
+      val rhs =
+        currentRuntime.picklers.lookupUnpickler(right.toString).getOrElse(AnyUnpickler).asInstanceOf[Unpickler[Any]]
+      new Tuple2RTKnownTagUnpickler(lhs, rhs)
+    case tpe => new Tuple2RTPickler()
   }
 }
