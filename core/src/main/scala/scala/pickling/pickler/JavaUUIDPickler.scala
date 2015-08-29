@@ -4,6 +4,7 @@ package pickler
 import java.util.UUID
 
 trait JavaUUIDPicklers extends PrimitivePicklers {
+  // TODO(jsuereth) - Register runtime picklers
   implicit val javaUUIDPickler:
     Pickler[UUID] with Unpickler[UUID] = new AbstractPicklerUnpickler[UUID] {
     def tag = FastTypeTag[UUID]

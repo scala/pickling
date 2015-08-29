@@ -3,7 +3,7 @@ package pickler
 
 /** Picklers for either trait. */
 trait EitherPicklers {
-
+  // TODO(jsuereth) - Register pickler generators
 
   implicit def pickleLeft[L, R](implicit lp: Pickler[L], t: FastTypeTag[Left[L,R]]): Pickler[Left[L, R]] =
      new AbstractPickler[Left[L, R]] {

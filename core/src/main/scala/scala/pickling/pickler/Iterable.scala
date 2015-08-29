@@ -16,6 +16,7 @@ trait IterablePicklers {
   implicit def listPickler[T: FastTypeTag](implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T], colTag: FastTypeTag[List[T]], cbf: CanBuildFrom[List[T], T, List[T]]):
      Pickler[List[T]] with Unpickler[List[T]] = TravPickler[T, List[T]]
 
+  // Register List runtime pickler
   locally {
     val generator =
       TravPickler.generate(implicitly[CanBuildFrom[List[Any], Any, List[Any]]], identity[List[Any]]) { tpe =>
@@ -24,6 +25,15 @@ trait IterablePicklers {
     currentRuntime.picklers.registerPicklerUnpicklerGenerator("scala.collection.immutable.List", generator)
     currentRuntime.picklers.registerPicklerUnpicklerGenerator("scala.collection.immutable.$colon$colon", generator)
     currentRuntime.picklers.registerPicklerUnpicklerGenerator("scala.collection.immutable.Nil.type", generator)
+  }
+
+  // Register Iterable runtime pickler
+  locally {
+    val generator =
+      TravPickler.generate(implicitly[CanBuildFrom[Iterable[Any], Any, Iterable[Any]]], identity[Iterable[Any]]) { tpe =>
+        TravPickler.oneArgumentTagExtractor(tpe)
+      } _
+    currentRuntime.picklers.registerPicklerUnpicklerGenerator("scala.collection.Iterable", generator)
   }
 }
 
@@ -45,7 +55,7 @@ object TravPickler {
     val elementType = elementTagExtractor(tpe)
     // TODO - These any pickler.unpicklers should be passed in.
     val elemPickler =
-      if(elementType.key == ANY_TAG.key) AllPicklers.anyPickler
+      if(elementType.key == ANY_TAG.key) AnyPickler
       else currentRuntime.picklers.lookupPickler(elementType.key).getOrElse(
         throw new PicklingException(s"Cannnot generate a pickler/unpickler for $tpe, cannot find a pickler for $elementType"))
     val elemUnpickler =

@@ -4,6 +4,8 @@ package pickler
 import scala.collection.generic.CanBuildFrom
 import scala.collection.{ immutable, mutable }
 
+// TODO(jsuereth) - Register runtime pickler generators
+
 trait MapPicklers {
   implicit def mapPickler[K: FastTypeTag, V: FastTypeTag](implicit elemPickler: Pickler[(K, V)], elemUnpickler: Unpickler[(K, V)], pairTag: FastTypeTag[(K, V)], collTag: FastTypeTag[Map[K, V]], cbf: CanBuildFrom[Map[K, V], (K, V), Map[K, V]]): Pickler[Map[K, V]] with Unpickler[Map[K, V]] =
     MapPickler[K, V, Map]

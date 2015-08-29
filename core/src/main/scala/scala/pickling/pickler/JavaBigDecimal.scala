@@ -7,6 +7,7 @@ import java.math.BigDecimal
   * Note; This currently serialzies as a string.
   */
 trait JavaBigDecimalPicklers extends PrimitivePicklers {
+  // TODO(jsuereth) - Register runtime picklers
   implicit val javaBigDecimalPickler:
     Pickler[BigDecimal] with Unpickler[BigDecimal] = new AbstractPicklerUnpickler[BigDecimal] {
     def tag = FastTypeTag[BigDecimal]
