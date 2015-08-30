@@ -110,6 +110,21 @@ class CaseClassGeneratorTest extends FunSuite {
     val y1 = x1.pickle.unpickle[OpenCaseClass]
     assert(x1 == y1)
   }
+
+  test("ignoreSubclasses") {
+    import generator.opts.ignoreCaseClassSubclasses
+    import static._
+    case class Other(x: Int)
+    implicit val pu = {
+      PicklingMacros.genPicklerUnpickler[OpenCaseClass]
+    }
+    implicit val pu2 = PicklingMacros.genPicklerUnpickler[Other]
+    val x = OpenCaseClass(1)
+    // Because we ignore subclasses, we shouldn't freak about subclass tags, because we ignore them. Only the
+    // "shape" of the pickle should matter.
+    val y = x.pickle.unpickle[Other]
+    assert(x.x == y.x)
+  }
 }
 
 // Case 1 - empty
