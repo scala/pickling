@@ -6,6 +6,11 @@ val buildVersion = "0.10.2-SNAPSHOT"
 def commonSettings = Seq(
   version in ThisBuild := buildVersion,
   scalaVersion := Util.buildScalaVersion,
+  crossScalaVersions := Util.buildScalaVersions,
+  scalacOptions in (Test, compile) ++= (scalaBinaryVersion.value match {
+    case "2.10" => Seq("-Xmax-classfile-name", "254")
+    case _ => Seq()
+  }),
   organization in ThisBuild := "org.scala-lang.modules",
   organizationName in ThisBuild := "LAMP/EPFL",
   organizationHomepage in ThisBuild := Some(url("http://lamp.epfl.ch")),
