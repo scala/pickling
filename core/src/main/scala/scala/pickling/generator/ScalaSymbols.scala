@@ -67,7 +67,12 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
     /** The class name represented by this symbol. */
     override def className: String = classSymbol.fullName
     override def isTrait: Boolean = classSymbol.isTrait
-    override def isAbstract: Boolean = classSymbol.isAbstract
+    override def isAbstract: Boolean = {
+      classSymbol.isAbstractType
+      // NOte: This doesn't exist on scala 2.10
+      //classSymbol.isAbstract
+      classSymbol.isAbstractClass
+    }
     override def primaryConstructor: Option[IrConstructor] = {
       tpe.declaration(nme.CONSTRUCTOR) match {
         // NOTE: primary ctor is always the first in the list
@@ -105,8 +110,11 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
       //        or not, so we may ignore them.
       //        It's actually a really bad scenario because you can't distinguish between something which
       //        is actually annotated as a val and something which is just a constructor argument.
-      def isConstructorArg(x: TermSymbol): Boolean =
-        x.owner.isConstructor
+      def isConstructorArg(x: TermSymbol): Boolean = {
+        // Note available in scala 2.10
+        // x.owner.isConstructor
+        x.owner.name == nme.CONSTRUCTOR
+      }
       tpe.members.filter(_.isTerm).map(_.asTerm).filter(x => x.isVal || x.isVar).map(x => new ScalaIrField(x, this)).toList
     }
     override def companion: Option[IrClass] = {
@@ -249,7 +257,12 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
       }
     }
     override def javaReflectionName: String = {
-      if(mthd.isParamAccessor && (mthd.isPrivate || mthd.isPrivateThis)) {
+      val isPrivateThis = {
+        // Note: Scala 2.10 does not support this
+        //mthd.isPrivateThis
+        false
+      }
+      if(mthd.isParamAccessor && (mthd.isPrivate || isPrivateThis)) {
         // Here we check to see if we need to encode the funky name that scala gives private fields to avoid conflicts
         // with fields in the parent class.
         def makeEncodedJvmName(names: List[String], buf: StringBuilder, isStart: Boolean = false): String =
@@ -269,7 +282,9 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
         val result = makeEncodedJvmName(split, new StringBuilder, true)
         result
       } else mthd match {
-        case TermName(n) => n
+          // Note: Not available in Scala 2.10.x
+        //case TermName(n) => n
+        case x: TermName => x.toString
         case _ => mthd.name.encodedName.toString
       }
     }
