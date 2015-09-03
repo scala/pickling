@@ -81,8 +81,22 @@ object CustomRuntime {
 
 }
 
+class Tuple2RTKnownTagUnpickler[L, R](lhs: Unpickler[L], rhs: Unpickler[R]) extends AbstractUnpickler[(L,R)] {
+  def unpickleField[T](name: String, reader: PReader, unpickler: Unpickler[T]): T = {
+    val reader1 = reader.readField(name)
+    // TODO - Always elide tags?
+    if(unpickler.tag.isEffectivelyPrimitive) reader1.hintElidedType(unpickler.tag)
+    unpickler.unpickleEntry(reader1).asInstanceOf[T]
+  }
+  override def unpickle(tag: String, reader: PReader): Any = {
+    (unpickleField("_1", reader, lhs), unpickleField("_2", reader, rhs))
+  }
+  override def tag: FastTypeTag[(L, R)] =
+    FastTypeTag.apply(currentMirror, s"scala.Tuple2[${lhs.tag.key},${rhs.tag.key}}]").asInstanceOf[FastTypeTag[(L,R)]]
+}
 
-class Tuple2RTPickler(tag: FastTypeTag[_]) extends Pickler[(Any, Any)] with Unpickler[(Any, Any)] {
+// TODO - This pickler should actually use the known tag if it is passed.  Currently it is never used.
+class Tuple2RTPickler() extends AbstractPicklerUnpickler[(Any, Any)] {
   def tag = FastTypeTag[(Any, Any)]
 
   def pickleField(name: String, value: Any, builder: PBuilder): Unit = {

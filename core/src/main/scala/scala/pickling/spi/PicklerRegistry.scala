@@ -1,6 +1,7 @@
 package scala.pickling
 package spi
 
+import scala.pickling.internal.AppliedType
 import scala.reflect.runtime.universe.Mirror
 
 /** A registry for looking up (and possibly coding on the fly) picklers by tag.
@@ -8,17 +9,84 @@ import scala.reflect.runtime.universe.Mirror
   * All methods are threadsafe.
   */
 trait PicklerRegistry {
-  // TODO - Do we need lookup*s w/ the gen*s?
+  // TODO(jsuereth) - We should remove the `gen` traits here and hide generation behind the lookup methods.
 
-  /** Looks up the registered unpickler using the provided tagKey. */
+  /** Looks up the registered unpickler using the provided tagKey.
+    *
+    * If there are no registered picklers or pickler-generators, then we instead attempt to generate the pickler using
+    * the passed in information.
+    *
+    * TODO(jsuereth) - This should use classLoader just like genPickler.  No reason to mix Java/Scala reflection.
+    *
+    * @param mirror  The scala mirror (classloader/symbolloader) we use to generate the unpickler.
+    * @param tagKey The full tag of the type, which may or may not include type parameters.
+    */
   def genUnpickler(mirror: Mirror, tagKey: String)(implicit share: refs.Share): Unpickler[_]
-  /** Looks up a Pickler or generates one. */
+  /** Looks up a Pickler for the given tag.  If none is found, then we attempt to generate one.
+    *
+    * @param classLoader The classloader to use when reflecting over the pickled class.
+    * @param clazz The clazz we need to pickle.
+    * @param tag The full tag of the type we're pickling, which may or may not include type parameters.
+    */
   def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit share: refs.Share): Pickler[_]
-  /** Checks the existince of an unpickler. */
+
+
+  /** Checks the existince of an unpickler.
+    *
+    * This will also check any registered generator functions.
+    */
   def lookupUnpickler(key: String): Option[Unpickler[_]]
-  /** Registers a pickler with this registry for future use. */
-  def registerPickler(key: String, p: Pickler[_]): Unit  // TODO - Return old pickler if one existed?
-  /** Registers an unpickler with this registry for future use. */
-  def registerUnpickler(key: String, p: Unpickler[_]): Unit
+  /** Looks for a pickler with the given FastTypeTag string.
+    *
+    * This will also check any registered generator functions.
+    */
+  def lookupPickler(key: String): Option[Pickler[_]]
+
+
+  /** Registers a pickler with this registry for future use.
+    *
+    * @param key  The type key for the pickler. Note: In reflective scenarios this may not include type parameters.
+    *             In those situations, the pickler should be able to handle arbitrary (existential) type parameters.
+    * @param p  The pickler to register.
+    */
+  def registerPickler[T](key: String, p: Pickler[T]): Unit  // TODO - Return old pickler if one existed?
+  /** Registers an unpickler with this registry for future use.
+    * @param key  The type key for the unpickler. Note: In reflective scenarios this may not include type parameters.
+    *             In those situations, the unpickler should be able to handle arbitrary (existential) type parameters.
+    * @param p  The unpickler to register.
+    */
+  def registerUnpickler[T](key: String, p: Unpickler[T]): Unit
+  /** Registers a pickler and unpickler for a type with this registry for future use.
+    * @param key  The type key for the pickler. Note: In reflective scenarios this may not include type parameters.
+    *             In those situations, the pickler should be able to handle arbitrary (existential) type parameters.
+    * @param p  The unpickler to register.
+    */
+  def registerPicklerUnpickler[T](key: String, p: (Pickler[T] with Unpickler[T])): Unit  // TODO - Return old pickler if one existed?
+
+
+  /** Registers a function which can generate picklers for a given type constructor.
+    *
+    * @param typeConstructorKey  The type constructor.  e.g. "scala.List" for something that can make scala.List[A] picklers.
+    * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
+    *                   this type.
+    *                   Note:  it is possible for the type arguments to be an empty set.  This is the case if we are
+    *                   trying to manually inspect an object at runtime to deterimine its type, and we do not know what
+    *                   the arguments are.  You can treat this case as 'existential' arguments.
+    */
+  def registerPicklerGenerator[T](typeConstructorKey: String, generator: AppliedType => Pickler[T]): Unit
+  /** Registers a function which can generate picklers for a given type constructor.
+    *
+    * @param typeConstructorKey  The type constructor.  e.g. "scala.List" for something that can make scala.List[A] picklers.
+    * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
+    *                   this type.
+    */
+  def registerUnpicklerGenerator[T](typeConstructorKey: String, generator: AppliedType => Unpickler[T]): Unit
+  /** Registers a function which can generate picklers for a given type constructor.
+    *
+    * @param typeConstructorKey  The type constructor.  e.g. "scala.List" for something that can make scala.List[A] picklers.
+    * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
+    *                   this type.
+    */
+  def registerPicklerUnpicklerGenerator[T](typeConstructorKey: String, generator: AppliedType => (Pickler[T] with Unpickler[T])): Unit
   // TODO - Some kind of clean or inspect what we have?
 }

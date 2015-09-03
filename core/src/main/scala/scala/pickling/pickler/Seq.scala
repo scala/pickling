@@ -4,6 +4,8 @@ package pickler
 import scala.collection.generic.CanBuildFrom
 import scala.collection.{ IndexedSeq, LinearSeq }
 
+// TODO(jsuereth) - Register runtime pickler generators
+
 trait SeqPicklers {
   implicit def seqPickler[T: FastTypeTag](implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T],
     collTag: FastTypeTag[Seq[T]], cbf: CanBuildFrom[Seq[T], T, Seq[T]]): Pickler[Seq[T]] with Unpickler[Seq[T]] =

@@ -106,8 +106,8 @@ abstract class AutoRegister[T: FastTypeTag](name: String) extends AbstractPickle
   // Register this pickler with the global handler.
   locally {
     val p = internal.currentRuntime.picklers
-    debug(s"autoregistering pickler $this under key '$name'")
-    p.registerPickler(name, this)
+    debug(s"autoregistering pickler $this under key '${tag.key}'")
+    p.registerPickler(tag.key, this)
     debug(s"autoregistering unpickler $this under key '${tag.key}'")
     p.registerUnpickler(tag.key, this)
   }

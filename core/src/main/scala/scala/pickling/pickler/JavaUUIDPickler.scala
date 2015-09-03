@@ -4,6 +4,7 @@ package pickler
 import java.util.UUID
 
 trait JavaUUIDPicklers extends PrimitivePicklers {
+
   implicit val javaUUIDPickler:
     Pickler[UUID] with Unpickler[UUID] = new AbstractPicklerUnpickler[UUID] {
     def tag = FastTypeTag[UUID]
@@ -36,4 +37,5 @@ trait JavaUUIDPicklers extends PrimitivePicklers {
       new java.util.UUID(msb, lsb)
     }
   }
+  internal.currentRuntime.picklers.registerPicklerUnpickler(javaUUIDPickler.tag.key, javaUUIDPickler)
 }
