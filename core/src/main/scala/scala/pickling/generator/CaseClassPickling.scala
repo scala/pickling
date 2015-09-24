@@ -8,7 +8,7 @@ package generator
   * This ONLY handles case-class types, it will not handle ADTS, but can generate code for non-final case classes.
   *
   */
-class CaseClassPickling(val allowReflection: Boolean) extends PicklingAlgorithm {
+class CaseClassPickling(val allowReflection: Boolean, val careAboutSubclasses: Boolean) extends PicklingAlgorithm {
   case class FieldInfo(name: String, sym: IrMethod)
   case class CaseClassInfo(constructor: IrConstructor, fields: Seq[FieldInfo])
 
@@ -125,7 +125,7 @@ class CaseClassPickling(val allowReflection: Boolean) extends PicklingAlgorithm 
     // Scala modules are pickled differently, so we have to explicitly ignore `case object`
     if(tpe.isCaseClass && !tpe.isScalaModule) {
       val behavior = (checkConstructorImpl(tpe, logger) join checkFactoryImpl(tpe, logger))
-      if(!tpe.isFinal) {
+      if(careAboutSubclasses && !tpe.isFinal) {
         // TODO - We need a different flag to say if we'll use runtime picklers *VS* reflection. The two features are not the same.
         tpe.closedSubclasses match {
           case scala.util.Success(subs) =>

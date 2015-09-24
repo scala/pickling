@@ -11,13 +11,19 @@ private[pickling] object PicklingMacros {
 private[pickling] trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
   import c.universe._
   val symbols = new IrScalaSymbols[c.universe.type, c.type](c.universe, tools)
-  // TODO - We should have more customization than "isStaticOnly"
+  // TODO - We should have more customization than this
+  val handleCaseClassSubclasses = !configOption(typeOf[IsIgnoreCaseClassSubclasses])
   val generator =
     if(isStaticOnly) {
       // TODO - should we consider externalizable "safe" or "static only" since we know it's externalizable at compile time?
-      PicklingAlgorithm.aggregate(Seq(new CaseClassPickling(allowReflection = false), AdtPickling, ScalaSingleton))
+      PicklingAlgorithm.aggregate(Seq(new CaseClassPickling(allowReflection = false, careAboutSubclasses = handleCaseClassSubclasses), AdtPickling, ScalaSingleton))
     } else {
-      PicklingAlgorithm.aggregate(Seq(new CaseClassPickling(allowReflection = true), AdtPickling, ScalaSingleton, new ExternalizablePickling, WillRobinsonPickling))
+      PicklingAlgorithm.aggregate(Seq(
+        new CaseClassPickling(allowReflection = true, careAboutSubclasses = handleCaseClassSubclasses),
+        AdtPickling,
+        ScalaSingleton,
+        new ExternalizablePickling,
+        WillRobinsonPickling))
     }
 
   object logger extends AlgorithmLogger {

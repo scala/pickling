@@ -10,6 +10,9 @@ trait TypeAnalysis extends Macro {
   def isStaticOnly: Boolean =
     c.inferImplicitValue(typeOf[IsStaticOnly]) != EmptyTree
 
+  def configOption(t: Type): Boolean =
+    c.inferImplicitValue(t) != EmptyTree
+
   def isCaseClass(sym: TypeSymbol): Boolean =
     sym.isClass && sym.asClass.isCaseClass
 
