@@ -49,19 +49,22 @@ trait PicklerRegistry {
     *             In those situations, the pickler should be able to handle arbitrary (existential) type parameters.
     * @param p  The pickler to register.
     */
-  def registerPickler[T](key: String, p: Pickler[T]): Unit  // TODO - Return old pickler if one existed?
+  def registerPickler[T](key: String, p: Pickler[T]): Unit
+  def registerPickler[T](p: Pickler[T]): Unit = registerPickler(p.tag.key, p)
   /** Registers an unpickler with this registry for future use.
     * @param key  The type key for the unpickler. Note: In reflective scenarios this may not include type parameters.
     *             In those situations, the unpickler should be able to handle arbitrary (existential) type parameters.
     * @param p  The unpickler to register.
     */
   def registerUnpickler[T](key: String, p: Unpickler[T]): Unit
+  def registerUnpickler[T](p: Unpickler[T]): Unit = registerUnpickler(p.tag.key, p)
   /** Registers a pickler and unpickler for a type with this registry for future use.
     * @param key  The type key for the pickler. Note: In reflective scenarios this may not include type parameters.
     *             In those situations, the pickler should be able to handle arbitrary (existential) type parameters.
     * @param p  The unpickler to register.
     */
-  def registerPicklerUnpickler[T](key: String, p: (Pickler[T] with Unpickler[T])): Unit  // TODO - Return old pickler if one existed?
+  def registerPicklerUnpickler[T](key: String, p: (Pickler[T] with Unpickler[T])): Unit
+  def registerPicklerUnpickler[T](p: Pickler[T] with Unpickler[T]): Unit = registerPicklerUnpickler(p.tag.key, p)
 
 
   /** Registers a function which can generate picklers for a given type constructor.

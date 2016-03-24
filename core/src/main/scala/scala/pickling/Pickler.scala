@@ -83,7 +83,7 @@ abstract class AbstractUnpickler[T] extends Unpickler[T]
 object Unpickler {
   def generate[T]: Unpickler[T] = macro generator.Compat.genUnpickler_impl[T]
 }
-/* Shim for java code (TODO - a good name for this.) */
+/* Shim for java code which wants to pickle/unpickle. */
 abstract class AbstractPicklerUnpickler[T] extends Pickler[T] with Unpickler[T]
 object PicklerUnpickler {
   def apply[T](p: Pickler[T], u: Unpickler[T]): AbstractPicklerUnpickler[T] = new DelegatingPicklerUnpickler(p, u)
@@ -100,6 +100,7 @@ object PicklerUnpickler {
   }
 }
 
+/** A pickler which will register itself with the runtime pickler registery. */
 abstract class AutoRegister[T: FastTypeTag](name: String) extends AbstractPicklerUnpickler[T] {
   val tag = implicitly[FastTypeTag[T]]
 

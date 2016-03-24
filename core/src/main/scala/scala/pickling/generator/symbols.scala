@@ -8,9 +8,7 @@ import scala.util.Try
 /**
  * A minimal symbol set to allow us to construct our mini-pickle-behavior language
  */
-private[pickling] sealed trait IrSymbol {
-  // TODO - isJava
-}
+private[pickling] sealed trait IrSymbol {}
 private[pickling] object IrSymbol {
   // TODO - This helper method should be available elsewhere.
   def allDeclaredMethodIncludingSubclasses(cls: IrClass): Seq[IrMethod] = {

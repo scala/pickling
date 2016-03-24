@@ -16,9 +16,13 @@ package object internal {
   import compat._
 
   private[this] def initDefaultRuntime = {
-    // TODO - Figure out some way to configure the default runtime at startup.
-    if(true) new DefaultRuntime()
-    else new NoReflectionRuntime()
+    // TODO - Figure out a better way to configure this.... (typesafe config?)
+    sys.props.getOrElse("pickling.runtime", "default") match {
+      case "hybrid" => new HybridRuntime()
+      case "noreflection" => new NoReflectionRuntime()
+      case _ => new DefaultRuntime()
+
+    }
   }
   private[this] var currentRuntimeVar = new AtomicReference[spi.PicklingRuntime](initDefaultRuntime)
   def currentRuntime: spi.PicklingRuntime = currentRuntimeVar.get
@@ -107,13 +111,18 @@ package object internal {
 
 
   // ----- utilities for managing object identity -----
-  // TODO - deprecated all of these, or leave them for convenience?
+  @deprecated("Use `currentRuntime.refRegistry.pickle.registerPicklee` instead", "0.11")
   def lookupPicklee(picklee: Any): Int = currentRuntime.refRegistry.pickle.registerPicklee(picklee)
-  def registerPicklee(picklee: Any) = currentRuntime.refRegistry.pickle.registerPicklee(picklee)
+  @deprecated("Use `currentRuntime.refRegistry.pickle.registerPicklee` instead", "0.11")
+  def registerPicklee(picklee: Any): Int = currentRuntime.refRegistry.pickle.registerPicklee(picklee)
+  @deprecated("Use `currentRuntime.refRegistry.pickle.clear` instead", "0.11")
   def clearPicklees() = currentRuntime.refRegistry.pickle.clear()
+  @deprecated("Use `currentRuntime.refRegistry.unpickle.lookupUnpicklees` instead", "0.11")
   def lookupUnpicklee(index: Int): Any = currentRuntime.refRegistry.unpickle.lookupUnpicklee(index)
+  @deprecated("Use `currentRuntime.refRegistry.unpickle.preregisterUnpicklee` instead", "0.11")
   def preregisterUnpicklee() = currentRuntime.refRegistry.unpickle.preregisterUnpicklee()
+  @deprecated("Use `currentRuntime.refRegistry.unpickle.registerUnpicklee` instead", "0.11")
   def registerUnpicklee(unpicklee: Any, index: Int) = currentRuntime.refRegistry.unpickle.regsiterUnpicklee(index, unpicklee)
-
+  @deprecated("Use `currentRuntime.refRegistry.unpickle.clear` instead", "0.11")
   def clearUnpicklees() = currentRuntime.refRegistry.unpickle.clear()
 }

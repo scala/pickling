@@ -43,7 +43,6 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
 
       x.getter match {
         case x: IrField =>
-          // TODO - handle
           val tpe = x.tpe[c.universe.type](c.universe)
           val staticallyElided = tpe.isEffectivelyFinal || tpe.isEffectivelyPrimitive
           if(x.isScala || !x.isPublic) {
@@ -61,7 +60,7 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
         case y: IrMethod =>
           val tpe = y.returnType(c.universe)
           val staticallyElided = {
-            // TODO - Figure this out
+            // TODO - This is too naive of a determination.  In practice, we almost want an "always elide" and "never elide" mode.
             tpe.isEffectivelyFinal || tpe.isEffectivelyPrimitive
           }
           if (y.isPublic) putField(q"picklee.${newTermName(y.methodName)}", staticallyElided, tpe)
@@ -92,7 +91,6 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
         CaseDef(Bind(otherTermName, Ident(nme.WILDCARD)), throwUnknownTag)
       }
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, createRuntimePickler(q"builder"))
-      // TODO - Figure out if we can handle runtime dispatch...
       val unknownDispatch =
         if(x.lookupRuntime) List(runtimeDispatch)
         else List(failDispatch)
@@ -178,7 +176,6 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
   }
 
   def genUnpicklerLogic[T: c.WeakTypeTag](unpicklerAst: UnpicklerAst): c.Tree = {
-    // TODO - Make sure this lines up with existing unpickler logic
     val unpickleLogic = generateUnpickleImplFromAst(unpicklerAst)
     // Handle null + Ref types first
     unpickleNull(unpickleRef(unpickleLogic))
@@ -321,7 +318,6 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
     q"_root_.scala.Predef.implicitly[_root_.scala.pickling.Unpickler[$tpe]]"
   def genSubclassUnpickler(x: SubclassUnpicklerDelegation): c.Tree = {
     val tpe = x.parent.tpe[c.universe.type](c.universe)
-    // TODO - Allow runtime pickler lookup if enabled...
     val defaultCase =
       if(x.lookupRuntime) CaseDef(Ident(nme.WILDCARD), EmptyTree, q"_root_.scala.pickling.internal.`package`.currentRuntime.picklers.genUnpickler(_root_.scala.pickling.internal.`package`.currentMirror, tagKey)")
       else CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""throw new _root_.scala.pickling.PicklingException("Cannot unpickle, Unexpected tag: " + tagKey + " not recognized.")""")
@@ -366,10 +362,15 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
       case x: UnpickleBehavior =>
         val behavior = x.operations.map(generateUnpickleImplFromAst).toList
         // TODO - This is kind of hacky.  We're trying to make sure during unpickling we always register/unregister appropriately...
+        //  This is actually guarranteed to fail if "structural sharing" is done in a way such that the shared "tree"
+        // of objects is needed to call the constructor. In this isntance, we are unable to register the new object
+        // before constructing it, leading to out of order OIDs and a failed deserialize.
+        // This is why we're deprecating sharing.
         x.operations match {
           case List() => q"null"
           case List(head: SubclassUnpicklerDelegation) => generateUnpickleImplFromAst(head)
             // TODO - Can we assume that ever additional operation is something which manipualtes the result?
+            // Once again, flakyness here is why we're deprecating sharing.
           case hd :: tail =>
             val hdTree = generateUnpickleImplFromAst(hd)
             val tlTree = tail.map(generateUnpickleImplFromAst)

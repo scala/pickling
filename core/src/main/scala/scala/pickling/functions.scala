@@ -19,9 +19,6 @@ object functions {
 
   // Note: this does NOT clear picklees.
   def pickleInto[T](picklee: T, builder: PBuilder)(implicit pickler: Pickler[T]): Unit = {
-    // TODO - BeginEntry/EndEntry needed?
-    // TODO - this hinting should be in the pickler, not here.  We need to understand
-    //        when we want to use this vs. something else, and avoid over-hinting everywhere.
     if (null == picklee) Defaults.nullPickler.pickle(null, builder)
     else pickler.pickle(picklee, builder)
   }

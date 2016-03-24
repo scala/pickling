@@ -31,7 +31,6 @@ trait TypeTagPicklers extends PrimitivePicklers {
       * @return Any an instance of the type we've unpickled.
       */
     override def unpickle(tag: String, reader: PReader): Any = {
-      // TODO - Check tag?
       val rk = reader.readField("key")
       rk.hintElidedType(stringPickler.tag)
       val key = stringPickler.unpickleEntry(rk).toString
@@ -39,9 +38,8 @@ trait TypeTagPicklers extends PrimitivePicklers {
     }
     override val tag: FastTypeTag[FastTypeTag[_]] = FastTypeTag.apply(internal.currentMirror, "scala.pickling.pickler.FastTypeTag").asInstanceOf[FastTypeTag[FastTypeTag[_]]]
 
-    // Ensure we register for runtime deserialization.
-    internal.currentRuntime.picklers.registerPickler(tag.key, this)
-    internal.currentRuntime.picklers.registerUnpickler(tag.key, this)
   }
+  // Ensure we register for runtime deserialization.
+  internal.currentRuntime.picklers.registerPicklerUnpickler(FastTypeTagPicklerUnpickler)
 }
 

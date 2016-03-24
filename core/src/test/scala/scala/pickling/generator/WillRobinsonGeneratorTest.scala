@@ -27,7 +27,6 @@ class WillRobinsonGeneratorTest extends FunSuite {
     assert(x != y)
     assert(x.toString == y.toString)
   }
-  // TODO - This is broken.
   test("private-this-val non-final class") {
     val x = new PrivateThisVal(5)
     implicit val p = PicklerUnpickler.generate[PrivateThisVal]
