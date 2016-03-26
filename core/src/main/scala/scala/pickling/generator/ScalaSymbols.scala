@@ -81,8 +81,6 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
         case NoSymbol => None
       }
     }
-
-    // TODO - Should we iterate down ALL of the hierarchy here for members, or make the algorithms do it later...
     private val allMethods = {
       val constructorArgs = tpe.members.collect {
         case meth: MethodSymbol => meth
@@ -161,8 +159,6 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
 
     /** Returs all the parent classes (traits, interfaces, etc,) for this type. */
     override def parentClasses: Seq[IrClass] = {
-      // TODO - We may need, additionally,  run some existentialAbstractoin fun on these signatures so the
-      //        symbol/types are fully realized from what we had.
       // We always drop the first class, becasue it is ourself.
       classSymbol.baseClasses.drop(1) filter (_.isClass) map { x =>
         //new ScalaIrClass(fillParameters(x), quantified, rawType)
@@ -197,7 +193,7 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
         ((field.getter != NoSymbol) && field.getter.annotations.exists(_.tpe =:= typeOf[scala.transient])) ||
           (field.annotations.exists(_.tpe =:= typeOf[scala.transient]))
       }
-      // TODO - Here we wrokaround a scala symbol issue where the field is never annotated with transient.
+      // Here we wrokaround a scala symbol issue where the field is never annotated with transient.
       val isSameNameAsTransientVar = owner.transientArgNames(fieldName)
       isSameNameAsTransientVar || tr.getOrElse(false)
     }
@@ -223,8 +219,9 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
     // TODO - We want to make sure this name matches what we'll see in reflection.
     override def toString = s"field ${fieldName}: ${field.typeSignature}"
 
-    // TODO - some kind of check to see if the field actualyl exists in runtime.  Scala sometimes erases
+    // TODO - some kind of check to see if the field actually exists in runtime.  Scala sometimes erases
     //        fields completely, and having a field is actually more of a runtime concern for scala.
+    //        Unforutnately, this TODO may be impossible.
     override def javaReflectionName: String =
       removeTrailingSpace(field.name.toString)
   }
@@ -232,7 +229,7 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
   private class ScalaIrMethod(mthd: MethodSymbol, override val owner: ScalaIrClass) extends IrMethod {
     import owner.fillParameters
     override def parameterNames: List[List[String]] =
-      mthd.paramss.map(_.map(_.name.toString)) // TODO - Is this safe?
+      mthd.paramss.map(_.map(_.name.toString))
 
     override def parameterTypes[U <: Universe with Singleton](u: U): List[List[u.Type]] = {
       mthd.paramss.map(_.map(x => fillParameters(x).asSeenFrom(owner.tpe, owner.tpe.typeSymbol)).map(_.asInstanceOf[u.Type]))
@@ -248,7 +245,6 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
       tr.getOrElse(false)
     }
 
-    // TODO - We need to get the actual jvm name here.
     override def methodName: String = {
       mthd.name.toString match {
         // TODO - Why do we need this random fix, is this a bug?
@@ -288,7 +284,7 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
         case _ => mthd.name.encodedName.toString
       }
     }
-    // TODO - Figure out if the method is JVM public or not.
+    // TODO - Figure out if the method is JVM public or not (different than scala public)
     override def isPublic: Boolean = mthd.isPublic
     override def isStatic: Boolean = mthd.isStatic
     override def isFinal: Boolean = mthd.isFinal
@@ -301,10 +297,6 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
       (mthd.getter != NoSymbol) && (mthd.setter != NoSymbol) &&
         (mthd.setter != mthd) // THis is  hack so the setter doesn't show up in our list of vars.
     override def returnType[U <: Universe with Singleton](u: Universe): u.Type =
-      // TODO - We need to fill in generic parameters of our owner class so that this actually works.  If we fail to do so,
-      //        We wind up delegating to runtime picklers when we DO know the static types.
-      //fillParameters(mthd.returnType.typeSymbol).asInstanceOf[u.Type]
-      //fillParameters(mthd).resultType.asInstanceOf[u.Type]
        mthd.returnType.asSeenFrom(owner.tpe, owner.tpe.typeSymbol).asInstanceOf[u.Type]
     override def setter: Option[IrMethod] = {
       mthd.setter match {

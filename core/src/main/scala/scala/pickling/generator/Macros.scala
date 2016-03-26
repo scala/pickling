@@ -1,7 +1,6 @@
 package scala.pickling
 package generator
 
-// TODO - move these into Pickler/Unpickler and replace the existing macros.
 private[pickling] object PicklingMacros {
   import scala.language.experimental.macros
   def genPickler[T]: Pickler[T] with Generated = macro scala.pickling.generator.Compat.genPickler_impl[T]
@@ -15,8 +14,10 @@ private[pickling] trait PicklingMacros extends Macro with SourceGenerator with T
   val handleCaseClassSubclasses = !configOption(typeOf[IsIgnoreCaseClassSubclasses])
   val generator =
     if(isStaticOnly) {
-      // TODO - should we consider externalizable "safe" or "static only" since we know it's externalizable at compile time?
-      PicklingAlgorithm.aggregate(Seq(new CaseClassPickling(allowReflection = false, careAboutSubclasses = handleCaseClassSubclasses), AdtPickling, ScalaSingleton))
+      PicklingAlgorithm.aggregate(Seq(
+        new CaseClassPickling(allowReflection = false, careAboutSubclasses = handleCaseClassSubclasses),
+        AdtPickling,
+        ScalaSingleton))
     } else {
       PicklingAlgorithm.aggregate(Seq(
         new CaseClassPickling(allowReflection = true, careAboutSubclasses = handleCaseClassSubclasses),

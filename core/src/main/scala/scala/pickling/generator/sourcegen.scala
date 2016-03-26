@@ -448,11 +448,10 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
   def registerUnPickledRef(instantiationLogic: c.Tree): c.Tree = {
     // TODO - We may not want to ALWAYS do this, some kind of enabling flag...
     val instance = c.fresh(newTermName("instance"))
-    // TODO - Rather than using the package object, we should grab the 'current runtime' interface and use that.
     q"""
-              val oid = _root_.scala.pickling.internal.`package`.preregisterUnpicklee()
+              val oid = _root_.scala.pickling.internal.`package`.currentRuntime.refRegistry.unpickle.preregisterUnpicklee()
               val $instance = $instantiationLogic
-              _root_.scala.pickling.internal.`package`.registerUnpicklee($instance, oid)
+              _root_.scala.pickling.internal.`package`.currentRuntime.refRegistry.unpickle.registerUnpicklee($instance, oid)
               $instance
             """
   }
@@ -504,45 +503,39 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
   // ---- Reflective Helper Methods ----
 
   def reflectivelyGet(target: TermName, value: IrMember)(body: c.Tree => c.Tree): List[c.Tree] = {
-    // TODO - Should we use scala reflection?
+    // Note: We have chosen not to use scala reflection due to errors that occur in it.
     // TODO - Should we trap errors and return better error messages?
     // TODO - We should attempt to SAVE the reflective methods/fields somewhere so we aren't
     //        looking them up all the time.
-    // TODO - We should handle `owner` and Declared vs. inherited Fields/Methods.
     val valueTree =
       value match {
         case field: IrField =>
-
+          val fieldTerm = c.fresh(newTermName("field"))
           val get = q"""
-              _root_.scala.Predef.locally {
-                val cls = $target.getClass
-                val field = _root_.scala.pickling.internal.Reflect.getField(cls, ${field.javaReflectionName})
-                field.setAccessible(true)
-                field.get($target)
-             }"""
+                val $fieldTerm = _root_.scala.pickling.internal.Reflect.getField($target.getClass, ${field.javaReflectionName})
+                $fieldTerm.setAccessible(true)
+                $fieldTerm.get($target)
+                """
           get
-
         // Private scala methods may not encode normally for case classes.  This is a hack which goes after the field.
         // TODO - We should update this to look for the accessor method which scala generally exposes for the deconstructor.
         case mthd: IrMethod if mthd.isScala && mthd.isPrivate =>
-          val fieldName = mthd.javaReflectionName
+          val methodTerm = c.fresh(newTermName("mthd"))
           // TODO - We may need to do a specialied lookup for magic named methods.
-          q"""_root_.scala.Predef.locally {
-                  val mthd = _root_.scala.pickling.internal.Reflect.getMethod($target.getClass, ${mthd.javaReflectionName}, Array())
-                  mthd.setAccessible(true)
-                  mthd.invoke($target)
-                }"""
+          q"""val $methodTerm = _root_.scala.pickling.internal.Reflect.getMethod($target.getClass, ${mthd.javaReflectionName}, Array())
+              $methodTerm.setAccessible(true)
+              $methodTerm.invoke($target)
+              """
         case mthd: IrMethod =>
-          q"""_root_.scala.Predef.locally {
-                  val mthd = _root_.scala.pickling.internal.Reflect.getMethod($target.getClass, ${mthd.javaReflectionName}, Array())
-                  mthd.setAccessible(true)
-                  mthd.invoke($target)
-                }"""
+          val methodTerm = c.fresh(newTermName("mthd"))
+          q"""val $methodTerm = _root_.scala.pickling.internal.Reflect.getMethod($target.getClass, ${mthd.javaReflectionName}, Array())
+              $methodTerm.setAccessible(true)
+              $methodTerm.invoke($target)"""
       }
     List(body(valueTree))
   }
   def reflectivelySet(target: TermName, setter: IrMember, value: c.Tree): c.Tree = {
-    // TODO - Should we use scala reflection?
+    // Note: We've chosen not to use scala reflection due to it being buggy.
     // TODO - Should we trap errors and return better error messages?
     // TODO - We should attempt to SAVE the reflective methods/fields somewhere so we aren't
     //        looking them up all the time.

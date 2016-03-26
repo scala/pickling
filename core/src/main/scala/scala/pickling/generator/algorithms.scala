@@ -3,8 +3,6 @@ package generator
 
 import scala.reflect.api.Universe
 
-// TODO - These need logging messages.
-
 /** An interface so we can pass logging to these algorithms at runtime/during testing. */
 private[pickling] trait AlgorithmLogger {
   def warn(msg: String): Unit
