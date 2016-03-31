@@ -23,7 +23,10 @@ final case class UnpickleOps(val thePickle: Pickle) {
     functions.unpickle(thePickle.asInstanceOf[format.PickleType])(unpickler, format)
 }
 
-/** A layer of pickling cake that can "lift" picklable types to have the core pickle operations. */
+/** A layer of protocol stack that can "lift" picklable types to have the core pickle operations.
+  *
+  * For example usage, see [[scala.pickling.Defaults]]
+  */
 trait Ops {
   implicit def pickleOps[T](picklee: T): PickleOps[T] = PickleOps(picklee)
   implicit def unpickleOps(thePickle: Pickle): UnpickleOps = UnpickleOps(thePickle)

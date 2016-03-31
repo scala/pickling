@@ -1,0 +1,156 @@
+This is the second stable release of Scala Pickling, an automatic serialization framework made for Scala.
+It's fast, boilerplate-free, and allows users to easily swap in/out different serialization formats (such as binary, or JSON). 
+
+We will retain binary compatibility throughout the 0.11.x series. We'll also keep format compatibility during 0.11.x.
+
+## Pickling in a nutshell
+
+To pickle a value, let's say `Person("foo", 20)`, you need two things.
+A [pickler combinator][Kennedy] for the given type `Person`, and a pickle format.
+The `Pickler[A]` is responsible for breaking `A` down to abstract *entries*, *fields*, and *collections*.
+It's called a combinator, because complex pickler combinators can be composed from primitive picklers.
+The `PickleFormat` turns the abstract notions like *fields* into binary or text representation.
+
+## Defaults mode
+
+Here's a basic usage using `Defaults` mode.
+
+    scala> import scala.pickling.Defaults._, scala.pickling.json._
+    scala> case class Person(name: String, age: Int)
+    
+    scala> val pkl = Person("foo", 20).pickle
+    pkl: pickling.json.pickleFormat.PickleType =
+    JSONPickle({
+      "$type": "Person",
+      "name": "foo",
+      "age": 20
+    })
+
+    scala> val person = pkl.unpickle[Person]
+    person: Person = Person(foo,20)
+
+The `Defaults` mode automatically derives `Pickler[Person]` from the primitive picklers at compile-time!
+Because the code is statically generated, we can inline the string manipulations and make it fast.
+([Faster than Java serialization or Kryo][Miller], which also does not require schema)
+
+Note, because `Pickler[A]` is a typeclass, Pickling can be retrofitted to `Person`
+without modifying the class to inherit [Serializable][1] or something like that.
+
+## DIY protocol stack
+
+Starting from Pickling 0.10.0 offers picklers, ops, and formats as traits, which can be
+stacked together, so third-party libraries can provide custom modes.
+Suppose you only want to pickle primitive types and `Apple`, and don't want to automatically
+derive pickler combinators. Here's a custom mode:
+
+    scala> case class Apple(kind: String)
+    scala> val appleProtocol = {
+             import scala.pickling._
+             new pickler.PrimitivePicklers with pickler.RefPicklers
+                 with json.JsonFormats {
+               // Manually generate pickler for Apple
+               implicit val applePickler = PicklerUnpickler.generate[Apple]
+               // Don't fall back to runtime picklers
+               implicit val so = static.StaticOnly
+               // Provide custom functions
+               def toJsonString[A: Pickler](a: A): String =
+                 functions.pickle(a).value
+               def fromJsonString[A: Unpickler](s: String): A =
+                 functions.unpickle[A](json.JSONPickle(s))
+             }
+           }
+    scala> import appleProtocol._
+    
+    scala> toJsonString(Apple("honeycrisp"))
+    res0: String =
+    {
+      "$type": "Apple",
+      "kind": "honeycrisp"
+    }
+
+For more details see [Pickling][Pickling].
+
+
+## Enhanced static safety
+
+The 0.11.0 pickling release focuses on improving the stability and safety of staticly generated picklers, as well as
+warning the user when their types cannot be safely pickled using scala analysis available from scala macros, and will
+resort to runtime pickling.
+
+The new picklers support the following algorithms:
+
+| Algorithm | Statically Safe | Dsecription |
+|---|---|---|
+| Case class | X | uses static analysis to handle scala classes.  Safety requires case classes to be final. |
+| ADT  | X | uses static analysis to handle sealed traits/classes.  May require the use of `directKnownSubclasses`. |
+| Scala Singleton | X | uses static analysis to handle `object`s defined in scala. |
+| Externalizable |  | uses creative mechanism to fake Java's `Externalizable` interface for pickling. |
+| Will Robinson |   | Uses reflection and partial static analysis to generate pickling logic. |
+
+When in "static only" mode, only the statically safe algorithms for pickling are used.  You can enter "static only"
+mode via `import scala.pickling.static._` at the top of a file requring static safety.
+
+
+
+## Hand-written pickler/unpickler migration.
+
+0.11.0 also brings some changes to the internals of pickler generation.  Those who have hand-written pickelrs may
+need to alter the code (slightly) for this new verison.
+
+Here's a list of changes:
+
+- Removal of `hintStaticallyElidedType`, `hintDynamicallyElidedType` and `hintTag` for a single `hintElidedType` method.
+  This generally means picklers are less able to elide types, but consistently handle types during pickling and
+  unpickling phases.  Additionally, it improves the ability to handle a scenario where a pickler is statically 
+  generated, but the unpickler is dynamically generated later.
+- If picklers are sharing sub-structural content, they must still pickle fields/entries/collections after calling
+  `hintOid`.
+- `beginEntry` calls on `PBuilder` require a `FastTypeTag[_]`.
+- Structural sharing Method calls (`Ref`) from `scala.pickling.internal` have been moved to an interface:
+  `scala.pickling.internal.currentRuntime.refRegistrary` in the `pickler` and `unpickler` methods respectively.
+- Registering picklers for runtime serialization now uses a dedicated interface, and should be accessed via:
+  `scala.pickling.internal.currentRuntime.pickler`.  See the `PicklerRegistry` trait for details.
+
+
+## Pickle format migration
+
+Here's a list of changes:
+
+- Pickle formats no longer HAVE to support the `Ref` mechanism of structural sharing.
+- The `hintElidedType` changes have caused picklers to be less able to elide types.  While not formally specified,
+  if a format does not find a type, but does have an "entry", it is acceptable to return an empty string.  Picklers
+  which allow elided types will ignore the type string anyway.
+
+## Custom runtime behavior
+
+Starting in 0.11.0, pickling now allows users to customize the runtime behavior.  When creating a pickling
+protocol stack, it is possible to inject a new runtime implementation before initializing any of the default picklers.
+Here's an example alternative implementation:
+
+```
+package my.protocol
+
+import scala.pickling._
+
+
+object Defaults extends {
+  // Minor hack to make sure runtime is initialized before all the "autoregistered" primtiive picklers
+  val ignoreMe =
+    internal.replaceRuntime(new internal.NoReflectionRuntime)
+} with Ops with pickler.AllPicklers
+```
+
+Additionally, the default runtime can be controlled via the environment variable `pickling.runtime`.
+
+| Value | Beahvior |
+|---|---|
+| hybrid | uses `scala.pickling.internal.HybridRuntime` |
+| norefleciton | uses `scala.pickling.internal.NoReflectionRuntime` |
+| <empty> | uses `scala.pickling.internal.DefaultRuntime` |
+
+Additionally, the `scala.pickling.spi` package defines the set of APIs for creating your own runtime behavior.
+
+  [Kennedy]: http://research.microsoft.com/pubs/64036/picklercombinators.pdf
+  [Miller]: http://infoscience.epfl.ch/record/187787/files/oopsla-pickling_1.pdf
+  [Pickling]: https://github.com/scala/pickling
+  [1]: http://docs.oracle.com/javase/7/docs/api/java/io/Serializable.html
