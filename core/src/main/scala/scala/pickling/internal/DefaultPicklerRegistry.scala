@@ -120,7 +120,6 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
     * @param p  The unpickler to register.
     */
   override def registerPicklerUnpickler[T](key: String, p: (Pickler[T] with Unpickler[T])): Unit = {
-    // TODO - Should we lock or something here?
     registerPickler(key, p)
     registerUnpickler(key, p)
   }
@@ -132,7 +131,6 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
     *                   this type.
     */
   override def registerPicklerUnpicklerGenerator[T](typeConstructorKey: String, generator: (AppliedType) => (Pickler[T] with Unpickler[T])): Unit = {
-    // TODO - Should we lock or something here?
     registerPicklerGenerator(typeConstructorKey, generator)
     registerUnpicklerGenerator(typeConstructorKey, generator)
   }

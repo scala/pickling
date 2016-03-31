@@ -9,13 +9,12 @@ import scala.pickling.spi.{PicklerRegistry, RefRegistry, PicklingRuntime}
 import scala.reflect.runtime
 
 /**
- * An implementation of the pickling runtime that tries to avoid ALL runtime picklers.
+ * An implementation of the pickling runtime that tries to avoid ALL runtime picklers,
+ * including runtime lookup of statically defined picklers.
  */
 final class NoReflectionRuntime() extends PicklingRuntime {
   /** The current reflection mirror to use when doing runtime unpickling/pickling. */
   override def currentMirror: runtime.universe.Mirror = runtime.currentMirror
-
-  // TODO - we should allow registered picklers, just no reflective pickler generation...
   object picklers extends PicklerRegistry {
     override def genUnpickler(mirror: runtime.universe.Mirror, tagKey: String)(implicit share: refs.Share): _root_.scala.pickling.Unpickler[_] =
       throw new UnsupportedOperationException(s"Runtime pickler generation is disabled.  Cannot create unpickler for $tagKey")

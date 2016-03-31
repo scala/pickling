@@ -3,7 +3,34 @@ package scala.pickling
 import scala.language.experimental.macros
 
 import scala.reflect.runtime.universe._
-// TODO - Document this, specifically what pinHints means.
+
+/**
+ * Hintable defines the interface used between picklers and formats to "aide' in creating clean/efficient formats.
+ *
+ *
+ * The FULL features picklers allow:
+ * - eliding statically known types
+ * - structural sharing of data
+ * - possible binary size optimizations (using jvm sizes)
+ *
+ * Obviously not all picklers will use these mechanisms.
+ *
+ * ----
+ * === Size Optimization ===
+ * If a pickler/unpickler calls `hintKnownSize`, it's talking about a binary size of the following entry.
+ * ----
+ * === Type Optimization ===
+ * If a pickler/unpickler call `hintElidedType`, it's allowing the underlying format to 'drop' the forced storage of a
+ * type tag.
+ * ----
+ * === Structural Sharing ===
+ * If a pickler/unpickler calls `hintOid`, it's telling the underlying format that this particular pickler entry
+ * shares it structure with the same entry of that number.
+ *
+ * Currently, rather than using known tags, picklers assume a per-pickle ordinal associated with each entry.  This
+ * ordinal should be automatically tracked and restored.
+ *
+ */
 trait Hintable {
   /** Hints at the expected (byte) size of the entry we're about to write.. */
   def hintKnownSize(knownSize: Int): this.type

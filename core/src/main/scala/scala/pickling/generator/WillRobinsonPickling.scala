@@ -12,8 +12,6 @@ private[pickling] object WillRobinsonPickling extends PicklingAlgorithm {
   private case class FieldInfo(setter: SetField, getter: GetField)
   // TODO - Constructor unification in the case-class generator is probably still useful here...
   private def allScalaField(tpe: IrClass, logger: AlgorithmLogger): Seq[FieldInfo] = {
-    // TODO - We find all these and hope it's ok
-    // TODO - We need this list to actually come from a recursive descent through the hierarchy for vars.
     val fields =
       // Note: For some reason, we sometimes see the same field twice, so we filter these out here.
       //       This is probably a bug somewhere.

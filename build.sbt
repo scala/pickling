@@ -83,10 +83,22 @@ lazy val macroTests: Project = (project in file("macro-test")).
   dependsOn(core).
   settings(commonSettings:_*).settings(noPublish:_*).
   settings(
-    libraryDependencies ++= Seq(
-      scalaTest % Test,
-      "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
-    )
+    libraryDependencies ++= {
+      val baseDeps =
+        Seq(
+          scalaTest % Test,
+          "org.scala-lang" % "scala-compiler" % scalaVersion.value % Test
+        )
+      val additional = CrossVersion.partialVersion(scalaVersion.value) match {
+        // if scala 2.11+ is used, quasiquotes are merged into scala-reflect
+        case Some((2, scalaMajor)) if scalaMajor >= 11 =>
+          Seq(parserCombinators)
+        // in Scala 2.10, quasiquotes are provided by macro-paradise
+        case Some((2, 10)) =>
+          Seq(compilerPlugin(macroParadise), quasiquotes)
+      }
+      baseDeps ++ additional
+    }
   )
 
 lazy val testUtil: Project = (project in file("test-util")).

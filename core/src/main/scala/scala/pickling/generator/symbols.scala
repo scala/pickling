@@ -8,11 +8,8 @@ import scala.util.Try
 /**
  * A minimal symbol set to allow us to construct our mini-pickle-behavior language
  */
-private[pickling] sealed trait IrSymbol {
-  // TODO - isJava
-}
+private[pickling] sealed trait IrSymbol {}
 private[pickling] object IrSymbol {
-  // TODO - This helper method should be available elsewhere.
   def allDeclaredMethodIncludingSubclasses(cls: IrClass): Seq[IrMethod] = {
     def allmethods(clss: List[IrClass], mthds: Seq[IrMethod], visitedClasses: Set[String]): Seq[IrMethod] =
       clss match {
@@ -22,8 +19,6 @@ private[pickling] object IrSymbol {
           allmethods(tail ++ hd.parentClasses, newMthds ++ mthds, visitedClasses + hd.className)
         case Nil => mthds
       }
-    // TODO - We should maybe warn if we see transient fields that cause us not to compile correctly, or maybe
-    //       allow serializing transient fields...
     allmethods(List(cls), Nil, Set())
   }
 
@@ -36,8 +31,6 @@ private[pickling] object IrSymbol {
           allfields(tail ++ hd.parentClasses, newFields ++ fields, visitedClasses + hd.className)
         case Nil => fields
       }
-    // TODO - We should maybe warn if we see transient fields that cause us not to compile correctly, or maybe
-    //       allow serializing transient fields...
     allfields(List(cls), Nil, Set())
   }
 }
@@ -100,7 +93,7 @@ private[pickling] sealed trait IrMember extends IrSymbol {
   def javaReflectionName: String
   /** This is true if the field is marked transient (either by scala or java serialization). */
   def isMarkedTransient: Boolean
-  // TODO - Signatures
+  // TODO - Methods for returning signatures
 
 }
 private[pickling] trait IrField extends IrMember {

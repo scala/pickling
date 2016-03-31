@@ -5,7 +5,6 @@ import java.util.{Date, TimeZone}
 import java.text.SimpleDateFormat
 
 trait DatePicklers extends PrimitivePicklers {
-  // TODO(jsuereth) - Register runtime pickler.
   implicit val datePickler: Pickler[Date] with Unpickler[Date] =
   new AbstractPicklerUnpickler[Date] {
     private val dateFormatTemplate = {
@@ -34,4 +33,5 @@ trait DatePicklers extends PrimitivePicklers {
       dateFormat.parse(result.asInstanceOf[String])
     }
   }
+  internal.currentRuntime.picklers.registerPicklerUnpickler(datePickler)
 }
