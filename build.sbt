@@ -1,5 +1,7 @@
 import Benchmark._ // see project/Benchmark.scala
 import Dependencies._ // see project/Dependencies.scala
+import scala.xml.{Node => XmlNode, NodeSeq => XmlNodeSeq, _}
+import scala.xml.transform.{RewriteRule, RuleTransformer}
 
 val buildVersion = "0.11.0-M1"
 
@@ -38,7 +40,16 @@ def commonSettings = Seq(
   },
   pomIncludeRepository := { x => false },
   pomExtra := <inceptionYear>2013</inceptionYear>,
-  credentials ++= Util.loadCredentials()
+  credentials ++= Util.loadCredentials(),
+  pomPostProcess := { (node: XmlNode) =>
+    new RuleTransformer(new RewriteRule {
+      override def transform(node: XmlNode): XmlNodeSeq = node match {
+        case e: Elem if e.label == "dependency" && e.child.exists(child => child.label == "artifactId" && child.text.contains("testutil")) =>
+          Comment(s"Ommitted test-util dependency")
+        case _ => node
+      }
+    }).transform(node).head
+  }
 )
 def noPublish = Seq(
   publish := {},
