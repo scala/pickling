@@ -1,7 +1,7 @@
 import Benchmark._ // see project/Benchmark.scala
 import Dependencies._ // see project/Dependencies.scala
 
-val buildVersion = "0.10.2-SNAPSHOT"
+val buildVersion = "0.11.0-M1"
 
 def commonSettings = Seq(
   version in ThisBuild := buildVersion,
