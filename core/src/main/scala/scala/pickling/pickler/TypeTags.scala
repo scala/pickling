@@ -19,7 +19,7 @@ trait TypeTagPicklers extends PrimitivePicklers {
       builder.endEntry()
     }
 
-    /** Unpickles an entry out of hte reader.
+    /** Unpickles an entry out of the reader.
       *
       * note:  This method ASSUMES beginEntry() has already been called and endEntry() will be
       * called immediately afterwards.
@@ -34,12 +34,12 @@ trait TypeTagPicklers extends PrimitivePicklers {
       val rk = reader.readField("key")
       rk.hintElidedType(stringPickler.tag)
       val key = stringPickler.unpickleEntry(rk).toString
-      FastTypeTag.apply(internal.currentMirror, key)
+      FastTypeTag.apply(key)
     }
-    override val tag: FastTypeTag[FastTypeTag[_]] = FastTypeTag.apply(internal.currentMirror, "scala.pickling.pickler.FastTypeTag").asInstanceOf[FastTypeTag[FastTypeTag[_]]]
+    override val tag: FastTypeTag[FastTypeTag[_]] = FastTypeTag.apply("scala.pickling.pickler.FastTypeTag").asInstanceOf[FastTypeTag[FastTypeTag[_]]]
 
   }
   // Ensure we register for runtime deserialization.
-  internal.currentRuntime.picklers.registerPicklerUnpickler(FastTypeTagPicklerUnpickler)
+  internal.currentRuntime.picklers.registerPicklerUnpicklerGenerator("scala.pickling.pickler.FastTypeTag", generator = ignore => FastTypeTagPicklerUnpickler)
 }
 
