@@ -8,7 +8,7 @@ package generator
   * - https://en.wikipedia.org/wiki/Danger,_Will_Robinson
   * - https://www.youtube.com/watch?v=RG0ochx16Dg
   */
-private[pickling] object WillRobinsonPickling extends PicklingAlgorithm {
+private[pickling] class WillRobinsonPickling(showWarnings: Boolean) extends PicklingAlgorithm {
   private case class FieldInfo(setter: SetField, getter: GetField)
   // TODO - Constructor unification in the case-class generator is probably still useful here...
   private def allScalaField(tpe: IrClass, logger: AlgorithmLogger): Seq[FieldInfo] = {
@@ -25,7 +25,7 @@ private[pickling] object WillRobinsonPickling extends PicklingAlgorithm {
   }
 
   override def generate(tpe: IrClass, logger: AlgorithmLogger): AlgorithmResult = {
-    logger.warn(s"DANGER WILL ROBINSON - ${tpe} is being serialized/deserialized using Unsafe operations.  Cannot statically identify any other safe mechanism.")
+    if(showWarnings) logger.warn(s"DANGER WILL ROBINSON - ${tpe} is being serialized/deserialized using Unsafe operations.  Cannot statically identify any other safe mechanism.")
     if(tpe.isScala) {
       // TODO - We should probably try the constructor unification thing.
       val fields = allScalaField(tpe, logger)
