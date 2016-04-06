@@ -44,7 +44,7 @@ trait FastTypeTag[T] extends Equals {
    * @return  A new Type instance that has reconstructed the full Type.
    */
   def reflectType(otherMirror: ru.Mirror): ru.Type =
-    internal.typeFromString(otherMirror, key)
+    FastTypeTag.reflectType(otherMirror, this)
 
  /**
    * Tests whether this tag is effectively a primitive type.  Note: We duplicate logic
@@ -78,6 +78,9 @@ private[pickling] final case class SimpleFastTypeTag[T](
 object FastTypeTag {
   implicit def apply[T]: FastTypeTag[T] = macro Compat.FastTypeTagMacros_impl[T]
 
+  def unapply[T](tag: FastTypeTag[T]): Option[(String, List[FastTypeTag[_]])] =
+    Option(tag.typeConstructor -> tag.typeArgs)
+
   
   def apply[T](key: String): FastTypeTag[T] = {
     val (tag, rem) = parseKey[T](key)
@@ -87,6 +90,36 @@ object FastTypeTag {
 
   def apply[T](tcons: String, targs: List[FastTypeTag[_]]): FastTypeTag[T] =
     new SimpleFastTypeTag(tcons, targs)
+
+  // TODO - can we just leave a cache like this around?  It was in 0.10.x + prior, but
+  // perhaps there are better mechanisms to solve this cache issue.
+  private val typeFromStringCache = scala.collection.concurrent.TrieMap[String, ru.Type]()
+  def reflectType[T](mirror: ru.Mirror, tag: FastTypeTag[T]): ru.Type = {
+    def calculate: ru.Type = {
+      // TODO - cache the results of this?
+      val typename = tag.typeConstructor
+      def errorMsg = s"""error: cannot find class or module with type name '$typename'
+                        |full type string: '${tag.key}'""".stripMargin
+      val sym = try {
+        if (typename.endsWith(".type")) mirror.staticModule(typename.stripSuffix(".type")).moduleClass
+        else mirror.staticClass(typename)
+      } catch {
+         case _: ScalaReflectionException => sys.error(errorMsg)
+         case _: scala.reflect.internal.MissingRequirementError => sys.error(errorMsg)
+      }
+      val tycon = sym.asType.toTypeConstructor
+      import ru._
+      import compat._
+      appliedType(tycon, tag.typeArgs.map(_.reflectType(mirror)))
+    }
+    val stpe = tag.key
+    if (typeFromStringCache.contains(stpe)) typeFromStringCache(stpe)
+    else {
+      val result = calculate
+      typeFromStringCache(stpe) = result
+      result
+    }
+  }
 
   // the delimiters in an applied type
   private val delims = List(',', '[', ']')
