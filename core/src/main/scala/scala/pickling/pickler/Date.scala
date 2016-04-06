@@ -15,7 +15,7 @@ trait DatePicklers extends PrimitivePicklers {
     }
     private def dateFormat = dateFormatTemplate.clone.asInstanceOf[SimpleDateFormat]
 
-    def tag = FastTypeTag[Date]
+    def tag = FastTypeTag[Date]("java.util.Date")
     def pickle(picklee: Date, builder: PBuilder): Unit = {
       builder.beginEntry(picklee, tag)
 

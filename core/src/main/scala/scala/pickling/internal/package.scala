@@ -87,7 +87,8 @@ package object internal {
   }
 
   // FIXME: duplication wrt Tools, but I don't really fancy abstracting away this path-dependent madness
-  private[pickling] implicit class RichTypeFIXME(tpe: Type) {
+  //private[pickling] 
+  implicit class RichTypeFIXME(tpe: Type) {
     import definitions._
     def key: String = {
       tpe.normalize match {
@@ -98,8 +99,11 @@ package object internal {
           sym.fullName +
           (if (sym.isModuleClass) ".type" else "") +
           (if (targs.isEmpty) "" else targs.map(_.key).mkString("[", ",", "]"))
-        case _ =>
-          tpe.toString
+        // TODO - more robust handling of with types.
+        case t  if t.toString contains "with" => 
+          t.toString.replaceAll(" with .*", "")
+        case t =>
+          t.toString
       }
     }
     def isEffectivelyPrimitive: Boolean = tpe match {

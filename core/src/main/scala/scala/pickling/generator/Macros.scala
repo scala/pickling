@@ -10,6 +10,8 @@ private[pickling] object PicklingMacros {
 private[pickling] trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
   import c.universe._
   val symbols = new IrScalaSymbols[c.universe.type, c.type](c.universe, tools)
+  // TODO - also allow import to disable the warnings.
+  val disableWillRobinsonWarning = java.lang.Boolean.getBoolean("pickling.willrobinson.disablewarning")
   // TODO - We should have more customization than this
   val handleCaseClassSubclasses = !configOption(typeOf[IsIgnoreCaseClassSubclasses])
   val generator =
@@ -24,7 +26,7 @@ private[pickling] trait PicklingMacros extends Macro with SourceGenerator with T
         AdtPickling,
         ScalaSingleton,
         new ExternalizablePickling,
-        WillRobinsonPickling))
+        new WillRobinsonPickling(showWarnings = !disableWillRobinsonWarning)))
     }
 
   object logger extends AlgorithmLogger {
@@ -86,6 +88,25 @@ private[pickling] trait PicklingMacros extends Macro with SourceGenerator with T
         tree
     }
   }
+
+  def debugPicklerUnpickler[T: c.WeakTypeTag]: c.Tree = preferringAlternativeImplicits {
+    val tpe = computeType[T]
+    checkClassType(tpe)
+    val sym = symbols.newClass(tpe)
+    val impl = PicklingAlgorithm.run(generator)(sym, logger)
+    //System.err.println(impl)
+    val tree2 = impl map generatePicklerUnpicklerClass[T]
+    tree2 match {
+      case None =>
+        c.error(c.enclosingPosition, s"Failed to generate pickler/unpickler for $tpe")
+        ???
+      case Some(tree) =>
+        //System.err.println(s" --=== $tpe ===--\n$tree\n --=== / $tpe ===--")
+        val treeString = s"$tree"
+         q"$treeString"
+    }
+  }
+
   def genPicklerUnpickler[T: c.WeakTypeTag]: c.Tree = preferringAlternativeImplicits {
     val tpe = computeType[T]
     checkClassType(tpe)

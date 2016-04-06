@@ -9,12 +9,12 @@ trait JavaBigIntegerPicklers extends PrimitivePicklers {
   // TODO(jsuereth) - Register runtime picklers
   implicit val javaBigIntegerPickler:
     Pickler[BigInteger] with Unpickler[BigInteger] = new AbstractPicklerUnpickler[BigInteger] {
-    def tag = FastTypeTag[BigInteger]
+    def tag = FastTypeTag[BigInteger]("java.math.BigInteger")
     def pickle(picklee: BigInteger, builder: PBuilder): Unit = {
       builder.beginEntry(picklee, tag)
 
       builder.putField("value", b => {
-        b.hintElidedType(FastTypeTag[String])
+        b.hintElidedType(FastTypeTag.String)
         stringPickler.pickle(picklee.toString, b)
       })
 
@@ -22,7 +22,7 @@ trait JavaBigIntegerPicklers extends PrimitivePicklers {
     }
     def unpickle(tag: String, reader: PReader): Any = {
       val reader1 = reader.readField("value")
-      reader1.hintElidedType(implicitly[FastTypeTag[String]])
+      reader1.hintElidedType(FastTypeTag.String)
       val result = stringPickler.unpickleEntry(reader1)
       new BigInteger(result.asInstanceOf[String])
     }

@@ -210,6 +210,7 @@ trait RichTypes {
   import definitions._
   import compat._
 
+  // TODO - figure out if we can remove this.
   implicit class RichType(tpe: scala.reflect.api.Universe#Type) {
     def key: String = {
       tpe.normalize match {
@@ -220,8 +221,8 @@ trait RichTypes {
           sym.fullName +
           (if (sym.isModuleClass) ".type" else "") +
           (if (targs.isEmpty) "" else targs.map(_.key).mkString("[", ",", "]"))
-        case _ =>
-          tpe.toString
+        case t  if t.toString contains "with" => sys.error(s"Cannot create key from type: $t")
+        case t => t.toString
       }
     }
 

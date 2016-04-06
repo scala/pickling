@@ -28,7 +28,7 @@ class WrappedArrayTest extends FunSuite {
           val elemClass = elem.getClass
           // TODO: allow passing in ClassLoader to picklers selected from registry
           val classLoader: ClassLoader = elemClass.getClassLoader
-          val elemTag = FastTypeTag.mkRaw(elemClass, mirror) // slow: `mkRaw` is called for each element
+          val elemTag = FastTypeTag.makeRaw(elemClass) // slow: `mkRaw` is called for each element
           val pickler = internal.currentRuntime.picklers.genPickler(classLoader, elemClass, elemTag).asInstanceOf[Pickler[AnyRef]]
           pickler.pickle(elem, b)
         }
@@ -57,8 +57,10 @@ class WrappedArrayTest extends FunSuite {
     }
   }
   // TODO - This is kind of a hack because we don't really know the full tag, and we're tagging the instance with a partial tag.
-  internal.currentRuntime.picklers.registerPickler("scala.collection.mutable.WrappedArray.ofRef", mkAnyRefWrappedArrayPickler)
+  // TODO - why are we getting scala.AnyRef instead of java.lang.Object?  compile-time should take care of that.
   internal.currentRuntime.picklers.registerUnpickler("scala.collection.mutable.WrappedArray.ofRef[java.lang.Object]", mkAnyRefWrappedArrayPickler)
+  internal.currentRuntime.picklers.registerUnpickler("scala.collection.mutable.WrappedArray.ofRef[scala.AnyRef]", mkAnyRefWrappedArrayPickler)
+  internal.currentRuntime.picklers.registerPicklerUnpickler("scala.collection.mutable.WrappedArray.ofRef[scala.Any]", mkAnyRefWrappedArrayPickler)
 
   test("main") {
     val l = List(Rating(10), Rating(5), Rating(2))

@@ -7,7 +7,7 @@ trait JavaUUIDPicklers extends PrimitivePicklers {
 
   implicit val javaUUIDPickler:
     Pickler[UUID] with Unpickler[UUID] = new AbstractPicklerUnpickler[UUID] {
-    def tag = FastTypeTag[UUID]
+    val tag = FastTypeTag[UUID]("java.util.UUID")
     def pickle(picklee: java.util.UUID, builder: PBuilder):Unit = {
       builder.beginEntry(picklee, tag)
 
