@@ -10,8 +10,8 @@ import scala.pickling.spi.{PicklerRegistry, RuntimePicklerGenerator}
 
 /** Default pickle registry just uses TrieMaps and delgates behavior to a runtime pickler generator. */
 final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends PicklerRegistry with RuntimePicklerRegistryHelper {
-  type PicklerGenerator = AppliedType => Pickler[_]
-  type UnpicklerGenerator = AppliedType => Unpickler[_]
+  type PicklerGenerator = FastTypeTag[_] => Pickler[_]
+  type UnpicklerGenerator = FastTypeTag[_] => Unpickler[_]
   // TODO - We need to move the special encoding for runtime classes into here, rather than in magical traits.
 
   private val picklerMap: mutable.Map[String, Pickler[_]] = new TrieMap[String, Pickler[_]]
@@ -58,9 +58,9 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
       case x: Some[Unpickler[_]] => x
       case None =>
         // Now we use the typeConstructor registry
-        AppliedType.parseFull(key) match {
-          case Some(a) =>
-            unpicklerGenMap.get(a.typename) match {
+       FastTypeTag(key) match {
+          case a @ FastTypeTag(typename, args) =>
+            unpicklerGenMap.get(typename) match {
               case Some(gen) =>
                 // Genereate the pickler, register it with ourselves for future lookup, and return it.
                 val up = gen(a)
@@ -68,7 +68,7 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
                 Some(up)
               case None => None
             }
-          case None => None // This key is not an applied type.
+          case _ => None // This key is not an applied type.
         }
     }
   }
@@ -78,10 +78,9 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
     picklerMap.get(key) match {
       case x: Some[Pickler[_]] => x
       case None =>
-        // TODO - fix AppliedType for a `parseAll` string or some such.
-        AppliedType.parseFull(key) match {
-          case Some(a) =>
-            picklerGenMap.get(a.typename) match {
+        FastTypeTag(key) match {
+          case a @ FastTypeTag(typename, _) =>
+            picklerGenMap.get(typename) match {
               case Some(gen) =>
                 // Genereate the pickler, register it with ourselves for future lookup, and return it.
                 val up = gen(a)
@@ -89,7 +88,7 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
                 Some(up)
               case None => None
             }
-          case None => None // This key is not an applied type.
+          case _ => None // This key is not an applied type.
         }
     }
 
@@ -101,7 +100,7 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
     * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
     *                   this type.
     */
-  override def registerUnpicklerGenerator[T](typeConstructorKey: String, generator: (AppliedType) => Unpickler[T]): Unit =
+  override def registerUnpicklerGenerator[T](typeConstructorKey: String, generator: (FastTypeTag[_]) => Unpickler[T]): Unit =
     unpicklerGenMap.put(typeConstructorKey, generator)
 
 
@@ -111,7 +110,7 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
     * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
     *                   this type.
     */
-  override def registerPicklerGenerator[T](typeConstructorKey: String, generator: (AppliedType) => Pickler[T]): Unit =
+  override def registerPicklerGenerator[T](typeConstructorKey: String, generator: (FastTypeTag[_]) => Pickler[T]): Unit =
     picklerGenMap.put(typeConstructorKey, generator)
 
   /** Registers a pickler and unpickler for a type with this registry for future use.
@@ -130,7 +129,7 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
     * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
     *                   this type.
     */
-  override def registerPicklerUnpicklerGenerator[T](typeConstructorKey: String, generator: (AppliedType) => (Pickler[T] with Unpickler[T])): Unit = {
+  override def registerPicklerUnpicklerGenerator[T](typeConstructorKey: String, generator: (FastTypeTag[_]) => (Pickler[T] with Unpickler[T])): Unit = {
     registerPicklerGenerator(typeConstructorKey, generator)
     registerUnpicklerGenerator(typeConstructorKey, generator)
   }

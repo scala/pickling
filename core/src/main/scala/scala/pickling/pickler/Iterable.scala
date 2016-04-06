@@ -40,17 +40,18 @@ trait IterablePicklers {
 object TravPickler {
   private val ANY_TAG = FastTypeTag.Any
 
-  def oneArgumentTagExtractor[T](tpe: AppliedType): FastTypeTag[T] = {
-    tpe.typeargs match {
-      case List(one) => FastTypeTag.apply(one.toString).asInstanceOf[FastTypeTag[T]]
-        // Note: This is what we do to handle
+  def oneArgumentTagExtractor[T](tpe: FastTypeTag[_]): FastTypeTag[T] = {
+    tpe.typeArgs match {
+      case List(one) => one.asInstanceOf[FastTypeTag[T]]
+        // Note: This is what we do to handle previous "lameness" of FastTypeTags.
+        // We should be able to remove this code.
       case List() => ANY_TAG.asInstanceOf[FastTypeTag[T]]
       case x => throw new PicklingException(s"Error, expected one type argument  on $tpe, found: $x")
     }
   }
 
   /** Creates a pickling generator that can be registered at runtime. */
-  def generate[T, C](cbf: CanBuildFrom[C,T,C], asTraversable: C => Traversable[_])(elementTagExtractor: AppliedType => FastTypeTag[T])(tpe: AppliedType): AbstractPicklerUnpickler[C] = {
+  def generate[T, C](cbf: CanBuildFrom[C,T,C], asTraversable: C => Traversable[_])(elementTagExtractor: FastTypeTag[_] => FastTypeTag[T])(tpe: FastTypeTag[_]): AbstractPicklerUnpickler[C] = {
     // TODO - we need to construct all the things we need from the tag to create a pickler/unpickler
     val elementType = elementTagExtractor(tpe)
     // TODO - These any pickler.unpicklers should be passed in.
@@ -62,7 +63,7 @@ object TravPickler {
       if(elementType.key == ANY_TAG.key) AnyUnpickler
       else currentRuntime.picklers.lookupUnpickler(elementType.key).getOrElse(
         throw new PicklingException(s"Cannnot generate a pickler/unpickler for $tpe, cannot find an unpickler for $elementType"))
-    val colTag = FastTypeTag.apply(tpe.toString)
+    val colTag = tpe
     apply[T,C](asTraversable, elemPickler.asInstanceOf[Pickler[T]], elemUnpickler.asInstanceOf[Unpickler[T]], cbf, colTag.asInstanceOf[FastTypeTag[C]])
   }
 

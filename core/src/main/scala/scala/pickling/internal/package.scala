@@ -56,36 +56,6 @@ package object internal {
 
   private[pickling] def typeToString(tpe: Type): String = tpe.key
 
-  private val typeFromStringCache = scala.collection.concurrent.TrieMap[String, Type]()
-  private[pickling] def typeFromString(mirror: Mirror, stpe: String): Type = {
-    // TODO: find out why typeFromString is called repeatedly for scala.Predef.String (at least in the evactor1 bench)
-    if (typeFromStringCache.contains(stpe)) typeFromStringCache(stpe)
-    else {
-      val result =
-        AppliedType.parseFull(stpe) match {
-          case Some(AppliedType(typename, appliedTypeArgs)) =>
-            def errorMsg = s"""error: cannot find class or module with type name '$typename'
-                              |full type string: '$stpe'""".stripMargin
-
-            val sym = try {
-              if (typename.endsWith(".type")) mirror.staticModule(typename.stripSuffix(".type")).moduleClass
-              else mirror.staticClass(typename)
-            } catch {
-              case _: ScalaReflectionException =>
-                sys.error(errorMsg)
-              case _: scala.reflect.internal.MissingRequirementError =>
-                sys.error(errorMsg)
-            }
-            val tycon = sym.asType.toTypeConstructor
-            appliedType(tycon, appliedTypeArgs.map(starg => typeFromString(mirror, starg.toString)))
-          case None =>
-            sys.error(s"fatal: cannot unpickle $stpe")
-        }
-      typeFromStringCache(stpe) = result
-      result
-    }
-  }
-
   // FIXME: duplication wrt Tools, but I don't really fancy abstracting away this path-dependent madness
   //private[pickling] 
   implicit class RichTypeFIXME(tpe: Type) {
