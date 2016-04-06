@@ -31,5 +31,5 @@ final class NoReflectionRuntime() extends PicklingRuntime {
   }
   override val refRegistry: RefRegistry = new DefaultRefRegistry()
   override val GRL: ReentrantLock = new ReentrantLock()
-  override def makeFastTag[T](tagKey: String): FastTypeTag[T] = FastTypeTag.apply(currentMirror, tagKey).asInstanceOf[FastTypeTag[T]]
+  override def makeFastTag[T](tagKey: String): FastTypeTag[T] = FastTypeTag.apply(tagKey).asInstanceOf[FastTypeTag[T]]
 }

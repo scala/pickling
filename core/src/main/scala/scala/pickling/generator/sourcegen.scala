@@ -8,7 +8,7 @@ import scala.reflect.api.Universe
   *
   *
   */
-private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
+private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacros {
   import c.universe._
 
   def pickleNull(builder: c.Tree): c.Tree =
@@ -149,7 +149,7 @@ private[pickling]  trait SourceGenerator extends Macro with FastTypeTagMacros {
     val classLoader = this.getClass.getClassLoader
     _root_.scala.pickling.internal.GRL.lock()
     val tag = try {
-      _root_.scala.pickling.FastTypeTag.mkRaw(clazz, _root_.scala.reflect.runtime.universe.runtimeMirror(classLoader))
+      _root_.scala.pickling.FastTypeTag.makeRaw(clazz)
     } finally _root_.scala.pickling.internal.GRL.unlock()
     _root_.scala.pickling.internal.`package`.currentRuntime.picklers.genPickler(classLoader, clazz, tag)
   """

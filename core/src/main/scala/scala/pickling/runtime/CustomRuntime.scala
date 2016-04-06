@@ -14,7 +14,7 @@ object CustomRuntime {
     val elemPickler   = elemPickler0.asInstanceOf[Pickler[AnyRef]]
     val elemUnpickler = elemUnpickler0.asInstanceOf[Unpickler[AnyRef]]
 
-    val isPrimitive = elemTag.tpe.isEffectivelyPrimitive
+    val isPrimitive = elemTag.reflectType(currentMirror).isEffectivelyPrimitive
 
     def tag: FastTypeTag[C] = collTag.asInstanceOf[FastTypeTag[C]]
 
@@ -92,19 +92,19 @@ class Tuple2RTKnownTagUnpickler[L, R](lhs: Unpickler[L], rhs: Unpickler[R]) exte
     (unpickleField("_1", reader, lhs), unpickleField("_2", reader, rhs))
   }
   override def tag: FastTypeTag[(L, R)] =
-    FastTypeTag.apply(currentMirror, s"scala.Tuple2[${lhs.tag.key},${rhs.tag.key}}]").asInstanceOf[FastTypeTag[(L,R)]]
+    FastTypeTag.apply(s"scala.Tuple2[${lhs.tag.key},${rhs.tag.key}}]").asInstanceOf[FastTypeTag[(L,R)]]
 }
 
 // TODO - This pickler should actually use the known tag if it is passed.  Currently it is never used.
 class Tuple2RTPickler() extends AbstractPicklerUnpickler[(Any, Any)] {
-  def tag = FastTypeTag[(Any, Any)]
+  val tag = FastTypeTag[(Any, Any)]("scala.Tuple2[scala.Any, scala.Any]")
 
   def pickleField(name: String, value: Any, builder: PBuilder): Unit = {
     val (tag1, pickler1) = if (value == null) {
       (FastTypeTag.Null.asInstanceOf[FastTypeTag[Any]], Defaults.nullPickler.asInstanceOf[Pickler[Any]])
     } else {
       val clazz = value.getClass
-      val tag = FastTypeTag.mkRaw(clazz, reflectRuntime.currentMirror).asInstanceOf[FastTypeTag[Any]]
+      val tag = FastTypeTag.makeRaw(clazz).asInstanceOf[FastTypeTag[Any]]
       val pickler = scala.pickling.internal.currentRuntime.picklers.genPickler(clazz.getClassLoader, clazz, tag).asInstanceOf[Pickler[Any]]
       (tag, pickler)
     }
