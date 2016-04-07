@@ -15,12 +15,13 @@ import scala.reflect.runtime.{universe => ru}
  *    fully reify the Type (tpe).
  * 2. It is vitally important to this class that an tag created using `apply` matches those created using `makeRaw`.
  *    As such, a few oddities have arisen:
- *    - Existentials are encoded as `scala.Any` type parameters, rather than erased.
+ *    - Existentials are encoded as `scala.Any` type parameters, rather than erased.  This has many varied
+ *      implications throughout the codebase, and marks a compromise (currently) to keep things working.
  *    - This class does NOT support refinement types, e.g. `Foo with Baz`.  Indeed, this is not a physical class
  *      at runtime, and therefore the need to "tag" something as having this type is limited.
  *
  *
- * @tparam T
+ * @tparam T the type being taggged.
  */
 trait FastTypeTag[T] extends Equals {
   /** A stringified key that can be used to denote this type.   This key should be unique for types within scala,
@@ -63,16 +64,6 @@ trait FastTypeTag[T] extends Equals {
   }
   override def hashCode = key.hashCode
   override def toString = "FastTypeTag[" + key + "]"
-}
-
-
-private[pickling] final case class SimpleFastTypeTag[T](
-    typeConstructor: String, 
-    typeArgs: List[FastTypeTag[_]]) extends FastTypeTag[T] {
-  override def isSimpleType = typeArgs.isEmpty
-  override val key = 
-    if (typeArgs.isEmpty) typeConstructor 
-    else s"$typeConstructor[${typeArgs.map(_.key).mkString(",")}]"
 }
 
 object FastTypeTag {
@@ -250,7 +241,6 @@ object FastTypeTag {
   }
 
   /** The jvm class name mapping of the type tags. */
-  // TODO - figure out if this is actually needed anywhere
   def valueTypeName(tag: FastTypeTag[_]): String = {
     val clazz: Class[_] = tag match {
       case FastTypeTag.String => classOf[java.lang.String]
@@ -279,50 +269,3 @@ object FastTypeTag {
     } else clazz.getName
   }
 }
-
-trait FastTypeTagMacros extends Macro {
-  // TODO(joshuasuereth): This is may duplicate functionality with the `.tag` extension method on `Type`.
-  def impl[T: c.WeakTypeTag]: c.Tree = {
-    import c.universe._
-    val T = weakTypeOf[T]
-    if (T.typeSymbol.isParameter)
-      c.abort(c.enclosingPosition, s"cannot generate FastTypeTag for type parameter $T, FastTypeTag can only be generated for concrete types")
-    // TODO(jsuereth) - make sure `with ...` does not show up in the resulting string.
-    def handleType(t: c.Type): c.Tree =
-     t.normalize match {
-      case ExistentialType(tparams, TypeRef(pre, sym, targs))
-	if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
-          // rather than going down form List[_] => List we want to become List[Any],
-          // we are trying to make this match the java-reflection case (where it will be Any)
-          handleType(TypeRef(pre, sym, targs.map(_ => definitions.AnyTpe)))
-      case TypeRef(pre, sym, targs) if pre.typeSymbol.isModuleClass =>
-	val name = sym.fullName + (if (sym.isModuleClass) ".type" else "")
-	val targSrcs = targs.map(t => q"_root_.scala.Predef.implicitly[_root_.scala.pickling.tags.FastTypeTag[${t}]]")
-	q"_root_.scala.pickling.tags.FastTypeTag[$T]($name, _root_.scala.List.apply(..$targSrcs))"
-      // TOOD(jsuereth) - more robust refinement type handling (T with U)
-      case _ if T.toString contains "with" =>
-         val sub = T.toString.replaceAll(" with .*", "")
-         c.warning(c.enclosingPosition, s"cannot generate stable FastTypeTag for refinement type $T, using $sub")
-	q"_root_.scala.pickling.tags.FastTypeTag[$T](${sub}, _root_.scala.Nil)"   
-      case _ =>
-	q"_root_.scala.pickling.tags.FastTypeTag[$T](${T.toString}, _root_.scala.Nil)"
-    }
-    handleType(T)
-  }
-}
-
-import scala.language.experimental.macros
-import scala.language.existentials
-
-import scala.reflect.macros.Context
-import scala.reflect.runtime.{universe => ru}
-
-// this is only necessary because 2.10.x doesn't support macro bundles
-object Compat {
-  def FastTypeTagMacros_impl[T: c.WeakTypeTag](c: Context): c.Expr[FastTypeTag[T]] = {
-    val c0: c.type = c
-    val bundle = new { val c: c0.type = c0 } with FastTypeTagMacros
-    c.Expr[FastTypeTag[T]](bundle.impl[T])
-  }
-}
-
