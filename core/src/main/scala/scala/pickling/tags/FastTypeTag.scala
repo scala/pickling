@@ -87,7 +87,6 @@ object FastTypeTag {
   private val typeFromStringCache = scala.collection.concurrent.TrieMap[String, ru.Type]()
   def reflectType[T](mirror: ru.Mirror, tag: FastTypeTag[T]): ru.Type = {
     def calculate: ru.Type = {
-      // TODO - cache the results of this?
       val typename = tag.typeConstructor
       def errorMsg = s"""error: cannot find class or module with type name '$typename'
                         |full type string: '${tag.key}'""".stripMargin
@@ -152,8 +151,7 @@ object FastTypeTag {
             else clazzName0.replace('$', '.')
         if (typeArgs.isEmpty) SimpleFastTypeTag(clazzName, Nil)
         else {
-          // TODO(jsuereth) - for each parameter, check bounds and generate a raw tag based on the bounds
-          // For now just always use `Any`
+          // For now just always use `Any`.  Ideally, we'd use some kind of placeholder.
           val argTags = typeArgs map (i => Any)
           FastTypeTag(clazzName, argTags.toList)
         }
