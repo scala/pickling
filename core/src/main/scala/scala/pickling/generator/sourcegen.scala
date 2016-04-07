@@ -335,7 +335,7 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
       case None => subClass
       case Some(p) =>
         val ptree = generateUnpickleImplFromAst(p)
-        q"""if(tagKey == ${tpe.key}) $ptree else $subClass"""
+        q"""if(tagKey == tag.key) $ptree else $subClass"""
     }
   }
   def genUnpickleSingleton(s: UnpickleSingleton): c.Tree = {
@@ -399,7 +399,7 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
       _root_.scala.Predef.locally {
         implicit object $picklerName extends _root_.scala.pickling.Pickler[$tpe] with _root_.scala.pickling.Generated {
           def pickle(picklee: $tpe, builder: _root_.scala.pickling.PBuilder): _root_.scala.Unit = ${genPicklerLogic[T](picklerAst)}
-          def tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
+          val tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
         }
         $picklerName
       }
@@ -415,7 +415,7 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
        _root_.scala.Predef.locally {
           implicit object $unpicklerName extends  _root_.scala.pickling.Unpickler[$tpe] with _root_.scala.pickling.Generated {
             def unpickle(tagKey: _root_.java.lang.String, reader: _root_.scala.pickling.PReader): _root_.scala.Any = $unpickleLogic
-            def tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
+            val tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
           }
           $unpicklerName : _root_.scala.pickling.Unpickler[$tpe] with _root_.scala.pickling.Generated
        }
@@ -434,7 +434,7 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
             //import _root_.scala.language.existentials
             override def pickle(picklee: $tpe, builder: _root_.scala.pickling.PBuilder): _root_.scala.Unit = $pickleLogic
             override def unpickle(tagKey: _root_.java.lang.String, reader: _root_.scala.pickling.PReader): _root_.scala.Any = $unpickleLogic
-            override def tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
+            override val tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
           }
           $name : _root_.scala.pickling.AbstractPicklerUnpickler[$tpe] with _root_.scala.pickling.Generated
        }

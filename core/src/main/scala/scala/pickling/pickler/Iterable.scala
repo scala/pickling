@@ -11,8 +11,6 @@ trait IterablePicklers {
     Pickler[Iterable[T]] with Unpickler[Iterable[T]] = TravPickler[T, Iterable[T]]
 
 
-
-  // TODO - Add all known collection types so we don't hit odd runtime perfomrance issues with deserializing full structure.
   implicit def listPickler[T: FastTypeTag](implicit elemPickler: Pickler[T], elemUnpickler: Unpickler[T], colTag: FastTypeTag[List[T]], cbf: CanBuildFrom[List[T], T, List[T]]):
      Pickler[List[T]] with Unpickler[List[T]] = TravPickler[T, List[T]]
 
@@ -24,6 +22,7 @@ trait IterablePicklers {
       } _
     currentRuntime.picklers.registerPicklerUnpicklerGenerator("scala.collection.immutable.List", generator)
     currentRuntime.picklers.registerPicklerUnpicklerGenerator("scala.collection.immutable.$colon$colon", generator)
+    // Note: this is kind of wrong/backward.  We should just directly deserialize Nil
     currentRuntime.picklers.registerPicklerUnpicklerGenerator("scala.collection.immutable.Nil.type", generator)
   }
 
@@ -43,7 +42,7 @@ object TravPickler {
   def oneArgumentTagExtractor[T](tpe: FastTypeTag[_]): FastTypeTag[T] = {
     tpe.typeArgs match {
       case List(one) => one.asInstanceOf[FastTypeTag[T]]
-        // Note: This is what we do to handle previous "lameness" of FastTypeTags.
+        // Note: This is hack to handle "Nil.type" as a tag, which really shouldn't happen.
         // We should be able to remove this code.
       case List() => ANY_TAG.asInstanceOf[FastTypeTag[T]]
       case x => throw new PicklingException(s"Error, expected one type argument  on $tpe, found: $x")
@@ -52,9 +51,7 @@ object TravPickler {
 
   /** Creates a pickling generator that can be registered at runtime. */
   def generate[T, C](cbf: CanBuildFrom[C,T,C], asTraversable: C => Traversable[_])(elementTagExtractor: FastTypeTag[_] => FastTypeTag[T])(tpe: FastTypeTag[_]): AbstractPicklerUnpickler[C] = {
-    // TODO - we need to construct all the things we need from the tag to create a pickler/unpickler
     val elementType = elementTagExtractor(tpe)
-    // TODO - These any pickler.unpicklers should be passed in.
     val elemPickler =
       if(elementType.key == ANY_TAG.key) AnyPickler
       else currentRuntime.picklers.lookupPickler(elementType.key).getOrElse(
