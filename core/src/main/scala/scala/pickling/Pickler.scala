@@ -89,6 +89,7 @@ object PicklerUnpickler {
   def apply[T](p: Pickler[T], u: Unpickler[T]): AbstractPicklerUnpickler[T] = new DelegatingPicklerUnpickler(p, u)
   //def generate[T]: Pickler[T] with Unpickler[T] = macro Compat.PicklerUnpicklerMacros_impl[T]
   def generate[T]: AbstractPicklerUnpickler[T] = macro generator.Compat.genPicklerUnpickler_impl[T]
+  def debug_generate[T]: String = macro generator.Compat.genPicklerUnpickler_debug[T]
   /** This is a private implementation of PicklerUnpickler that delegates pickle and unpickle to underlying. */
   private class DelegatingPicklerUnpickler[T](p: Pickler[T], u: Unpickler[T]) extends AbstractPicklerUnpickler[T] {
     // From Pickler

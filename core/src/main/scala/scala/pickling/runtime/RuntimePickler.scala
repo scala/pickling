@@ -37,7 +37,8 @@ class RuntimeTypeInfo(classLoader: ClassLoader, clazz: Class[_], share: refs.Sha
   val cir = irs.newClassIR(tpe)
   // debug(s"CIR: ${cir.fields.mkString(",")}")
 
-  val tag = FastTypeTag(mirror, tpe, tpe.key)
+  // in runtime land, always use raw tags
+  val tag = FastTypeTag.makeRaw(clazz)
   // debug(s"tag: $tag")
 
   val shareAnalyzer = new ShareAnalyzer[ru.type](ru) {
@@ -76,7 +77,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
       // essentially, we have to emulate the behavior of generated picklers, which make
       // the same decision.
       // println(s"creating runtime pickler to pickle $fldClass field of class ${picklee.getClass.getName}")
-      val fldTag = FastTypeTag.mkRaw(fldClass, mirror)
+      val fldTag = FastTypeTag.makeRaw(fldClass)
       // debug(s"!!! finding pickler for field with class ${fldClass.getName}")
       val fldPickler = scala.pickling.internal.currentRuntime.picklers.genPickler(classLoader, fldClass, fldTag).asInstanceOf[Pickler[Any]]
       //debug(s"looked up field pickler: $fldPickler")
@@ -129,7 +130,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
       // essentially, we have to emulate the behavior of generated picklers, which make
       // the same decision.
       // debug(s"creating tag for field of class ${fldClass.getName}")
-      val fldTag = FastTypeTag.mkRaw(fldClass, mirror)
+      val fldTag = FastTypeTag.makeRaw(fldClass)
       val fldPickler = scala.pickling.internal.currentRuntime.picklers.genPickler(classLoader, fldClass, fldTag).asInstanceOf[Pickler[Any]]
       // debug(s"looked up field pickler: $fldPickler")
 
@@ -155,7 +156,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
   def pickleInto(fieldClass: Class[_], fieldValue: Any, builder: PBuilder, pickler: Pickler[Any], fieldTag: FastTypeTag[_]): Unit = {
     //debug(s"fieldTag for pickleInto: ${fieldTag.key}")
 
-    val fieldTpe = fieldTag.tpe
+    val fieldTpe = fieldTag.reflectType(mirror)
     if (shouldBotherAboutSharing(fieldTpe))
       fieldValue match {
         case null => pickler.asInstanceOf[Pickler[Null]].pickle(null, builder)
