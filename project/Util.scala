@@ -2,7 +2,7 @@ import sbt._
 import Keys._
 
 object Util {
-  val buildScalaVersion = System.getProperty("scala.version", "2.10.4")
+  val buildScalaVersion = System.getProperty("scala.version", "2.11.7")
   val buildScalaVersions = Seq("2.11.7", "2.10.4")
   val javaVersion       = System.getProperty("java.version")
 
