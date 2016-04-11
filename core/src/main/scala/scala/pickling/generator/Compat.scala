@@ -26,4 +26,10 @@ private[pickling] object Compat {
     val bundle = new { val c: c0.type = c0 } with PicklingMacros
     c.Expr[Unpickler[T] with Generated](bundle.genUnPickler[T])
   }
+
+  def genPicklerUnpickler_debug[T: c.WeakTypeTag](c: Context): c.Expr[String] = {
+    val c0: c.type = c
+    val bundle = new { val c: c0.type = c0 } with PicklingMacros
+    c.Expr[String](bundle.debugPicklerUnpickler[T])
+  }
 }

@@ -1,7 +1,6 @@
 package scala.pickling
 package spi
 
-import scala.pickling.internal.AppliedType
 import scala.reflect.runtime.universe.Mirror
 
 /** A registry for looking up (and possibly coding on the fly) picklers by tag.
@@ -76,20 +75,20 @@ trait PicklerRegistry {
     *                   trying to manually inspect an object at runtime to deterimine its type, and we do not know what
     *                   the arguments are.  You can treat this case as 'existential' arguments.
     */
-  def registerPicklerGenerator[T](typeConstructorKey: String, generator: AppliedType => Pickler[T]): Unit
+  def registerPicklerGenerator[T](typeConstructorKey: String, generator: FastTypeTag[_] => Pickler[T]): Unit
   /** Registers a function which can generate picklers for a given type constructor.
     *
     * @param typeConstructorKey  The type constructor.  e.g. "scala.List" for something that can make scala.List[A] picklers.
     * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
     *                   this type.
     */
-  def registerUnpicklerGenerator[T](typeConstructorKey: String, generator: AppliedType => Unpickler[T]): Unit
+  def registerUnpicklerGenerator[T](typeConstructorKey: String, generator: FastTypeTag[_] => Unpickler[T]): Unit
   /** Registers a function which can generate picklers for a given type constructor.
     *
     * @param typeConstructorKey  The type constructor.  e.g. "scala.List" for something that can make scala.List[A] picklers.
     * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
     *                   this type.
     */
-  def registerPicklerUnpicklerGenerator[T](typeConstructorKey: String, generator: AppliedType => (Pickler[T] with Unpickler[T])): Unit
+  def registerPicklerUnpicklerGenerator[T](typeConstructorKey: String, generator: FastTypeTag[_] => (Pickler[T] with Unpickler[T])): Unit
   // TODO - Some kind of clean or inspect what we have?
 }
