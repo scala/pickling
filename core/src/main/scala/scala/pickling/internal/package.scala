@@ -54,37 +54,6 @@ package object internal {
   }
   def currentMirror: ru.Mirror = currentRuntime.currentMirror
 
-  
-
-  // FIXME: duplication wrt Tools, but I don't really fancy abstracting away this path-dependent madness
-  //private[pickling] 
-  implicit class RichTypeFIXME(tpe: Type) {
-    import definitions._
-    // TODO - this can be removed IFF we migrate runtime picklers to always generate
-    //        FastTypeTags using java reflection.
-    def key: String = {
-      tpe.normalize match {
-        case ExistentialType(tparams, TypeRef(pre, sym, targs))
-        if targs.nonEmpty && targs.forall(targ => tparams.contains(targ.typeSymbol)) =>
-          TypeRef(pre, sym, Nil).key
-        case TypeRef(pre, sym, targs) if pre.typeSymbol.isModuleClass =>
-          sym.fullName +
-          (if (sym.isModuleClass) ".type" else "") +
-          (if (targs.isEmpty) "" else targs.map(_.key).mkString("[", ",", "]"))
-        case RefinedType(hd :: tail, scope) => hd.key
-        case t =>
-          t.toString
-      }
-    }
-    // TODO - this can probably be moved to FastTypeTag
-    def isEffectivelyPrimitive: Boolean = tpe match {
-      case TypeRef(_, sym: ClassSymbol, _) if sym.isPrimitive => true
-      case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.typeSymbol.isClass && eltpe.typeSymbol.asClass.isPrimitive => true
-      case _ => false
-    }
-  }
-
-
   // ----- utilities for managing object identity -----
   @deprecated("Use `currentRuntime.refRegistry.pickle.registerPicklee` instead", "0.11")
   def lookupPicklee(picklee: Any): Int = currentRuntime.refRegistry.pickle.registerPicklee(picklee)
