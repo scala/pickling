@@ -157,15 +157,15 @@ trait WikiGraphBenchmark extends PicklingBenchmark {
 }
 
 object WikiGraphPicklingBench extends WikiGraphBenchmark {
-  implicit val VertexTag = FastTypeTag.materializeFastTypeTag[Vertex]
-  implicit val GraphTag = FastTypeTag.materializeFastTypeTag[Graph]
-  implicit val StringTag = FastTypeTag.materializeFastTypeTag[String]
-  implicit val ColonColonVertexTag = FastTypeTag.materializeFastTypeTag[::[Vertex]]
+  implicit val VertexTag = FastTypeTag[Vertex]
+  implicit val GraphTag = FastTypeTag[Graph]
+  implicit val StringTag = FastTypeTag[String]
+  implicit val ColonColonVertexTag = FastTypeTag[::[Vertex]]
   import scala.reflect.runtime.{universe => ru}
   implicit val myLittlePony: ru.Mirror = ru.runtimeMirror(getClass.getClassLoader)
-  implicit val VectorVertexTag = FastTypeTag.materializeFastTypeTag[Vector[Vertex]]
-  implicit val ListVertexTag = FastTypeTag.materializeFastTypeTag[List[Vertex]]
-  implicit val NilTag = FastTypeTag.materializeFastTypeTag[Nil.type]
+  implicit val VectorVertexTag = FastTypeTag[Vector[Vertex]]
+  implicit val ListVertexTag = FastTypeTag[List[Vertex]]
+  implicit val NilTag = FastTypeTag[Nil.type]
   // TODO - why does this no longer compile?
   implicit val picklerNil = Pickler.generate[Nil.type]
   implicit val unpicklerNil = implicitly[Unpickler[Nil.type]]

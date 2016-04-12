@@ -46,7 +46,7 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_], shar
       existentialAbstraction(tparams, tpeWithMaybeTparams)
     }
   }
-  val tag = FastTypeTag(mirror, tpe, tpe.key)
+  val tag = FastTypeTag.makeRaw(clazz)
   //debug(s"PicklerRuntime: tpe = $tpe, tag = ${tag.toString}")
   val irs = new IRs[ru.type](ru)
   import irs._
@@ -74,7 +74,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
       val fields: List[(irs.FieldIR, Boolean)] =
         cir.fields.filter(_.hasGetter).map(fir => (fir, fir.tpe.typeSymbol.isEffectivelyFinal))
 
-      def tag: FastTypeTag[Any] = FastTypeTag.mkRaw(clazz, mirror).asInstanceOf[FastTypeTag[Any]]
+      def tag: FastTypeTag[Any] = FastTypeTag.makeRaw(clazz).asInstanceOf[FastTypeTag[Any]]
 
       def pickleInto(fieldTpe: Type, picklee: Any, builder: PBuilder, pickler: Pickler[Any]): Unit = {
         if (shouldBotherAboutSharing(fieldTpe))
@@ -103,7 +103,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
               // by using only the class we convert Int to Integer
               // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
               //val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
-              val fldTag = FastTypeTag.mkRaw(fldClass, mirror)
+              val fldTag = FastTypeTag.makeRaw(fldClass)
               val fldPickler = scala.pickling.internal.currentRuntime.picklers.genPickler(classLoader, fldClass, fldTag).asInstanceOf[Pickler[Any]]
 
               builder.putField(fir.name, b => {
@@ -141,18 +141,23 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
 
 trait UnpicklerRuntime {
   def genUnpickler: Unpickler[Any]
+  def mirror: Mirror
+  import scala.reflect.runtime.{universe => ru}
+  def classForType(t: ru.Type): Class[_] =
+    if (t =:= ru.typeOf[Any]) classOf[Any]
+    else mirror.runtimeClass(t)
 }
 
 // TODO: currently this works with an assumption that sharing settings for unpickling are the same as for pickling
 // of course this might not be the case, so we should be able to read `share` from the pickle itself
-class InterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(implicit share: refs.Share)
+class InterpretedUnpicklerRuntime(val mirror: Mirror, typeTag: String)(implicit share: refs.Share)
     extends UnpicklerRuntime {
   import scala.reflect.runtime.universe._
   import definitions._
   import scala.reflect.runtime.{universe => ru}
 
-  val fastTag = FastTypeTag(mirror, typeTag)
-  val tpe = fastTag.tpe
+  val fastTag = FastTypeTag(typeTag)
+  val tpe = fastTag.reflectType(mirror)
   val sym = tpe.typeSymbol.asType
   // debug("UnpicklerRuntime: tpe = " + tpe)
   val clazz = mirror.runtimeClass(tpe.erasure)
@@ -195,21 +200,18 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(implicit shar
 
             def fieldVals = pendingFields.map(fir => {
               val freader = reader.readField(fir.name)
-              val fstaticTag = FastTypeTag(mirror, fir.tpe, fir.tpe.key)
-              val fstaticSym = fstaticTag.tpe.typeSymbol
+              val fstaticTag = FastTypeTag.makeRaw(classForType(fir.tpe))
+              val fstaticSym = fstaticTag.reflectType(mirror).typeSymbol
               if (fstaticSym.isEffectivelyFinal) freader.hintElidedType(fstaticTag)
               val fdynamicTag = try {
                 freader.beginEntry()
               } catch {
                 case e@PicklingException(msg, cause) =>
-                  debug( s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}
-':
-                         |$msg
-
-                      |enclosing object has type: '${tagKey}
-'
-                         |static type of field: '${fir.tpe.key}'
-                         |""".stripMargin)
+                  debug( s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}':
+                            |$msg
+                            |enclosing object has type: '${tagKey}'
+                            |static type of field: '${fir.tpe}'
+                            |""".stripMargin)
                 throw e
             }
             val
@@ -257,14 +259,14 @@ class InterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(implicit shar
   }
 }
 
-class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(implicit share: refs.Share)
+class ShareNothingInterpretedUnpicklerRuntime(val mirror: Mirror, typeTag: String)(implicit share: refs.Share)
     extends UnpicklerRuntime {
   import scala.reflect.runtime.universe._
   import definitions._
   import scala.reflect.runtime.{universe => ru}
 
-  val fastTag = FastTypeTag(mirror, typeTag)
-  val tpe = fastTag.tpe
+  val fastTag = FastTypeTag(typeTag)
+  val tpe = fastTag.reflectType(mirror)
   val sym = tpe.typeSymbol.asType
   // debug("UnpicklerRuntime: tpe = " + tpe)
   val clazz = mirror.runtimeClass(tpe.erasure)
@@ -299,8 +301,8 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(i
 
           def fieldVals = pendingFields.map(fir => {
             val freader = reader.readField(fir.name)
-            val fstaticTag = FastTypeTag(mirror, fir.tpe, fir.tpe.key)
-            val fstaticSym = fstaticTag.tpe.typeSymbol
+            val fstaticTag = FastTypeTag.makeRaw(classForType(fir.tpe))
+            val fstaticSym = fstaticTag.reflectType(mirror).typeSymbol
             if (fstaticSym.isEffectivelyFinal) freader.hintElidedType(fstaticTag)
             val fdynamicTag = try {
               freader.beginEntry()
@@ -309,7 +311,7 @@ class ShareNothingInterpretedUnpicklerRuntime(mirror: Mirror, typeTag: String)(i
                 debug(s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}':
                          |$msg
                          |enclosing object has type: '${tagKey}'
-                         |static type of field: '${fir.tpe.key}'
+                         |static type of field: '${fir.tpe}'
                          |""".stripMargin)
                 throw e
             }

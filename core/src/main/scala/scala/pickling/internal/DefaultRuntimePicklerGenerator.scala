@@ -30,7 +30,7 @@ class DefaultRuntimePicklerGenerator(reflectionLock: ReentrantLock) extends spi.
       val pickler: Pickler[_] = if (clazz.isArray) {
         val mirror = ru.runtimeMirror(classLoader)
         val elemClass = clazz.getComponentType()
-        val elemTag = FastTypeTag.mkRaw(elemClass, mirror)
+        val elemTag = FastTypeTag.makeRaw(elemClass)
         val elemPickler = currentRuntime.picklers.genPickler(classLoader, elemClass, elemTag)
         mkRuntimeTravPickler[Array[AnyRef]](elemClass, elemTag, tag, elemPickler, null)
       } else {
@@ -51,10 +51,12 @@ class DefaultRuntimePicklerGenerator(reflectionLock: ReentrantLock) extends spi.
         val elemTypeString = tagKey.substring(12, tagKey.length - 1)
         // debug(s"creating tag for element type: $elemTypeString")
         // TODO - If the elem tag is not something useful, we should treat it as `Any`...
-        val elemTag = FastTypeTag(currentRuntime.currentMirror, elemTypeString)
-        val elemClass = Classes.classFromString(elemTypeString)
+        val elemTag = FastTypeTag(elemTypeString)
+        val elemClass = 
+           if (elemTypeString.startsWith("scala.Array")) Classes.classFromString(elemTypeString)
+           else Classes.classFromString(elemTag.typeConstructor)
         val elemUnpickler = internal.currentRuntime.picklers.genUnpickler(mirror, elemTypeString)
-        val tag = FastTypeTag(currentRuntime.currentMirror, tagKey)
+        val tag = FastTypeTag(tagKey)
         mkRuntimeTravPickler[Array[AnyRef]](elemClass, elemTag, tag, null, elemUnpickler)
       } else {
           val runtime = if (share.isInstanceOf[refs.ShareNothing]) {

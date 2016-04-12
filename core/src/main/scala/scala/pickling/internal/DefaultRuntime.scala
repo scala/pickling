@@ -23,7 +23,7 @@ class DefaultRuntime extends spi.PicklingRuntime {
     *
     * NOTE; this only assumes the T lines up.
     */
-  override def makeFastTag[T](tagKey: String): FastTypeTag[T] = FastTypeTag.apply(currentMirror, tagKey).asInstanceOf[FastTypeTag[T]]
+  override def makeFastTag[T](tagKey: String): FastTypeTag[T] = FastTypeTag.apply(tagKey).asInstanceOf[FastTypeTag[T]]
 
   /** The current reflection mirror to use when doing runtime unpickling/pickling. */
   override def currentMirror: Mirror = _root_.scala.reflect.runtime.currentMirror

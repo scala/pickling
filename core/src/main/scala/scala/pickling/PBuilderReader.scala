@@ -48,7 +48,7 @@ trait Hintable {
     * Hint: This is only used during pickling.
     */
   def hintOid(id: Int): this.type
-  /** Locks the hints down to what we've specified, so if you drop into anotehr pickler it retains our information. */
+  /** Locks the hints down to what we've specified, so if you drop into another pickler it retains our information. */
   def pinHints(): this.type
   /** Unlocks the hints. */
   def unpinHints(): this.type

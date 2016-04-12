@@ -17,5 +17,5 @@ class HybridRuntime extends PicklingRuntime {
   override val picklers  = new DefaultPicklerRegistry(NoRuntimePicklerGeneration)
   override val refRegistry: RefRegistry = new DefaultRefRegistry()
   override val GRL: ReentrantLock = new ReentrantLock()
-  override def makeFastTag[T](tagKey: String): FastTypeTag[T] = FastTypeTag.apply(currentMirror, tagKey).asInstanceOf[FastTypeTag[T]]
+  override def makeFastTag[T](tagKey: String): FastTypeTag[T] = FastTypeTag.apply(tagKey).asInstanceOf[FastTypeTag[T]]
 }
