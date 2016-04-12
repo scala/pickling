@@ -137,6 +137,8 @@ object FastTypeTag {
 
   // Note: this method is only used from runtime-only PICKLERS (not unpicklers).   In hybrid mode, this shouldn't be used.
   def makeRaw[T](clazz: Class[T]): FastTypeTag[T] = {
+    // TODO - We should handle "Inner classes".  The only way to know if an inner class is if the constructors require
+    // an outer instance as the first parameter.  That is only a heuristic.
     rawclassToTagMap.getOrElse(clazz, {
       if (clazz == null) FastTypeTag.Null
       else if (clazz.isArray) {

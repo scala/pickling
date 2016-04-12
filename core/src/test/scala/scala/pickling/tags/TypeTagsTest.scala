@@ -9,7 +9,7 @@ object Nested {
   case class NestedCaseClass(x: String)
 }
 class Nested {
-  class ClassNestedCaseClass(x: String)
+  case class ClassNestedCaseClass(x: String)
 }
 class TagTest extends FunSuite {
  
@@ -40,7 +40,8 @@ class TagTest extends FunSuite {
       // Projections
       FastTypeTag[Nested.type#NestedCaseClass],
       // TODO - This fails, but is also something we couldn't pickle statically.
-      //FastTypeTag[Nested#ClassNestedCaseClass]
+      // Indeed it's actually impossible to even reflect the physical class with an instance of the outer class.
+      //FastTypeTag[Nested#ClassNestedCaseClass], // scala.pickling.tags.Nested$ClassNestedCaseClass  
 
       // Annotated Types
       FastTypeTag[Int @annotation.unchecked.uncheckedVariance]
