@@ -15,7 +15,7 @@ trait SymbolTestMacros extends Macro {
     val tpe = weakTypeOf[T]
     val cls = symbols.newClass(tpe)
     cls.primaryConstructor match {
-      case Some(x) => x.parameterTypes[c.universe.type](c.universe).toList.flatMap(_.map(_.key))
+      case Some(x) => x.parameterTypes[c.universe.type](c.universe).toList.flatMap(_.map(_.toString))
       case None => Seq()
     }
   }
@@ -28,7 +28,7 @@ trait SymbolTestMacros extends Macro {
     val mthds = IrSymbol.allDeclaredMethodIncludingSubclasses(cls)
     mthds.filter(_.isVar).map { x =>
       //System.err.println(s" - $x, ${x.returnType(c.universe)} from ${x.owner}")
-      x.returnType[c.universe.type](c.universe).key
+      x.returnType[c.universe.type](c.universe).toString
     }
   }
 
@@ -75,7 +75,7 @@ trait SymbolTestMacros extends Macro {
   def parentClasses[T: WeakTypeTag]: Seq[String] = {
     val tpe = weakTypeOf[T]
     val cls = symbols.newClass(tpe)
-    cls.parentClasses.map(_.tpe[c.universe.type](c.universe).key)
+    cls.parentClasses.map(_.tpe[c.universe.type](c.universe).toString)
   }
 }
 

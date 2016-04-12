@@ -324,7 +324,7 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
     val subClassCases =
        x.subClasses.toList map { sc =>
          val stpe = sc.tpe[c.universe.type](c.universe)
-         val skey = stpe.key
+         val skey = typeKey(stpe)
          CaseDef(Literal(Constant(skey)), EmptyTree, createUnpickler(stpe))
        }
     val subClass =
