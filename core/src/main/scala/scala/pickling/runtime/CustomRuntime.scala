@@ -14,7 +14,7 @@ object CustomRuntime {
     val elemPickler   = elemPickler0.asInstanceOf[Pickler[AnyRef]]
     val elemUnpickler = elemUnpickler0.asInstanceOf[Unpickler[AnyRef]]
 
-    val isPrimitive = elemTag.reflectType(currentMirror).isEffectivelyPrimitive
+    val isPrimitive = elemTag.isEffectivelyPrimitive
 
     def tag: FastTypeTag[C] = collTag.asInstanceOf[FastTypeTag[C]]
 
