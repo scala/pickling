@@ -1,12 +1,8 @@
 package scala.pickling
 package generator
 
-import scala.reflect.api.Universe
-
-/** This is the portion of code which can actually generate a pickler/unpickler object instance
-  * from the IR AST.
-  *
-  *
+/** This is the portion of code which can actually generate a pickler/unpickler
+  * object instance from the IR AST.
   */
 private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacros {
   import c.universe._
@@ -400,6 +396,11 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
         implicit object $picklerName extends _root_.scala.pickling.Pickler[$tpe] with _root_.scala.pickling.Generated {
           def pickle(picklee: $tpe, builder: _root_.scala.pickling.PBuilder): _root_.scala.Unit = ${genPicklerLogic[T](picklerAst)}
           val tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
+
+          if(_root_.scala.pickling.internal.currentRuntime.picklers.lookupPickler(tag.key).isEmpty) {
+            _root_.scala.pickling.internal.currentRuntime.picklers.registerPickler(this)
+          }
+
         }
         $picklerName
       }
@@ -416,6 +417,11 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
           implicit object $unpicklerName extends  _root_.scala.pickling.Unpickler[$tpe] with _root_.scala.pickling.Generated {
             def unpickle(tagKey: _root_.java.lang.String, reader: _root_.scala.pickling.PReader): _root_.scala.Any = $unpickleLogic
             val tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
+
+            if(_root_.scala.pickling.internal.currentRuntime.picklers.lookupUnpickler(tag.key).isEmpty) {
+              _root_.scala.pickling.internal.currentRuntime.picklers.registerUnpickler(this)
+            }
+
           }
           $unpicklerName : _root_.scala.pickling.Unpickler[$tpe] with _root_.scala.pickling.Generated
        }
@@ -435,6 +441,15 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
             override def pickle(picklee: $tpe, builder: _root_.scala.pickling.PBuilder): _root_.scala.Unit = $pickleLogic
             override def unpickle(tagKey: _root_.java.lang.String, reader: _root_.scala.pickling.PReader): _root_.scala.Any = $unpickleLogic
             override val tag: _root_.scala.pickling.FastTypeTag[$tpe] = $createTagTree
+
+            if(_root_.scala.pickling.internal.currentRuntime.picklers.lookupPickler(tag.key).isEmpty) {
+              _root_.scala.pickling.internal.currentRuntime.picklers.registerPickler(this)
+            }
+
+            if(_root_.scala.pickling.internal.currentRuntime.picklers.lookupUnpickler(tag.key).isEmpty) {
+              _root_.scala.pickling.internal.currentRuntime.picklers.registerUnpickler(this)
+            }
+
           }
           $name : _root_.scala.pickling.AbstractPicklerUnpickler[$tpe] with _root_.scala.pickling.Generated
        }
