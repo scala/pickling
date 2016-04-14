@@ -61,10 +61,11 @@ trait Unpickler[T] {
    *             which was provided when reading.  This is generally used by abstract type 
    *             Unpicklers to delegate to the appropriate concrete unpickler.
    * @param reader  The reader we can grab fields, primitives or collection items out of.
+ *
    * @return Any an instance of the type we've unpickled.
    */
   def unpickle(tag: String, reader: PReader): Any
-  /** A mechanism of unpickling that also includes calling beginEntry()/endEntry(). 
+  /** A mechanism of unpickling that also includes calling beginEntry()/endEntry().
    *  Note: We assume anyone calling this will hint "staticallyElided" or "dynamicallyElided"
    *        if needed.   Each Unpickler should make no assumptions about its own type.
    */
@@ -101,16 +102,43 @@ object PicklerUnpickler {
   }
 }
 
-/** A pickler which will register itself with the runtime pickler registery. */
-abstract class AutoRegister[T: FastTypeTag](name: String) extends AbstractPicklerUnpickler[T] {
-  val tag = implicitly[FastTypeTag[T]]
+object AutoRegister {
+  import scala.pickling.internal.currentRuntime
 
-  // Register this pickler with the global handler.
-  locally {
-    val p = internal.currentRuntime.picklers
-    debug(s"autoregistering pickler $this under key '${tag.key}'")
-    p.registerPickler(tag.key, this)
-    debug(s"autoregistering unpickler $this under key '${tag.key}'")
-    p.registerUnpickler(tag.key, this)
-  }
+  private def isLookupEnabled: Boolean =
+    !currentRuntime.isInstanceOf[NoReflectionRuntime]
+
+  private[pickling] def existsPicklerFor(key: String) =
+    isLookupEnabled && currentRuntime.picklers.lookupExistingPickler(key).isEmpty
+
+  private[pickling] def existsUnpicklerFor(key: String) =
+    isLookupEnabled && currentRuntime.picklers.lookupExistingUnpickler(key).isEmpty
+
 }
+
+trait AutoRegisterPickler[T] {
+  this: Pickler[T] =>
+
+  locally {
+    if (AutoRegister.existsPicklerFor(tag.key)) {
+      currentRuntime.picklers.registerPickler(this)
+    }
+  }
+
+}
+
+trait AutoRegisterUnpickler[T] {
+  this: Unpickler[T] =>
+
+  locally {
+    if (AutoRegister.existsUnpicklerFor(tag.key)) {
+      currentRuntime.picklers.registerUnpickler(this)
+    }
+  }
+
+}
+
+trait AutoRegister[T] extends AutoRegisterPickler[T] with AutoRegisterUnpickler[T] {
+  this: Pickler[T] with Unpickler[T] =>
+}
+

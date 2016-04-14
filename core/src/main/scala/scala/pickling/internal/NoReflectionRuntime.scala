@@ -22,6 +22,8 @@ final class NoReflectionRuntime() extends PicklingRuntime {
       throw new UnsupportedOperationException(s"Runtime pickler generation is disabled.  Cannot create pickler for $tag")
     override def lookupUnpickler(key: String): Option[Unpickler[_]] = None
     override def lookupPickler(key: String): Option[Pickler[_]] = None
+    override def lookupExistingPickler(key: String): Option[Pickler[_]] = None
+    override def lookupExistingUnpickler(key: String): Option[Unpickler[_]] = None
     override def registerPickler[T](key: String, p: Pickler[T]): Unit = ()
     override def registerUnpicklerGenerator[T](typeConstructorKey: String, generator: (FastTypeTag[_]) => Unpickler[T]): Unit = ()
     override def registerPicklerUnpicklerGenerator[T](typeConstructorKey: String, generator: (FastTypeTag[_]) => Pickler[T] with Unpickler[T]): Unit = ()

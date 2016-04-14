@@ -17,12 +17,15 @@ trait PrimitivePicklers {
   implicit val unitPickler: Pickler[Unit] with Unpickler[Unit] = PrimitivePickler[Unit]
 }
 
-class PrimitivePickler[T: FastTypeTag](name: String) extends AutoRegister[T](name) {
-  def pickle(picklee: T, builder: PBuilder): Unit = {
+class PrimitivePickler[T: FastTypeTag](name: String)
+  extends AbstractPicklerUnpickler[T] with AutoRegister[T] {
+
+  override def tag = implicitly[FastTypeTag[T]]
+  override def pickle(picklee: T, builder: PBuilder): Unit = {
     builder.beginEntry(picklee, tag)
     builder.endEntry()
   }
-  def unpickle(tag: String, reader: PReader): Any = {
+  override def unpickle(tag: String, reader: PReader): Any = {
     try {
       // TODO - beginEntry/endEntry?
       reader.readPrimitive()

@@ -9,7 +9,8 @@ trait TypeTagPicklers extends PrimitivePicklers {
     FastTypeTagPicklerUnpickler.asInstanceOf[AbstractPicklerUnpickler[FastTypeTag[T]]]
 
 
-  private[pickler] object FastTypeTagPicklerUnpickler extends AbstractPicklerUnpickler[FastTypeTag[_]] {
+  private[pickler] object FastTypeTagPicklerUnpickler
+    extends AbstractPicklerUnpickler[FastTypeTag[_]] with AutoRegister[FastTypeTag[_]] {
     override def pickle(picklee: FastTypeTag[_], builder: PBuilder): Unit = {
       builder.beginEntry(picklee, tag)
       builder.putField("key", { b =>
@@ -36,7 +37,7 @@ trait TypeTagPicklers extends PrimitivePicklers {
       val key = stringPickler.unpickleEntry(rk).toString
       FastTypeTag.apply(key)
     }
-    override val tag: FastTypeTag[FastTypeTag[_]] = FastTypeTag.apply("scala.pickling.pickler.FastTypeTag").asInstanceOf[FastTypeTag[FastTypeTag[_]]]
+    override lazy val tag: FastTypeTag[FastTypeTag[_]] = FastTypeTag.apply("scala.pickling.pickler.FastTypeTag").asInstanceOf[FastTypeTag[FastTypeTag[_]]]
 
   }
   // Ensure we register for runtime deserialization.
