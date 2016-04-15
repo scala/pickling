@@ -6,6 +6,9 @@ import scala.pickling._, scala.pickling.Defaults._, binary._
 class C(val name: String, val desc: String, var c: C, val arr: Array[Int])
 
 class ShareBinaryAnyTest extends FunSuite {
+
+  import scala.pickling.internal.currentRuntime
+
   val c1 = new C("c1", "desc", null, Array(1))
   val c2 = new C("c2", "desc", c1, Array(1))
   val c3 = new C("c3", "desc", c2, Array(1))
@@ -31,6 +34,10 @@ class ShareBinaryAnyTest extends FunSuite {
   }*/
 
   test("loop-share-nothing") {
+
+    currentRuntime.picklers.clearRegisteredPicklerUnpicklerFor[Any]
+    currentRuntime.picklers.clearRegisteredPicklerUnpicklerFor[C]
+
     intercept[StackOverflowError] {
       import shareNothing._
       c1.c = c3
@@ -59,6 +66,9 @@ class ShareBinaryAnyTest extends FunSuite {
   }*/
 
   test("noloop-share-non-primitives") {
+
+    currentRuntime.picklers.clearRegisteredPicklerUnpicklerFor[C]
+
     import shareNothing._
     c1.c = null
     val pickle = (c3: Any).pickle

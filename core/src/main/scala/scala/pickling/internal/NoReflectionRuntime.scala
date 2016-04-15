@@ -31,6 +31,7 @@ final class NoReflectionRuntime() extends PicklingRuntime {
     override def registerPicklerGenerator[T](typeConstructorKey: String, generator: (FastTypeTag[_]) => Pickler[T]): Unit = ()
     override def registerUnpickler[T](key: String, p: Unpickler[T]): Unit = ()
     override def registerPicklerUnpickler[T](key: String, p: Pickler[T] with Unpickler[T]): Unit = ()
+    override private[pickling] def clearRegisteredPicklerUnpicklerFor[T: FastTypeTag]: Unit = ()
   }
   override val refRegistry: RefRegistry = new DefaultRefRegistry()
   override val GRL: ReentrantLock = new ReentrantLock()

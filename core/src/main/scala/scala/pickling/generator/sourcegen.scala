@@ -385,6 +385,7 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
 
   val picklingPath = q"_root_.scala.pickling"
   val picklersRegistry = q"$picklingPath.internal.currentRuntime.picklers"
+  val generated = tq"$picklingPath.Generated"
 
   def lazyInit(lookup: c.Tree, key: c.Tree, tpe: c.Tree,
                notInitialized: c.TermName): c.Tree = {
@@ -416,7 +417,7 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
   def generatePicklerClass[T: c.WeakTypeTag](picklerAst: PicklerAst): c.Tree = {
 
     val tpe = computeType[T]
-    val picklerName = c.freshName(TermName(syntheticBaseName(tpe) + "Pickler"))
+    val picklerName = c.fresh(newTermName(syntheticBaseName(tpe) + "Pickler"))
     val createTagTree = super[FastTypeTagMacros].impl[T]
     val picklerType = tq"$picklingPath.Pickler[$tpe]"
     val key = q"$createTagTree.key"
@@ -440,17 +441,17 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
   def generateUnpicklerClass[T: c.WeakTypeTag](unpicklerAst: UnpicklerAst): c.Tree = {
 
     val tpe = computeType[T]
-    val unpicklerName = c.freshName(TermName(syntheticBaseName(tpe) + "Unpickler"))
+    val unpicklerName = c.fresh(newTermName(syntheticBaseName(tpe) + "Unpickler"))
     val createTagTree = super[FastTypeTagMacros].impl[T]
     val unpickleLogic = genUnpicklerLogic[T](unpicklerAst)
     val unpicklerType = tq"$picklingPath.Unpickler[$tpe]"
-    val genUnpicklerType = tq"$unpicklerType with $picklingPath.Generated"
+    val genUnpicklerType = tq"$unpicklerType with $generated"
     val key = q"$createTagTree.key"
     val lookup = q"$picklersRegistry.lookupExistingUnpickler"
 
     q"""
        _root_.scala.Predef.locally {
-          implicit object $unpicklerName extends $unpicklerType with $picklingPath.Generated
+          implicit object $unpicklerName extends $unpicklerType with $generated
               with $picklingPath.AutoRegisterUnpickler[$tpe] {
 
             lazy val tag: $picklingPath.FastTypeTag[$tpe] = $createTagTree
@@ -466,20 +467,19 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
   def generatePicklerUnpicklerClass[T: c.WeakTypeTag](impl: PickleUnpickleImplementation): c.Tree = {
 
     val tpe = computeType[T]
-    val name = c.freshName(TermName(syntheticBaseName(tpe) + "PicklerUnpickler"))
+    val name = c.fresh(newTermName(syntheticBaseName(tpe) + "PicklerUnpickler"))
     val createTagTree = super[FastTypeTagMacros].impl[T]
     val unpickleLogic = genUnpicklerLogic[T](impl.unpickle)
     val pickleLogic = genPicklerLogic[T](impl.pickle)
     val key = q"$createTagTree.key"
     val picklerUnpicklerType = tq"$picklingPath.AbstractPicklerUnpickler[$tpe]"
-    val genPicklerUnpicklerType = tq"$picklerUnpicklerType with $picklingPath.Generated"
+    val genPicklerUnpicklerType = tq"$picklerUnpicklerType with $generated"
     val lookup1 = q"$picklersRegistry.lookupExistingPickler"
     val lookup2 = q"$picklersRegistry.lookupExistingUnpickler"
-    val castedName = c.freshName(TermName("castedName"))
 
     q"""
        _root_.scala.Predef.locally {
-          implicit object $name extends $picklerUnpicklerType with $picklingPath.Generated
+          implicit object $name extends $picklerUnpicklerType with $generated
               with $picklingPath.AutoRegister[$tpe] {
 
             override lazy val tag: $picklingPath.FastTypeTag[$tpe] = $createTagTree

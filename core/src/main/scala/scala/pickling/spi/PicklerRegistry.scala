@@ -98,5 +98,12 @@ trait PicklerRegistry {
     *                   this type.
     */
   def registerPicklerUnpicklerGenerator[T](typeConstructorKey: String, generator: FastTypeTag[_] => (Pickler[T] with Unpickler[T])): Unit
-  // TODO - Some kind of clean or inspect what we have?
+
+  /** Clear the registered pickler/unpickler for a given type.
+    *
+    * Useful for avoiding conflict between picklers registered with different
+    * sharing strategies and are cached when they're initialised.
+    */
+  private[pickling] def clearRegisteredPicklerUnpicklerFor[T: FastTypeTag]: Unit
+
 }

@@ -15,11 +15,17 @@ final class Simple(x: Int) {
 
 
 class ShareBinaryTest extends FunSuite {
+
+  import scala.pickling.internal.currentRuntime
+
   val c1 = new C("c1", "desc", null, Array(1))
   val c2 = new C("c2", "desc", c1, Array(1))
   val c3 = new C("c3", "desc", c2, Array(1))
 
   test("loop-share-nonprimitives") {
+
+    currentRuntime.picklers.clearRegisteredPicklerUnpicklerFor[C]
+
     c1.c = c3
     val pickle = c1.pickle
     //val expected = "BinaryPickle([0,0,0,29,115,99,97,108,97,46,112,105,99,107,108,105,110,103,46,115,104,97,114,101,46,98,105,110,97,114,121,46,67,0,0,0,2,99,49,0,0,0,4,100,101,115,99,-5,0,0,0,2,99,51,0,0,0,4,100,101,115,99,-5,0,0,0,2,99,50,0,0,0,4,100,101,115,99,-3,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0])"
@@ -42,6 +48,9 @@ class ShareBinaryTest extends FunSuite {
   }
 
   test("loop-share-nothing") {
+
+    currentRuntime.picklers.clearRegisteredPicklerUnpicklerFor[C]
+
     intercept[StackOverflowError] {
       import shareNothing._
       c1.c = c3
@@ -50,6 +59,9 @@ class ShareBinaryTest extends FunSuite {
   }
 
   test("loop-share-everything") {
+
+    currentRuntime.picklers.clearRegisteredPicklerUnpicklerFor[C]
+
     import shareEverything._
     c1.c = c3
     val pickle = c1.pickle
@@ -71,6 +83,9 @@ class ShareBinaryTest extends FunSuite {
   }
 
   test("noloop-share-non-primitives") {
+
+    currentRuntime.picklers.clearRegisteredPicklerUnpicklerFor[C]
+
     import shareNothing._
     c1.c = null
     val pickle = c3.pickle

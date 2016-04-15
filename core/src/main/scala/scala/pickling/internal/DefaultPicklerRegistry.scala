@@ -52,6 +52,12 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
   override def registerUnpickler[T](key: String, p: Unpickler[T]): Unit =
     unpicklerMap.put(key, p)
 
+  override private[pickling] def clearRegisteredPicklerUnpicklerFor[T: FastTypeTag]: Unit = {
+    val tag = implicitly[FastTypeTag[T]]
+    picklerMap -= tag.key
+    unpicklerMap -= tag.key
+  }
+
   override val isLookupEnabled = true
 
   /** Checks the existence of a pickler ignoring the registered generators. */

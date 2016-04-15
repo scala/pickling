@@ -6,10 +6,17 @@ import scala.pickling._, scala.pickling.Defaults._, json._
 class C(val name: String, val desc: String, var c: C, val arr: Array[Int])
 
 class ShareJsonTest extends FunSuite {
+
+  import scala.pickling.internal.currentRuntime
+
   val c1 = new C("c1", "desc", null, Array(1))
   val c2 = new C("c2", "desc", c1, Array(1))
   val c3 = new C("c3", "desc", c2, Array(1))
+
   test("loop-share-nonprimitives") {
+
+    currentRuntime.picklers.clearRegisteredPicklerUnpicklerFor[C]
+
     c1.c = c3
     val pickle = c1.pickle
     assert(pickle.toString === """
@@ -56,12 +63,11 @@ class ShareJsonTest extends FunSuite {
   }
 
   test("loop-share-nothing") {
-    /*intercept[StackOverflowError] {
-      import shareNothing._
-      c1.c = c3
-      c2.pickle
-    }*/
-    // Note we've been running out of memory on this test in jenkins, which is also a legitimate success case
+
+    currentRuntime.picklers.clearRegisteredPicklerUnpicklerFor[C]
+
+    // Note we've been running out of memory on this test in jenkins,
+    // which is also a legitimate success case
     try {
       import shareNothing._
       c1.c = c3
@@ -74,6 +80,9 @@ class ShareJsonTest extends FunSuite {
   }
 
   test("loop-share-everything") {
+
+    currentRuntime.picklers.clearRegisteredPicklerUnpicklerFor[C]
+
     import shareEverything._
     c1.c = c3
     val pickle = c1.pickle
@@ -121,6 +130,9 @@ class ShareJsonTest extends FunSuite {
   }
 
   test("noloop-share-non-primitives") {
+
+    currentRuntime.picklers.clearRegisteredPicklerUnpicklerFor[C]
+
     import shareNothing._
     c1.c = null
     val pickle = c3.pickle
