@@ -29,12 +29,15 @@ trait PicklerRegistry {
     */
   def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit share: refs.Share): Pickler[_]
 
+  /** Checks if lookup is enabled for this registry */
+  def isLookupEnabled: Boolean
 
   /** Checks the existince of an unpickler.
     *
     * This will also check any registered generator functions.
     */
   def lookupUnpickler(key: String): Option[Unpickler[_]]
+
   /** Looks for a pickler with the given FastTypeTag string.
     *
     * This will also check any registered generator functions.

@@ -106,7 +106,7 @@ object AutoRegister {
   import scala.pickling.internal.currentRuntime
 
   private def isLookupEnabled: Boolean =
-    !currentRuntime.isInstanceOf[NoReflectionRuntime]
+    currentRuntime.picklers.isLookupEnabled
 
   private[pickling] def existsPicklerFor(key: String) =
     isLookupEnabled && currentRuntime.picklers.lookupExistingPickler(key).isEmpty

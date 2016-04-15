@@ -20,6 +20,7 @@ final class NoReflectionRuntime() extends PicklingRuntime {
       throw new UnsupportedOperationException(s"Runtime pickler generation is disabled.  Cannot create unpickler for $tagKey")
     override def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit share: Share): Pickler[_] =
       throw new UnsupportedOperationException(s"Runtime pickler generation is disabled.  Cannot create pickler for $tag")
+    override val isLookupEnabled: Boolean = false
     override def lookupUnpickler(key: String): Option[Unpickler[_]] = None
     override def lookupPickler(key: String): Option[Pickler[_]] = None
     override def lookupExistingPickler(key: String): Option[Pickler[_]] = None
