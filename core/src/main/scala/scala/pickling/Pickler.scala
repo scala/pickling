@@ -102,27 +102,11 @@ object PicklerUnpickler {
   }
 }
 
-object AutoRegister {
-  import scala.pickling.internal.currentRuntime
-
-  private def isLookupEnabled: Boolean =
-    currentRuntime.picklers.isLookupEnabled
-
-  private[pickling] def existsPicklerFor(key: String) =
-    isLookupEnabled && currentRuntime.picklers.lookupExistingPickler(key).isEmpty
-
-  private[pickling] def existsUnpicklerFor(key: String) =
-    isLookupEnabled && currentRuntime.picklers.lookupExistingUnpickler(key).isEmpty
-
-}
-
 trait AutoRegisterPickler[T] {
   this: Pickler[T] =>
 
   locally {
-    if (AutoRegister.existsPicklerFor(tag.key)) {
-      currentRuntime.picklers.registerPickler(this)
-    }
+    currentRuntime.picklers.registerPickler(this)
   }
 
 }
@@ -131,9 +115,7 @@ trait AutoRegisterUnpickler[T] {
   this: Unpickler[T] =>
 
   locally {
-    if (AutoRegister.existsUnpicklerFor(tag.key)) {
-      currentRuntime.picklers.registerUnpickler(this)
-    }
+    currentRuntime.picklers.registerUnpickler(this)
   }
 
 }
