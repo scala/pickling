@@ -52,7 +52,15 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
   override def registerUnpickler[T](key: String, p: Unpickler[T]): Unit =
     unpicklerMap.put(key, p)
 
-  /** Checks the existince of an unpickler. */
+  /** Checks the existence of a pickler ignoring the registered generators. */
+  override def lookupExistingPickler(key: String): Option[Pickler[_]] =
+    picklerMap.get(key)
+
+  /** Checks the existence of an unpickler ignoring the registered generators. */
+  override def lookupExistingUnpickler(key: String): Option[Unpickler[_]] =
+    unpicklerMap.get(key)
+
+  /** Checks the existence of an unpickler. */
   override def lookupUnpickler(key: String): Option[Unpickler[_]] = {
     unpicklerMap.get(key) match {
       case x: Some[Unpickler[_]] => x

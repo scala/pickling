@@ -41,6 +41,11 @@ trait PicklerRegistry {
     */
   def lookupPickler(key: String): Option[Pickler[_]]
 
+  /** Checks the existence of an unpickler ignoring the registered generators. */
+  def lookupExistingUnpickler(key: String): Option[Unpickler[_]]
+
+  /** Checks the existence of a pickler ignoring the registered generators. */
+  def lookupExistingPickler(key: String): Option[Pickler[_]]
 
   /** Registers a pickler with this registry for future use.
     *

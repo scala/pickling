@@ -2,7 +2,8 @@ package scala.pickling
 package pickler
 
 /** An pickler for "Any" value (will look up pickler at runtime, or generate it. */
-object AnyPickler extends Pickler[Any] {
+object AnyPickler extends Pickler[Any] with AutoRegisterPickler[Any] {
+  override def tag: FastTypeTag[Any] = FastTypeTag.Any
   override def pickle(picklee: Any, builder: PBuilder): Unit = {
     // Here we just look up the pickler.
     val clazz = picklee.getClass
@@ -13,16 +14,15 @@ object AnyPickler extends Pickler[Any] {
     val p = internal.currentRuntime.picklers.genPickler(classLoader, clazz, tag)
     p.asInstanceOf[Pickler[Any]].pickle(picklee, builder)
   }
-  override def tag: FastTypeTag[Any] = FastTypeTag.Any
   override def toString = "AnyPickler"
 }
 /** An unpickler for "Any" value (will look up unpickler at runtime, or generate it. */
-object AnyUnpickler extends Unpickler[Any] {
+object AnyUnpickler extends Unpickler[Any] with AutoRegisterUnpickler[Any] {
+  def tag: FastTypeTag[Any] = FastTypeTag.Any
   def unpickle(tag: String, reader: PReader): Any = {
     val actualUnpickler = internal.currentRuntime.picklers.genUnpickler(scala.reflect.runtime.currentMirror, tag)
     actualUnpickler.unpickle(tag, reader)
   }
-  def tag: FastTypeTag[Any] = FastTypeTag.Any
   override def toString = "AnyUnPickler"
 }
 

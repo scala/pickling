@@ -29,19 +29,17 @@ class NonPublicWeirdTest extends FunSuite {
     """.stripMargin.trim)
     assert(personPickle.unpickle[Person].toString === person.toString)
 
-    // TODO: when generating a Person pickler at runtime, we should be able to reuse the one which was generated at compile-time
-    // but we aren't auto-registering the compiled picklers.
-    // Once we do so these JSON pickles should change.
+    // This will get the registered pickler for person
     val anyPickle = (person: Any).pickle
     assert(anyPickle.toString === """
       |JSONPickle({
       |  "$type": "scala.pickling.non.public.weird.Person",
-      |  "name": "Eugene",
       |  "hobby": {
+      |    "attitude": "loving it",
       |    "name": "hacking",
-      |    "notes": "mostly Scala",
-      |    "attitude": "loving it"
-      |  }
+      |    "notes": "mostly Scala"
+      |  },
+      |  "name": "Eugene"
       |})
     """.stripMargin.trim)
     assert(anyPickle.unpickle[Person].toString === person.toString)
