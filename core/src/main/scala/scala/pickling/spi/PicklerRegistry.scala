@@ -29,12 +29,15 @@ trait PicklerRegistry {
     */
   def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit share: refs.Share): Pickler[_]
 
+  /** Checks if lookup is enabled for this registry */
+  def isLookupEnabled: Boolean
 
   /** Checks the existince of an unpickler.
     *
     * This will also check any registered generator functions.
     */
   def lookupUnpickler(key: String): Option[Unpickler[_]]
+
   /** Looks for a pickler with the given FastTypeTag string.
     *
     * This will also check any registered generator functions.
@@ -95,5 +98,12 @@ trait PicklerRegistry {
     *                   this type.
     */
   def registerPicklerUnpicklerGenerator[T](typeConstructorKey: String, generator: FastTypeTag[_] => (Pickler[T] with Unpickler[T])): Unit
-  // TODO - Some kind of clean or inspect what we have?
+
+  /** Clear the registered pickler/unpickler for a given type.
+    *
+    * Useful for avoiding conflict between picklers registered with different
+    * sharing strategies and are cached when they're initialised.
+    */
+  private[pickling] def clearRegisteredPicklerUnpicklerFor[T: FastTypeTag]: Unit
+
 }
