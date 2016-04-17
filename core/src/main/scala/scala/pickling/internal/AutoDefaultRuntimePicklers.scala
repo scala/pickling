@@ -1,7 +1,7 @@
 package scala.pickling
 package internal
 
-import scala.pickling.pickler.AnyUnpickler
+import scala.pickling.pickler.AnyPicklerUnpickler
 import scala.pickling.runtime.{Tuple2RTKnownTagUnpickler, Tuple2RTPickler}
 import scala.pickling.spi.PicklerRegistry
 
@@ -59,9 +59,9 @@ trait RuntimePicklerRegistryHelper extends PicklerRegistry {
   def tupleUnpicklerGenerator: FastTypeTag[_] => Unpickler[(Any,Any)] = {
     case FastTypeTag(_, List(left, right)) =>
       val lhs = 
-        currentRuntime.picklers.lookupUnpickler(left.toString).getOrElse(AnyUnpickler).asInstanceOf[Unpickler[Any]]
+        currentRuntime.picklers.lookupUnpickler(left.toString).getOrElse(AnyPicklerUnpickler).asInstanceOf[Unpickler[Any]]
       val rhs =
-        currentRuntime.picklers.lookupUnpickler(right.toString).getOrElse(AnyUnpickler).asInstanceOf[Unpickler[Any]]
+        currentRuntime.picklers.lookupUnpickler(right.toString).getOrElse(AnyPicklerUnpickler).asInstanceOf[Unpickler[Any]]
       new Tuple2RTKnownTagUnpickler(lhs, rhs)
     case tpe => new Tuple2RTPickler()
   }

@@ -1,76 +1,69 @@
 package scala.pickling
 package pickler
 
-/** Picklers for either trait. */
+/** Generate [[Pickler]]s and [[Unpickler]]s for [[Either]]
+  * and its subclasses [[Right]] and [[Left]].
+  */
 trait EitherPicklers {
   // TODO(jsuereth) - Register pickler generators
 
-  implicit def pickleLeft[L, R](implicit lp: Pickler[L], t: FastTypeTag[Left[L,R]]): Pickler[Left[L, R]] =
-     new AbstractPickler[Left[L, R]] with AutoRegisterPickler[Left[L, R]] {
+  implicit def pickleUnpickleLeft[L, R](implicit lp: Pickler[L], lu: Unpickler[L],
+                                        t: FastTypeTag[Left[L,R]]): AbstractPicklerUnpickler[Left[L, R]] =
+     new AbstractPicklerUnpickler[Left[L, R]] with AutoRegister[Left[L, R]] {
+       override lazy val tag: FastTypeTag[Left[L, R]] = t
        override def pickle(picklee: Left[L, R], builder: PBuilder): Unit = {
          builder.beginEntry(picklee, tag)
          if(lp.tag.isEffectivelyPrimitive) builder.hintElidedType(lp.tag)
          builder.putField("a", b => lp.pickle(picklee.a, b))
          builder.endEntry()
        }
-       override def tag: FastTypeTag[Left[L, R]] = t
-       override def toString = s"LeftPickler($tag)"
+       override def unpickle(tag: String, reader: PReader): Any = {
+         if (t.key == tag) {
+           val rr = reader.readField("a")
+           if(lp.tag.isEffectivelyPrimitive) rr.hintElidedType(lp.tag)
+           Left(lu.unpickleEntry(rr).asInstanceOf[R])
+         } else throw new PicklingException(s"LeftUnpickler can't unpickle: $tag")
+       }
+       override def toString = s"LeftPicklerUnpickler($tag)"
      }
-  implicit def pickleRight[L,R](implicit rp: Pickler[R], t: FastTypeTag[Right[L,R]]): Pickler[Right[L,R]] =
-    new AbstractPickler[Right[L, R]] with AutoRegisterPickler[Right[L, R]] {
+
+  implicit def pickleUnpickleRight[L,R](implicit rp: Pickler[R], ru: Unpickler[R],
+                                        t: FastTypeTag[Right[L,R]]): AbstractPicklerUnpickler[Right[L,R]] =
+    new AbstractPicklerUnpickler[Right[L, R]] with AutoRegister[Right[L, R]] {
+      override lazy val tag: FastTypeTag[Right[L, R]] = t
       override def pickle(picklee: Right[L, R], builder: PBuilder): Unit = {
         builder.beginEntry(picklee, tag)
         if(rp.tag.isEffectivelyPrimitive) builder.hintElidedType(rp.tag)
         builder.putField("b", b => rp.pickle(picklee.b, b))
         builder.endEntry()
       }
-      override def tag: FastTypeTag[Right[L, R]] = t
-      override def toString = s"RightPickler($tag)"
+      override def unpickle(tag: String, reader: PReader): Any = {
+        if (t.key == tag) {
+          val rr = reader.readField("b")
+          if(rp.tag.isEffectivelyPrimitive) rr.hintElidedType(rp.tag)
+          Right(ru.unpickleEntry(rr).asInstanceOf[R])
+        } else throw new PicklingException(s"RightUnpickler can't unpickle: $tag")
+      }
+      override def toString = s"RightPicklerUnpickler($tag)"
     }
 
-  implicit def pickleEither[L,R](implicit rp: Pickler[Right[L,R]], lp: Pickler[Left[L,R]], t: FastTypeTag[Either[L,R]]): Pickler[Either[L,R]] =
-    new AbstractPickler[Either[L, R]] with AutoRegisterPickler[Either[L, R]] {
+  implicit def pickleUnpickleEither[L,R](implicit rp: Pickler[Right[L,R]], ru: Unpickler[Right[L, R]],
+                                         lp: Pickler[Left[L,R]], lu: Unpickler[Left[L, R]],
+                                         t: FastTypeTag[Either[L,R]]): AbstractPicklerUnpickler[Either[L,R]] =
+    new AbstractPicklerUnpickler[Either[L, R]] with AutoRegister[Either[L, R]] {
       override def pickle(picklee: Either[L, R], builder: PBuilder): Unit = {
         picklee match {
           case l: Left[L,R] => lp.pickle(l, builder)
           case r: Right[L,R] => rp.pickle(r, builder)
         }
       }
+      override def unpickle(tag: String, reader: PReader): Any = {
+        if(tag == rp.tag.key) ru.unpickle(tag,reader)
+        else if(tag == lp.tag.key) lu.unpickle(tag, reader)
+        else throw new PicklingException(s"Unknown type tag for Either: $tag")
+      }
       override def tag: FastTypeTag[Either[L, R]] = t
-      override def toString = s"EitherPickler($t)"
+      override def toString = s"EitherPicklerUnpickler($t)"
     }
 
-  implicit def unpickleLeft[L, R](implicit lp: Unpickler[L], t: FastTypeTag[Left[L,R]]): Unpickler[Left[L, R]] =
-    new AbstractUnpickler[Left[L, R]] with AutoRegisterUnpickler[Left[L, R]] {
-      override def toString = s"LeftUnpickler($tag)"
-      override def unpickle(tag: String, reader: PReader): Any = {
-        // TODO - check tag == our tag?
-        val rr = reader.readField("a")
-        if(lp.tag.isEffectivelyPrimitive) rr.hintElidedType(lp.tag)
-        Left(lp.unpickleEntry(rr).asInstanceOf[R])
-      }
-      override def tag: FastTypeTag[Left[L, R]] = t
-    }
-  implicit def unpickleRight[L, R](implicit rp: Unpickler[R], t: FastTypeTag[Right[L,R]]): Unpickler[Right[L, R]] =
-    new AbstractUnpickler[Right[L, R]] with AutoRegisterUnpickler[Right[L, R]] {
-      override def unpickle(tag: String, reader: PReader): Any = {
-        // TODO - check tag == our tag?
-        val rr = reader.readField("b")
-        if(rp.tag.isEffectivelyPrimitive) rr.hintElidedType(rp.tag)
-        Right(rp.unpickleEntry(rr).asInstanceOf[R])
-      }
-      override def tag: FastTypeTag[Right[L, R]] = t
-      override def toString = s"RightUnpickler($tag)"
-    }
-  implicit def unpickleEither[L, R](implicit rp: Unpickler[Right[L,R]], lp: Unpickler[Left[L,R]],
-                                   t: FastTypeTag[Either[L,R]]): Unpickler[Either[L, R]] =
-    new AbstractUnpickler[Either[L, R]] with AutoRegisterUnpickler[Either[L, R]] {
-      override def unpickle(tag: String, reader: PReader): Any = {
-        if(tag == rp.tag.key) rp.unpickle(tag,reader)
-          else if(tag == lp.tag.key) lp.unpickle(tag, reader)
-          else throw new PicklingException(s"Unknown type tag for Either: $tag")
-      }
-      override def tag: FastTypeTag[Either[L, R]] = t
-      override def toString = s"EitherUnpickler($tag)"
-    }
 }

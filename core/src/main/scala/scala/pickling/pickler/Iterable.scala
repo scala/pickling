@@ -53,11 +53,11 @@ object TravPickler {
   def generate[T, C](cbf: CanBuildFrom[C,T,C], asTraversable: C => Traversable[_])(elementTagExtractor: FastTypeTag[_] => FastTypeTag[T])(tpe: FastTypeTag[_]): AbstractPicklerUnpickler[C] = {
     val elementType = elementTagExtractor(tpe)
     val elemPickler =
-      if(elementType.key == ANY_TAG.key) AnyPickler
+      if(elementType.key == ANY_TAG.key) AnyPicklerUnpickler
       else currentRuntime.picklers.lookupPickler(elementType.key).getOrElse(
         throw new PicklingException(s"Cannnot generate a pickler/unpickler for $tpe, cannot find a pickler for $elementType"))
     val elemUnpickler =
-      if(elementType.key == ANY_TAG.key) AnyUnpickler
+      if(elementType.key == ANY_TAG.key) AnyPicklerUnpickler
       else currentRuntime.picklers.lookupUnpickler(elementType.key).getOrElse(
         throw new PicklingException(s"Cannnot generate a pickler/unpickler for $tpe, cannot find an unpickler for $elementType"))
     val colTag = tpe
