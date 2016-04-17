@@ -1,6 +1,6 @@
 package scala.pickling.test.sealedtraitstaticannotated
 
-import scala.pickling.{PicklingException, directSubclasses, Pickler, Unpickler, Defaults }
+import scala.pickling._
 import scala.pickling.static._
 import scala.pickling.json._
 import Defaults.{ stringPickler, intPickler, refUnpickler, nullPickler }
@@ -13,15 +13,13 @@ import org.scalatest.FunSuite
 trait Fruit
 
 object Banana {
-  implicit val pickler = Defaults.genPickler[Banana]
-  implicit val unpickler = Defaults.genUnpickler[Banana]
+  implicit val picklerUnpickler = Defaults.genPickler[Banana]
 }
 
 // this is BEFORE the subtypes below so directKnownSubclasses probably
 // won't work and this would break without the directSubclasses annotation.
 object Fruit {
-  implicit val pickler = Defaults.genPickler[Fruit]
-  implicit val unpickler = Defaults.genUnpickler[Fruit]
+  implicit val picklerUnpickler = Defaults.genPickler[Fruit]
 }
 
 sealed trait RedOrOrangeFruit extends Fruit
@@ -86,8 +84,7 @@ class SealedTraitStaticAnnotatedTest extends FunSuite {
   }
 
   test("manually generate") {
-    implicit val pumpkinPickler = Pickler.generate[Pumpkin]
-    implicit val pumpkinUnpickler = Unpickler.generate[Pumpkin]
+    implicit val pumpkinPicklerUnpickler = PicklerUnpickler.generate[Pumpkin]
     val pumpkin = Pumpkin("Kabocha")
     val pumpkinString = pumpkin.pickle.value
     assert(JSONPickle(pumpkinString).unpickle[Pumpkin] == pumpkin)

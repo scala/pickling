@@ -30,10 +30,11 @@ class PrimitivePickler[T: FastTypeTag](name: String)
   }
   override def unpickle(tag: String, reader: PReader): Any = {
     try {
-      reader.beginEntry()
-      val readValue = reader.readPrimitive()
-      reader.endEntry()
-      readValue
+      // Don't use beginEntry/endEntry because
+      // tag has to be elided and there's some
+      // incompatibilities between java and scala
+      // primitive types (like String or Int)
+      reader.readPrimitive()
     } catch { case PicklingException(msg, cause) =>
         throw PicklingException(
           s"""error in unpickle of primitive unpickler '$name':

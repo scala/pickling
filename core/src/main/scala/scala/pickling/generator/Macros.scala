@@ -3,9 +3,17 @@ package generator
 
 private[pickling] object PicklingMacros {
   import scala.language.experimental.macros
-  def genPickler[T]: Pickler[T] with Generated = macro scala.pickling.generator.Compat.genPickler_impl[T]
-  def genUnpickler[T]: Unpickler[T] with Generated = macro scala.pickling.generator.Compat.genUnpickler_impl[T]
-  def genPicklerUnpickler[T]: AbstractPicklerUnpickler[T] with Generated = macro scala.pickling.generator.Compat.genPicklerUnpickler_impl[T]
+
+  @deprecated("Use `genPicklerUnpickler` instead", "0.11")
+  def genPickler[T]: AbstractPicklerUnpickler[T] with Generated =
+    macro scala.pickling.generator.Compat.genPicklerUnpickler_impl[T]
+
+  @deprecated("Use `genPicklerUnpickler` instead", "0.11")
+  def genUnpickler[T]: AbstractPicklerUnpickler[T] with Generated =
+    macro scala.pickling.generator.Compat.genPicklerUnpickler_impl[T]
+
+  def genPicklerUnpickler[T]: AbstractPicklerUnpickler[T] with Generated =
+    macro scala.pickling.generator.Compat.genPicklerUnpickler_impl[T]
 }
 private[pickling] trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
   import c.universe._
@@ -51,59 +59,6 @@ private[pickling] trait PicklingMacros extends Macro with SourceGenerator with T
         ()  // This case is fine.
       case _ =>
         c.abort(c.enclosingPosition, s"cannot generate pickling logic for non-class type $tpe")
-    }
-  }
-
-  def genPickler[T: c.WeakTypeTag]: c.Tree = preferringAlternativeImplicits {
-    val tpe = computeType[T]
-    checkClassType(tpe)
-    val sym = symbols.newClass(tpe)
-    val impl = PicklingAlgorithm.run(generator)(sym, logger)
-    val tree2 = impl map {
-      case PickleUnpickleImplementation(alg2, alg) => generatePicklerClass[T](alg2)
-    }
-    tree2 match {
-      case None =>
-        c.error(c.enclosingPosition, s"Failed to generate pickler for $tpe")
-        ???
-      case Some(tree) =>
-        //System.err.println(s" --=== $tpe ===--\n$tree\n --=== / $tpe ===--")
-        tree
-    }
-  }
-  def genUnPickler[T: c.WeakTypeTag]: c.Tree = preferringAlternativeImplicits {
-    val tpe = computeType[T]
-    checkClassType(tpe)
-    val sym = symbols.newClass(tpe)
-    val impl = PicklingAlgorithm.run(generator)(sym, logger)
-    val tree2 = impl map {
-      case PickleUnpickleImplementation(alg2, alg) => generateUnpicklerClass[T](alg)
-    }
-    tree2 match {
-      case None =>
-        c.error(c.enclosingPosition, s"Failed to generate unpickler for $tpe")
-        ???
-      case Some(tree) =>
-        //System.err.println(s" --=== $tpe ===--\n$tree\n --=== / $tpe ===--")
-        tree
-    }
-  }
-
-  def debugPicklerUnpickler[T: c.WeakTypeTag]: c.Tree = preferringAlternativeImplicits {
-    val tpe = computeType[T]
-    checkClassType(tpe)
-    val sym = symbols.newClass(tpe)
-    val impl = PicklingAlgorithm.run(generator)(sym, logger)
-    //System.err.println(impl)
-    val tree2 = impl map generatePicklerUnpicklerClass[T]
-    tree2 match {
-      case None =>
-        c.error(c.enclosingPosition, s"Failed to generate pickler/unpickler for $tpe")
-        ???
-      case Some(tree) =>
-        //System.err.println(s" --=== $tpe ===--\n$tree\n --=== / $tpe ===--")
-        val treeString = s"$tree"
-         q"$treeString"
     }
   }
 

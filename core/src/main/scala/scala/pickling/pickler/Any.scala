@@ -9,7 +9,7 @@ import scala.reflect.runtime.currentMirror
   *
   * It will look up pickler/unpickler at runtime, or generate it.
   */
-object AnyPicklerUnpickler extends Pickler[Any] with Unpickler[Any]
+object AnyPicklerUnpickler extends AbstractPicklerUnpickler[Any]
     with AutoRegister[Any] {
 
   override def tag: FastTypeTag[Any] = FastTypeTag.Any
