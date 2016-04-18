@@ -44,5 +44,5 @@ object AnyPicklerUnpickler extends AbstractPicklerUnpickler[Any]
 }
 
 trait AnyUnpicklers {
-  implicit val anyUnpickler: Unpickler[Any] = AnyPicklerUnpickler
+  implicit val anyPicklerUnpickler: AbstractPicklerUnpickler[Any] = AnyPicklerUnpickler
 }

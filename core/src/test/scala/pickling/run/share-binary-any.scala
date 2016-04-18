@@ -40,6 +40,7 @@ class ShareBinaryAnyTest extends FunSuite {
 
     intercept[StackOverflowError] {
       import shareNothing._
+      implicit val pu = PicklerUnpickler.generate[C]
       c1.c = c3
       (c2: Any).pickle
     }
