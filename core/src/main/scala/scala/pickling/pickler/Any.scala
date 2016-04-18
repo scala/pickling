@@ -1,34 +1,48 @@
 package scala.pickling
 package pickler
 
-/** An pickler for "Any" value (will look up pickler at runtime, or generate it. */
-object AnyPickler extends Pickler[Any] with AutoRegisterPickler[Any] {
+import scala.pickling.internal.GRL
+import scala.pickling.internal.currentRuntime
+import scala.reflect.runtime.currentMirror
+
+/** Generate a [[Pickler]] and [[Unpickler]] for [[Any]].
+  *
+  * It will look up pickler/unpickler at runtime, or generate it.
+  */
+object AnyPicklerUnpickler extends AbstractPicklerUnpickler[Any]
+    with AutoRegister[Any] {
+
   override def tag: FastTypeTag[Any] = FastTypeTag.Any
+
+  /** Pickle [[Any]] by getting its class at runtime and looking
+    * up the correct [[Pickler]] for that class if available or
+    * generate it.
+    *
+    * Don't use [[AnyPicklerUnpickler]] for pickling classes with generic
+    * types. Otherwise, it will fail because of the type erasure
+    * and the lookup will replace the unknown type by [[Any]].
+    */
   override def pickle(picklee: Any, builder: PBuilder): Unit = {
-    // Here we just look up the pickler.
     val clazz = picklee.getClass
     val classLoader = this.getClass.getClassLoader
-    internal.GRL.lock()
+    GRL.lock()
     val tag = try FastTypeTag.makeRaw(clazz)
-    finally internal.GRL.unlock()
-    val p = internal.currentRuntime.picklers.genPickler(classLoader, clazz, tag)
+    finally GRL.unlock()
+    val p = currentRuntime.picklers.genPickler(classLoader, clazz, tag)
     p.asInstanceOf[Pickler[Any]].pickle(picklee, builder)
   }
-  override def toString = "AnyPickler"
-}
-/** An unpickler for "Any" value (will look up unpickler at runtime, or generate it. */
-object AnyUnpickler extends Unpickler[Any] with AutoRegisterUnpickler[Any] {
-  def tag: FastTypeTag[Any] = FastTypeTag.Any
+
+  /** Unpickle something as [[Any]] by looking up registered
+    * unpicklers for [[tag]] or using runtime unpickler generation.
+    */
   def unpickle(tag: String, reader: PReader): Any = {
-    val actualUnpickler = internal.currentRuntime.picklers.genUnpickler(scala.reflect.runtime.currentMirror, tag)
+    val actualUnpickler = currentRuntime.picklers.genUnpickler(currentMirror, tag)
     actualUnpickler.unpickle(tag, reader)
   }
-  override def toString = "AnyUnPickler"
+
+  override def toString = "AnyPicklerUnpickler"
 }
 
-/** Attempts to unpickle Any by looking up registered unpicklers using `currentMirror`.
- */
 trait AnyUnpicklers {
-  // Any
-  implicit val anyUnpickler: Unpickler[Any] = AnyUnpickler
+  implicit val anyPicklerUnpickler: AbstractPicklerUnpickler[Any] = AnyPicklerUnpickler
 }
