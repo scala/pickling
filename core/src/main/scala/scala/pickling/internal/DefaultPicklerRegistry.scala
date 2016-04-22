@@ -10,14 +10,16 @@ import scala.pickling.spi.{PicklerRegistry, RuntimePicklerGenerator}
 
 /** Default pickle registry just uses TrieMaps and delgates behavior to a runtime pickler generator. */
 final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends PicklerRegistry with RuntimePicklerRegistryHelper {
-  type PicklerGenerator = FastTypeTag[_] => Pickler[_]
-  type UnpicklerGenerator = FastTypeTag[_] => Unpickler[_]
+
+  type PicklerGen = FastTypeTag[_] => Pickler[_]
+  type UnpicklerGen = FastTypeTag[_] => Unpickler[_]
+
   // TODO - We need to move the special encoding for runtime classes into here, rather than in magical traits.
 
   private val picklerMap: mutable.Map[String, Pickler[_]] = new TrieMap[String, Pickler[_]]
-  private val picklerGenMap: mutable.Map[String, PicklerGenerator] = new TrieMap[String, PicklerGenerator]
+  private val picklerGenMap: mutable.Map[String, PicklerGen] = new TrieMap[String, PicklerGen]
   private val unpicklerMap: mutable.Map[String, Unpickler[_]] = new TrieMap[String, Unpickler[_]]
-  private val unpicklerGenMap: mutable.Map[String, UnpicklerGenerator] = new TrieMap[String, UnpicklerGenerator]
+  private val unpicklerGenMap: mutable.Map[String, UnpicklerGen] = new TrieMap[String, UnpicklerGen]
 
   // During constrcution, we can now register the default picklers against our cache of picklers.
   autoRegisterDefaults()
@@ -130,6 +132,7 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
     picklerGenMap.put(typeConstructorKey, generator)
 
   /** Registers a pickler and unpickler for a type with this registry for future use.
+ *
     * @param key  The type key for the pickler. Note: In reflective scenarios this may not include type parameters.
     *             In those situations, the pickler should be able to handle arbitrary (existential) type parameters.
     * @param p  The unpickler to register.
@@ -149,4 +152,25 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator) extends P
     registerPicklerGenerator(typeConstructorKey, generator)
     registerUnpicklerGenerator(typeConstructorKey, generator)
   }
+
+  /** Transfer the "state" between different [[scala.pickling.spi.PicklingRuntime]]s.
+    *
+    * Watch out, this operation is not thread-safe.
+    *
+    * Make a new [[scala.pickling.spi.PicklingRuntime]] aware of
+    * the already registered [[Pickler]]s and [[Unpickler]]s present
+    * in the one that will be replaced.
+    */
+  private[pickling] def dumpStateTo(r: PicklerRegistry): Unit = {
+
+    type AnyPicklerGen = FastTypeTag[_] => Pickler[Any]
+    type AnyUnpicklerGen = FastTypeTag[_] => Unpickler[Any]
+
+    for(p <- picklerMap) r.registerPickler(p._1, p._2.asInstanceOf[Pickler[Any]])
+    for(p <- picklerGenMap) r.registerPicklerGenerator(p._1, p._2.asInstanceOf[AnyPicklerGen])
+    for(u <- unpicklerMap) r.registerUnpickler(u._1, u._2.asInstanceOf[Unpickler[Any]])
+    for(u <- unpicklerGenMap) r.registerUnpicklerGenerator(u._1, u._2.asInstanceOf[AnyUnpicklerGen])
+
+  }
+
 }

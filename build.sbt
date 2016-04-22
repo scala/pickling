@@ -3,7 +3,7 @@ import Dependencies._ // see project/Dependencies.scala
 import scala.xml.{Node => XmlNode, NodeSeq => XmlNodeSeq, _}
 import scala.xml.transform.{RewriteRule, RuleTransformer}
 
-val buildVersion = "0.11.0-SNAPSHOT"
+val buildVersion = "0.11.0-M4"
 
 def commonSettings = Seq(
   version in ThisBuild := buildVersion,
@@ -58,7 +58,7 @@ def noPublish = Seq(
 
 // Use root project
 lazy val root: Project = (project in file(".")).
-  aggregate(core, benchmark, sandbox, macroTests).
+  aggregate(core, benchmark, sandbox, sandboxTests, macroTests).
   settings(commonSettings ++ noPublish: _*).
   settings(
     name := "Scala Pickling",
@@ -124,6 +124,18 @@ lazy val sandbox: Project = (project in file("sandbox")).
     // scalacOptions ++= Seq()
     scalacOptions ++= Seq("-Xlog-implicits")
     // scalacOptions ++= Seq("-Xprint:typer")
+  )
+
+/* This submodule is meant to store tests that need to be executed
+ * independently from the main test suite placed in `core`. */
+lazy val sandboxTests: Project = (project in file("sandbox-test")).
+  dependsOn(core).
+  settings(commonSettings ++ noPublish: _*).
+  settings(
+    libraryDependencies ++= Seq(
+      "org.scala-lang" % "scala-compiler" % scalaVersion.value,
+      scalaTest
+    )
   )
 
 lazy val benchmark: Project = (project in file("benchmark")).

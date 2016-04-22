@@ -5,13 +5,12 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.language.experimental.macros
 import scala.language.reflectiveCalls
 
-import java.util.IdentityHashMap
-
 import HasCompat._
 
 package object internal {
 
   import scala.reflect.runtime.{universe => ru}
+  import spi._
   import ru._
   import compat._
 
@@ -24,10 +23,19 @@ package object internal {
 
     }
   }
-  private[this] var currentRuntimeVar = new AtomicReference[spi.PicklingRuntime](initDefaultRuntime)
-  def currentRuntime: spi.PicklingRuntime = currentRuntimeVar.get
-  // Here we inject a new runtime for usage.
-  def replaceRuntime(r: spi.PicklingRuntime): Unit = {
+  private[this] var currentRuntimeVar = new AtomicReference[PicklingRuntime](initDefaultRuntime)
+  def currentRuntime: PicklingRuntime = currentRuntimeVar.get
+
+  /** Replace the old [[PicklingRuntime]] keeping its state. This operation
+    * is not thread-safe and it's expected to be executed in a single thread.
+    *
+    * Note that we don't do anything with the [[RefRegistry]] because in
+    * future versions we are going to change how cyclic references work.
+    */
+  def replaceRuntime(r: PicklingRuntime): Unit = {
+    if(r.picklers.isLookupEnabled) {
+      currentRuntime.picklers.dumpStateTo(r.picklers)
+    }
     currentRuntimeVar.lazySet(r)
   }
 
