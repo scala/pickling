@@ -1,9 +1,9 @@
 package scala.pickling.binary
 
 import scala.pickling._
+import PicklingErrors._
 import scala.pickling.internal._
 import scala.language.implicitConversions
-import scala.reflect.runtime.universe.Mirror
 
 import java.io.InputStream
 import java.nio.ByteBuffer
@@ -188,7 +188,7 @@ class BinaryPickleReader(in: BinaryInput, format: BinaryPickleFormat) extends Ab
           case NULL_TAG =>
             FastTypeTag.Null
           case ELIDED_TAG =>
-            hints.elidedType.getOrElse(throw new PicklingException(s"Type is elided in pickle, but no elide hint was provided by unpickler!"))
+            hints.elidedType.getOrElse(throw NoTypeHint)
           case REF_TAG =>
             FastTypeTag.Ref
           case _ =>
@@ -196,8 +196,11 @@ class BinaryPickleReader(in: BinaryInput, format: BinaryPickleFormat) extends Ab
             val res = try {
               in.getStringWithLookahead(lookahead)
             } catch {
-              case PicklingException(msg, cause) =>
-                throw PicklingException(s"error decoding type string. debug info: $hints\ncause:$msg")
+              case e @ BasePicklingException(msg, cause) =>
+                throw Wrapper(e,
+                  s"""Error decoding type string. Debug info: $hints
+                     |Message: $msg
+                   """.stripMargin, "\n")
             }
             res
         }

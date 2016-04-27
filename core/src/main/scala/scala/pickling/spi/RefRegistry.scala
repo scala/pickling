@@ -25,7 +25,7 @@ trait RefUnpicklingRegistry {
   /** Grabs the registeration id for the next object. */
   def preregisterUnpicklee(): Int
   /** Registers an object to an id, after its FIRST deserialization. */
-  def regsiterUnpicklee(oid: Int, value: Any): Unit
+  def registerUnpicklee(oid: Int, value: Any): Unit
   /** Looks up an unpicklee by its object id. Throws an exception if oid is not valid. */
   def lookupUnpicklee(oid: Int): Any
   /** Removes all instances from the registry.  This should be done AFTER a top-level unpickle/pickle call. */

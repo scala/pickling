@@ -104,7 +104,8 @@ object FastTypeTag {
       appliedType(tycon, tag.typeArgs.map(_.reflectType(mirror)))
     }
     val stpe = tag.key
-    if (typeFromStringCache.contains(stpe)) typeFromStringCache(stpe)
+    val lookup = typeFromStringCache.get(stpe)
+    if (lookup.nonEmpty) lookup.get
     else {
       val result = calculate
       typeFromStringCache(stpe) = result

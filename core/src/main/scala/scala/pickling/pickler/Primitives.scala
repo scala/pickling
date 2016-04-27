@@ -1,6 +1,8 @@
 package scala.pickling
 package pickler
 
+import scala.pickling.PicklingErrors.{FailedUnpickling, BasePicklingException}
+
 /** Generate [[Pickler]]s and [[Unpickler]]s for the primitive types.
   *
   * The primitive types are [[Byte]], [[Short]], [[Char]], [[Int]], [[Long]],
@@ -35,12 +37,8 @@ class PrimitivePickler[T: FastTypeTag](name: String)
       // incompatibilities between java and scala
       // primitive types (like String or Int)
       reader.readPrimitive()
-    } catch { case PicklingException(msg, cause) =>
-        throw PicklingException(
-          s"""error in unpickle of primitive unpickler '$name':
-             |tag in unpickle: '${tag}'
-             |message:
-             |$msg""".stripMargin, cause)
+    } catch { case BasePicklingException(msg, cause) =>
+        throw FailedUnpickling(name, tag, msg, cause)
     }
   }
 }

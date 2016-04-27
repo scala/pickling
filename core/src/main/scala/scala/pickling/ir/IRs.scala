@@ -1,6 +1,7 @@
 package scala.pickling
 package ir
 
+import scala.pickling.PicklingErrors.{LogicException, BasePicklingException}
 import scala.reflect.api.Universe
 import java.lang.reflect.Modifier
 
@@ -73,10 +74,11 @@ class IRs[U <: Universe with Singleton](val uni: U) {
       tpe.declarations.flatMap {
         case sym: MethodSymbol if sym.name.toString.startsWith("set") =>
           val shortName = sym.name.toString.substring(3)
-          if (candidates.find(_ == shortName).nonEmpty && shortName.length > 0) {
+          if (candidates.exists(_ == shortName) && shortName.length > 0) {
             val rawSymTpe = sym.typeSignatureIn(rawTpeOfOwner) match {
               case MethodType(List(param), _) => param.typeSignature
-              case _ => throw PicklingException("expected method type for method ${sym.name.toString}")
+              case _ => throw new LogicException(
+                s"Expected method type for method ${sym.name.toString}")
             }
             val symTpe = existentialAbstraction(quantified, rawSymTpe)
 

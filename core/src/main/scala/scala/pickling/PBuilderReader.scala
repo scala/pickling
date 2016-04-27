@@ -2,8 +2,6 @@ package scala.pickling
 
 import scala.language.experimental.macros
 
-import scala.reflect.runtime.universe._
-
 /**
  * Hintable defines the interface used between picklers and formats to "aide' in creating clean/efficient formats.
  *
@@ -231,14 +229,3 @@ trait PReader extends Hintable {
 // Abstract class for Java implementors of picklers.
 abstract class AbstractPReader extends PReader with PickleTools
 
-/**
- * Exception thrown when the pickling or unpickling process fails.
- * @param message error message
- * @param cause exception causing the pickling exception if any
- */
-final case class PicklingException(message: String, cause: Option[Throwable] = None) extends RuntimeException(message, cause.orNull)
-
-/**
- * Exception thrown when a stream ends unexpectedly during unpickling.
- */
-final class EndOfStreamException extends RuntimeException("End of stream reached while unpickling")

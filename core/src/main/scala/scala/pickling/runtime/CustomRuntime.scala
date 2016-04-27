@@ -1,15 +1,17 @@
 package scala.pickling
 package runtime
 
+import scala.pickling.PicklingErrors.{Wrapper, BasePicklingException}
 import scala.reflect.{runtime => reflectRuntime}
 import internal._
 
 // TODO - Move all these into the "PicklerRegistry"
 object CustomRuntime {
 
-  def mkRuntimeTravPickler[C <% Traversable[_]](elemClass: Class[_], elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
-                                                elemPickler0: Pickler[_], elemUnpickler0: Unpickler[_]):
-    Pickler[C] with Unpickler[C] = new Pickler[C] with Unpickler[C] {
+  def mkRuntimeTravPickler[C]
+    (elemClass: Class[_], elemTag: FastTypeTag[_], collTag: FastTypeTag[_],
+     elemPickler0: Pickler[_], elemUnpickler0: Unpickler[_])
+    (implicit ev: C => Traversable[_]) = new Pickler[C] with Unpickler[C] {
 
     val elemPickler   = elemPickler0.asInstanceOf[Pickler[AnyRef]]
     val elemUnpickler = elemUnpickler0.asInstanceOf[Unpickler[AnyRef]]
@@ -59,17 +61,18 @@ object CustomRuntime {
           newArray(i) = elem.asInstanceOf[AnyRef]
           i = i + 1
         } catch {
-          case PicklingException(msg, cause) =>
-            throw PicklingException(s"""error in unpickle of 'mkRuntimeTravPickler':
-                                       |collTag: '${collTag.key}'
-                                       |elemTag: '${elemTag.key}'
-                                       |message:
-                                       |$msg""".stripMargin, cause)
+          case e @ BasePicklingException(msg, cause) =>
+            throw Wrapper(e,
+              s"""Error in unpickle of 'mkRuntimeTravPickler':
+                  |collTag: '${collTag.key}'
+                  |elemTag: '${elemTag.key}'
+                  |Message:""".stripMargin)
           case e: Exception =>
-            e.printStackTrace()
-            throw PicklingException(s"""exception in unpickle of 'mkRuntimeTravPickler':
-                                       |collTag: '${collTag.key}'
-                                       |elemTag: '${elemTag.key}'""".stripMargin, Some(e))
+            throw Wrapper(e,
+              s"""Error in unpickle of 'mkRuntimeTravPickler':
+                  |collTag: '${collTag.key}'
+                  |elemTag: '${elemTag.key}'
+                  |<essage:""".stripMargin)
         }
       }
 
@@ -143,12 +146,12 @@ class Tuple2RTPickler() extends AbstractPicklerUnpickler[(Any, Any)] {
         try {
           unpickler1.unpickle(tag1, reader1)
         } catch {
-          case PicklingException(msg, cause) =>
-            throw PicklingException(s"""error in unpickle of '${this.getClass.getName}':
-                                       |field name: '$name'
-                                       |field tag: '${tag1}'
-                                       |message:
-                                       |$msg""".stripMargin, cause)
+          case e @ BasePicklingException(msg, cause) =>
+            throw Wrapper(e,
+              s"""Error in unpickle of '${this.getClass.getName}':
+                  |Field name: '$name'
+                  |Field tag: '$tag1'
+                  |Message:""".stripMargin)
         }
       }
     }

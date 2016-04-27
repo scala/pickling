@@ -2,6 +2,7 @@ package scala.pickling.test.binary
 
 import org.scalatest.FunSuite
 
+import scala.pickling.PicklingErrors.EndOfStreamException
 import scala.pickling._, scala.pickling.Defaults._, binary._
 
 import java.io.ByteArrayInputStream
@@ -77,7 +78,7 @@ class BinaryInputStreamReaderTest extends FunSuite {
       streamPickle.unpickle[Employee]
       assert(false, "EndOfStreamException not thrown")
     } catch {
-      case _: EndOfStreamException =>
+      case EndOfStreamException =>
         /* expected */
       case _: java.io.EOFException =>
         /* expected */
