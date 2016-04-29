@@ -118,64 +118,35 @@ trait CustomRuntime {
   }
 
   /** Runtime [[Pickler]] and [[Unpickler]] of tuple with unknown types. */
-  class Tuple2RuntimePicklerUnpickler extends AbstractPicklerUnpickler[(Any, Any)] {
+  object Tuple2RuntimePicklerUnpickler extends AbstractPicklerUnpickler[(Any, Any)] {
 
     val tag = FastTypeTag[(Any, Any)]("scala.Tuple2[scala.Any, scala.Any]")
-
-    def pickleField(name: String, value: Any, builder: PBuilder): Unit = {
-      // TODO This pickler should use the known tag if it is passed.
-      val (tag1, pickler1) = if (value == null) {
-        (FastTypeTag.Null.asInstanceOf[FastTypeTag[Any]],
-         Defaults.nullPickler.asInstanceOf[Pickler[Any]])
-      } else {
-        val clazz = value.getClass
-        val tag = FastTypeTag.makeRaw(clazz)
-        val pickler = currentRuntime.picklers
-          .genPickler(clazz.getClassLoader, clazz, tag)
-          .asInstanceOf[Pickler[Any]]
-        (tag, pickler)
-      }
-
-      builder.putField(name, b => {
-        pickler1.pickle(value, b)
-      })
-    }
 
     def pickle(picklee: (Any, Any), builder: PBuilder): Unit = {
       builder.beginEntry(picklee, tag)
 
-      val fld1 = picklee._1
-      pickleField("_1", fld1, builder)
-      val fld2 = picklee._2
-      pickleField("_2", fld2, builder)
+      builder.putField("_1", b => {
+        AnyPicklerUnpickler.pickle(picklee._1, b)
+      })
+
+      builder.putField("_2", b => {
+        AnyPicklerUnpickler.pickle(picklee._2, b)
+      })
 
       builder.endEntry()
     }
 
     def unpickleField(name: String, reader: PReader): Any = {
-      val reader1 = reader.readField(name)
-      val tag1 = reader1.beginEntry()
-
-      val value = {
-        if (reader1.atPrimitive) {
-          reader1.readPrimitive()
-        } else {
-          val unpickler1 = currentRuntime.picklers
-            .genUnpickler(reflectRuntime.currentMirror, tag1)
-          try {
-            unpickler1.unpickle(tag1, reader1)
-          } catch {
-            case e@BasePicklingException(msg, cause) =>
-              throw Wrapper(e,
-                s"""Error in unpickle of '${this.getClass.getName}':
-                    |Field name: '$name'
-                    |Field tag: '$tag1'
-                    |Message:""".stripMargin)
-          }
-        }
+      try {
+        val reader1 = reader.readField(name)
+        AnyPicklerUnpickler.unpickleEntry(reader1)
+      } catch {
+        case e @ BasePicklingException(msg, cause) =>
+          throw Wrapper(e,
+            s"""Error in unpickle of '${this.getClass.getName}':
+                |Field name: '$name'
+                |Message:""".stripMargin)
       }
-      reader1.endEntry()
-      value
     }
 
     def unpickle(tag: String, reader: PReader): Any = {
@@ -188,12 +159,14 @@ trait CustomRuntime {
   val tuplePicklerGenerator: PicklerUnpicklerGen[(Any, Any)] = { tpe =>
     // TODO - Actually extract the tpe of the internal things.
     val tag = FastTypeTag.apply(tpe.toString)
-    new Tuple2RuntimePicklerUnpickler
+    // TODO Remove this redundancy and reuse the tag above
+    Tuple2RuntimePicklerUnpickler
   }
 
   val tupleUnpicklerGenerator: UnpicklerGen[(Any,Any)] = {
     case FastTypeTag(_, List(left, right)) =>
 
+      // Lookup the type params since they are explicit when unpickling
       val lhs = currentRuntime.picklers.lookupUnpickler(left.toString)
         .getOrElse(AnyPicklerUnpickler).asInstanceOf[Unpickler[Any]]
       val rhs = currentRuntime.picklers.lookupUnpickler(right.toString)
@@ -201,8 +174,7 @@ trait CustomRuntime {
 
       new Tuple2RuntimeKnownTagUnpickler(lhs, rhs)
 
-    case tpe => new Tuple2RuntimePicklerUnpickler
+    case tpe => Tuple2RuntimePicklerUnpickler
   }
 
 }
-

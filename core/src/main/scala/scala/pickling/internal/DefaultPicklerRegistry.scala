@@ -12,13 +12,13 @@ import scala.pickling.spi.{PicklerRegistry, RuntimePicklerGenerator}
 final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator)
   extends PicklerRegistry with RuntimePicklerRegistry {
 
-  type PicklerGen = FastTypeTag[_] => Pickler[_]
-  type UnpicklerGen = FastTypeTag[_] => Unpickler[_]
+  type PicklerGenerator = FastTypeTag[_] => Pickler[_]
+  type UnpicklerGenerator = FastTypeTag[_] => Unpickler[_]
 
   private val picklerMap: mutable.Map[String, Pickler[_]] = new TrieMap[String, Pickler[_]]
-  private val picklerGenMap: mutable.Map[String, PicklerGen] = new TrieMap[String, PicklerGen]
+  private val picklerGenMap: mutable.Map[String, PicklerGenerator] = new TrieMap[String, PicklerGenerator]
   private val unpicklerMap: mutable.Map[String, Unpickler[_]] = new TrieMap[String, Unpickler[_]]
-  private val unpicklerGenMap: mutable.Map[String, UnpicklerGen] = new TrieMap[String, UnpicklerGen]
+  private val unpicklerGenMap: mutable.Map[String, UnpicklerGenerator] = new TrieMap[String, UnpicklerGenerator]
 
   registerRuntimePicklersAtInit()
 
@@ -162,13 +162,10 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator)
     */
   private[pickling] def dumpStateTo(r: PicklerRegistry): Unit = {
 
-    type AnyPicklerGen = FastTypeTag[_] => Pickler[Any]
-    type AnyUnpicklerGen = FastTypeTag[_] => Unpickler[Any]
-
     for(p <- picklerMap) r.registerPickler(p._1, p._2.asInstanceOf[Pickler[Any]])
-    for(p <- picklerGenMap) r.registerPicklerGenerator(p._1, p._2.asInstanceOf[AnyPicklerGen])
+    for(p <- picklerGenMap) r.registerPicklerGenerator(p._1, p._2.asInstanceOf[PicklerGen[Any]])
     for(u <- unpicklerMap) r.registerUnpickler(u._1, u._2.asInstanceOf[Unpickler[Any]])
-    for(u <- unpicklerGenMap) r.registerUnpicklerGenerator(u._1, u._2.asInstanceOf[AnyUnpicklerGen])
+    for(u <- unpicklerGenMap) r.registerUnpicklerGenerator(u._1, u._2.asInstanceOf[UnpicklerGen[Any]])
 
   }
 

@@ -8,6 +8,9 @@ private[pickling] object Feedback {
   def failedParsingMsg(x: String, format: String) =
     s"Failed to parse $x as $format."
 
+  def disabledRuntimeGenerationMsg(tpe: String, failed: String) =
+    s"Couldn't create $failed for $tpe because runtime generation is disabled."
+
 }
 
 object PicklingErrors {
@@ -55,7 +58,14 @@ object PicklingErrors {
       failedGenerationMsg(tpe, concreteTpe, "unpickler"), cause
   )
 
-  /** Represent any error related to parsgin. */
+  /** Exception thrown when it's not possible to generated a [[Pickler]]
+    * or [[Unpickler]] at runtime because runtime generation has been disabled.*/
+  final case class RuntimeGenerationDisabled(tpe: String, failed: String)
+    extends UnsupportedOperationException(
+      disabledRuntimeGenerationMsg(tpe, failed)
+    )
+
+  /** Represent any error related to parsing. */
   class ParsingException(msg: String) extends BasePicklingException(msg)
 
   /** Exception thrown when the parsing of a message is not successful.

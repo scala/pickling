@@ -10,7 +10,8 @@ import scala.pickling.spi.PicklerRegistry
   * Related to [[scala.pickling.runtime.CustomRuntime]].
   * Note: Currently this only handles Tuple2s.
   */
-trait RuntimePicklerRegistry extends PicklerRegistry with CustomRuntime {
+trait RuntimePicklerRegistry extends CustomRuntime {
+  this: PicklerRegistry =>
 
   val tupleGenerators = (tuplePicklerGenerator, tupleUnpicklerGenerator)
 
