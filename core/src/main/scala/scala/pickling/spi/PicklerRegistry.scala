@@ -106,4 +106,13 @@ trait PicklerRegistry {
     */
   private[pickling] def clearRegisteredPicklerUnpicklerFor[T: FastTypeTag]: Unit
 
+  /** Transfer the "state" between different [[PicklingRuntime]]s.
+    *
+    * Watch out, this operation is not thread-safe.
+    *
+    * Make a new [[PicklingRuntime]] aware of the already registered [[Pickler]]s
+    * and [[Unpickler]]s present in the one that will be replaced.
+    */
+  private[pickling] def dumpStateTo(r: PicklerRegistry): Unit
+
 }

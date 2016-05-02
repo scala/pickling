@@ -4,7 +4,6 @@ package internal
 import java.util.concurrent.locks.ReentrantLock
 
 import scala.pickling.refs.Share
-import scala.pickling.{Pickler, Unpickler, FastTypeTag}
 import scala.pickling.spi.{PicklerRegistry, RefRegistry, PicklingRuntime}
 import scala.reflect.runtime
 
@@ -32,6 +31,7 @@ final class NoReflectionRuntime() extends PicklingRuntime {
     override def registerUnpickler[T](key: String, p: Unpickler[T]): Unit = ()
     override def registerPicklerUnpickler[T](key: String, p: Pickler[T] with Unpickler[T]): Unit = ()
     override private[pickling] def clearRegisteredPicklerUnpicklerFor[T: FastTypeTag]: Unit = ()
+    override private[pickling] def dumpStateTo(r: scala.pickling.spi.PicklerRegistry): Unit = ()
   }
   override val refRegistry: RefRegistry = new DefaultRefRegistry()
   override val GRL: ReentrantLock = new ReentrantLock()
