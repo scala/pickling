@@ -2,11 +2,9 @@ package scala.pickling.internal
 
 import java.util.concurrent.locks.ReentrantLock
 
-import scala.pickling.internal.DefaultPicklerRegistry
-import scala.pickling.refs.Share
-import scala.pickling.{Unpickler, Pickler, FastTypeTag, refs}
-import scala.pickling.spi.{RefRegistry, PicklerRegistry, PicklingRuntime}
 import scala.reflect.runtime
+import scala.pickling.FastTypeTag
+import scala.pickling.spi.{RefRegistry, PicklingRuntime}
 
 /**
  * This runtime will not use reflection to generate new picklers, but DOES allow lookup of statically generated

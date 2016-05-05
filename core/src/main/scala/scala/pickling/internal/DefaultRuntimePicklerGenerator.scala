@@ -2,8 +2,7 @@ package scala.pickling
 package internal
 
 import java.util.concurrent.locks.ReentrantLock
-import scala.pickling.runtime.{InterpretedUnpicklerRuntime, ShareNothingInterpretedUnpicklerRuntime, RuntimePickler}
-import scala.pickling.runtime.CustomRuntime._
+import scala.pickling.runtime.{CustomRuntime, InterpretedUnpicklerRuntime, ShareNothingInterpretedUnpicklerRuntime, RuntimePickler}
 import scala.reflect.runtime.universe.Mirror
 import scala.reflect.runtime.{universe => ru}
 
@@ -21,7 +20,9 @@ import scala.reflect.runtime.{universe => ru}
 [error] 	scala.pickling.array.binary.ArrayBinaryTest
 [error] 	scala.pickling.test.runtime.array.RuntimeArrayTest
  */
-class DefaultRuntimePicklerGenerator(reflectionLock: ReentrantLock) extends spi.RuntimePicklerGenerator {
+class DefaultRuntimePicklerGenerator(reflectionLock: ReentrantLock)
+  extends spi.RuntimePicklerGenerator with CustomRuntime {
+
   /** Create a new pickler using the given tagKey. */
   def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit share: refs.Share): Pickler[_] = {
     reflectionLock.lock()
@@ -40,7 +41,6 @@ class DefaultRuntimePicklerGenerator(reflectionLock: ReentrantLock) extends spi.
       pickler
     } finally reflectionLock.unlock()
   }
-
 
   /** Create a new unpickler using the given tagKey. */
   override def genUnpickler(mirror: Mirror, tagKey: String)(implicit share: refs.Share): Unpickler[_] = {

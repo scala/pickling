@@ -36,7 +36,6 @@ class StaticOnlyWithManualPicklerTest extends FunSuite {
       throw new AssertionError("Should have used the fake implementation unpickler")
     } catch {
       case e @ PicklingException(msg, cause) =>
-        println(e)
         assert(e.isInstanceOf[PicklingErrors.JsonParseFailed])
     }
   }
