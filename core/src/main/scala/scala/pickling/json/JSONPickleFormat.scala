@@ -1,12 +1,14 @@
 package scala.pickling
 
 import scala.pickling.internal._
+import scala.language.existentials
 import scala.language.implicitConversions
 
-package object json extends JsonFormats {
-}
+package object json extends JsonFormats
 
 package json {
+
+  import scala.pickling.PicklingErrors.{FieldNotFound, LogicPicklingError, JsonParseFailed, BasePicklingException}
   import scala.reflect.runtime.universe._
   import definitions._
   import scala.util.parsing.json._
@@ -33,7 +35,7 @@ package json {
       if(pickle.value == "null") new JSONPickleReader(null, this)
       else JSON.parseRaw(pickle.value) match {
         case Some(raw) => new JSONPickleReader(raw, this)
-        case None => throw new PicklingException("failed to parse \"" + pickle.value + "\" as JSON")
+        case None => throw JsonParseFailed(pickle.value)
       }
     }
   }
@@ -226,8 +228,8 @@ package json {
           datum match {
             case JSONObject(fields) if fields.contains("$ref") => FastTypeTag.Ref.key
             case JSONObject(fields) if fields.contains("$type") => fields("$type").asInstanceOf[String]
-            case JSONObject(fields) => throw new PicklingException(s"Logic pickling error:  Could not find a type tag, and no elided type was hinted: ${fields}")
-            case value => throw new PicklingException(s"Logic pickling error:  Could not find a type tag on primitive, and no elided type was hinted: $value")
+            case JSONObject(fields) => throw LogicPicklingError(s"Could not find a type tag, and no elided type was hinted: ${fields}")
+            case value => throw LogicPicklingError(s"Logic pickling error:  Could not find a type tag on primitive, and no elided type was hinted: $value")
           }
         }
       }
@@ -257,7 +259,9 @@ package json {
     def atObject: Boolean = datum.isInstanceOf[JSONObject]
     def readField(name: String): JSONPickleReader = {
       datum match {
-        case JSONObject(fields) => mkNestedReader(fields.get(name).getOrElse(throw PicklingException(s"No field '$name' when unpickling, tag $lastReadTag, fields were $fields")))
+        case JSONObject(fields) =>
+          mkNestedReader(fields.getOrElse(name,
+            throw FieldNotFound(name, lastReadTag, fields)))
       }
     }
     def endEntry(): Unit = {}

@@ -74,7 +74,7 @@ package object internal {
   @deprecated("Use `currentRuntime.refRegistry.unpickle.preregisterUnpicklee` instead", "0.11")
   def preregisterUnpicklee() = currentRuntime.refRegistry.unpickle.preregisterUnpicklee()
   @deprecated("Use `currentRuntime.refRegistry.unpickle.registerUnpicklee` instead", "0.11")
-  def registerUnpicklee(unpicklee: Any, index: Int) = currentRuntime.refRegistry.unpickle.regsiterUnpicklee(index, unpicklee)
+  def registerUnpicklee(unpicklee: Any, index: Int) = currentRuntime.refRegistry.unpickle.registerUnpicklee(index, unpicklee)
   @deprecated("Use `currentRuntime.refRegistry.unpickle.clear` instead", "0.11")
   def clearUnpicklees() = currentRuntime.refRegistry.unpickle.clear()
 }

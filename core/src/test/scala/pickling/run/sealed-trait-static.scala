@@ -1,6 +1,7 @@
 package scala.pickling.test.sealedtraitstatic
 
-import scala.pickling.{PicklerUnpickler, Pickler, Unpickler, PicklingException}
+import scala.pickling._
+import scala.pickling.PicklerUnpickler
 import scala.pickling.static._
 import scala.pickling.json._
 import scala.pickling.Defaults._

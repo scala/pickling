@@ -2,6 +2,8 @@ package scala.pickling.pickler
 
 import org.scalatest.FunSuite
 
+import scala.pickling.internal.HybridRuntime
+
 /**
  * Tests Either picklers
  */
@@ -9,6 +11,7 @@ class EitherPicklerTest extends FunSuite {
   import scala.pickling._, Defaults._, static._, json._
   test("pickle Left") {
     val l: Left[Int, String] = Left(1)
+    val m = AnyPicklerUnpickler.pickle(l,pickleFormat.createBuilder())
     val up = l.pickle.unpickle[Left[Int,String]]
     assert(l == up)
 
@@ -30,4 +33,6 @@ class EitherPicklerTest extends FunSuite {
     val up22 = r2.pickle.unpickle[Either[Int,String]]
     assert(r2 == up22)
   }
+
+
 }

@@ -4,7 +4,7 @@ package pickler
 /**
  * Pickler implicits for type tags.
  */
-trait TypeTagPicklers extends PrimitivePicklers {
+trait TypeTagPicklers extends PrimitivePicklers with GeneratorRegistry {
   implicit def typeTagPickler[T]: AbstractPicklerUnpickler[FastTypeTag[T]] =
     FastTypeTagPicklerUnpickler.asInstanceOf[AbstractPicklerUnpickler[FastTypeTag[T]]]
 
@@ -40,7 +40,12 @@ trait TypeTagPicklers extends PrimitivePicklers {
     override lazy val tag: FastTypeTag[FastTypeTag[_]] = FastTypeTag.apply("scala.pickling.pickler.FastTypeTag").asInstanceOf[FastTypeTag[FastTypeTag[_]]]
 
   }
+
   // Ensure we register for runtime deserialization.
-  internal.currentRuntime.picklers.registerPicklerUnpicklerGenerator("scala.pickling.pickler.FastTypeTag", generator = ignore => FastTypeTagPicklerUnpickler)
+  locally{
+    registerGen("scala.pickling.pickler.FastTypeTag",
+      ignore => FastTypeTagPicklerUnpickler)
+  }
+
 }
 

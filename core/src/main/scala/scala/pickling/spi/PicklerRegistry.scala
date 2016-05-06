@@ -1,13 +1,17 @@
 package scala.pickling
 package spi
 
+import scala.language.existentials
 import scala.reflect.runtime.universe.Mirror
 
 /** A registry for looking up (and possibly coding on the fly) picklers by tag.
   *
-  * All methods are threadsafe.
+  * All methods are thread-safe.
   */
 trait PicklerRegistry {
+
+  import PicklerRegistry._
+
   // TODO(jsuereth) - We should remove the `gen` traits here and hide generation behind the lookup methods.
 
   /** Looks up the registered unpickler using the provided tagKey.
@@ -21,6 +25,7 @@ trait PicklerRegistry {
     * @param tagKey The full tag of the type, which may or may not include type parameters.
     */
   def genUnpickler(mirror: Mirror, tagKey: String)(implicit share: refs.Share): Unpickler[_]
+
   /** Looks up a Pickler for the given tag.  If none is found, then we attempt to generate one.
     *
     * @param classLoader The classloader to use when reflecting over the pickled class.
@@ -58,21 +63,24 @@ trait PicklerRegistry {
     */
   def registerPickler[T](key: String, p: Pickler[T]): Unit
   def registerPickler[T](p: Pickler[T]): Unit = registerPickler(p.tag.key, p)
+
   /** Registers an unpickler with this registry for future use.
+ *
     * @param key  The type key for the unpickler. Note: In reflective scenarios this may not include type parameters.
     *             In those situations, the unpickler should be able to handle arbitrary (existential) type parameters.
     * @param p  The unpickler to register.
     */
   def registerUnpickler[T](key: String, p: Unpickler[T]): Unit
   def registerUnpickler[T](p: Unpickler[T]): Unit = registerUnpickler(p.tag.key, p)
+
   /** Registers a pickler and unpickler for a type with this registry for future use.
+ *
     * @param key  The type key for the pickler. Note: In reflective scenarios this may not include type parameters.
     *             In those situations, the pickler should be able to handle arbitrary (existential) type parameters.
     * @param p  The unpickler to register.
     */
   def registerPicklerUnpickler[T](key: String, p: (Pickler[T] with Unpickler[T])): Unit
   def registerPicklerUnpickler[T](p: Pickler[T] with Unpickler[T]): Unit = registerPicklerUnpickler(p.tag.key, p)
-
 
   /** Registers a function which can generate picklers for a given type constructor.
     *
@@ -83,21 +91,23 @@ trait PicklerRegistry {
     *                   trying to manually inspect an object at runtime to deterimine its type, and we do not know what
     *                   the arguments are.  You can treat this case as 'existential' arguments.
     */
-  def registerPicklerGenerator[T](typeConstructorKey: String, generator: FastTypeTag[_] => Pickler[T]): Unit
+  def registerPicklerGenerator[T](typeConstructorKey: String, generator: PicklerGen[T]): Unit
+
   /** Registers a function which can generate picklers for a given type constructor.
     *
     * @param typeConstructorKey  The type constructor.  e.g. "scala.List" for something that can make scala.List[A] picklers.
     * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
     *                   this type.
     */
-  def registerUnpicklerGenerator[T](typeConstructorKey: String, generator: FastTypeTag[_] => Unpickler[T]): Unit
+  def registerUnpicklerGenerator[T](typeConstructorKey: String, generator: UnpicklerGen[T]): Unit
+
   /** Registers a function which can generate picklers for a given type constructor.
     *
     * @param typeConstructorKey  The type constructor.  e.g. "scala.List" for something that can make scala.List[A] picklers.
     * @param generator  A function which takes an applied type string (your type + arguments) and returns a pickler for
     *                   this type.
     */
-  def registerPicklerUnpicklerGenerator[T](typeConstructorKey: String, generator: FastTypeTag[_] => (Pickler[T] with Unpickler[T])): Unit
+  def registerPicklerUnpicklerGenerator[T](typeConstructorKey: String, generator: PicklerUnpicklerGen[T]): Unit
 
   /** Clear the registered pickler/unpickler for a given type.
     *
@@ -116,3 +126,14 @@ trait PicklerRegistry {
   private[pickling] def dumpStateTo(r: PicklerRegistry): Unit
 
 }
+
+object PicklerRegistry {
+
+  /* The tag needs to be existential because we need it
+   * afterwards in `genUnpickler` and we create any tag. */
+  type PicklerGen[T] = FastTypeTag[_] => Pickler[T]
+  type UnpicklerGen[T] = FastTypeTag[_] => Unpickler[T]
+  type PicklerUnpicklerGen[T] = FastTypeTag[_] => (Pickler[T] with Unpickler[T])
+
+}
+

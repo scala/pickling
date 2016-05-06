@@ -29,7 +29,7 @@ final class NoSharingRefUnpicklingRegistry extends RefUnpicklingRegistry {
   override def clear(): Unit = ()
 
   /** Registers an object to an id, after its FIRST deserialization. */
-  override def regsiterUnpicklee(oid: Int, value: Any): Unit = ()
+  override def registerUnpicklee(oid: Int, value: Any): Unit = ()
 
   /** Looks up an unpicklee by its object id. Throws an exception if oid is not valid. */
   override def lookupUnpicklee(oid: Int): Any =

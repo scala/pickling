@@ -4,17 +4,20 @@ package generator
 /** This is the portion of code which can actually generate a pickler/unpickler
   * object instance from the IR AST.
   */
-private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacros {
+private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacros {
   import c.universe._
+
+  val picklingPath = q"_root_.scala.pickling"
+  val errorsPath = q"$picklingPath.PicklingErrors"
+  val basePicklingException = q"$errorsPath.BasePicklingException"
+  val basePicklingExceptionType = tq"$errorsPath.BasePicklingException"
 
   def pickleNull(builder: c.Tree): c.Tree =
     q"""_root_.scala.pickling.Defaults.nullPickler.pickle(null, $builder)"""
 
-
-
   def allowNonExistentField(impl: Tree): c.Tree = {
     q"""try $impl catch {
-            case _: _root_.scala.pickling.PicklingException =>
+            case _: $basePicklingExceptionType =>
             // TODO - Don't just ignore bad things, figure out how to actually read the class file for reals.
             // We could basically by blocked by scala here, though.
           }"""
@@ -67,6 +70,7 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
       }
     }
 
+    val unrecognizedClass = q"$errorsPath.UnrecognizedClass"
 
     def genSubclassDispatch(x: SubclassDispatch): c.Tree = {
       val tpe = x.parent.tpe[c.universe.type](c.universe)
@@ -76,22 +80,21 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
         CaseDef(Bind(clazzName, Ident(nme.WILDCARD)), q"clazz == classOf[$tpe]", createPickler(tpe, q"builder"))
       })(collection.breakOut)
 
-
       val failDispatch = {
         val dispatcheeNames = x.subClasses.map(_.className).mkString(", ")
         val otherTermName = newTermName("other")
         val throwUnknownTag =
           if(x.subClasses.isEmpty) {
-            q"""throw _root_.scala.pickling.PicklingException("Class " + clazz + " not recognized by pickler")"""
-        } else q"""throw _root_.scala.pickling.PicklingException("Class " + clazz + " not recognized by pickler, looking for one of: " + $dispatcheeNames)"""
+            q"""throw $unrecognizedClass(clazz, None)"""
+          } else
+            q"""throw $unrecognizedClass(clazz,
+               Some("looking for one of: " + $dispatcheeNames))"""
         CaseDef(Bind(otherTermName, Ident(nme.WILDCARD)), throwUnknownTag)
       }
       val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, createRuntimePickler(q"builder"))
       val unknownDispatch =
         if(x.lookupRuntime) List(runtimeDispatch)
         else List(failDispatch)
-
-
 
       val picklerLookup = q"""
         val clazz = if (picklee != null) picklee.getClass else null
@@ -316,7 +319,7 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
     val tpe = x.parent.tpe[c.universe.type](c.universe)
     val defaultCase =
       if(x.lookupRuntime) CaseDef(Ident(nme.WILDCARD), EmptyTree, q"_root_.scala.pickling.internal.`package`.currentRuntime.picklers.genUnpickler(_root_.scala.pickling.internal.`package`.currentMirror, tagKey)")
-      else CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""throw new _root_.scala.pickling.PicklingException("Cannot unpickle, Unexpected tag: " + tagKey + " not recognized.")""")
+      else CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""throw $basePicklingException("Cannot unpickle, Unexpected tag: " + tagKey + " not recognized.")""")
     val subClassCases =
        x.subClasses.toList map { sc =>
          val stpe = sc.tpe[c.universe.type](c.universe)
@@ -383,7 +386,6 @@ private[pickling]  trait SourceGenerator extends Macro with tags.FastTypeTagMacr
     }
   }
 
-  val picklingPath = q"_root_.scala.pickling"
   val picklersRegistry = q"$picklingPath.internal.currentRuntime.picklers"
   val generated = tq"$picklingPath.Generated"
 

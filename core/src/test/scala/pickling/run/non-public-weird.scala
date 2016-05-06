@@ -15,7 +15,6 @@ class NonPublicWeirdTest extends FunSuite {
   test("main") {
     val person = new Person("Eugene", 25, new Hobby("hacking", "mostly Scala", "loving it"))
     val personPickle = person.pickle
-    System.err.println(personPickle.toString)
     assert(personPickle.toString === """
       |JSONPickle({
       |  "$type": "scala.pickling.non.public.weird.Person",

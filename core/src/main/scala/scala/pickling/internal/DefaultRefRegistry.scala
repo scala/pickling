@@ -1,8 +1,8 @@
 package scala.pickling.internal
 
-import java.util.IdentityHashMap
+import java.util
 
-import scala.pickling.PicklingException
+import scala.pickling.PicklingErrors.LogicException
 import scala.pickling.spi.{RefUnpicklingRegistry, RefPicklingRegistry, RefRegistry}
 
 /** Default implementation of the Ref registry that allows circular dependencies to be handled.
@@ -19,7 +19,7 @@ final class DefaultRefRegistry extends RefRegistry {
   override def unpickle: RefUnpicklingRegistry = unpicklerTl.get()
 }
 class DefaultRefPicklingRegistry extends RefPicklingRegistry {
-  private val refs = new IdentityHashMap[AnyRef, Integer]()
+  private val refs = new util.IdentityHashMap[AnyRef, Integer]()
   private var nextPicklee: Int = 0
   override def registerPicklee(picklee: Any): Int = {
     val anyRefPicklee = picklee.asInstanceOf[AnyRef]
@@ -66,13 +66,15 @@ class DefaultRefUnpicklingRegistry(maxRefs: Int = 655536) extends RefUnpicklingR
     }
 
   }
-  override def regsiterUnpicklee(oid: Int, value: Any): Unit = {
+  override def registerUnpicklee(oid: Int, value: Any): Unit = {
     refs(oid) = value
   }
   override def lookupUnpicklee(oid: Int): Any = {
-    if (oid >= idx) throw PicklingException(s"fatal error: invalid index $oid unpicklee cache of length $idx")
+    if (oid >= idx) throw new LogicException(
+      s"Fatal error: invalid index $oid unpicklee cache of length $idx")
     val result = refs(oid)
-    if (result == null) throw new Error(s"fatal error: unpicklee cache is corrupted at $oid")
+    if (result == null) throw new LogicException(
+      s"Fatal error: unpicklee cache is corrupted at $oid")
     result
   }
 }

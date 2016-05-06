@@ -1,6 +1,7 @@
 package scala.pickling
 package runtime
 
+import scala.pickling.PicklingErrors.BasePicklingException
 import scala.pickling.internal._
 
 import scala.reflect.runtime.universe.Mirror
@@ -206,7 +207,7 @@ class InterpretedUnpicklerRuntime(val mirror: Mirror, typeTag: String)(implicit 
               val fdynamicTag = try {
                 freader.beginEntry()
               } catch {
-                case e@PicklingException(msg, cause) =>
+                case e@BasePicklingException(msg, cause) =>
                   debug( s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}':
                             |$msg
                             |enclosing object has type: '${tagKey}'
@@ -307,7 +308,7 @@ class ShareNothingInterpretedUnpicklerRuntime(val mirror: Mirror, typeTag: Strin
             val fdynamicTag = try {
               freader.beginEntry()
             } catch {
-              case e @ PicklingException(msg, cause) =>
+              case e @ BasePicklingException(msg, cause) =>
                 debug(s"""error in interpreted runtime unpickler while reading tag of field '${fir.name}':
                          |$msg
                          |enclosing object has type: '${tagKey}'
