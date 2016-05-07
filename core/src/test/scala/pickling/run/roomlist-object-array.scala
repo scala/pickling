@@ -32,6 +32,7 @@ class RoomListObjectArrayTest extends FunSuite {
       |})""".stripMargin.trim
 
     assert(p.toString === jsn)
-    assert(rl.pickle.unpickle[RoomList].rooms.sameElements(rl.rooms))
+    val result = p.unpickle[RoomList]
+    assert(result.rooms.sameElements(rl.rooms))
   }
 }
