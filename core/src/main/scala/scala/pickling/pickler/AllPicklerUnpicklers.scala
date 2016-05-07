@@ -36,8 +36,7 @@ trait CollectionPicklers extends AllGenPicklers with MutableMapPicklers
 
 // Gen picklers need to be BELOW the collection implicits so that we can use the collection ones.
 trait AllGenPicklers extends LowPriorityPicklers
-  with GenPicklers
-  with GenUnpicklers {}
+  with GenPicklersUnpicklers {}
 
 // We force any to be the last pickler.
 trait LowPriorityPicklers extends AnyUnpicklers {}

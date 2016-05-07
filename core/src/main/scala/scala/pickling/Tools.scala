@@ -1,5 +1,8 @@
 package scala.pickling
 
+import java.util.concurrent.atomic.AtomicReference
+
+import scala.collection.mutable
 import scala.pickling.internal._
 
 import scala.language.existentials
@@ -354,37 +357,39 @@ abstract class Macro extends RichTypes { self =>
   def syntheticPicklerUnpicklerSuffix(): String = "PicklerUnpickler"
 
   def preferringAlternativeImplicits(body: => Tree): Tree = {
+
     import Compat._
+    import Console._
 
     val candidates = c.enclosingImplicits
-    if (candidates.isEmpty)
-      return body
-    val ourPt      = candidates.head.pt
+    if (candidates.isEmpty) return body
+    val ourPt = candidates.head.pt
 
     def debug(msg: Any) = {
       val padding = "  " * (candidates.length - 1)
-      // Console.err.println(padding + msg)
+      Console.err.println(padding + msg)
     }
 
-    debug("can we enter " + ourPt + "?")
+    debug(MAGENTA_B + "Can we enter " + ourPt + "?" + RESET)
     debug(candidates)
 
     if ((candidates.size >= 2) && {
+      /* This checks if `inferImplicitValue` has called the same
+       * implicit macro that is expected to find/gen the picklers */
       val theirPt = candidates.tail.head.pt
       ourPt =:= theirPt
     }) {
-      debug(s"no, because: ourPt = $ourPt, theirPt = ${candidates.tail.head.pt}")
-      // c.diverge()
+      debug(RED_B + s"No, parent type is the same $ourPt" + RESET)
       c.abort(c.enclosingPosition, "stepping aside: repeating itself")
     } else {
-      debug(s"not sure, need to explore alternatives")
+      debug(YELLOW_B + s"Not sure, need to explore alternatives" + RESET)
       c.inferImplicitValue(ourPt, silent = true) match {
         case success if success != EmptyTree =>
-          debug(s"no, because there's $success")
+          debug(BLUE_B + s"No, because there's $success" + RESET)
           c.abort(c.enclosingPosition, "stepping aside: there are other candidates")
           // c.diverge()
         case _ =>
-          debug("yes, there are no obstacles. entering " + ourPt)
+          debug(GREEN_B + s"Yes, there are no obstacles. Entering: $ourPt" + RESET)
           val result = body
           debug("result: " + result)
           result
