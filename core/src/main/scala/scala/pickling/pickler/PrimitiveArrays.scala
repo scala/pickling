@@ -4,12 +4,12 @@ package pickler
 /** Picklers for primitive arrays.
  */
 trait PrimitiveArrayPicklers {
-  implicit val byteArrayPickler: Pickler[Array[Byte]] with Unpickler[Array[Byte]] = PrimitivePickler[Array[Byte]]
-  implicit val shortArrayPickler: Pickler[Array[Short]] with Unpickler[Array[Short]] = PrimitivePickler[Array[Short]]
-  implicit val charArrayPickler: Pickler[Array[Char]] with Unpickler[Array[Char]] = PrimitivePickler[Array[Char]]
-  implicit val intArrayPickler: Pickler[Array[Int]] with Unpickler[Array[Int]] = PrimitivePickler[Array[Int]]
-  implicit val longArrayPickler: Pickler[Array[Long]] with Unpickler[Array[Long]] = PrimitivePickler[Array[Long]]
-  implicit val booleanArrayPickler: Pickler[Array[Boolean]] with Unpickler[Array[Boolean]] = PrimitivePickler[Array[Boolean]]
-  implicit val floatArrayPickler: Pickler[Array[Float]] with Unpickler[Array[Float]] = PrimitivePickler[Array[Float]]
-  implicit val doubleArrayPickler: Pickler[Array[Double]] with Unpickler[Array[Double]] = PrimitivePickler[Array[Double]]
+  implicit val byteArrayPickler: AbstractPicklerUnpickler[Array[Byte]] = PrimitivePickler[Array[Byte]]
+  implicit val shortArrayPickler: AbstractPicklerUnpickler[Array[Short]] = PrimitivePickler[Array[Short]]
+  implicit val charArrayPickler: AbstractPicklerUnpickler[Array[Char]] = PrimitivePickler[Array[Char]]
+  implicit val intArrayPickler: AbstractPicklerUnpickler[Array[Int]] = PrimitivePickler[Array[Int]]
+  implicit val longArrayPickler: AbstractPicklerUnpickler[Array[Long]] = PrimitivePickler[Array[Long]]
+  implicit val booleanArrayPickler: AbstractPicklerUnpickler[Array[Boolean]] = PrimitivePickler[Array[Boolean]]
+  implicit val floatArrayPickler: AbstractPicklerUnpickler[Array[Float]] = PrimitivePickler[Array[Float]]
+  implicit val doubleArrayPickler: AbstractPicklerUnpickler[Array[Double]] with Unpickler[Array[Double]] = PrimitivePickler[Array[Double]]
 }

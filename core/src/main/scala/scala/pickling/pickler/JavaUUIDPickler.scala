@@ -5,10 +5,11 @@ import java.util.UUID
 
 trait JavaUUIDPicklers extends PrimitivePicklers {
 
-  implicit val javaUUIDPickler: Pickler[UUID] with Unpickler[UUID] =
+  implicit val javaUUIDPickler: AbstractPicklerUnpickler[UUID] = {
     new AbstractPicklerUnpickler[UUID] with AutoRegister[UUID] {
       lazy val tag = FastTypeTag[UUID]("java.util.UUID")
-      def pickle(picklee: java.util.UUID, builder: PBuilder):Unit = {
+
+      def pickle(picklee: java.util.UUID, builder: PBuilder): Unit = {
         builder.beginEntry(picklee, tag)
 
         builder.putField("msb", { b =>
@@ -37,5 +38,6 @@ trait JavaUUIDPicklers extends PrimitivePicklers {
         new java.util.UUID(msb, lsb)
       }
     }
-  internal.currentRuntime.picklers.registerPicklerUnpickler(javaUUIDPickler)
+  }
+
 }
