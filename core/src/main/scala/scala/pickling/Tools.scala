@@ -183,7 +183,7 @@ class Tools[C <: Context](val c: C) {
     if (baseSym.isFinal || baseSym.isModuleClass) Nil // FIXME: http://groups.google.com/group/scala-internals/browse_thread/thread/e2b786120b6d118d
     else if (blackList(baseSym)) Nil
     else {
-      var unsorted = {
+      val unsorted = {
         if (baseSym.isClass && treatAsSealed(baseSym.asClass)) sealedHierarchyScan()
         else sourcepathScan() // sourcepathAndClasspathScan()
       }
@@ -220,6 +220,9 @@ trait RichTypes {
       case TypeRef(_, sym, eltpe :: Nil) if sym == ArrayClass && eltpe.typeSymbol.isClass && eltpe.typeSymbol.asClass.isPrimitive => true
       case _ => false
     }
+
+    def isScalaOrJavaPrimitive: Boolean =
+      isEffectivelyPrimitive || tpe.typeSymbol == StringClass
 
     def isEffectivelyFinal = tpe.typeSymbol.isEffectivelyFinal
 
@@ -355,47 +358,6 @@ abstract class Macro extends RichTypes { self =>
   def syntheticPicklerUnpicklerName(tpe: Type): TypeName = syntheticBaseName(tpe) + syntheticPicklerUnpicklerSuffix()
   def syntheticPicklerUnpicklerQualifiedName(tpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticPicklerUnpicklerSuffix()
   def syntheticPicklerUnpicklerSuffix(): String = "PicklerUnpickler"
-
-  def preferringAlternativeImplicits(body: => Tree): Tree = {
-
-    import Compat._
-    import Console._
-
-    val candidates = c.enclosingImplicits
-    if (candidates.isEmpty) return body
-    val ourPt = candidates.head.pt
-
-    def debug(msg: Any) = {
-      val padding = "  " * (candidates.length - 1)
-      Console.err.println(padding + msg)
-    }
-
-    debug(MAGENTA_B + "Can we enter " + ourPt + "?" + RESET)
-    debug(candidates)
-
-    if ((candidates.size >= 2) && {
-      /* This checks if `inferImplicitValue` has called the same
-       * implicit macro that is expected to find/gen the picklers */
-      val theirPt = candidates.tail.head.pt
-      ourPt =:= theirPt
-    }) {
-      debug(RED_B + s"No, parent type is the same $ourPt" + RESET)
-      c.abort(c.enclosingPosition, "stepping aside: repeating itself")
-    } else {
-      debug(YELLOW_B + s"Not sure, need to explore alternatives" + RESET)
-      c.inferImplicitValue(ourPt, silent = true) match {
-        case success if success != EmptyTree =>
-          debug(BLUE_B + s"No, because there's $success" + RESET)
-          c.abort(c.enclosingPosition, "stepping aside: there are other candidates")
-          // c.diverge()
-        case _ =>
-          debug(GREEN_B + s"Yes, there are no obstacles. Entering: $ourPt" + RESET)
-          val result = body
-          debug("result: " + result)
-          result
-      }
-    }
-  }
 
   private var reflectivePrologueEmitted = false // TODO: come up with something better
   def reflectively(target: String, fir: FieldIR)(body: Tree => Tree): List[Tree] = reflectively(newTermName(target), fir)(body)

@@ -1,8 +1,6 @@
 package scala.pickling
 package generator
 
-import scala.reflect.api.Universe
-
 /** An interface so we can pass logging to these algorithms at runtime/during testing. */
 private[pickling] trait AlgorithmLogger {
   def warn(msg: String): Unit
