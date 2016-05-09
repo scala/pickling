@@ -8,14 +8,14 @@ import scala.language.experimental.macros
   */
 trait GenPicklersUnpicklers {
 
-  def genPickler[T]: AbstractPicklerUnpickler[T] =
+  implicit def genPickler[T]: AbstractPicklerUnpickler[T] =
     macro generator.Compat.genPicklerUnpickler_impl[T]
 
   def genUnpickler[T]: AbstractPicklerUnpickler[T] with Generated =
     macro generator.Compat.genPicklerUnpickler_impl[T]
 
   // The only implicit definition, otherwise there's a clash
-  implicit def genPicklerUnpickler[T]: AbstractPicklerUnpickler[T] with Generated =
+  def genPicklerUnpickler[T]: AbstractPicklerUnpickler[T] with Generated =
     macro generator.Compat.genPicklerUnpickler_impl[T]
 
 }

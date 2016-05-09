@@ -49,7 +49,6 @@ trait GeneratorHelper {
     else query(key).getOrElse(throw error).asInstanceOf[PU[S]]
   }
 
-
   /** Get a pickler from the registry or throw exception otherwise. */
   def getPickler[T, S](tpe: FastTypeTag[T], fullTpe: FastTypeTag[S]) =
     get[Pickler, T](currentRuntime.picklers.lookupPickler, tpe.key,
@@ -73,13 +72,30 @@ trait GeneratorHelper {
   def specialize[T](tag: FastTypeTag[_]): FastTypeTag[T] =
     tag.asInstanceOf[FastTypeTag[T]]
 
+  /** Extract one type parameter from a type constructor and
+    * cast them to a concrete type [[T]].
+    *
+    * @tparam T Type we want to convert to
+    *
+    * @return A tag holding information about [[T]]
+    */
+  def oneArgumentTagExtractor[T](tpe: FastTypeTag[_]): FastTypeTag[T] = {
+    val typeArgs = tpe.typeArgs
+    typeArgs match {
+      case List(one) => one.asInstanceOf[FastTypeTag[T]]
+      // TODO: Remove this hack to handle `Nil.type` as a tag
+      case List() => FastTypeTag.Any.asInstanceOf[FastTypeTag[T]]
+      case x => throw TypeMismatch(List(tpe), typeArgs)
+    }
+  }
+
   /** Extract two type parameters from a type constructor and
     * cast them to some concrete types [[T]] and [[S]].
     *
     * @tparam T First type we want to convert to
     * @tparam S Second type we want to convert to
     *
-    * @return A tuple of tags of (T, S)
+    * @return A tuple of tags of ([[T]], [[S]])
     */
   def twoArgumentTagExtractor[T, S](tpe: FastTypeTag[_]): (FastTypeTag[T], FastTypeTag[S]) = {
     val typeArgs = tpe.typeArgs
