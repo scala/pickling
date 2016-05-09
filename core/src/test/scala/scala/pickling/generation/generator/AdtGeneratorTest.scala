@@ -2,7 +2,7 @@ package scala.pickling.generator
 
 import org.scalatest.FunSuite
 
-
+import scala.pickling.PicklerUnpickler
 
 // Case #1 - Everything sealed and together.
 object SimpleAdt {
@@ -14,9 +14,9 @@ object SimpleAdt {
   final case class Foo(x: Int) extends Adt
   final case class Bar(y: String) extends Adt
   implicit val fp2 = {
-    implicit val fp = PicklingMacros.genPicklerUnpickler[Foo]
-    implicit val fp3 = PicklingMacros.genPicklerUnpickler[Bar]
-    PicklingMacros.genPicklerUnpickler[Adt]
+    implicit val fp = PicklerUnpickler.generate[Foo]
+    implicit val fp3 = PicklerUnpickler.generate[Bar]
+    PicklerUnpickler.generate[Adt]
   }
 }
 
@@ -29,12 +29,12 @@ object NestedAdt {
   sealed trait NestedAdt extends Adt
   final case class Bar(y: String) extends Adt
   implicit val p = {
-    implicit val f = PicklingMacros.genPicklerUnpickler[Foo]
+    implicit val f = PicklerUnpickler.generate[Foo]
     implicit val f2 = {
-      implicit val b = PicklingMacros.genPicklerUnpickler[Bar]
-      PicklingMacros.genPicklerUnpickler[NestedAdt]
+      implicit val b = PicklerUnpickler.generate[Bar]
+      PicklerUnpickler.generate[NestedAdt]
     }
-    PicklingMacros.genPicklerUnpickler[Adt]
+    PicklerUnpickler.generate[Adt]
   }
 }
 

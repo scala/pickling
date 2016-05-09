@@ -1,21 +1,6 @@
 package scala.pickling
 package generator
 
-private[pickling] object PicklingMacros {
-  import scala.language.experimental.macros
-
-  @deprecated("Use `genPicklerUnpickler` instead", "0.11")
-  def genPickler[T]: AbstractPicklerUnpickler[T] with Generated =
-    macro scala.pickling.generator.Compat.genPicklerUnpickler_impl[T]
-
-  @deprecated("Use `genPicklerUnpickler` instead", "0.11")
-  def genUnpickler[T]: AbstractPicklerUnpickler[T] with Generated =
-    macro scala.pickling.generator.Compat.genPicklerUnpickler_impl[T]
-
-  def genPicklerUnpickler[T]: AbstractPicklerUnpickler[T] with Generated =
-    macro scala.pickling.generator.Compat.genPicklerUnpickler_impl[T]
-}
-
 private[pickling] trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
 
   implicit val implContext = c
