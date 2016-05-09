@@ -1,5 +1,7 @@
 package scala.pickling
 
+import scala.pickling.generator.AlgorithmLogger
+
 private[pickling] object Feedback {
 
   def failedGenerationMsg(x: String, y: String, z: String) =
@@ -10,6 +12,20 @@ private[pickling] object Feedback {
 
   def disabledRuntimeGenerationMsg(tpe: String, failed: String) =
     s"Couldn't create $failed for $tpe because runtime generation is disabled."
+
+}
+
+private[pickling] object MacrosErrors {
+
+  import scala.reflect.macros.Context
+
+  def failedGeneration(culprit: String)(implicit c: Context, l: AlgorithmLogger): Nothing = {
+    l.error(s"Failed pickler/unpickler generation for $culprit")
+    ???
+  }
+
+  def impossibleGeneration(culprit: String)(implicit c: Context, l: AlgorithmLogger) =
+    l.abort("Scala pickling can't generate pickling logic for $culprit")
 
 }
 
