@@ -3,7 +3,7 @@ package scala.pickling.test.runtime.array
 import org.scalatest.FunSuite
 import scala.pickling._, scala.pickling.Defaults._, json._
 
-class ArraySuite extends FunSuite {
+class ArraysRuntimeSuite extends FunSuite {
 
   test("primitive array") {
     def testIt(x: Any): Unit = {

@@ -7,7 +7,7 @@ import ru._
 
 case class Person(age: Int)
 
-class BinarySimpleCaseClassTest extends FunSuite {
+class SimpleCaseClassBinaryTest extends FunSuite {
   test("main") {
     val p = Person(43)
     val pickle = p.pickle

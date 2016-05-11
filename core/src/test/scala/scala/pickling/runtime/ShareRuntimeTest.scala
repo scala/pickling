@@ -5,7 +5,7 @@ import scala.pickling._, scala.pickling.Defaults._, binary._
 
 class C(val name: String, val desc: String, var c: C, val arr: Array[Int])
 
-class ShareBinaryAnyTest extends FunSuite {
+class ShareRuntimeTest extends FunSuite {
 
   import scala.pickling.internal.currentRuntime
 

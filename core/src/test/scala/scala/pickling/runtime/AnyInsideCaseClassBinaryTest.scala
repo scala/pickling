@@ -5,7 +5,7 @@ import scala.pickling._, scala.pickling.Defaults._, binary._
 
 case class C(x: Any)
 
-class AnyInsideCaseClassTest extends FunSuite {
+class AnyInsideCaseClassBinaryTest extends FunSuite {
   test("main") {
     val c = new C(2)
     val pckl = c.pickle

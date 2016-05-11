@@ -5,7 +5,7 @@ import scala.pickling._, scala.pickling.Defaults._, json._
 
 class C(val name: String, val desc: String, var c: C, val arr: Array[Int])
 
-class ThreadSafetyTest extends FunSuite {
+class ThreadSafetyJsonTest extends FunSuite {
   val c1 = new C("c1", "desc", null, Array(1))
   val c2 = new C("c2", "desc", c1, Array(1))
   val c3 = new C("c3", "desc", c2, Array(1))

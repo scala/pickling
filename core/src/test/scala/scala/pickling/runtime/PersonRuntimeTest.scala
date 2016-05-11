@@ -5,7 +5,7 @@ import scala.pickling._, scala.pickling.Defaults._, json._
 
 class Person(val name: String, val age: Int)
 
-class PersonTest extends FunSuite {
+class PersonRuntimeTest extends FunSuite {
   test("main") {
     val p: Any = new Person("joe", 23)
 

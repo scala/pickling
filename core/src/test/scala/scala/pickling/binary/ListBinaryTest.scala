@@ -3,7 +3,7 @@ package scala.pickling.binary.list.t.`new`
 import org.scalatest.FunSuite
 import scala.pickling._, scala.pickling.Defaults._, binary._
 
-class BinaryListTNewTest extends FunSuite {
+class ListBinaryTest extends FunSuite {
   test("main") {
     val pickle = List(1, 2, 3).pickle
     val expected =

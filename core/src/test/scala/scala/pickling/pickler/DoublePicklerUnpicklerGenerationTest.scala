@@ -3,7 +3,7 @@ package scala.pickling.pickler
 import org.scalatest.FunSuite
 import scala.pickling._, Defaults._, static._, json._
 
-class DoublePicklerUnpicklerGeneration extends FunSuite {
+class DoublePicklerUnpicklerGenerationTest extends FunSuite {
 
   import scala.pickling.internal.currentRuntime
 

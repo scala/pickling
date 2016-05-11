@@ -6,7 +6,7 @@ import java.io.{OutputStream, ByteArrayOutputStream, ByteArrayInputStream}
 
 import scala.pickling._, scala.pickling.Defaults._, binary._
 
-class BinaryOutputStreamTest extends FunSuite {
+class OutputStreamBinaryTest extends FunSuite {
   test("pickle to OutputStream") {
     val obj1 = Employee("James", 30)
     val obj2 = Employee("Jim", 40)

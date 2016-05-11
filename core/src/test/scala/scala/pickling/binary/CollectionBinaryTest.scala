@@ -10,7 +10,7 @@ import scala.collection.LinearSeq
 
 case class Person(x: Int)
 
-class BinaryCollectionTest extends FunSuite {
+class CollectionBinaryTest extends FunSuite {
   test("Seq") {
     val p = Seq(1, 2, 3).pickle
     val up = p.unpickle[Seq[Int]]

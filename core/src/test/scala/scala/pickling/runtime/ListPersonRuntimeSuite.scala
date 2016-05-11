@@ -6,7 +6,7 @@ import scala.pickling._, scala.pickling.Defaults._, json._
 
 case class Person(age: Int)
 
-class ListPersonSuite extends FunSuite {
+class ListPersonRuntimeSuite extends FunSuite {
 
   test("case class: non-empty") {
     val lst: List[Person] = List(Person(20), Person(40))

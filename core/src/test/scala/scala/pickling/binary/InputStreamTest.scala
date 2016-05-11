@@ -18,7 +18,7 @@ case class PersonShort(name: String, randNums: Array[Short]) extends Person[Shor
 case class PersonChar(name: String, randNums: Array[Char]) extends Person[Char]
 case class PersonBoolean(name: String, randNums: Array[Boolean]) extends Person[Boolean]
 
-class BinaryInputStreamReaderTest extends FunSuite {
+class InputStreamReaderBinaryTest extends FunSuite {
   def mkString[T](obj: Person[T]): String =
     s"Person(${obj.name}, ${obj.randNums.mkString("[", ",", "]")})"
 

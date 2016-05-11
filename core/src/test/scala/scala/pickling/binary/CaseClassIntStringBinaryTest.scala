@@ -7,7 +7,7 @@ import ru._
 
 case class Person(name: String, age: Int)
 
-class CaseClassIntStringTest extends FunSuite {
+class CaseClassIntStringBinaryTest extends FunSuite {
   test("main") {
     val p = Person("Jim", 43)
     val pickle = p.pickle

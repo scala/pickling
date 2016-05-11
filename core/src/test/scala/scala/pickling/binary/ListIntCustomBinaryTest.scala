@@ -6,7 +6,7 @@ import scala.pickling._, scala.pickling.Defaults._, binary._
 import scala.reflect.runtime.universe._
 import scala.collection.mutable.ListBuffer
 
-class BinaryListIntCustomTest extends FunSuite {
+class ListIntCustomBinaryTest extends FunSuite {
   test("main") {
     val lst = (1 to 10).toList
 

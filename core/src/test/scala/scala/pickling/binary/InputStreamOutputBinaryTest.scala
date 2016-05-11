@@ -8,7 +8,7 @@ import scala.pickling._, scala.pickling.Defaults._, binary._
 
 case class Employee(name: String, age: Int)
 
-class BinaryInputStreamReaderOutputTest extends FunSuite {
+class InputStreamOutputBinaryTest extends FunSuite {
   test("unpickle two objects from stream") {
     val obj1 = Employee("James", 30)
     val obj2 = Employee("Jim", 40)

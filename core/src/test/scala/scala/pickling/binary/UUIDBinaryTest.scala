@@ -7,7 +7,7 @@ import scala.pickling.binary._
 
 import java.util.UUID
 
-class UuidTest extends FunSuite {
+class UUIDBinaryTest extends FunSuite {
   test("main") {
     val u = UUID.fromString("0d5d4832-af50-4a4d-837f-ef20ae862293")
     val pickle = u.pickle

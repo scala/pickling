@@ -6,7 +6,7 @@ import scala.pickling._, scala.pickling.Defaults._, binary._
 
 case class Person(name: String)
 
-class ListObjectTest extends FunSuite {
+class ListObjectBinaryTest extends FunSuite {
   test("main") {
     val lst = List(Person("A"), Person("B"), Person("C"))
     val pickle = lst.pickle

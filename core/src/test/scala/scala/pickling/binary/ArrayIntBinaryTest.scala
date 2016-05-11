@@ -5,7 +5,7 @@ import scala.pickling._, scala.pickling.Defaults._, binary._
 
 import scala.reflect.runtime.universe._
 
-class ArrayIntTest extends FunSuite {
+class ArrayIntBinaryTest extends FunSuite {
   test("main") {
     val ia = Array[Int](30, 31)
 
