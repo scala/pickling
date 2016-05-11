@@ -3,6 +3,7 @@ package scala.pickling.array.binary
 import org.scalatest.FunSuite
 import scala.pickling.Defaults._
 import scala.pickling.binary._
+import scala.pickling.static._
 
 case class C(arr: Array[Int]) { override def toString = s"""C(${arr.mkString("[", ",", "]")})""" }
 

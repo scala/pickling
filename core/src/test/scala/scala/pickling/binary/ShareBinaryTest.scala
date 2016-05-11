@@ -13,7 +13,6 @@ final class Simple(x: Int) {
   var y: String = ""
 }
 
-
 class ShareBinaryTest extends FunSuite {
 
   import scala.pickling.internal.currentRuntime

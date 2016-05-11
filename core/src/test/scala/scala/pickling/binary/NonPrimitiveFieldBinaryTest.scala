@@ -2,6 +2,7 @@ package scala.pickling.binary.non.primitive.field
 
 import org.scalatest.FunSuite
 import scala.pickling._, scala.pickling.Defaults._, binary._
+import static._
 
 case class Person(name: String, age: Int)
 case class Philipp(mother: Person)

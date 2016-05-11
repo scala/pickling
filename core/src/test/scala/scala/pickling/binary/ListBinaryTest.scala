@@ -2,6 +2,7 @@ package scala.pickling.binary.list.t.`new`
 
 import org.scalatest.FunSuite
 import scala.pickling._, scala.pickling.Defaults._, binary._
+import static._
 
 class ListBinaryTest extends FunSuite {
   test("main") {

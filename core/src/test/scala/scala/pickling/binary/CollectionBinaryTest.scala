@@ -1,6 +1,7 @@
 package scala.pickling.test.binary.collection
 
 import scala.pickling._, scala.pickling.Defaults._, binary._
+import static._
 import org.scalatest.FunSuite
 
 import scala.collection.mutable

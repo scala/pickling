@@ -5,6 +5,7 @@ import org.scalatest.FunSuite
 import java.io.ByteArrayInputStream
 
 import scala.pickling._, scala.pickling.Defaults._, binary._
+import static._
 
 case class Employee(name: String, age: Int)
 

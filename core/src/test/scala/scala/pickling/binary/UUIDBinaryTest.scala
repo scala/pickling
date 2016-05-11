@@ -4,6 +4,7 @@ import org.scalatest.FunSuite
 import scala.pickling._
 import scala.pickling.Defaults._
 import scala.pickling.binary._
+import static._
 
 import java.util.UUID
 
