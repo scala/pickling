@@ -12,6 +12,7 @@ import scala.pickling.spi.{RefRegistry, PicklingRuntime}
  */
 class HybridRuntime extends PicklingRuntime {
   override def currentMirror: runtime.universe.Mirror = runtime.currentMirror
+  override def currentClassLoader: ClassLoader = ???
   override val picklers  = new DefaultPicklerRegistry(NoRuntimePicklerGeneration)
   override val refRegistry: RefRegistry = new DefaultRefRegistry()
   override val GRL: ReentrantLock = new ReentrantLock()

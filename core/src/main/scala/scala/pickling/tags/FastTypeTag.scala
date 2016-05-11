@@ -48,6 +48,9 @@ trait FastTypeTag[T] extends Equals {
   def reflectType(otherMirror: ru.Mirror): ru.Type =
     FastTypeTag.reflectType(otherMirror, this)
 
+  def reflectClass(classLoader: ClassLoader): Class[T] =
+    FastTypeTag.clazz(this, classLoader)
+
  /**
    * Tests whether this tag is effectively a primitive type.  Note: We duplicate logic
    * out of regular runtime reflection here to avoid the burden of requiring runtime reflection.
@@ -269,4 +272,46 @@ object FastTypeTag {
       case _ => tag.key
     } else clazz.getName
   }
+  // Note:  This is not handling nested classes inside of objects.
+  //        That's because Scala treats those as members, but at runtime
+  //        the classes get $ on them, and we're not accurately handling it.
+  def clazz[T](tag: FastTypeTag[T], cl: ClassLoader): Class[T] =
+    (tag match {
+      case FastTypeTag.String => classOf[java.lang.String]
+      case FastTypeTag.Byte => classOf[java.lang.Byte]
+      case FastTypeTag.Short => classOf[java.lang.Short]
+      case FastTypeTag.Char => classOf[java.lang.Character]
+      case FastTypeTag.Int => classOf[java.lang.Integer]
+      case FastTypeTag.Long => classOf[java.lang.Long]
+      case FastTypeTag.Boolean => classOf[java.lang.Boolean]
+      case FastTypeTag.Float => classOf[java.lang.Float]
+      case FastTypeTag.Double => classOf[java.lang.Double]
+      case FastTypeTag.Null => classOf[Null]
+      case FastTypeTag.ArrayInt => classOf[Array[Int]]
+      case FastTypeTag.ArrayDouble => classOf[Array[Double]]
+      case FastTypeTag.ArrayBoolean => classOf[Array[Boolean]]
+      case FastTypeTag.ArrayLong => classOf[Array[Long]]
+      case FastTypeTag.ArrayByte => classOf[Array[Byte]]
+      case FastTypeTag.ArrayFloat => classOf[Array[Float]]
+      case FastTypeTag.ArrayChar => classOf[Array[Char]]
+      case FastTypeTag.ArrayShort => classOf[Array[Short]]
+      case x if x.typeConstructor == "scala.Array" =>  
+        clazz(x.typeArgs.head, cl).getName match {
+          case x if x startsWith "[" => Class.forName(s"[${x}", false, cl)
+          case x => Class.forName(s"[L${x};", false, cl)
+        }
+      case _ => 
+         try Class.forName(tag.typeConstructor, false, cl)
+         catch {
+           case e: ClassNotFoundException =>
+             // Try to correct for inner vs. outer classes.
+             val idx = tag.typeConstructor.lastIndexOf('.')
+             if (idx == -1) throw e
+             else {
+               val classname = new StringBuilder(tag.typeConstructor)
+               classname.setCharAt(idx, '$')
+               Class.forName(classname.toString, false, cl)
+             }
+         }
+    }).asInstanceOf[Class[T]]
 }

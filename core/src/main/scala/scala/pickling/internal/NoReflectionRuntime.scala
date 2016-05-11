@@ -14,10 +14,11 @@ import scala.reflect.runtime
 final class NoReflectionRuntime() extends PicklingRuntime {
   /** The current reflection mirror to use when doing runtime unpickling/pickling. */
   override def currentMirror: runtime.universe.Mirror = runtime.currentMirror
+  override def currentClassLoader: ClassLoader = ???
   object picklers extends PicklerRegistry {
-    override def genUnpickler(mirror: runtime.universe.Mirror, tagKey: String)(implicit share: refs.Share): _root_.scala.pickling.Unpickler[_] =
-      throw new UnsupportedOperationException(s"Runtime pickler generation is disabled.  Cannot create unpickler for $tagKey")
-    override def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit share: Share): Pickler[_] =
+    override def genUnpickler(tag: FastTypeTag[_])(implicit share: refs.Share): _root_.scala.pickling.Unpickler[_] =
+      throw new UnsupportedOperationException(s"Runtime pickler generation is disabled.  Cannot create unpickler for $tag")
+    override def genPickler(tag: FastTypeTag[_])(implicit share: Share): Pickler[_] =
       throw new UnsupportedOperationException(s"Runtime pickler generation is disabled.  Cannot create pickler for $tag")
     override val isLookupEnabled: Boolean = false
     override def lookupUnpickler(key: String): Option[Unpickler[_]] = None

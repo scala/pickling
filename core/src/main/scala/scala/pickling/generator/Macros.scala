@@ -14,6 +14,9 @@ private[pickling] object PicklingMacros {
 
   def genPicklerUnpickler[T]: AbstractPicklerUnpickler[T] with Generated =
     macro scala.pickling.generator.Compat.genPicklerUnpickler_impl[T]
+
+  def genPicklerUnpicklerDebug[T]: String =
+    macro scala.pickling.generator.Compat.genPicklerUnpickler_debug[T]
 }
 private[pickling] trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
   import c.universe._
@@ -76,6 +79,23 @@ private[pickling] trait PicklingMacros extends Macro with SourceGenerator with T
       case Some(tree) =>
         //System.err.println(s" --=== $tpe ===--\n$tree\n --=== / $tpe ===--")
         tree
+    }
+  }
+  // TODO - Share more code with the above
+  def genPicklerUnpicklerDebug[T: c.WeakTypeTag]: c.Tree = preferringAlternativeImplicits {
+    val tpe = computeType[T]
+    checkClassType(tpe)
+    val sym = symbols.newClass(tpe)
+    val impl = PicklingAlgorithm.run(generator)(sym, logger)
+    //System.err.println(impl)
+    val tree2 = impl map generatePicklerUnpicklerClass[T]
+    tree2 match {
+      case None =>
+        c.error(c.enclosingPosition, s"Failed to generate pickler/unpickler for $tpe")
+        ???
+      case Some(tree) =>
+        //System.err.println(s" --=== $tpe ===--\n$tree\n --=== / $tpe ===--")
+        q"${tree.toString}"
     }
   }
 }

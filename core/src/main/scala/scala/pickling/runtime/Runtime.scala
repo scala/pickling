@@ -105,7 +105,7 @@ class InterpretedPicklerRuntime(classLoader: ClassLoader, preclazz: Class[_])(im
               // therefore we pass fir.tpe (as pretpe) in addition to the class and use it for the is primitive check
               //val fldRuntime = new InterpretedPicklerRuntime(classLoader, fldClass)
               val fldTag = FastTypeTag.makeRaw(fldClass)
-              val fldPickler = scala.pickling.internal.currentRuntime.picklers.genPickler(classLoader, fldClass, fldTag).asInstanceOf[Pickler[Any]]
+              val fldPickler = scala.pickling.internal.currentRuntime.picklers.genPickler(fldTag).asInstanceOf[Pickler[Any]]
 
               builder.putField(fir.name, b => {
                 if (isEffFinal) {
@@ -222,7 +222,7 @@ class InterpretedUnpicklerRuntime(val mirror: Mirror, typeTag: String)(implicit 
                 if (shouldBotherAboutSharing(fir.tpe)) registerUnpicklee(result, preregisterUnpicklee())
                 result
               } else {
-                val fieldUnpickler = scala.pickling.internal.currentRuntime.picklers.genUnpickler(mirror, fdynamicTag)
+                val fieldUnpickler = scala.pickling.internal.currentRuntime.picklers.genUnpickler(FastTypeTag(fdynamicTag))
                 fieldUnpickler.unpickle(fdynamicTag, freader)
               }
             }
@@ -321,7 +321,7 @@ class ShareNothingInterpretedUnpicklerRuntime(val mirror: Mirror, typeTag: Strin
                 val result = freader.readPrimitive()
                 result
               } else {
-                val fieldUnpickler = scala.pickling.internal.currentRuntime.picklers.genUnpickler(mirror, fdynamicTag)
+                val fieldUnpickler = scala.pickling.internal.currentRuntime.picklers.genUnpickler(FastTypeTag(fdynamicTag))
                 fieldUnpickler.unpickle(fdynamicTag, freader)
               }
             }

@@ -21,4 +21,6 @@ trait PicklingRuntime {
   /** The current reflection mirror to use when doing runtime unpickling/pickling. */
   //  TODO - Allow this to get modified!
   def currentMirror: Mirror
+  /** The current classloader used when doing runtime unpickling/pickling. */
+  def currentClassLoader: ClassLoader
 }

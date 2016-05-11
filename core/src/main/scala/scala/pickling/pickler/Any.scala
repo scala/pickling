@@ -3,7 +3,6 @@ package pickler
 
 import scala.pickling.internal.GRL
 import scala.pickling.internal.currentRuntime
-import scala.reflect.runtime.currentMirror
 
 /** Generate a [[Pickler]] and [[Unpickler]] for [[Any]].
   *
@@ -33,7 +32,7 @@ object AnyPicklerUnpickler extends AbstractPicklerUnpickler[Any]
       GRL.lock()
       val tag = try FastTypeTag.makeRaw(clazz)
       finally GRL.unlock()
-      val p = currentRuntime.picklers.genPickler(classLoader, clazz, tag)
+      val p = currentRuntime.picklers.genPickler(tag)
       p.asInstanceOf[Pickler[Any]]
     }
 
@@ -47,7 +46,7 @@ object AnyPicklerUnpickler extends AbstractPicklerUnpickler[Any]
   def unpickle(tag: String, reader: PReader): Any = {
     if (reader.atPrimitive) reader.readPrimitive()
     else {
-      val actualUnpickler = currentRuntime.picklers.genUnpickler(currentMirror, tag)
+      val actualUnpickler = currentRuntime.picklers.genUnpickler(FastTypeTag(tag))
       actualUnpickler.unpickle(tag, reader)
     }
   }

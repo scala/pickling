@@ -22,23 +22,20 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator)
 
   registerRuntimePicklersAtInit()
 
-  override def genUnpickler(mirror: Mirror, tagKey: String)(implicit share: refs.Share): Unpickler[_] = {
-    lookupUnpickler(tagKey) match {
+  override def genUnpickler(tag: FastTypeTag[_])(implicit share: refs.Share): Unpickler[_] = {
+    lookupUnpickler(tag.key) match {
       case Some(p) => p
       case None =>
-        // TODO - This should probably just be taking the `tagKey` and no mirror or share, the mirror/share
-        //        should be configured by the default runtime.
-        val p = generator.genUnpickler(mirror, tagKey)
-        registerUnpickler(tagKey, p)
+        val p = generator.genUnpickler(tag)
+        registerUnpickler(tag.key, p)
         p
     }
   }
-  def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit share: refs.Share): Pickler[_] = {
+  def genPickler(tag: FastTypeTag[_])(implicit share: refs.Share): Pickler[_] = {
     lookupPickler(tag.key) match {
       case Some(p) => p
       case None =>
-        // TODO - genPickler should probably just be using the tag and `currentMirror` of internal.
-        val p = generator.genPickler(classLoader, clazz, tag)
+        val p = generator.genPickler(tag)
         registerPickler(tag.key, p)
         p
     }

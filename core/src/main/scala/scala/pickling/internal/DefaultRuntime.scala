@@ -16,6 +16,19 @@ import scala.reflect.runtime.universe.Mirror
  */
 class DefaultRuntime extends spi.PicklingRuntime {
   override val GRL = new ReentrantLock()
+  override def currentClassLoader: ClassLoader = {
+    // This is meant to be a (less good, but more flexible) replacement
+    // to `currentMirror` in scala.reflect.runtime, which is a macro that will grab the class of the
+    // enclosing scope.
+    // We are trying to respect classloaders, but....
+    Thread.currentThread().getContextClassLoader() match {
+      case null => 
+        // Most likely this is what is returned now.
+        getClass.getClassLoader
+      case cl => cl
+    }
+    
+  }
   /** Gives access to the current refRegistry. */
   override val refRegistry: RefRegistry = new DefaultRefRegistry
 

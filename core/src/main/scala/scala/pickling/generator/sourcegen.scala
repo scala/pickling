@@ -150,7 +150,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
     val tag = try {
       _root_.scala.pickling.FastTypeTag.makeRaw(clazz)
     } finally _root_.scala.pickling.internal.GRL.unlock()
-    _root_.scala.pickling.internal.`package`.currentRuntime.picklers.genPickler(classLoader, clazz, tag)
+    _root_.scala.pickling.internal.`package`.currentRuntime.picklers.genPickler(tag)
   """
 
   def createPickler(tpe: c.Type, builder: c.Tree): c.Tree = q"""
@@ -318,7 +318,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
   def genSubclassUnpickler(x: SubclassUnpicklerDelegation): c.Tree = {
     val tpe = x.parent.tpe[c.universe.type](c.universe)
     val defaultCase =
-      if(x.lookupRuntime) CaseDef(Ident(nme.WILDCARD), EmptyTree, q"_root_.scala.pickling.internal.`package`.currentRuntime.picklers.genUnpickler(_root_.scala.pickling.internal.`package`.currentMirror, tagKey)")
+      if(x.lookupRuntime) CaseDef(Ident(nme.WILDCARD), EmptyTree, q"_root_.scala.pickling.internal.`package`.currentRuntime.picklers.genUnpickler(_root_.scala.pickling.FastTypeTag(tagKey))")
       else CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""throw $basePicklingException("Cannot unpickle, Unexpected tag: " + tagKey + " not recognized.")""")
     val subClassCases =
        x.subClasses.toList map { sc =>

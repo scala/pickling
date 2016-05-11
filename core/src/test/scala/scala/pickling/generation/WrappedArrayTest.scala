@@ -29,7 +29,7 @@ class WrappedArrayTest extends FunSuite {
           // TODO: allow passing in ClassLoader to picklers selected from registry
           val classLoader: ClassLoader = elemClass.getClassLoader
           val elemTag = FastTypeTag.makeRaw(elemClass) // slow: `mkRaw` is called for each element
-          val pickler = internal.currentRuntime.picklers.genPickler(classLoader, elemClass, elemTag).asInstanceOf[Pickler[AnyRef]]
+          val pickler = internal.currentRuntime.picklers.genPickler(elemTag).asInstanceOf[Pickler[AnyRef]]
           pickler.pickle(elem, b)
         }
       }
@@ -46,7 +46,7 @@ class WrappedArrayTest extends FunSuite {
       while (i < length) {
         val r = reader.readElement()
         val elemTag = r.beginEntry()
-        val elemUnpickler = internal.currentRuntime.picklers.genUnpickler(mirror, elemTag)
+        val elemUnpickler = internal.currentRuntime.picklers.genUnpickler(FastTypeTag(elemTag))
         val elem = elemUnpickler.unpickle(elemTag, r)
         r.endEntry()
         newArray(i) = elem.asInstanceOf[AnyRef]

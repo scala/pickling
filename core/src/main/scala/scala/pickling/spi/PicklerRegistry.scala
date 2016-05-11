@@ -16,23 +16,27 @@ trait PicklerRegistry {
 
   /** Looks up the registered unpickler using the provided tagKey.
     *
+    * TODO(jsuereth) - Deprecate this in favor of just "lookupUnpickler", once we can drop statically configured
+    * sharing of dynamically generated unpicklers
+    *
     * If there are no registered picklers or pickler-generators, then we instead attempt to generate the pickler using
     * the passed in information.
-    *
-    * TODO(jsuereth) - This should use classLoader just like genPickler.  No reason to mix Java/Scala reflection.
     *
     * @param mirror  The scala mirror (classloader/symbolloader) we use to generate the unpickler.
     * @param tagKey The full tag of the type, which may or may not include type parameters.
     */
-  def genUnpickler(mirror: Mirror, tagKey: String)(implicit share: refs.Share): Unpickler[_]
+  def genUnpickler(tag: FastTypeTag[_])(implicit share: refs.Share): Unpickler[_]
 
   /** Looks up a Pickler for the given tag.  If none is found, then we attempt to generate one.
+    *
+    * TODO(jsuereth) - Deprecate this in favor of just "lookupPickler", once we can drop statically configured
+    * sharing of dynamically generated unpicklers
     *
     * @param classLoader The classloader to use when reflecting over the pickled class.
     * @param clazz The clazz we need to pickle.
     * @param tag The full tag of the type we're pickling, which may or may not include type parameters.
     */
-  def genPickler(classLoader: ClassLoader, clazz: Class[_], tag: FastTypeTag[_])(implicit share: refs.Share): Pickler[_]
+  def genPickler(tag: FastTypeTag[_])(implicit share: refs.Share): Pickler[_]
 
   /** Checks if lookup is enabled for this registry */
   def isLookupEnabled: Boolean
