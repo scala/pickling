@@ -7,6 +7,7 @@ private[pickling] trait PicklingMacros extends Macro with SourceGenerator with T
 
   implicit val implContext = c
   import c.universe._
+  import compat._
 
   val symbols = new IrScalaSymbols[c.universe.type, c.type](c.universe, tools)
   // TODO - also allow import to disable the warnings.
