@@ -2,15 +2,18 @@ package scala.pickling
 package pickler
 
 /**
- * Pickler implicits for type tags.
- */
-trait TypeTagPicklers extends PrimitivePicklers with GeneratorRegistry {
-  implicit def typeTagPickler[T]: AbstractPicklerUnpickler[FastTypeTag[T]] =
-    FastTypeTagPicklerUnpickler.asInstanceOf[AbstractPicklerUnpickler[FastTypeTag[T]]]
+  * Pickler implicits for type tags.
+  */
+trait TypeTagPicklers extends GeneratorRegistry {
+  this: PrimitivePicklers =>
 
+  implicit def typeTagPickler[T]: AbstractPicklerUnpickler[FastTypeTag[T]] =
+    FastTypeTagPicklerUnpickler
+      .asInstanceOf[AbstractPicklerUnpickler[FastTypeTag[T]]]
 
   private[pickler] object FastTypeTagPicklerUnpickler
-    extends AbstractPicklerUnpickler[FastTypeTag[_]] with AutoRegister[FastTypeTag[_]] {
+      extends AbstractPicklerUnpickler[FastTypeTag[_]]
+      with AutoRegister[FastTypeTag[_]] {
     override def pickle(picklee: FastTypeTag[_], builder: PBuilder): Unit = {
       builder.beginEntry(picklee, tag)
       builder.putField("key", { b =>
@@ -37,15 +40,14 @@ trait TypeTagPicklers extends PrimitivePicklers with GeneratorRegistry {
       val key = stringPickler.unpickleEntry(rk).toString
       FastTypeTag.apply(key)
     }
-    override lazy val tag: FastTypeTag[FastTypeTag[_]] = FastTypeTag.apply("scala.pickling.pickler.FastTypeTag").asInstanceOf[FastTypeTag[FastTypeTag[_]]]
-
+    override lazy val tag: FastTypeTag[FastTypeTag[_]] = FastTypeTag
+      .apply("scala.pickling.pickler.FastTypeTag")
+      .asInstanceOf[FastTypeTag[FastTypeTag[_]]]
   }
 
   // Ensure we register for runtime deserialization.
-  locally{
+  locally {
     registerGen("scala.pickling.pickler.FastTypeTag",
-      ignore => FastTypeTagPicklerUnpickler)
+                ignore => FastTypeTagPicklerUnpickler)
   }
-
 }
-

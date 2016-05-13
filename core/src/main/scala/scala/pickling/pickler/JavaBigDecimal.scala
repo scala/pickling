@@ -7,9 +7,11 @@ import java.math.BigDecimal
   * Note; This currently serialzies as a string.
   */
 trait JavaBigDecimalPicklers extends PrimitivePicklers {
-  implicit val javaBigDecimalPickler: Pickler[BigDecimal] with Unpickler[BigDecimal] =
+
+  implicit val javaBigDecimalPickler: AbstractPicklerUnpickler[BigDecimal] = {
     new AbstractPicklerUnpickler[BigDecimal] with AutoRegister[BigDecimal] {
       lazy val tag = FastTypeTag[BigDecimal]("java.math.BigDecimal")
+
       def pickle(picklee: BigDecimal, builder: PBuilder): Unit = {
         builder.beginEntry(picklee, tag)
         builder.putField("value", b => {
@@ -18,6 +20,7 @@ trait JavaBigDecimalPicklers extends PrimitivePicklers {
         })
         builder.endEntry()
       }
+
       def unpickle(tag: String, reader: PReader): Any = {
         val reader1 = reader.readField("value")
         reader1.hintElidedType(implicitly[FastTypeTag[String]])
@@ -25,5 +28,6 @@ trait JavaBigDecimalPicklers extends PrimitivePicklers {
         new BigDecimal(result.asInstanceOf[String])
       }
     }
-  internal.currentRuntime.picklers.registerPicklerUnpickler(javaBigDecimalPickler)
+  }
+
 }

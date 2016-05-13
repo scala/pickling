@@ -1,9 +1,9 @@
 package scala.pickling
 package pickler
 
-/** All pickler instances.
- */
-trait AllPicklers extends PrimitivePicklers
+/** All pickler instances, including the low priority implicits. */
+trait AllPicklers extends LowPriorityPicklers
+  with PrimitivePicklers
   with DatePicklers
   with JavaBigDecimalPicklers
   with JavaBigIntegerPicklers
@@ -15,11 +15,8 @@ trait AllPicklers extends PrimitivePicklers
   with CollectionPicklers {}
 object AllPicklers extends AllPicklers {}
 
-/** All picklers for collections with exception of List which is handled by macro.
-  *
-  * These need to be between the big picklers and the gen picklers.
- */
-trait CollectionPicklers extends AllGenPicklers with MutableMapPicklers
+/** All collection picklers except [[List]] which is handled by a macro. */
+trait CollectionPicklers extends MutableMapPicklers
   with ImmutableSortedMapPicklers
   with MapPicklers
   with MutableSortedSetPicklers
@@ -34,10 +31,5 @@ trait CollectionPicklers extends AllGenPicklers with MutableMapPicklers
   with SeqPicklers
   with IterablePicklers {}
 
-// Gen picklers need to be BELOW the collection implicits so that we can use the collection ones.
-trait AllGenPicklers extends LowPriorityPicklers
-  with GenPicklers
-  with GenUnpicklers {}
-
-// We force any to be the last pickler.
-trait LowPriorityPicklers extends AnyUnpicklers {}
+// Force `Any` to be the last pickler to be picked in the implicit search
+trait LowPriorityPicklers extends GenPicklersUnpicklers with AnyUnpicklers {}

@@ -87,7 +87,7 @@ import scala.pickling.Defaults.{ pickleOps, unpickleOps }
 // import scala.pickling.functions._
 
 // Import picklers for specific types
-import scala.pickling.Defaults.{ stringPickler, intPickler, refUnpickler, nullPickler }
+import scala.pickling.Defaults.{ stringPickler, intPickler, refPicklerUnpickler, nullPickler }
 
 case class Pumpkin(kind: String)
 // Manually generate a pickler using macro
