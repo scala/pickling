@@ -120,7 +120,7 @@ lazy val sandbox: Project = (project in file("sandbox")).
   settings(commonSettings ++ noPublish: _*).
   settings(
     sourceDirectory in Test := baseDirectory.value,
-    libraryDependencies += scalaTest,
+    libraryDependencies += scalaTest % Test,
     // scalacOptions ++= Seq()
     scalacOptions ++= Seq("-Xlog-implicits")
     // scalacOptions ++= Seq("-Xprint:typer")
@@ -134,7 +134,8 @@ lazy val sandboxTests: Project = (project in file("sandbox-test")).
   settings(
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
-      scalaTest
+      scalaTest % Test,
+      scalaCheck % Test
     )
   )
 
