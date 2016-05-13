@@ -66,7 +66,7 @@ private[pickling] trait PicklingMacros extends Macro with SourceGenerator with T
 
     def debug(msg: Any) = {
       val padding = "  " * (candidates.length - 1)
-      Console.err.println(padding + msg)
+      //Console.err.println(padding + msg)
     }
 
     debug(YELLOW_B + s"We have entered here ${Memo.memo.get(key)}" + RESET)
@@ -110,6 +110,7 @@ private[pickling] trait PicklingMacros extends Macro with SourceGenerator with T
 
 }
 
+/** Temporary object used for debugging the implicit search. */
 object Memo {
   val memo = mutable.Map.empty[String, Int]
 }
