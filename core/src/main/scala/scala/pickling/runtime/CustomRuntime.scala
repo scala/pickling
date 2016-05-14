@@ -156,11 +156,11 @@ trait CustomRuntime {
     }
   }
 
-  val tuplePicklerGenerator: PicklerUnpicklerGen[(Any, Any)] = { tpe =>
+  val tuplePicklerGenerator: PicklerGen[(Any, Any)] = { tpe =>
     // TODO - Actually extract the tpe of the internal things.
     val tag = FastTypeTag.apply(tpe.toString)
     // TODO Remove this redundancy and reuse the tag above
-    Tuple2RuntimePicklerUnpickler
+    Tuple2RuntimePicklerUnpickler.asInstanceOf[Pickler[(Any, Any)]]
   }
 
   val tupleUnpicklerGenerator: UnpicklerGen[(Any,Any)] = {

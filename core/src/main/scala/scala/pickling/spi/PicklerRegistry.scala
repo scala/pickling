@@ -125,6 +125,17 @@ trait PicklerRegistry {
     */
   private[pickling] def dumpStateTo(r: PicklerRegistry): Unit
 
+  type Templates = (PicklerGen[Any], UnpicklerGen[Any])
+
+  /** Register templates (also known as generators) that know how to pickle
+    * and unpickle types at runtime without using reflection.*/
+  final def registerTemplatesAtInit(ts: Vector[(String, Templates)]): Unit = {
+    for((key, (pickler, unpickler)) <- ts) {
+      registerPicklerGenerator(key, pickler)
+      registerUnpicklerGenerator(key, unpickler)
+    }
+  }
+
 }
 
 object PicklerRegistry {

@@ -4,13 +4,14 @@ import scala.collection.concurrent.TrieMap
 import scala.collection.mutable
 import scala.pickling.spi.PicklerRegistry._
 import scala.reflect.runtime.universe.Mirror
-
 import scala.pickling._
+import scala.pickling.runtime.CustomRuntime
 import scala.pickling.spi.{PicklerRegistry, RuntimePicklerGenerator}
+import scala.pickling.util.ClassMapper
 
 /** Default pickle registry just uses TrieMaps and delegates behavior to a runtime pickler generator. */
 final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator)
-  extends PicklerRegistry with RuntimePicklerRegistry {
+  extends PicklerRegistry with CustomRuntime {
 
   type PicklerGenerator = FastTypeTag[_] => Pickler[_]
   type UnpicklerGenerator = FastTypeTag[_] => Unpickler[_]
@@ -20,7 +21,16 @@ final class DefaultPicklerRegistry(generator: RuntimePicklerGenerator)
   private val unpicklerMap: mutable.Map[String, Unpickler[_]] = new TrieMap[String, Unpickler[_]]
   private val unpicklerGenMap: mutable.Map[String, UnpicklerGenerator] = new TrieMap[String, UnpicklerGenerator]
 
-  registerRuntimePicklersAtInit()
+  val tupleGenerators: (PicklerGen[Any], UnpicklerGen[Any]) =
+    (tuplePicklerGenerator.asInstanceOf[PicklerGen[Any]],
+      tupleUnpicklerGenerator.asInstanceOf[UnpicklerGen[Any]])
+
+  val templatesToRegister =
+    Vector("scala.Tuple2" -> tupleGenerators) ++
+      ClassMapper.specializedTupleNamesFor("scala.Tuple2")
+        .map(_ -> tupleGenerators)
+
+  registerTemplatesAtInit(templatesToRegister)
 
   override def genUnpickler(mirror: Mirror, tagKey: String)(implicit share: refs.Share): Unpickler[_] = {
     lookupUnpickler(tagKey) match {
