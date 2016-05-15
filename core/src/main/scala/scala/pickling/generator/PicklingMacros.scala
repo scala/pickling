@@ -3,30 +3,41 @@ package generator
 
 import scala.collection.mutable
 
-private[pickling] trait PicklingMacros extends Macro with SourceGenerator with TypeAnalysis {
+import HasCompat._
+
+private[pickling] trait PicklingMacros
+    extends Macro with SourceGenerator with TypeAnalysis {
 
   implicit val implContext = c
+
   import c.universe._
   import compat._
 
   val symbols = new IrScalaSymbols[c.universe.type, c.type](c.universe, tools)
   // TODO - also allow import to disable the warnings.
-  val disableWillRobinsonWarning = java.lang.Boolean.getBoolean("pickling.willrobinson.disablewarning")
+  val disableWillRobinsonWarning =
+    java.lang.Boolean.getBoolean("pickling.willrobinson.disablewarning")
   // TODO - We should have more customization than this
-  val handleCaseClassSubclasses = !configOption(typeOf[IsIgnoreCaseClassSubclasses])
+  val handleCaseClassSubclasses = !configOption(
+      typeOf[IsIgnoreCaseClassSubclasses])
   val generator =
-    if(isStaticOnly) {
-      PicklingAlgorithm.aggregate(Seq(
-        new CaseClassPickling(allowReflection = false, careAboutSubclasses = handleCaseClassSubclasses),
-        AdtPickling,
-        ScalaSingleton))
+    if (isStaticOnly) {
+      PicklingAlgorithm.aggregate(
+          Seq(new CaseClassPickling(
+                  allowReflection = false,
+                  careAboutSubclasses = handleCaseClassSubclasses),
+              AdtPickling,
+              ScalaSingleton))
     } else {
-      PicklingAlgorithm.aggregate(Seq(
-        new CaseClassPickling(allowReflection = true, careAboutSubclasses = handleCaseClassSubclasses),
-        AdtPickling,
-        ScalaSingleton,
-        new ExternalizablePickling,
-        new WillRobinsonPickling(showWarnings = !disableWillRobinsonWarning)))
+      PicklingAlgorithm.aggregate(
+          Seq(new CaseClassPickling(
+                  allowReflection = true,
+                  careAboutSubclasses = handleCaseClassSubclasses),
+              AdtPickling,
+              ScalaSingleton,
+              new ExternalizablePickling,
+              new WillRobinsonPickling(
+                  showWarnings = !disableWillRobinsonWarning)))
     }
 
   implicit object logger extends AlgorithmLogger {
@@ -35,7 +46,7 @@ private[pickling] trait PicklingMacros extends Macro with SourceGenerator with T
     def abort(msg: String): Nothing = c.abort(c.enclosingPosition, msg)
     def debug(msg: String): Unit = {
       // These are enabled when -verbose is enabled.
-      c.info(c.enclosingPosition, msg, force=false)
+      c.info(c.enclosingPosition, msg, force = false)
     }
   }
 
@@ -47,11 +58,11 @@ private[pickling] trait PicklingMacros extends Macro with SourceGenerator with T
       case tpe1 if tpe1.typeSymbol.isClass => () // This case is fine.
       case NothingTpe => impossibleGeneration("Nothing")
       case RefinedType(parents, decls) => impossibleGeneration("refined type")
-      case _ if tpe.isScalaOrJavaPrimitive => impossibleGeneration("primitive types")
+      case _ if tpe.isScalaOrJavaPrimitive =>
+        impossibleGeneration("primitive types")
       case _ => impossibleGeneration(s"non-class type $tpe")
     }
   }
-
 
   def preferExistingImplicits(body: => Tree): Tree = {
 
@@ -87,16 +98,18 @@ private[pickling] trait PicklingMacros extends Macro with SourceGenerator with T
       c.inferImplicitValue(ourPt, silent = true) match {
         case success if success != EmptyTree =>
           debug(BLUE_B + s"No, because there's $success" + RESET)
-          c.abort(c.enclosingPosition, "stepping aside: there are other candidates")
+          c.abort(c.enclosingPosition,
+                  "stepping aside: there are other candidates")
         case _ =>
-          debug(GREEN_B + s"Yes, there are no obstacles. Entering: $ourPt" + RESET)
+          debug(GREEN_B + s"Yes, there are no obstacles. Entering: $ourPt" +
+              RESET)
           debug(s"Generated tree: $body")
           body
       }
     }
   }
 
-  def genPicklerUnpickler[T: c.WeakTypeTag]: c.Tree = {
+  def genPicklerUnpickler[T : c.WeakTypeTag]: c.Tree = {
     preferExistingImplicits {
       val tpe = computeType[T]
       checkClassType(tpe)
@@ -108,7 +121,6 @@ private[pickling] trait PicklingMacros extends Macro with SourceGenerator with T
       }
     }
   }
-
 }
 
 /** Temporary object used for debugging the implicit search. */

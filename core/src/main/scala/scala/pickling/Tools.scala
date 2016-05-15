@@ -1,8 +1,5 @@
 package scala.pickling
 
-import java.util.concurrent.atomic.AtomicReference
-
-import scala.collection.mutable
 import scala.pickling.internal._
 
 import scala.language.existentials
@@ -10,9 +7,7 @@ import scala.language.existentials
 import scala.reflect.macros.Context
 import scala.reflect.api.Universe
 
-import scala.collection.mutable.{Map => MutableMap, ListBuffer => MutableList, WeakHashMap, Set => MutableSet}
-import scala.collection.mutable.{Stack => MutableStack, Queue => MutableQueue}
-
+import scala.collection.mutable.{Map => MutableMap, ListBuffer => MutableList, WeakHashMap}
 import java.lang.ref.WeakReference
 
 import HasCompat._
@@ -24,7 +19,7 @@ object Tools {
     def unapply[T](optRef: Option[WeakReference[T]]): Option[T] =
       if (optRef.nonEmpty) {
         val result = optRef.get.get
-        if (result != null) Some(result) else None
+        Option(result)
       } else None
   }
 
