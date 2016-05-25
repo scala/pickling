@@ -11,6 +11,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
   val errorsPath = q"$picklingPath.PicklingErrors"
   val basePicklingException = q"$errorsPath.BasePicklingException"
   val basePicklingExceptionType = tq"$errorsPath.BasePicklingException"
+  val unrecognizedTagPath = q"$errorsPath.UnrecognizedTag"
 
   def pickleNull(builder: c.Tree): c.Tree =
     q"""_root_.scala.pickling.Defaults.nullPickler.pickle(null, $builder)"""
@@ -325,8 +326,11 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
   def genSubclassUnpickler(x: SubclassUnpicklerDelegation): c.Tree = {
     val tpe = x.parent.tpe[c.universe.type](c.universe)
     val defaultCase =
-      if(x.lookupRuntime) CaseDef(Ident(nme.WILDCARD), EmptyTree, q"_root_.scala.pickling.internal.`package`.currentRuntime.picklers.genUnpickler(_root_.scala.pickling.internal.`package`.currentMirror, tagKey)")
-      else CaseDef(Ident(nme.WILDCARD), EmptyTree, q"""throw $basePicklingException("Cannot unpickle, Unexpected tag: " + tagKey + " not recognized.")""")
+      if(x.lookupRuntime)
+        CaseDef(Ident(nme.WILDCARD), EmptyTree,
+          q"_root_.scala.pickling.internal.`package`.currentRuntime.picklers.genUnpickler(_root_.scala.pickling.internal.`package`.currentMirror, tagKey)")
+      else CaseDef(Ident(nme.WILDCARD), EmptyTree,
+        q"""throw $unrecognizedTagPath(tagKey, "unpickling")""")
     val subClassCases =
        x.subClasses.toList map { sc =>
          val stpe = sc.tpe[c.universe.type](c.universe)

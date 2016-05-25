@@ -1,7 +1,6 @@
 package scala.pickling
 package pickler
 
-import scala.pickling.internal.GRL
 import scala.pickling.internal.currentRuntime
 import scala.reflect.runtime.currentMirror
 
@@ -30,9 +29,7 @@ object AnyPicklerUnpickler extends AbstractPicklerUnpickler[Any]
     val pickler = if (picklee == null) nullPickler else {
       val clazz = picklee.getClass
       val classLoader = this.getClass.getClassLoader
-      GRL.lock()
-      val tag = try FastTypeTag.makeRaw(clazz)
-      finally GRL.unlock()
+      val tag = FastTypeTag.makeRaw(clazz)
       val p = currentRuntime.picklers.genPickler(classLoader, clazz, tag)
       p.asInstanceOf[Pickler[Any]]
     }

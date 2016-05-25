@@ -85,8 +85,9 @@ object PicklingErrors {
   /** Exception thrown when there is no type hint and the type in the
     * unpickler hasn't been elided.
     */
-  case object NoTypeHint extends ParsingException(
-    "Type is elided in pickle, but no elide hint was provided by the unpickler.")
+  case class NoTypeHint(suffix: String) extends ParsingException(
+    s"Type is elided in pickle, but no elide hint was provided by the unpickler$suffix")
+  object NoTypeHint extends NoTypeHint(".")
 
   /** Represent any error that violates an assumption made by scala pickling. */
   class LogicException(msg: String) extends BasePicklingException(msg)
@@ -149,8 +150,19 @@ object PicklingErrors {
     * @param extra Extra information that enriches the feedback
     */
   final case class UnrecognizedClass(clz: Class[_], extra: Option[String])
-    extends PicklingRuntimeException(s"Class $clz not recognized by pickler" +
-      s"""${if(extra.isDefined) ", " + extra + "." else "." }""" )
+    extends PicklingRuntimeException(s"Class ${clz.getName} not recognized" +
+      s""" by pickler. ${if(extra.isDefined) ", " + extra + "." else "." }"""
+    )
+
+  /** Exception thrown when a pickler is unable to recognize a tag.
+    *
+    * @param tagKey The string representation of a tag
+    * @param context Information about where or how has happened
+    */
+  final case class UnrecognizedTag(tagKey: String, context: String)
+    extends PicklingRuntimeException(
+      s"Error when $context. Unexpected tag $tagKey could not be recognized."
+    )
 
   /** Used to add some top message to a captured exception, that usually
     * gives some information on the context in which it happened.
