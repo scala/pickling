@@ -70,15 +70,21 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
       }
     }
 
+    val classMapper = q"$picklingPath.util.ClassMapper"
     val unrecognizedClass = q"$errorsPath.UnrecognizedClass"
 
     def genSubclassDispatch(x: SubclassDispatch): c.Tree = {
       val tpe = x.parent.tpe[c.universe.type](c.universe)
-      val clazzName = newTermName("clazz")
-        val compileTimeDispatch: List[CaseDef] = (x.subClasses map { subtpe =>
-        val tpe = subtpe.tpe[c.universe.type](c.universe)
-        CaseDef(Bind(clazzName, Ident(nme.WILDCARD)), q"clazz == classOf[$tpe]", createPickler(tpe, q"builder"))
-      })(collection.breakOut)
+      val clazz = newTermName("clazz")
+      val compileTimeDispatch: List[CaseDef] =
+        (x.subClasses map { subtpe =>
+          val tpe = subtpe.tpe[c.universe.type](c.universe)
+          CaseDef(
+            Bind(clazz, Ident(nme.WILDCARD)),
+            q"_root_.scala.pickling.util.ClassMapper.areSameClasses($clazz, classOf[$tpe])",
+            createPickler(tpe, q"builder")
+          )
+        })(collection.breakOut)
 
       val failDispatch = {
         val dispatcheeNames = x.subClasses.map(_.className).mkString(", ")
@@ -111,7 +117,8 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
         case Some(b) =>
           val parentTpe = x.parent.tpe[c.universe.type](c.universe)
           val impl = generatePickleImplFromAst(b)
-          q"""if(classOf[$parentTpe] == picklee.getClass) $impl else $subclasses"""
+          val checkIfParent = q"$classMapper.areSameClasses(picklee.getClass, classOf[$parentTpe])"
+          q"""if($checkIfParent) $impl else $subclasses"""
       }
     }
     def genPickleEntry(op: PickleEntry): c.Tree = {
