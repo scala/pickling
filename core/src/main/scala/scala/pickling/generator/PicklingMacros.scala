@@ -73,15 +73,11 @@ private[pickling] trait PicklingMacros
     if (candidates.isEmpty) return body
     val ourPt = candidates.head.pt
 
-    val key = ourPt.toString
-    Memo.memo += key -> (Memo.memo.getOrElse(key, 0) + 1)
-
     def debug(msg: Any) = {
       val padding = "  " * (candidates.length - 1)
       //Console.err.println(padding + msg)
     }
 
-    debug(YELLOW_B + s"We have entered here ${Memo.memo.get(key)}" + RESET)
     debug(MAGENTA_B + "Can we enter " + ourPt + "?" + RESET)
     debug(candidates)
 
@@ -121,9 +117,4 @@ private[pickling] trait PicklingMacros
       }
     }
   }
-}
-
-/** Temporary object used for debugging the implicit search. */
-object Memo {
-  val memo = mutable.Map.empty[String, Int]
 }
