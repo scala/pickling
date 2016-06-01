@@ -4,6 +4,7 @@ package pickler
 /** All pickler instances, including the low priority implicits. */
 trait AllPicklers extends LowPriorityPicklers
   with PrimitivePicklers
+  with NothingPicklers
   with DatePicklers
   with JavaBigDecimalPicklers
   with JavaBigIntegerPicklers

@@ -190,4 +190,8 @@ object PicklingErrors {
   final case class Wrapper(e: Throwable, msg: String, delimiter: String = "\n")
     extends BasePicklingException(s"$msg$delimiter${e.getMessage}", Some(e))
 
+  /** Exception thrown when one tries to unpickle on a Unpickler[Nothing]. */
+  case object NothingIsNotUnpicklable extends PicklingRuntimeException(
+    s"You called `unpickle` on `Unpickler[Nothing]`, but it cannot be unpickled")
+
 }
