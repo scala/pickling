@@ -3,7 +3,7 @@ import Dependencies._ // see project/Dependencies.scala
 import scala.xml.{Node => XmlNode, NodeSeq => XmlNodeSeq, _}
 import scala.xml.transform.{RewriteRule, RuleTransformer}
 
-val buildVersion = "0.11.0-M4"
+val buildVersion = "0.11.0-M2"
 
 def commonSettings = Seq(
   version in ThisBuild := buildVersion,
