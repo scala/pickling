@@ -8,16 +8,18 @@ package object json extends JsonFormats
 
 package json {
 
-  import scala.pickling.PicklingErrors.{FieldNotFound, LogicPicklingError, JsonParseFailed, BasePicklingException}
+  import scala.pickling.PicklingErrors._
   import scala.reflect.runtime.universe._
   import definitions._
+
   import scala.util.parsing.json._
-  import scala.collection.mutable.{StringBuilder, Stack}
+  import scala.collection.mutable.{Stack => MutableStack}
 
   trait JsonFormats {
     implicit val pickleFormat: JSONPickleFormat = new JSONPickleFormat
     implicit def toJSONPickle(value: String): JSONPickle = JSONPickle(value)
-    implicit def jsonPickleToUnpickleOps(value: String): UnpickleOps = new UnpickleOps(JSONPickle(value))   
+    implicit def jsonPickleToUnpickleOps(value: String): UnpickleOps =
+      new UnpickleOps(JSONPickle(value))
   }
 
   case class JSONPickle(value: String) extends Pickle {
@@ -40,8 +42,8 @@ package json {
     }
   }
 
-  class JSONPickleBuilder(format: JSONPickleFormat, buf: Output[String]) extends PBuilder with PickleTools {
-    // private val buf = new StringBuilder()
+  class JSONPickleBuilder(format: JSONPickleFormat, buf: Output[String])
+    extends PBuilder with PickleTools {
     private var nindent = 0
     private def indent() = nindent += 1
     private def unindent() = nindent -= 1
@@ -64,7 +66,7 @@ package json {
       append(s + "\n")
       pendingIndent = true
     }
-    private val tags = new Stack[FastTypeTag[_]]()
+    private val tags = new MutableStack[FastTypeTag[_]]()
     private def pickleArray(arr: Array[_], tag: FastTypeTag[_]) = {
       unindent()
       appendLine("[")
@@ -226,10 +228,14 @@ package json {
           }
         } else {
           datum match {
-            case JSONObject(fields) if fields.contains("$ref") => FastTypeTag.Ref.key
-            case JSONObject(fields) if fields.contains("$type") => fields("$type").asInstanceOf[String]
-            case JSONObject(fields) => throw LogicPicklingError(s"Could not find a type tag, and no elided type was hinted: ${fields}")
-            case value => throw LogicPicklingError(s"Logic pickling error:  Could not find a type tag on primitive, and no elided type was hinted: $value")
+            case JSONObject(fields)
+              if fields.contains("$ref") => FastTypeTag.Ref.key
+            case JSONObject(fields)
+              if fields.contains("$type") => fields("$type").asInstanceOf[String]
+            case JSONObject(fields) =>
+              throw NoTypeHint(s". Found fields: ${fields}")
+            case value =>
+              throw NoTypeHint(s" for the primitive $value.")
           }
         }
       }

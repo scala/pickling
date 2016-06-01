@@ -46,11 +46,11 @@ class SealedTraitStaticAnnotatedTest extends FunSuite {
     val apple = Apple("Fuji")
     try {
       val pickled = (apple: Fruit).pickle.value
-      throw new Exception(s"We should have failed to pickle Apple but we pickled as: $pickled")
+      fail(s"We should have failed to pickle Apple but we pickled as: $pickled")
     } catch {
       case PicklingException(message, cause) =>
         if (!message.contains("Apple not recognized"))
-          throw new Exception(s"Not the expected exception: $message")
+          fail (s"Not the expected exception: $message")
     }
 
     // if we are only using static (un)picklers, then the Banana
@@ -63,11 +63,11 @@ class SealedTraitStaticAnnotatedTest extends FunSuite {
     // it should fail because it doesn't know to duck-type into Banana
     try {
       val f = JSONPickle(bananaString.replace("Banana", "Cucumber")).unpickle[Fruit]
-      throw new Exception(s"Should have thrown on unpickle but instead parsed $f")
+      fail(s"Should have thrown on unpickle but instead parsed $f")
     } catch {
       case PicklingException(message, cause) =>
-        if (!message.contains("Cucumber not recognized"))
-          throw new Exception(s"Not the expected exception: $message")
+        if (!message.contains("Cucumber could not be recognized"))
+          fail(s"Not the expected exception: $message")
     }
 
     // due to the annotation, the Fruit unpickler should not know
@@ -75,11 +75,11 @@ class SealedTraitStaticAnnotatedTest extends FunSuite {
     // Fruit.
     try {
       val f = JSONPickle(bananaString.replace("Banana", "Apple")).unpickle[Fruit]
-      throw new Exception(s"Should have thrown on unpickle but instead parsed $f")
+      fail(s"Should have thrown on unpickle but instead parsed $f")
     } catch {
       case PicklingException(message, cause) =>
-        if (!message.contains("Apple not recognized"))
-          throw new Exception(s"Not the expected exception: $message")
+        if (!message.contains("Apple could not be recognized"))
+          fail(s"Not the expected exception: $message")
     }
   }
 

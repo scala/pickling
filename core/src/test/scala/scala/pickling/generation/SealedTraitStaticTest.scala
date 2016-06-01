@@ -42,7 +42,7 @@ class SealedTraitStaticTest extends FunSuite {
       throw new Exception(s"Should have thrown on unpickle but instead parsed $f")
     } catch {
       case PicklingException(message, cause) =>
-        if (!message.contains("Cucumber not recognized"))
+        if (!message.contains("Cucumber could not be recognized"))
           throw new Exception(s"Not the expected exception: $message")
     }
 
