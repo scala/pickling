@@ -9,17 +9,17 @@ import scala.pickling.PicklingErrors.{FailedUnpickling, BasePicklingException}
   * [[Boolean]], [[Float]], [[Double]], [[Null]], [[String]] and [[Unit]].
   */
 trait PrimitivePicklers {
-  implicit val bytePickler: Pickler[Byte] with Unpickler[Byte] = PrimitivePickler[Byte]
-  implicit val shortPickler: Pickler[Short] with Unpickler[Short] = PrimitivePickler[Short]
-  implicit val charPickler: Pickler[Char] with Unpickler[Char] = PrimitivePickler[Char]
-  implicit val intPickler: Pickler[Int] with Unpickler[Int] = PrimitivePickler[Int]
-  implicit val longPickler: Pickler[Long] with Unpickler[Long] = PrimitivePickler[Long]
-  implicit val booleanPickler: Pickler[Boolean] with Unpickler[Boolean] = PrimitivePickler[Boolean]
-  implicit val floatPickler: Pickler[Float] with Unpickler[Float] = PrimitivePickler[Float]
-  implicit val doublePickler: Pickler[Double] with Unpickler[Double] = PrimitivePickler[Double]
-  implicit val nullPickler: Pickler[Null] with Unpickler[Null] = PrimitivePickler[Null]
-  implicit val stringPickler: Pickler[String] with Unpickler[String] = PrimitivePickler[String]
-  implicit val unitPickler: Pickler[Unit] with Unpickler[Unit] = PrimitivePickler[Unit]
+  implicit val bytePickler: AbstractPicklerUnpickler[Byte] = PrimitivePickler[Byte]
+  implicit val shortPickler: AbstractPicklerUnpickler[Short] = PrimitivePickler[Short]
+  implicit val charPickler: AbstractPicklerUnpickler[Char] = PrimitivePickler[Char]
+  implicit val intPickler: AbstractPicklerUnpickler[Int] = PrimitivePickler[Int]
+  implicit val longPickler: AbstractPicklerUnpickler[Long] = PrimitivePickler[Long]
+  implicit val booleanPickler: AbstractPicklerUnpickler[Boolean] = PrimitivePickler[Boolean]
+  implicit val floatPickler: AbstractPicklerUnpickler[Float] = PrimitivePickler[Float]
+  implicit val doublePickler: AbstractPicklerUnpickler[Double] = PrimitivePickler[Double]
+  implicit val nullPickler: AbstractPicklerUnpickler[Null] = PrimitivePickler[Null]
+  implicit val stringPickler: AbstractPicklerUnpickler[String] = PrimitivePickler[String]
+  implicit val unitPickler: AbstractPicklerUnpickler[Unit] = PrimitivePickler[Unit]
 }
 
 class PrimitivePickler[T: FastTypeTag](name: String)
@@ -43,6 +43,6 @@ class PrimitivePickler[T: FastTypeTag](name: String)
   }
 }
 object PrimitivePickler {
-  def apply[A: FastTypeTag]: Pickler[A] with Unpickler[A] =
+  def apply[A: FastTypeTag]: AbstractPicklerUnpickler[A] =
     new PrimitivePickler[A](FastTypeTag.valueTypeName(implicitly[FastTypeTag[A]]))
 }

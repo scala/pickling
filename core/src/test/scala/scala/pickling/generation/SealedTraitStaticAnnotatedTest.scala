@@ -3,7 +3,7 @@ package scala.pickling.test.sealedtraitstaticannotated
 import scala.pickling._
 import scala.pickling.static._
 import scala.pickling.json._
-import Defaults.{ stringPickler, intPickler, refUnpickler, nullPickler }
+import Defaults.{ stringPickler, intPickler, refPicklerUnpickler, nullPickler }
 import Defaults.{ pickleOps, unpickleOps }
 
 import org.scalatest.FunSuite

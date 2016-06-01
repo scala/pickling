@@ -5,4 +5,4 @@ package scala.pickling
 // even though `c.universe` doesn't have `compat`
 // in Scala 2.11.0, it will be ignored, becase `import c.universe._`
 // brings its own `compat` in scope and that one takes precedence
-private object HasCompat { val compat = ??? }
+private[pickling] object HasCompat { val compat = ??? }

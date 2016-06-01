@@ -6,9 +6,11 @@ import java.math.BigInteger
 
 /** This contains implicits which can serialize java.math.BigInteger values. */
 trait JavaBigIntegerPicklers extends PrimitivePicklers {
-  implicit val javaBigIntegerPickler: Pickler[BigInteger] with Unpickler[BigInteger] =
+
+  implicit val javaBigIntegerPickler: AbstractPicklerUnpickler[BigInteger] = {
     new AbstractPicklerUnpickler[BigInteger] with AutoRegister[BigInteger] {
       lazy val tag = FastTypeTag[BigInteger]("java.math.BigInteger")
+
       def pickle(picklee: BigInteger, builder: PBuilder): Unit = {
         builder.beginEntry(picklee, tag)
 
@@ -19,6 +21,7 @@ trait JavaBigIntegerPicklers extends PrimitivePicklers {
 
         builder.endEntry()
       }
+
       def unpickle(tag: String, reader: PReader): Any = {
         val reader1 = reader.readField("value")
         reader1.hintElidedType(FastTypeTag.String)
@@ -26,5 +29,6 @@ trait JavaBigIntegerPicklers extends PrimitivePicklers {
         new BigInteger(result.asInstanceOf[String])
       }
     }
-  internal.currentRuntime.picklers.registerPicklerUnpickler(javaBigIntegerPickler)
+  }
+
 }
