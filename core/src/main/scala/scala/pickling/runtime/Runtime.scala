@@ -3,6 +3,7 @@ package runtime
 
 import scala.pickling.PicklingErrors.BasePicklingException
 import scala.pickling.internal._
+import binary.UnsafeMemory
 
 import scala.reflect.runtime.universe.Mirror
 import ir._
@@ -233,7 +234,7 @@ class InterpretedUnpicklerRuntime(val mirror: Mirror, typeTag: String)(implicit 
 
           // TODO: need to support modules and other special guys here
           // TODO: in principle, we could invoke a constructor here
-          val inst = scala.concurrent.util.Unsafe.instance.allocateInstance(clazz)
+          val inst = UnsafeMemory.unsafe.allocateInstance(clazz)
           if (shouldBotherAboutSharing(tpe)) registerUnpicklee(inst, preregisterUnpicklee())
           val im = mirror.reflect(inst)
 
@@ -332,7 +333,7 @@ class ShareNothingInterpretedUnpicklerRuntime(val mirror: Mirror, typeTag: Strin
 
           // TODO: need to support modules and other special guys here
           // TODO: in principle, we could invoke a constructor here
-          val inst = scala.concurrent.util.Unsafe.instance.allocateInstance(clazz)
+          val inst = UnsafeMemory.unsafe.allocateInstance(clazz)
           val im = mirror.reflect(inst)
 
           //debug(s"pendingFields: ${pendingFields.size}")
