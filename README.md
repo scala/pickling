@@ -37,6 +37,8 @@ You can use Scala Pickling in your sbt project by simply adding the following de
 libraryDependencies += "org.scala-lang.modules" %% "scala-pickling" % "0.10.1"
 ```
 
+Please, don't use the version `0.11.0-M1` since it's not production ready and it's still under ongoing development.
+
 ## What makes it different?
 
 Scala Pickling...
