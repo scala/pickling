@@ -5,14 +5,10 @@ import java.util.concurrent.atomic.AtomicReference
 import scala.language.experimental.macros
 import scala.language.reflectiveCalls
 
-import HasCompat._
-
 package object internal {
 
   import scala.reflect.runtime.{universe => ru}
   import spi._
-  import ru._
-  import compat._
 
   private[this] def initDefaultRuntime = {
     // TODO - Figure out a better way to configure this.... (typesafe config?)
@@ -23,7 +19,7 @@ package object internal {
 
     }
   }
-  private[this] var currentRuntimeVar = new AtomicReference[PicklingRuntime](initDefaultRuntime)
+  private[this] val currentRuntimeVar = new AtomicReference[PicklingRuntime](initDefaultRuntime)
   def currentRuntime: PicklingRuntime = currentRuntimeVar.get
 
   /** Replace the old [[PicklingRuntime]] keeping its state. This operation
@@ -69,7 +65,7 @@ package object internal {
   def registerPicklee(picklee: Any): Int = currentRuntime.refRegistry.pickle.registerPicklee(picklee)
   @deprecated("Use `currentRuntime.refRegistry.pickle.clear` instead", "0.11")
   def clearPicklees() = currentRuntime.refRegistry.pickle.clear()
-  @deprecated("Use `currentRuntime.refRegistry.unpickle.lookupUnpicklees` instead", "0.11")
+  @deprecated("Use `currentRuntime.refRegistry.unpickle.lookupUnpicklee` instead", "0.11")
   def lookupUnpicklee(index: Int): Any = currentRuntime.refRegistry.unpickle.lookupUnpicklee(index)
   @deprecated("Use `currentRuntime.refRegistry.unpickle.preregisterUnpicklee` instead", "0.11")
   def preregisterUnpicklee() = currentRuntime.refRegistry.unpickle.preregisterUnpicklee()
