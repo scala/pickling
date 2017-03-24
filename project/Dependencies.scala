@@ -2,9 +2,9 @@ import sbt._
 import Keys._
 
 object Dependencies {
-  lazy val scalaTest = "org.scalatest" %% "scalatest" % "3.0.0-M15"
+  lazy val scalaTest = "org.scalatest" %% "scalatest" % "3.0.1"
   lazy val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.11.6"
-  lazy val parserCombinators = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.2"
+  lazy val parserCombinators = "org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.5"
   lazy val macroParadise = "org.scalamacros" % "paradise" % "2.0.1" cross CrossVersion.full
   lazy val quasiquotes = "org.scalamacros" %% "quasiquotes" % "2.0.1"
   lazy val kryoSerializers = "de.javakaffee" % "kryo-serializers" % "0.22"

@@ -2,7 +2,7 @@ package scala.pickling.generator.scalasymbols
 
 import scala.pickling.Macro
 import scala.pickling.generator.{IrSymbol, IrScalaSymbols}
-import scala.reflect.macros.Context
+import scala.reflect.macros.whitebox.Context
 import scala.reflect.runtime.{universe => ru}
 import scala.language.experimental.macros
 

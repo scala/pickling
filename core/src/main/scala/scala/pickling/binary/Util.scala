@@ -2,8 +2,9 @@ package scala.pickling.binary
 
 object UnsafeMemory {
   import sun.misc.Unsafe
-  private[pickling] val unsafe: Unsafe =
-  scala.concurrent.util.Unsafe.instance
+  import scala.pickling.Tools
+  //private[pickling] val unsafe: Unsafe = scala.concurrent.util.Unsafe.instance
+  private[pickling] val unsafe: Unsafe = Tools.unsafe
   private[pickling] val byteArrayOffset: Long = unsafe.arrayBaseOffset(classOf[Array[Byte]])
   private[pickling] val shortArrayOffset: Long = unsafe.arrayBaseOffset(classOf[Array[Short]])
   private[pickling] val intArrayOffset: Long = unsafe.arrayBaseOffset(classOf[Array[Int]])

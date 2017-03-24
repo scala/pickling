@@ -1,7 +1,7 @@
-package scala.pickling
-package tags
+package scala.pickling.tags
 
 import scala.language.experimental.macros
+import scala.pickling.Macro
 
 /** Macros which take compiler types and turn them into
  *  runtime string we can use to tag ADTs.
@@ -48,7 +48,6 @@ trait FastTypeTagMacros extends Macro {
   // TODO(joshuasuereth): This is may duplicate functionality with the `.tag` extension method on `Type`.
   def impl[T: c.WeakTypeTag]: c.Tree = {
     import c.universe._
-    import compat._
     val T = weakTypeOf[T]
     if (T.typeSymbol.isParameter)
       c.abort(c.enclosingPosition, s"cannot generate FastTypeTag for type parameter $T, FastTypeTag can only be generated for concrete types")

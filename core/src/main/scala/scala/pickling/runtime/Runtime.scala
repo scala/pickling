@@ -28,6 +28,8 @@ abstract class PicklerRuntime(classLoader: ClassLoader, preclazz: Class[_], shar
   import definitions._
   import scala.reflect.runtime.{universe => ru}
   import compat._
+  import ru.internal.existentialAbstraction
+
 
   val clazz = if (preclazz != null) Runtime.toUnboxed.getOrElse(preclazz, preclazz) else null
   val mirror = runtimeMirror(classLoader)
@@ -233,7 +235,7 @@ class InterpretedUnpicklerRuntime(val mirror: Mirror, typeTag: String)(implicit 
 
           // TODO: need to support modules and other special guys here
           // TODO: in principle, we could invoke a constructor here
-          val inst = scala.concurrent.util.Unsafe.instance.allocateInstance(clazz)
+          val inst = Tools.unsafe.allocateInstance(clazz)
           if (shouldBotherAboutSharing(tpe)) registerUnpicklee(inst, preregisterUnpicklee())
           val im = mirror.reflect(inst)
 
@@ -332,7 +334,7 @@ class ShareNothingInterpretedUnpicklerRuntime(val mirror: Mirror, typeTag: Strin
 
           // TODO: need to support modules and other special guys here
           // TODO: in principle, we could invoke a constructor here
-          val inst = scala.concurrent.util.Unsafe.instance.allocateInstance(clazz)
+          val inst = Tools.unsafe.allocateInstance(clazz)
           val im = mirror.reflect(inst)
 
           //debug(s"pendingFields: ${pendingFields.size}")

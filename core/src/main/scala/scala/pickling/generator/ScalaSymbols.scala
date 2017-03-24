@@ -4,7 +4,7 @@ package generator
 
 import HasCompat._
 import scala.reflect.api.Universe
-import scala.reflect.macros.Context
+import scala.reflect.macros.whitebox.Context
 
 
 private[pickling] class UnclosedSubclassesException(errors: Seq[String]) extends Exception(errors.mkString("\n")) {
@@ -68,13 +68,13 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
     override def className: String = classSymbol.fullName
     override def isTrait: Boolean = classSymbol.isTrait
     override def isAbstract: Boolean = {
-      classSymbol.isAbstractType
-      // NOte: This doesn't exist on scala 2.10
+      classSymbol.isAbstract
+      // Note: This doesn't exist on scala 2.10
       //classSymbol.isAbstract
-      classSymbol.isAbstractClass
+      classSymbol.isAbstract
     }
     override def primaryConstructor: Option[IrConstructor] = {
-      tpe.declaration(nme.CONSTRUCTOR) match {
+      tpe.decl(termNames.CONSTRUCTOR) match {
         // NOTE: primary ctor is always the first in the list
         case overloaded: TermSymbol => Some(new ScalaIrConstructor(overloaded.alternatives.head.asMethod, this))
         case primaryCtor: MethodSymbol => Some(new ScalaIrConstructor(primaryCtor, this))
@@ -90,7 +90,7 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
       }.toList
       //System.err.println(s"$tpe has constructor args:\n - ${constructorArgs.mkString("\n - ")}")
       // NOTE - This will only collect memeber vals/vals.  It's possible some things come from the constructor.
-      val declaredVars = (tpe.declarations).collect { case meth: MethodSymbol => meth }.toList
+      val declaredVars = (tpe.decls).collect { case meth: MethodSymbol => meth }.toList
       // NOTE - There can be duplication between 'constructor args' and 'declared vars' we'd like to avoid.
         declaredVars
     }
@@ -111,13 +111,15 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
       def isConstructorArg(x: TermSymbol): Boolean = {
         // Note available in scala 2.10
         // x.owner.isConstructor
-        x.owner.name == nme.CONSTRUCTOR
+        x.owner.name == termNames.CONSTRUCTOR
       }
       tpe.members.filter(_.isTerm).map(_.asTerm).filter(x => x.isVal || x.isVar).map(x => new ScalaIrField(x, this)).toList
     }
     override def companion: Option[IrClass] = {
       if(tpe.typeSymbol.isType) {
-        val tmp = tpe.typeSymbol.asType.companionSymbol
+        // method companionSymbol in trait SymbolApi is deprecated:
+        // Use `companion` instead, but beware of possible changes in behavior
+        val tmp = tpe.typeSymbol.asType.companion
         if(tmp.isType) {
           val cp = tmp.asType.toType
           if (cp != NoType) Some(new ScalaIrClass(cp, quantified, rawType))
@@ -173,7 +175,7 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
       //System.err.println(s"baseSymTpe: ${baseSymTpe.toString}")
 
       val rawSymTpe = baseSymTpe match { case NullaryMethodType(ntpe) => ntpe; case ntpe => ntpe }
-      val result = existentialAbstraction(quantified, rawSymTpe)
+      val result = internal.existentialAbstraction(quantified, rawSymTpe)
       //System.err.println(s"result = ${result.toString}")
       result
 
@@ -189,9 +191,9 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
 
     override def isMarkedTransient: Boolean = {
       val tr = scala.util.Try {
-        ((field.accessed != NoSymbol) && field.accessed.annotations.exists(_.tpe =:= typeOf[scala.transient])) ||
-        ((field.getter != NoSymbol) && field.getter.annotations.exists(_.tpe =:= typeOf[scala.transient])) ||
-          (field.annotations.exists(_.tpe =:= typeOf[scala.transient]))
+        ((field.accessed != NoSymbol) && field.accessed.annotations.exists(_.tree.tpe =:= typeOf[scala.transient])) ||
+        ((field.getter != NoSymbol) && field.getter.annotations.exists(_.tree.tpe =:= typeOf[scala.transient])) ||
+          (field.annotations.exists(_.tree.tpe =:= typeOf[scala.transient]))
       }
       // Here we wrokaround a scala symbol issue where the field is never annotated with transient.
       val isSameNameAsTransientVar = owner.transientArgNames(fieldName)
@@ -229,18 +231,18 @@ private[pickling] class IrScalaSymbols[U <: Universe with Singleton, C <: Contex
   private class ScalaIrMethod(mthd: MethodSymbol, override val owner: ScalaIrClass) extends IrMethod {
     import owner.fillParameters
     override def parameterNames: List[List[String]] =
-      mthd.paramss.map(_.map(_.name.toString))
+      mthd.paramLists.map(_.map(_.name.toString))
 
     override def parameterTypes[U <: Universe with Singleton](u: U): List[List[u.Type]] = {
-      mthd.paramss.map(_.map(x => fillParameters(x).asSeenFrom(owner.tpe, owner.tpe.typeSymbol)).map(_.asInstanceOf[u.Type]))
+      mthd.paramLists.map(_.map(x => fillParameters(x).asSeenFrom(owner.tpe, owner.tpe.typeSymbol)).map(_.asInstanceOf[u.Type]))
     }
 
     override def isMarkedTransient: Boolean = {
       // TODO - is this correct?
       val tr = scala.util.Try {
-        ((mthd.accessed != NoSymbol) && mthd.accessed.annotations.exists(_.tpe =:= typeOf[scala.transient])) ||
-          ((mthd.getter != NoSymbol) && mthd.getter.annotations.exists(_.tpe =:= typeOf[scala.transient])) ||
-          (mthd.annotations.exists(_.tpe =:= typeOf[scala.transient]))
+        ((mthd.accessed != NoSymbol) && mthd.accessed.annotations.exists(_.tree.tpe =:= typeOf[scala.transient])) ||
+          ((mthd.getter != NoSymbol) && mthd.getter.annotations.exists(_.tree.tpe =:= typeOf[scala.transient])) ||
+          (mthd.annotations.exists(_.tree.tpe =:= typeOf[scala.transient]))
       }
       tr.getOrElse(false)
     }

@@ -4,13 +4,12 @@ import scala.pickling.internal._
 
 import scala.language.existentials
 
-import scala.reflect.macros.Context
+import scala.reflect.macros.whitebox.Context
 import scala.reflect.api.Universe
 
 import scala.collection.mutable.{Map => MutableMap, ListBuffer => MutableList, WeakHashMap}
 import java.lang.ref.WeakReference
-
-import HasCompat._
+import sun.misc.Unsafe
 
 object Tools {
   private val subclassCaches = new WeakHashMap[AnyRef, WeakReference[AnyRef]]()
@@ -33,6 +32,12 @@ object Tools {
         value
     }
   }
+
+  lazy val unsafe: Unsafe = {
+    val ctor = classOf[Unsafe].getDeclaredConstructor()
+    ctor.setAccessible(true)
+    ctor.newInstance()
+  }
 }
 
 class Tools[C <: Context](val c: C) {
@@ -47,7 +52,7 @@ class Tools[C <: Context](val c: C) {
         annotation
     }).headOption map {
       annotation =>
-        annotation.javaArgs(newTermName("value")) match {
+        annotation.javaArgs(TermName("value")) match {
           case ArrayArgument(klasses) => klasses.toList map {
             case LiteralArgument(constant) =>
               constant.value.asInstanceOf[Type].typeSymbol.asType
@@ -76,7 +81,7 @@ class Tools[C <: Context](val c: C) {
   def isRelevantSubclass(baseSym: Symbol, subSym: Symbol) = {
     !blackList(baseSym) && !blackList(subSym) && subSym.isClass && {
       val subClass = subSym.asClass
-      subClass.baseClasses.contains(baseSym) && !subClass.isAbstractClass && !subClass.isTrait
+      subClass.baseClasses.contains(baseSym) && !subClass.isAbstract && !subClass.isTrait
     }
   }
 
@@ -152,7 +157,7 @@ class Tools[C <: Context](val c: C) {
           val pkgMembers = pkg.typeSignature.members
           pkgMembers foreach (m => {
             def analyze(m: Symbol): Unit = {
-              if (m.name.decoded.contains("$")) () // SI-7251
+              if (m.name.decodedName.toString.contains("$")) () // SI-7251
               else if (m.isClass) m.asClass.baseClasses foreach (bc => updateCache(bc, m))
               else if (m.isModule) analyze(m.asModule.moduleClass)
               else ()
@@ -193,7 +198,7 @@ class Tools[C <: Context](val c: C) {
         // NOTE: this is an extremely naïve heuristics
         // see http://groups.google.com/group/scala-internals/browse_thread/thread/3a43a6364b97b521 for more information
         if (tparamsMatch && targsAreConcrete) appliedType(subSym.toTypeConstructor, baseTargs)
-        else existentialAbstraction(subSym.typeParams, subSym.toType)
+        else u.internal.existentialAbstraction(subSym.typeParams, subSym.toType)
       })
       subTpes
     }
@@ -335,30 +340,30 @@ abstract class Macro extends RichTypes { self =>
   }
 
   def syntheticPackageName: String = "scala.pickling.synthetic"
-  def syntheticBaseName(tpe: Type): TypeName = {
+  def syntheticBaseName(tpe: Type): String = {
     val raw = tpe.toString.split('.').map(_.capitalize).mkString("")
-    val encoded = newTypeName(raw).encoded
-    newTypeName(encoded)
+    val encoded = TypeName(raw).encodedName.toString
+    encoded
   }
-  def syntheticBaseQualifiedName(tpe: Type): TypeName = newTypeName(syntheticPackageName + "." + syntheticBaseName(tpe).toString)
+  def syntheticBaseQualifiedName(tpe: Type): String = syntheticPackageName + "." + syntheticBaseName(tpe)
 
-  def syntheticPicklerName(tpe: Type): TypeName = syntheticBaseName(tpe) + syntheticPicklerSuffix()
-  def syntheticPicklerQualifiedName(tpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticPicklerSuffix()
+  def syntheticPicklerName(tpe: Type): TypeName = TypeName(syntheticBaseName(tpe) + syntheticPicklerSuffix())
+  def syntheticPicklerQualifiedName(tpe: Type): TypeName = TypeName(syntheticBaseQualifiedName(tpe) + syntheticPicklerSuffix())
   def syntheticPicklerSuffix(): String = "Pickler"
 
-  def syntheticUnpicklerName(tpe: Type): TypeName = syntheticBaseName(tpe) + syntheticUnpicklerSuffix()
-  def syntheticUnpicklerQualifiedName(tpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticUnpicklerSuffix()
+  def syntheticUnpicklerName(tpe: Type): TypeName = TypeName(syntheticBaseName(tpe) + syntheticUnpicklerSuffix())
+  def syntheticUnpicklerQualifiedName(tpe: Type): TypeName = TypeName(syntheticBaseQualifiedName(tpe) + syntheticUnpicklerSuffix())
   def syntheticUnpicklerSuffix(): String = "Unpickler"
 
-  def syntheticPicklerUnpicklerName(tpe: Type): TypeName = syntheticBaseName(tpe) + syntheticPicklerUnpicklerSuffix()
-  def syntheticPicklerUnpicklerQualifiedName(tpe: Type): TypeName = syntheticBaseQualifiedName(tpe) + syntheticPicklerUnpicklerSuffix()
+  def syntheticPicklerUnpicklerName(tpe: Type): TypeName = TypeName(syntheticBaseName(tpe) + syntheticPicklerUnpicklerSuffix())
+  def syntheticPicklerUnpicklerQualifiedName(tpe: Type): TypeName = TypeName(syntheticBaseQualifiedName(tpe) + syntheticPicklerUnpicklerSuffix())
   def syntheticPicklerUnpicklerSuffix(): String = "PicklerUnpickler"
 
   private var reflectivePrologueEmitted = false // TODO: come up with something better
-  def reflectively(target: String, fir: FieldIR)(body: Tree => Tree): List[Tree] = reflectively(newTermName(target), fir)(body)
+  def reflectively(target: String, fir: FieldIR)(body: Tree => Tree): List[Tree] = reflectively(TermName(target), fir)(body)
 
   def reflectivelyWithoutGetter(target: String, fir: FieldIR)(body: Tree => Tree): List[Tree] = {
-    val pickleeName = newTermName(target)
+    val pickleeName = TermName(target)
     val getFieldValue = q"""
       val clazz = $pickleeName.getClass
       scala.util.Try(clazz.getDeclaredField(${fir.name})).map { javaField =>
@@ -389,8 +394,8 @@ abstract class Macro extends RichTypes { self =>
     // val field = fir.field.get
     val owner = if (fir.param.nonEmpty) fir.param.get.owner
       else fir.accessor.get.owner
-    val ownerSymbol = c.fresh(newTermName(fir.name + "Owner"))
-    val firSymbol = c.fresh(newTermName(fir.name + "Symbol"))
+    val ownerSymbol = c.freshName(TermName(fir.name + "Owner"))
+    val firSymbol = c.freshName(TermName(fir.name + "Symbol"))
     // TODO: make sure this works for:
     // 1) private[this] fields
     // 2) inherited private[this] fields
