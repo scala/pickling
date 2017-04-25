@@ -356,7 +356,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
 
   def genAllocateInstance(x: AllocateInstance): c.Tree = {
     val tpe = x.tpe.tpe[c.universe.type](c.universe)
-    q"""_root_.scala.picking.Tools.unsafe.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]"""
+    q"""_root_.scala.pickling.Tools.unsafe.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]"""
   }
 
   def generateUnpickleImplFromAst(unpicklerAst: UnpicklerAst): c.Tree = {
@@ -484,7 +484,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
     val objectOutTpe = typeOf[scala.pickling.util.GenObjectOutput]
     val fieldName = "$ext"
     q"""
-       val $target = _root_.scala.picking.Tools.unsafe.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]
+       val $target = _root_.scala.pickling.Tools.unsafe.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]
        val $readerName = reader.readField($fieldName)
        val out = {
          val up = _root_.scala.Predef.implicitly[_root_.scala.pickling.Unpickler[$objectOutTpe]]
