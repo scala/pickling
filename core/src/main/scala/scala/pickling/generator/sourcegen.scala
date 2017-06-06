@@ -27,7 +27,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
 
     def genGetField(x: GetField): c.Tree = {
       def pickleLogic(isStaticallyElided: Boolean, fieldValue: Tree, tpe: Type): Tree = {
-        val fieldPickler = c.fresh(newTermName("fieldPickler"))
+        val fieldPickler = c.freshName(TermName("fieldPickler"))
         val elideHint =
           if (isStaticallyElided) q"b.hintElidedType($fieldPickler.tag)" else q""
         // NOTE; This will look up an IMPLICIT pickler for the value, based on the type.
@@ -48,12 +48,12 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
           if(x.isScala || !x.isPublic) {
             // We always have to use reflection for scala fields right now.  Additionally, for Scala fields, we
             // actually have no idea if they exist at runtime, so we allow failure for now, which is EVIL, but we have no alternative.
-            val result = reflectivelyGet(newTermName("picklee"), x)(fm => fm)
-            val rTerm = c.fresh(newTermName("result"))
+            val result = reflectivelyGet(TermName("picklee"), x)(fm => fm)
+            val rTerm = c.freshName(TermName("result"))
             val logic = q"""val $rTerm = { ..$result }
                             ${putField(q"$rTerm.asInstanceOf[$tpe]", staticallyElided, tpe)}"""
             if(x.isScala) allowNonExistentField(logic) else logic
-          } else putField(q"picklee.${newTermName(x.fieldName)}", staticallyElided, tpe)
+          } else putField(q"picklee.${TermName(x.fieldName)}", staticallyElided, tpe)
         case _: IrConstructor =>
           // This is a logic erorr
           sys.error(s"Pickling logic error.  Found constructor when trying to pickle field ${x.name}.")
@@ -63,9 +63,9 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
             // TODO - This is too naive of a determination.  In practice, we almost want an "always elide" and "never elide" mode.
             tpe.isEffectivelyFinal || tpe.isEffectivelyPrimitive
           }
-          if (y.isPublic) putField(q"picklee.${newTermName(y.methodName)}", staticallyElided, tpe)
+          if (y.isPublic) putField(q"picklee.${TermName(y.methodName)}", staticallyElided, tpe)
           else {
-            val result = reflectivelyGet(newTermName("picklee"), y)(fm => putField(q"${fm}.asInstanceOf[${y.returnType(u).asInstanceOf[c.Type]}]", staticallyElided, tpe))
+            val result = reflectivelyGet(TermName("picklee"), y)(fm => putField(q"${fm}.asInstanceOf[${y.returnType(u).asInstanceOf[c.Type]}]", staticallyElided, tpe))
             q"""..$result"""
           }
       }
@@ -76,12 +76,12 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
 
     def genSubclassDispatch(x: SubclassDispatch): c.Tree = {
       val tpe = x.parent.tpe[c.universe.type](c.universe)
-      val clazz = newTermName("clazz")
+      val clazz = TermName("clazz")
       val compileTimeDispatch: List[CaseDef] =
         (x.subClasses map { subtpe =>
           val tpe = subtpe.tpe[c.universe.type](c.universe)
           CaseDef(
-            Bind(clazz, Ident(nme.WILDCARD)),
+            Bind(clazz, Ident(termNames.WILDCARD)),
             q"_root_.scala.pickling.util.ClassMapper.areSameClasses($clazz, classOf[$tpe])",
             createPickler(tpe, q"builder")
           )
@@ -89,16 +89,16 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
 
       val failDispatch = {
         val dispatcheeNames = x.subClasses.map(_.className).mkString(", ")
-        val otherTermName = newTermName("other")
+        val otherTermName = TermName("other")
         val throwUnknownTag =
           if(x.subClasses.isEmpty) {
             q"""throw $unrecognizedClass(clazz, None)"""
           } else
             q"""throw $unrecognizedClass(clazz,
                Some("looking for one of: " + $dispatcheeNames))"""
-        CaseDef(Bind(otherTermName, Ident(nme.WILDCARD)), throwUnknownTag)
+        CaseDef(Bind(otherTermName, Ident(termNames.WILDCARD)), throwUnknownTag)
       }
-      val runtimeDispatch = CaseDef(Ident(nme.WILDCARD), EmptyTree, createRuntimePickler(q"builder"))
+      val runtimeDispatch = CaseDef(Ident(termNames.WILDCARD), EmptyTree, createRuntimePickler(q"builder"))
       val unknownDispatch =
         if(x.lookupRuntime) List(runtimeDispatch)
         else List(failDispatch)
@@ -125,7 +125,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
     def genPickleEntry(op: PickleEntry): c.Tree = {
       val nested =
         op.ops.toList map genPickleOp
-      val oid = c.fresh(newTermName("oid"))
+      val oid = c.freshName(TermName("oid"))
       // TODO - hint known size
       val shareHint: List[c.Tree] =
         if(shareNothing) List(q"()")
@@ -146,7 +146,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
         case x: GetField => genGetField(x)
         case x: PickleEntry => genPickleEntry(x)
         case x: SubclassDispatch => genSubclassDispatch(x)
-        case x: PickleExternalizable => genExternalizablePickle(newTermName("picklee"), newTermName("builder"), x)
+        case x: PickleExternalizable => genExternalizablePickle(TermName("picklee"), TermName("builder"), x)
       }
     genPickleOp(picklerAst)
   }
@@ -200,12 +200,12 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
   }
 
   def readField(name: String, tpe: Type): c.Tree = {
-    val readerName = c.fresh(newTermName("reader"))
-    val unpicklerName    = c.fresh(newTermName("unpickler$unpickle$"))
+    val readerName = c.freshName(TermName("reader"))
+    val unpicklerName    = c.freshName(TermName("unpickler$unpickle$"))
     // TODO - is this the right place to do this?
     val staticHint       = if (tpe.isEffectivelyFinal) q"$readerName.hintElidedType($unpicklerName.tag)" else q"";
 
-    val resultName = c.fresh(newTermName("result"))
+    val resultName = c.freshName(TermName("result"))
     // TODO - may be able to drop locally.
       q"""
          _root_.scala.Predef.locally {
@@ -262,9 +262,9 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
     // TODO - Handle reflective case.
     val result = if(cons.requiresReflection) sys.error(s"Unable to reflectively call factory methods, currently.")
     else {
-      if(cons.factoryMethod.parameterNames.isEmpty) q"${tpe}.${newTermName(cons.factoryMethod.methodName)}()"
+      if(cons.factoryMethod.parameterNames.isEmpty) q"${tpe}.${TermName(cons.factoryMethod.methodName)}()"
       else {
-        q"${tpe}.${newTermName(cons.factoryMethod.methodName)}(...$argss)"
+        q"${tpe}.${TermName(cons.factoryMethod.methodName)}(...$argss)"
       }
     }
     result
@@ -282,9 +282,9 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
             val read = readField(s.name, tpe)
             if(x.isPublic) {
               q"""
-                 result.${newTermName(x.methodName)}($read)
+                 result.${TermName(x.methodName)}($read)
                """
-            } else reflectivelySet(newTermName("result"), x, read)
+            } else reflectivelySet(TermName("result"), x, read)
           case x => sys.error(s"Cannot handle a setting method that does not take exactly one parameter, found parameters: $x")
         }
 
@@ -293,8 +293,8 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
         val read = readField(s.name, tpe)
         val staticallyElided = tpe.isEffectivelyFinal || tpe.isEffectivelyPrimitive
         if(x.isScala || !x.isPublic || x.isFinal) {
-          reflectivelySet(newTermName("result"), x, read)
-        } else q"""result.${newTermName(x.fieldName)} = $read"""
+          reflectivelySet(TermName("result"), x, read)
+        } else q"""result.${TermName(x.fieldName)} = $read"""
     }
 
   }
@@ -327,9 +327,9 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
     val tpe = x.parent.tpe[c.universe.type](c.universe)
     val defaultCase =
       if(x.lookupRuntime)
-        CaseDef(Ident(nme.WILDCARD), EmptyTree,
+        CaseDef(Ident(termNames.WILDCARD), EmptyTree,
           q"_root_.scala.pickling.internal.`package`.currentRuntime.picklers.genUnpickler(_root_.scala.pickling.internal.`package`.currentMirror, tagKey)")
-      else CaseDef(Ident(nme.WILDCARD), EmptyTree,
+      else CaseDef(Ident(termNames.WILDCARD), EmptyTree,
         q"""throw $unrecognizedTagPath(tagKey, "unpickling")""")
     val subClassCases =
        x.subClasses.toList map { sc =>
@@ -356,7 +356,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
 
   def genAllocateInstance(x: AllocateInstance): c.Tree = {
     val tpe = x.tpe.tpe[c.universe.type](c.universe)
-    q"""_root_.scala.concurrent.util.Unsafe.instance.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]"""
+    q"""_root_.scala.pickling.Tools.unsafe.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]"""
   }
 
   def generateUnpickleImplFromAst(unpicklerAst: UnpicklerAst): c.Tree = {
@@ -368,7 +368,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
       case x: UnpickleSingleton => genUnpickleSingleton(x)
       case x: AllocateInstance => genAllocateInstance(x)
         // TODO - This is kind of hacky, should be a temproary workaround for a better solution.
-      case x: UnpickleExternalizable => genExternalizablUnPickle(newTermName("reader"), x)
+      case x: UnpickleExternalizable => genExternalizablUnPickle(TermName("reader"), x)
       case x: UnpickleBehavior =>
         val behavior = x.operations.map(generateUnpickleImplFromAst).toList
         // TODO - This is kind of hacky.  We're trying to make sure during unpickling we always register/unregister appropriately...
@@ -415,7 +415,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
   def generatePicklerUnpicklerClass[T: c.WeakTypeTag](impl: PickleUnpickleImplementation): c.Tree = {
 
     val tpe = computeType[T]
-    val name = c.fresh(newTermName(syntheticBaseName(tpe) + "PicklerUnpickler"))
+    val name = c.freshName(TermName(syntheticBaseName(tpe) + "PicklerUnpickler"))
     val createTagTree = super[FastTypeTagMacros].impl[T]
     val unpickleLogic = genUnpicklerLogic[T](impl.unpickle)
     val pickleLogic = genPicklerLogic[T](impl.pickle)
@@ -446,7 +446,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
     */
   def registerUnPickledRef(instantiationLogic: c.Tree): c.Tree = {
     // TODO - We may not want to ALWAYS do this, some kind of enabling flag...
-    val instance = c.fresh(newTermName("instance"))
+    val instance = c.freshName(TermName("instance"))
     q"""
       val oid = _root_.scala.pickling.internal.`package`.currentRuntime.refRegistry.unpickle.preregisterUnpicklee()
       val $instance = $instantiationLogic
@@ -466,7 +466,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
 
   // -- Externalizable Hackery --
   def genExternalizablePickle(target: TermName, builder: TermName, pe: PickleExternalizable): c.Tree = {
-    val out = c.fresh(newTermName("out"))
+    val out = c.freshName(TermName("out"))
     val objectOutTpe = typeOf[scala.pickling.util.GenObjectOutput]
     val fieldName = "$ext"
     q"""val $out = new _root_.scala.pickling.util.GenObjectOutput
@@ -479,12 +479,12 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
 
   def genExternalizablUnPickle(reader: TermName, pe: UnpickleExternalizable): c.Tree = {
     val tpe = pe.tpe.tpe[c.universe.type](c.universe)
-    val readerName = c.fresh(newTermName("readerName"))
-    val target = c.fresh(newTermName("out"))
+    val readerName = c.freshName(TermName("readerName"))
+    val target = c.freshName(TermName("out"))
     val objectOutTpe = typeOf[scala.pickling.util.GenObjectOutput]
     val fieldName = "$ext"
     q"""
-       val $target = _root_.scala.concurrent.util.Unsafe.instance.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]
+       val $target = _root_.scala.pickling.Tools.unsafe.allocateInstance(classOf[$tpe]).asInstanceOf[$tpe]
        val $readerName = reader.readField($fieldName)
        val out = {
          val up = _root_.scala.Predef.implicitly[_root_.scala.pickling.Unpickler[$objectOutTpe]]
@@ -506,7 +506,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
     val valueTree =
       value match {
         case field: IrField =>
-          val fieldTerm = c.fresh(newTermName("field"))
+          val fieldTerm = c.freshName(TermName("field"))
           val get = q"""
                 val $fieldTerm = _root_.scala.pickling.internal.Reflect.getField($target.getClass, ${field.javaReflectionName})
                 $fieldTerm.setAccessible(true)
@@ -516,14 +516,14 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
         // Private scala methods may not encode normally for case classes.  This is a hack which goes after the field.
         // TODO - We should update this to look for the accessor method which scala generally exposes for the deconstructor.
         case mthd: IrMethod if mthd.isScala && mthd.isPrivate =>
-          val methodTerm = c.fresh(newTermName("mthd"))
+          val methodTerm = c.freshName(TermName("mthd"))
           // TODO - We may need to do a specialied lookup for magic named methods.
           q"""val $methodTerm = _root_.scala.pickling.internal.Reflect.getMethod($target.getClass, ${mthd.javaReflectionName}, Array())
               $methodTerm.setAccessible(true)
               $methodTerm.invoke($target)
               """
         case mthd: IrMethod =>
-          val methodTerm = c.fresh(newTermName("mthd"))
+          val methodTerm = c.freshName(TermName("mthd"))
           q"""val $methodTerm = _root_.scala.pickling.internal.Reflect.getMethod($target.getClass, ${mthd.javaReflectionName}, Array())
               $methodTerm.setAccessible(true)
               $methodTerm.invoke($target)"""
@@ -537,7 +537,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
     //        looking them up all the time.
     setter match {
       case field: IrField =>
-        val fieldTerm = c.fresh(newTermName("field"))
+        val fieldTerm = c.freshName(TermName("field"))
         val result = q"""
                  val $fieldTerm = _root_.scala.pickling.internal.Reflect.getField($target.getClass, ${field.javaReflectionName})
                  $fieldTerm.setAccessible(true)
@@ -545,7 +545,7 @@ private[pickling] trait SourceGenerator extends Macro with tags.FastTypeTagMacro
         // Workaround for issues with not being able to accurate read scala symbols.
         if(field.isScala) allowNonExistentField(result) else result
       case mthd: IrMethod =>
-        val methodTerm = c.fresh(newTermName("mthd"))
+        val methodTerm = c.freshName(TermName("mthd"))
         // TODO - We should ensure types align.
         val List(List(tpe)) = mthd.parameterTypes[c.universe.type](c.universe)
         q"""

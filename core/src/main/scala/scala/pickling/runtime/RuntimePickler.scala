@@ -176,7 +176,7 @@ class RuntimePickler(classLoader: ClassLoader, clazz: Class[_], fastTag: FastTyp
         if (fir.accessor.nonEmpty)
           List(
             if (fir.tpe.typeSymbol.isEffectivelyFinal) new EffectivelyFinalLogic(fir)
-            else if (fir.tpe.typeSymbol.asType.isAbstractType) new AbstractLogic(fir)
+            else if (fir.tpe.typeSymbol.asType.isAbstract) new AbstractLogic(fir)
             else new DefaultLogic(fir)
           )
         else

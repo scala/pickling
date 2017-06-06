@@ -3,7 +3,7 @@ import Dependencies._ // see project/Dependencies.scala
 import scala.xml.{Node => XmlNode, NodeSeq => XmlNodeSeq, _}
 import scala.xml.transform.{RewriteRule, RuleTransformer}
 
-val buildVersion = "0.11.0-M2"
+val buildVersion = "0.12.0"
 
 def commonSettings = Seq(
   version in ThisBuild := buildVersion,
@@ -13,6 +13,7 @@ def commonSettings = Seq(
     case "2.10" => Seq("-Xmax-classfile-name", "254")
     case _ => Seq()
   }),
+  scalacOptions ++= Seq("-deprecation"),
   organization in ThisBuild := "org.scala-lang.modules",
   organizationName in ThisBuild := "LAMP/EPFL",
   organizationHomepage in ThisBuild := Some(url("http://lamp.epfl.ch")),
@@ -143,7 +144,11 @@ lazy val benchmark: Project = (project in file("benchmark")).
   dependsOn(core).
   settings(commonSettings ++ noPublish ++ benchmarkSettings: _*).
   settings(
-    scalacOptions ++= Seq("-optimise"),
+    // -optimise is deprecated: In 2.12,
+    // -optimise enables -opt:l:classpath.
+    // Check -opt:help for using the Scala 2.12 optimizer.
+    //scalacOptions ++= Seq("-optimise"),
+    scalacOptions ++= Seq("-Xlog-implicits"),
     libraryDependencies ++= Seq(
       "org.scala-lang" % "scala-compiler" % scalaVersion.value,
       kryoSerializers, kryo)

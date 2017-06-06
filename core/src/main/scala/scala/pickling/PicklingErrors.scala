@@ -17,7 +17,7 @@ private[pickling] object Feedback {
 
 private[pickling] object MacrosErrors {
 
-  import scala.reflect.macros.Context
+  import scala.reflect.macros.whitebox.Context
 
   def failedGeneration(culprit: String)(implicit c: Context, l: AlgorithmLogger): Nothing = {
     l.error(s"Failed pickler/unpickler generation for $culprit")

@@ -2,8 +2,7 @@ package scala.pickling
 
 import scala.language.experimental.macros
 import scala.language.existentials
-
-import scala.reflect.macros.Context
+import scala.reflect.macros.whitebox.Context
 import scala.reflect.runtime.{universe => ru}
 
 // this is only necessary because 2.10.x doesn't support macro bundles

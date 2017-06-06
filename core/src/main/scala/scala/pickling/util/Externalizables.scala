@@ -2,7 +2,7 @@ package scala.pickling.util
 
 import scala.language.experimental.macros
 
-import scala.reflect.macros.Context
+import scala.reflect.macros.whitebox.Context
 import java.io.ObjectInput
 
 
@@ -54,20 +54,20 @@ object Externalizables {
     def readTree(is: List[Int]): Tree =
       if (is.isEmpty) q"???"
       else if (is.size == 1) {
-        val argName = newTermName("x" + is.head)
+        val argName = TermName("x" + is.head)
         q"state += 1; $argName"
       } else if (is.size == 2) {
-        val argName0 = newTermName("x" + is.head)
-        val argName1 = newTermName("x" + is.tail.head)
+        val argName0 = TermName("x" + is.head)
+        val argName1 = TermName("x" + is.tail.head)
         q"""
           state += 1
           if (state == ${is.head}) $argName0
           else $argName1
         """
       } else if (is.size == 3) {
-        val argName0 = newTermName("x" + is.head)
-        val argName1 = newTermName("x" + is.tail.head)
-        val argName2 = newTermName("x" + is.tail.tail.head)
+        val argName0 = TermName("x" + is.head)
+        val argName1 = TermName("x" + is.tail.head)
+        val argName2 = TermName("x" + is.tail.tail.head)
         q"""
           state += 1
           if (state == ${is.head}) $argName0
@@ -80,7 +80,7 @@ object Externalizables {
     // create class parameter list
     // (val x0: Int, val x1: Int, val x2: Array[Byte], val x3: Int, val x4: Long, ...)
     val params = for ((targ, i) <- targs.zipWithIndex) yield {
-      val name = newTermName("x" + i)
+      val name = TermName("x" + i)
       q"val $name: $targ"
     }
 
@@ -97,13 +97,13 @@ object Externalizables {
       if (arrIndices.isEmpty) { // Array[Byte] unused
         q"???"
       } else {
-        val name = newTermName("x" + arrIndices.head)
+        val name = TermName("x" + arrIndices.head)
         // TODO: faster array copy using Unsafe?
         q"System.arraycopy($name, 0, x, 0, x.length)"
       }
     }
 
-    val dummyName = c.fresh(newTypeName("DummyObjectInput"))
+    val dummyName = c.freshName(TypeName("DummyObjectInput"))
     val instance: Tree = q"""
       class $dummyName(..$params) extends java.io.ObjectInput {
         var state = -1
@@ -175,7 +175,7 @@ object Externalizables {
 
     // we assume the methods corresponding to the "writeTree" bodies are called in the right order
     def writeTree(is: List[Int], tpeName: String): Tree = {
-      val fldName = newTermName(tpeName + "Arr")
+      val fldName = TermName(tpeName + "Arr")
       if (is.isEmpty) q"???"
       else if (is.size == 1) {
         q"{ state += 1; $fldName(0) = x }"
@@ -207,7 +207,7 @@ object Externalizables {
     val fields = (for (targ <- storage.keys) yield {
       val TypeRef(_, classSym, _) = targ
       val tpestr     = classSym.name.toString.toLowerCase
-      val name       = newTermName(tpestr + "Arr")
+      val name       = TermName(tpestr + "Arr")
       val storageTpe = storage(targ)
       val size       = perType.getOrElse(targ, List[Int]()).size
       q"val $name: Array[$storageTpe] = Array.ofDim[$storageTpe]($size)"
@@ -222,7 +222,7 @@ object Externalizables {
     def finalTree(tpe: Type, tpeName: String): Tree =
       writeTree(perType.getOrElse(tpe, List[Int]()), tpeName)
 
-    val dummyName = c.fresh(newTypeName("DummyObjectOutput"))
+    val dummyName = c.freshName(TypeName("DummyObjectOutput"))
     val instance: Tree = q"""
       class $dummyName extends scala.pickling.util.ArrayObjectOutput {
         var state = -1

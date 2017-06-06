@@ -4,8 +4,7 @@ package generator
 import scala.language.experimental.macros
 import scala.language.existentials
 import scala.pickling.Pickler
-
-import scala.reflect.macros.Context
+import scala.reflect.macros.whitebox.Context
 import scala.reflect.runtime.{universe => ru}
 
 private[pickling] object Compat {
